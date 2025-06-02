@@ -1,30 +1,25 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.EveryStateElement
 use crate::query_api::siddhi_element::SiddhiElement;
 use super::state_element::StateElement; // Recursive definition
+// Expression is not used here as per Java structure. 'within' is on StateInputStream.
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct EveryStateElement {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // EveryStateElement fields
     pub state_element: Box<StateElement>,
+    // The 'within' clause is associated with the whole pattern in StateInputStream,
+    // not with individual 'every' elements in the Java API.
 }
 
 impl EveryStateElement {
     pub fn new(state_element: StateElement) -> Self {
         EveryStateElement {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             state_element: Box::new(state_element),
         }
     }
 }
 
-impl SiddhiElement for EveryStateElement {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// No Default derive due to required Box<StateElement>.

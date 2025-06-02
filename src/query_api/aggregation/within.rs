@@ -1,0 +1,71 @@
+use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::expression::Expression;
+
+#[derive(Clone, Debug, PartialEq)] // Default is tricky due to required fields
+pub struct Within {
+    pub siddhi_element: SiddhiElement,
+    // In Java, timeRange can hold one (pattern) or two (start, end) expressions.
+    // We can model this as an enum or distinct fields.
+    // Using distinct fields for clarity, matching the two factory methods.
+    pub pattern_expression: Option<Box<Expression>>, // For within(Expression pattern)
+    pub start_expression: Option<Box<Expression>>,   // For within(Expression start, Expression end)
+    pub end_expression: Option<Box<Expression>>,     // For within(Expression start, Expression end)
+}
+
+impl Within {
+    // Corresponds to Java's within(Expression pattern)
+    pub fn new_with_pattern(pattern: Expression) -> Self {
+        Self {
+            siddhi_element: SiddhiElement::default(),
+            pattern_expression: Some(Box::new(pattern)),
+            start_expression: None,
+            end_expression: None,
+        }
+    }
+
+    // Corresponds to Java's within(Expression start, Expression end)
+    pub fn new_with_range(start: Expression, end: Expression) -> Self {
+        Self {
+            siddhi_element: SiddhiElement::default(),
+            pattern_expression: None,
+            start_expression: Some(Box::new(start)),
+            end_expression: Some(Box::new(end)),
+        }
+    }
+
+    // Getter that matches Java's getTimeRange() -> List<Expression>
+    // It might be more idiomatic in Rust to provide specific getters for pattern/start/end.
+    pub fn get_time_range_expressions(&self) -> Vec<&Expression> {
+        let mut range = Vec::new();
+        if let Some(p) = &self.pattern_expression {
+            range.push(p.as_ref());
+        }
+        if let Some(s) = &self.start_expression {
+            range.push(s.as_ref());
+        }
+        if let Some(e) = &self.end_expression {
+            range.push(e.as_ref());
+        }
+        range
+    }
+}
+
+// Default might not be very useful as either pattern or start/end is required.
+// However, if needed for Default derive on other structs that contain Option<Within>:
+impl Default for Within {
+    fn default() -> Self {
+        // Represents an empty/undefined Within clause, which might not be valid in Siddhi.
+        // Or, default to a pattern variant with a default (placeholder) expression if Expression had a default.
+        // Since Expression does not have Default, this is problematic.
+        // For now, let's assume a truly "empty" Within is not a concept.
+        // If it were, it would mean:
+        Self {
+            siddhi_element: SiddhiElement::default(),
+            pattern_expression: None,
+            start_expression: None,
+            end_expression: None, // This state (all None) should ideally not occur if constructed via new_ methods.
+        }
+        // A better default might be to panic or make `new_` methods the only way.
+        // For now, allowing this potentially invalid state if `default()` is called directly.
+    }
+}

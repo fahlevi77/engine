@@ -1,33 +1,31 @@
 use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Variable; // Corrected path
+use crate::query_api::expression::Variable;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Order {
     Asc,
     Desc,
 }
 
-// Helper to convert from Java enum string if needed during parsing, not used now.
-// impl FromStr for Order { ... }
+impl Default for Order {
+    fn default() -> Self { Order::Asc }
+}
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default requires Variable to be Default
 pub struct OrderByAttribute {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // OrderByAttribute fields
-    pub variable: Variable,
-    pub order: Order, // Default is ASC in Java
+    pub variable: Variable, // Variable struct has Default derive
+    pub order: Order,
 }
 
 impl OrderByAttribute {
     // Constructor for `OrderByAttribute(Variable variable, Order order)`
     pub fn new(variable: Variable, order: Order) -> Self {
         OrderByAttribute {
-            query_context_start_index: None, // Variable itself will have context
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(), // Or copy from variable.siddhi_element?
             variable,
             order,
         }
@@ -35,13 +33,18 @@ impl OrderByAttribute {
 
     // Constructor for `OrderByAttribute(Variable variable)` which defaults to ASC
     pub fn new_default_order(variable: Variable) -> Self {
-        Self::new(variable, Order::Asc)
+        Self::new(variable, Order::default())
     }
 }
 
-impl SiddhiElement for OrderByAttribute {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
+// If Variable is Default, OrderByAttribute can derive Default.
+// Variable's Default requires attribute_name to be String::default().
+impl Default for OrderByAttribute {
+    fn default() -> Self {
+        Self {
+            siddhi_element: SiddhiElement::default(),
+            variable: Variable::default(),
+            order: Order::default(),
+        }
+    }
 }

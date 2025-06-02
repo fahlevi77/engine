@@ -5,23 +5,20 @@ use super::stream_state_element::StreamStateElement;
 // Constant for ANY count, from Java's CountStateElement.ANY = -1
 pub const ANY_COUNT: i32 = -1;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct CountStateElement {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // CountStateElement fields
-    pub stream_state_element: Box<StreamStateElement>, // Contains BasicSingleInputStream
-    pub min_count: i32,
-    pub max_count: i32,
+    pub stream_state_element: Box<StreamStateElement>,
+    pub min_count: i32, // Using i32 and ANY_COUNT to represent optionality, like Java
+    pub max_count: i32, // Using i32 and ANY_COUNT
 }
 
 impl CountStateElement {
     pub fn new(stream_state_element: StreamStateElement, min_count: i32, max_count: i32) -> Self {
         CountStateElement {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             stream_state_element: Box::new(stream_state_element),
             min_count,
             max_count,
@@ -29,9 +26,16 @@ impl CountStateElement {
     }
 }
 
-impl SiddhiElement for CountStateElement {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// No Default derive due to required StreamStateElement and specific count logic.
+// A user would typically construct this with specific counts or ANY_COUNT.
+// Defaulting min/max to ANY_COUNT might be an option if StreamStateElement was Default.
+// impl Default for CountStateElement {
+//     fn default() -> Self {
+//         Self {
+//             siddhi_element: SiddhiElement::default(),
+//             stream_state_element: Box::default(), // Requires StreamStateElement::default()
+//             min_count: ANY_COUNT,
+//             max_count: ANY_COUNT,
+//         }
+//     }
+// }

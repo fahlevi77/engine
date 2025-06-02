@@ -1,12 +1,12 @@
 // Corresponds to parts of io.siddhi.query.api.execution.query.output.ratelimit.EventOutputRate
 
-// EventOutputRate in Java has an Integer `value` and an `OutputRate.Type` enum field.
-// The `OutputRate.Type` (ALL, FIRST, LAST) will be part of the main OutputRate enum in output_rate.rs.
-// This struct will only hold the event count.
+// This struct holds the specific data for event-based rate limiting.
+// The common SiddhiElement context will be in the main OutputRate struct.
+// The OutputRateBehavior (All, First, Last) will also be associated in the OutputRate struct/enum.
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct EventsOutputRate {
-    pub event_count: i32, // Corresponds to `value` in Java's EventOutputRate
+    pub event_count: i32, // Corresponds to `value` in Java's EventOutputRate, defaults to 0
 }
 
 impl EventsOutputRate {

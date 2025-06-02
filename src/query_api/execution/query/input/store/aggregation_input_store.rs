@@ -1,0 +1,71 @@
+// Corresponds to io.siddhi.query.api.execution.query.input.store.AggregationInputStore
+use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::expression::Expression;
+use super::store::Store; // The base Store
+use super::input_store::InputStoreTrait;
+use crate::query_api::aggregation::Within; // Using the actual Within struct
+
+#[derive(Clone, Debug, PartialEq)] // Default not straightforward
+pub struct AggregationInputStore {
+    // In Java, it extends ConditionInputStore. We will compose Store and add fields.
+    // Or compose ConditionInputStore if that's more aligned.
+    // Let's compose Store directly and manage on_condition here too.
+    pub siddhi_element: SiddhiElement,
+
+    pub store: Store,
+    pub on_condition: Option<Expression>, // From ConditionInputStore part
+
+    // AggregationInputStore specific fields
+    pub within: Option<Within>,
+    pub per: Option<Expression>,
+}
+
+impl AggregationInputStore {
+    // Constructor for when there's an ON condition
+    pub fn new_with_condition(
+        store: Store,
+        on_condition: Expression,
+        within: Within,
+        per: Expression
+    ) -> Self {
+        AggregationInputStore {
+            siddhi_element: SiddhiElement::default(),
+            store,
+            on_condition: Some(on_condition),
+            within: Some(within),
+            per: Some(per),
+        }
+    }
+
+    // Constructor for when there's no ON condition (onCondition is null in Java)
+    pub fn new_no_condition(
+        store: Store,
+        within: Within,
+        per: Expression
+    ) -> Self {
+        AggregationInputStore {
+            siddhi_element: SiddhiElement::default(),
+            store,
+            on_condition: None,
+            within: Some(within),
+            per: Some(per),
+        }
+    }
+}
+
+impl SiddhiElement for AggregationInputStore {
+    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_start_index }
+    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_start_index = index; }
+    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_end_index }
+    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_end_index = index; }
+}
+
+impl InputStoreTrait for AggregationInputStore {
+    fn get_store_id(&self) -> &str {
+        self.store.get_store_id() // Delegate
+    }
+
+    fn get_store_reference_id(&self) -> Option<&str> {
+        self.store.get_store_reference_id() // Delegate
+    }
+}

@@ -2,7 +2,7 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq, Default)] // Added Default
+#[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct InOp { // Renamed from In to InOp
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 

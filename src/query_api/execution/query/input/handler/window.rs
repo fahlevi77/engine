@@ -1,28 +1,25 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.handler.Window
 // Implements StreamHandler and Extension in Java.
-// To avoid naming conflict with definition::WindowDefinition, this might be named WindowHandler.
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Window { // In mod.rs, this can be `pub use self::window::Window as WindowHandler;`
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
+pub struct Window { // Aliased as WindowHandler in handler/mod.rs
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // Extension fields
-    pub namespace: Option<String>, // Changed from String to Option for empty namespace
-    pub name: String, // 'function' in Java, but 'name' makes more sense for a window's type
+    pub namespace: Option<String>,
+    pub name: String, // 'function' in Java, but 'name' for window type is clear
 
     // Window specific fields
-    pub parameters: Vec<Expression>, // Java uses Expression[]
+    pub parameters: Vec<Expression>,
 }
 
 impl Window {
-    pub fn new(namespace: Option<String>, name: String, parameters: Vec<Expression>) -> Self {
+    // Constructor requires name. Namespace and parameters can be defaulted.
+    pub fn new(name: String, namespace: Option<String>, parameters: Vec<Expression>) -> Self {
         Window {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             namespace,
             name,
             parameters,
@@ -34,24 +31,17 @@ impl Window {
         &self.parameters
     }
 
-    // Helper for StreamHandlerTrait to return references
-    pub(super) fn get_parameters_ref(&self) -> Option<Vec<&Expression>> {
+    // Helper for StreamHandlerTrait's get_parameters_as_option_vec
+    pub(super) fn get_parameters_ref_internal(&self) -> Option<Vec<&Expression>> {
          if self.parameters.is_empty() {
-            None // Java getParameters can return null
+            None
         } else {
             Some(self.parameters.iter().collect())
         }
     }
 }
 
-impl SiddhiElement for Window {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
-
-// Extension trait implementation (conceptual)
+// Extension trait (conceptual)
 // pub trait Extension {
 //     fn get_namespace(&self) -> Option<&str>;
 //     fn get_name(&self) -> &str;

@@ -23,7 +23,7 @@ impl Default for Operator {
 // enum io_siddhi_query_api_expression_condition_Compare_Operator { ... }
 
 
-#[derive(Clone, Debug, PartialEq, Default)] // Added Default
+#[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Compare {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 

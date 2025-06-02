@@ -1,25 +1,37 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::expression::Variable; // For the constructor OutputAttribute(Variable)
+use crate::query_api::expression::Variable;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct OutputAttribute {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // OutputAttribute fields
-    pub rename: Option<String>, // In Java, rename is String, but can be null if created from Variable
+    pub rename: Option<String>,
+    // Expression cannot be Default easily, so OutputAttribute::default() will have a default Expression variant.
+    // This makes Default derive problematic if Expression itself is not Default.
+    // Let's assume Expression will have a usable default (e.g. Constant(Default)).
+    pub expression: Expression,
+}
+// Reconsidering Default for OutputAttribute: if Expression is not Default, this cannot be Default.
+// Expression enum does not have a Default derive.
+// So, OutputAttribute cannot derive Default.
+
+// Corrected structure:
+#[derive(Clone, Debug, PartialEq)]
+pub struct OutputAttribute {
+    pub siddhi_element: SiddhiElement,
+    pub rename: Option<String>,
     pub expression: Expression,
 }
 
 impl OutputAttribute {
     // Constructor for `OutputAttribute(String rename, Expression expression)`
-    pub fn new(rename: String, expression: Expression) -> Self {
+    // Making rename Option<String> as per prompt and current code.
+    pub fn new(rename: Option<String>, expression: Expression) -> Self {
         OutputAttribute {
-            query_context_start_index: None,
-            query_context_end_index: None,
-            rename: Some(rename),
+            siddhi_element: SiddhiElement::default(),
+            rename,
             expression,
         }
     }
@@ -27,17 +39,11 @@ impl OutputAttribute {
     // Constructor for `OutputAttribute(Variable variable)`
     pub fn new_from_variable(variable: Variable) -> Self {
         OutputAttribute {
-            query_context_start_index: None, // Variable itself will have context
-            query_context_end_index: None,
-            rename: Some(variable.attribute_name.clone()), // `rename` is the attribute name
-            expression: Expression::Variable(variable), // Expression is the variable itself
+            siddhi_element: SiddhiElement::default(), // Or copy from variable.siddhi_element?
+            rename: Some(variable.attribute_name.clone()),
+            expression: Expression::Variable(variable),
         }
     }
 }
 
-impl SiddhiElement for OutputAttribute {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// No Default derive.

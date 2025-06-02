@@ -3,82 +3,105 @@
 
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
-// BasicSingleInputStream for composition/delegation
 use crate::query_api::execution::query::input::stream::BasicSingleInputStream;
-// For InputStoreTrait
+use crate::query_api::execution::query::input::handler::StreamHandler; // For new_with_id constructor
 use super::input_store::InputStoreTrait;
 // For on() methods returning these types, which are then wrapped in InputStore enum
+// These will need to be refactored to compose SiddhiElement as well.
 use super::condition_input_store::ConditionInputStore;
 use super::aggregation_input_store::AggregationInputStore;
 
-// Placeholders for Within and Per, as they are complex types not yet fully defined.
-// use crate::query_api::aggregation::Within; // TODO: Define this
-// use crate::query_api::expression::Expression as PerExpression; // TODO: Confirm 'per' type
-type WithinPlaceholder = String;
-type PerExpressionPlaceholder = Expression;
+// Using Within from join_input_stream, assuming it's general enough.
+// Ideally, this would be `crate::query_api::aggregation::Within` if defined.
+use crate::query_api::execution::query::input::stream::join_input_stream::Within as WithinPlaceholder;
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Store {
     // Composes BasicSingleInputStream to inherit its stream-like properties
-    // (stream_id, stream_reference_id, handlers, etc.)
     pub basic_single_input_stream: BasicSingleInputStream,
-    // Store doesn't add new fields other than those inherited from BasicSingleInputStream
-    // and methods from InputStore.
+    // Store has its own SiddhiElement context, separate from BasicSingleInputStream's inner one.
+    // However, Java Store directly uses context of BasicSingleInputStream.
+    // Let's ensure `siddhi_element` is part of `Store` directly or consistently accessed.
+    // The current impl delegates SiddhiElement to basic_single_input_stream.
+    // If Store needs its *own* context distinct from the stream it represents,
+    // it would need its own `siddhi_element: SiddhiElement` field.
+    // For now, assuming it shares context with its BasicSingleInputStream representation.
+    // This means Store does not need its own siddhi_element field if BasicSingleInputStream has one.
+    // Let's verify BasicSingleInputStream: it has `pub inner: SingleInputStream`, and SingleInputStream has `siddhi_element`.
+    // So, Store effectively gets its context via `basic_single_input_stream.inner.siddhi_element`.
+    // The SiddhiElement impl for Store already delegates to basic_single_input_stream.
+    pub siddhi_element: SiddhiElement, // Store itself is a SiddhiElement
 }
 
 impl Store {
-    // Constructors from Java (protected, but used by InputStore.store() static methods)
-    pub(super) fn new_with_id(store_id: String) -> Self {
+    // Internal constructor, used by factories in InputStore enum.
+    // Made pub(super) in previous version, now pub for direct use if needed.
+    pub fn new_with_id(store_id: String) -> Self {
         Store {
-            // Create a BasicSingleInputStream with the store_id. No reference_id by default.
-            // No handlers initially for a plain store reference.
+            siddhi_element: SiddhiElement::default(),
             basic_single_input_stream: BasicSingleInputStream::new(store_id, false, false, None, Vec::new()),
         }
     }
 
-    pub(super) fn new_with_ref(store_reference_id: String, store_id: String) -> Self {
+    pub fn new_with_ref(store_reference_id: String, store_id: String) -> Self {
         Store {
+            siddhi_element: SiddhiElement::default(),
             basic_single_input_stream: BasicSingleInputStream::new(store_id, false, false, Some(store_reference_id), Vec::new()),
         }
     }
 
+    // Constructor from prompt: `new(store_id: String, on_condition: Option<Expression>)`
+    // This seems to conflate Store with ConditionInputStore.
+    // Java Store is just an ID; conditions are applied via `.on()`.
+    // Sticking to Java structure: Store itself doesn't take on_condition in constructor.
+
     // Methods corresponding to `on(Expression)` and `on(Within, Per)`
     // These return concrete types which can then be wrapped by the InputStore enum.
     pub fn on_condition(self, on_condition: Expression) -> ConditionInputStore {
-        ConditionInputStore::new(self, on_condition)
+        // ConditionInputStore would take `self` (a Store instance) and the condition.
+        ConditionInputStore::new(self, on_condition) // Assumes ConditionInputStore::new is defined
     }
 
     pub fn on_aggregation_condition(
         self,
         on_condition: Expression,
-        within: WithinPlaceholder, // TODO: Replace with actual Within type
-        per: PerExpressionPlaceholder // TODO: Replace with actual Per type
+        within: WithinPlaceholder,
+        per: Expression
     ) -> AggregationInputStore {
-        AggregationInputStore::new_with_condition(self, on_condition, within, per)
+        AggregationInputStore::new_with_condition(self, on_condition, within, per)  // Assumes constructor exists
     }
 
     pub fn on_aggregation_only(
         self,
-        within: WithinPlaceholder, // TODO: Replace with actual Within type
-        per: PerExpressionPlaceholder // TODO: Replace with actual Per type
+        within: WithinPlaceholder,
+        per: Expression
     ) -> AggregationInputStore {
-        AggregationInputStore::new_no_condition(self, within, per)
+        AggregationInputStore::new_no_condition(self, within, per) // Assumes constructor exists
     }
-
 }
 
-// Implement SiddhiElement by delegating to BasicSingleInputStream
+// Implement SiddhiElement for Store.
+// It should have its own context, separate from the BasicSingleInputStream it composes if it's a distinct element.
+// Java's Store extends BasicSingleInputStream, so it *is* a BasicSingleInputStream and shares its context.
+// Our BasicSingleInputStream gets context via its `inner: SingleInputStream`.
+// The previous SiddhiElement impl for Store delegated to basic_single_input_stream.
+// If Store itself is a SiddhiElement, it should use its own `siddhi_element` field.
+// The prompt's example for `StoreQuery` has `element: SiddhiElement`, implying StoreQuery is the element,
+// not necessarily the `Store` struct itself if `Store` is just an ID wrapper.
+// Let's assume `Store` itself needs to be a `SiddhiElement`.
+
 impl SiddhiElement for Store {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.basic_single_input_stream.query_context_start_index() }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.basic_single_input_stream.set_query_context_start_index(index); }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.basic_single_input_stream.query_context_end_index() }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.basic_single_input_stream.set_query_context_end_index(index); }
+    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_start_index }
+    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_start_index = index; }
+    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_end_index }
+    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_end_index = index; }
 }
 
 // Implement InputStoreTrait
 impl InputStoreTrait for Store {
     fn get_store_id(&self) -> &str {
+        // The ID of the store is the stream_id of the composed BasicSingleInputStream
         self.basic_single_input_stream.inner.get_stream_id_str()
     }
 
@@ -88,12 +111,10 @@ impl InputStoreTrait for Store {
 }
 
 // Delegate stream-like methods (filter, function, window, as) to BasicSingleInputStream
-// This allows Store to be used like a stream before specifying `on` conditions.
 impl Store {
      pub fn filter(mut self, filter_expression: Expression) -> Self {
         self.basic_single_input_stream = self.basic_single_input_stream.filter(filter_expression);
         self
     }
-
-    // Add other delegated methods from BasicSingleInputStream as needed (function, window, as_ref)
+    // TODO: Add other delegated methods: function, window, as_ref from BasicSingleInputStream
 }

@@ -3,26 +3,23 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct StreamFunction {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // Extension fields
-    pub namespace: Option<String>, // Changed from String to Option for empty namespace
-    pub name: String, // 'function' in Java
+    pub namespace: Option<String>,
+    pub name: String, // 'function' in Java, but 'name' is more generic for Extension trait
 
     // StreamFunction specific fields
     pub parameters: Vec<Expression>,
 }
 
 impl StreamFunction {
-    // Constructor matching common usage, assuming default namespace if not provided.
-    pub fn new(namespace: Option<String>, name: String, parameters: Vec<Expression>) -> Self {
+    // Constructor requires name. Namespace and parameters can be defaulted.
+    pub fn new(name: String, namespace: Option<String>, parameters: Vec<Expression>) -> Self {
         StreamFunction {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             namespace,
             name,
             parameters,
@@ -30,29 +27,21 @@ impl StreamFunction {
     }
 
     // Corresponds to getParameters()
-    pub fn get_parameters(&self) -> &[Expression] { // Returning a slice
+    pub fn get_parameters(&self) -> &[Expression] {
         &self.parameters
     }
 
-    // Helper for StreamHandlerTrait to return references
-    pub(super) fn get_parameters_ref(&self) -> Option<Vec<&Expression>> {
+    // Helper for StreamHandlerTrait's get_parameters_as_option_vec
+    pub(super) fn get_parameters_ref_internal(&self) -> Option<Vec<&Expression>> {
         if self.parameters.is_empty() {
-            None // Java returns null for empty parameters in some contexts
+            None
         } else {
             Some(self.parameters.iter().collect())
         }
     }
 }
 
-impl SiddhiElement for StreamFunction {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
-
-// Extension trait implementation (conceptual)
-// In Rust, traits are used for shared behavior. If `Extension` was a trait:
+// Extension trait (conceptual)
 // pub trait Extension {
 //     fn get_namespace(&self) -> Option<&str>;
 //     fn get_name(&self) -> &str;
@@ -61,4 +50,3 @@ impl SiddhiElement for StreamFunction {
 //     fn get_namespace(&self) -> Option<&str> { self.namespace.as_deref() }
 //     fn get_name(&self) -> &str { &self.name }
 // }
-// For now, fields are public.

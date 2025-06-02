@@ -13,67 +13,55 @@ use super::stream_state_element::StreamStateElement;
 #[derive(Clone, Debug, PartialEq)]
 pub enum StateElement {
     Stream(StreamStateElement),
-    AbsentStream(AbsentStreamStateElement), // Derived from logicalNot in State.java
-    Logical(LogicalStateElement),
-    Next(Box<NextStateElement>),     // Boxed for recursive definition
-    Count(CountStateElement),        // CountStateElement itself contains a StreamStateElement
-    Every(Box<EveryStateElement>),   // Boxed for recursive definition
+    AbsentStream(AbsentStreamStateElement),
+    Logical(LogicalStateElement), // Contains Box<StateElement> internally for its operands
+    Next(Box<NextStateElement>),
+    Count(CountStateElement), // Contains Box<StreamStateElement> internally
+    Every(Box<EveryStateElement>),
 }
 
-// Implement SiddhiElement for the enum by dispatching to variants
+// Implement SiddhiElement for the enum by dispatching to variants' composed siddhi_element field
+impl StateElement {
+    fn siddhi_element_ref(&self) -> &SiddhiElement {
+        match self {
+            StateElement::Stream(s) => &s.siddhi_element,
+            StateElement::AbsentStream(a) => &a.siddhi_element,
+            StateElement::Logical(l) => &l.siddhi_element,
+            StateElement::Next(n) => &n.siddhi_element,
+            StateElement::Count(c) => &c.siddhi_element,
+            StateElement::Every(e) => &e.siddhi_element,
+        }
+    }
+
+    fn siddhi_element_mut_ref(&mut self) -> &mut SiddhiElement {
+        match self {
+            StateElement::Stream(s) => &mut s.siddhi_element,
+            StateElement::AbsentStream(a) => &mut a.siddhi_element,
+            StateElement::Logical(l) => &mut l.siddhi_element,
+            StateElement::Next(n) => &mut n.siddhi_element,
+            StateElement::Count(c) => &mut c.siddhi_element,
+            StateElement::Every(e) => &mut e.siddhi_element,
+        }
+    }
+}
+
 impl SiddhiElement for StateElement {
     fn query_context_start_index(&self) -> Option<(i32, i32)> {
-        match self {
-            StateElement::Stream(s) => s.query_context_start_index(),
-            StateElement::AbsentStream(a) => a.query_context_start_index(),
-            StateElement::Logical(l) => l.query_context_start_index(),
-            StateElement::Next(n) => n.query_context_start_index(),
-            StateElement::Count(c) => c.query_context_start_index(),
-            StateElement::Every(e) => e.query_context_start_index(),
-        }
+        self.siddhi_element_ref().query_context_start_index
     }
 
     fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        match self {
-            StateElement::Stream(s) => s.set_query_context_start_index(index),
-            StateElement::AbsentStream(a) => a.set_query_context_start_index(index),
-            StateElement::Logical(l) => l.set_query_context_start_index(index),
-            StateElement::Next(n) => n.set_query_context_start_index(index),
-            StateElement::Count(c) => c.set_query_context_start_index(index),
-            StateElement::Every(e) => e.set_query_context_start_index(index),
-        }
+        self.siddhi_element_mut_ref().query_context_start_index = index;
     }
 
     fn query_context_end_index(&self) -> Option<(i32, i32)> {
-        match self {
-            StateElement::Stream(s) => s.query_context_end_index(),
-            StateElement::AbsentStream(a) => a.query_context_end_index(),
-            StateElement::Logical(l) => l.query_context_end_index(),
-            StateElement::Next(n) => n.query_context_end_index(),
-            StateElement::Count(c) => c.query_context_end_index(),
-            StateElement::Every(e) => e.query_context_end_index(),
-        }
+        self.siddhi_element_ref().query_context_end_index
     }
 
     fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        match self {
-            StateElement::Stream(s) => s.set_query_context_end_index(index),
-            StateElement::AbsentStream(a) => a.set_query_context_end_index(index),
-            StateElement::Logical(l) => l.set_query_context_end_index(index),
-            StateElement::Next(n) => n.set_query_context_end_index(index),
-            StateElement::Count(c) => c.set_query_context_end_index(index),
-            StateElement::Every(e) => e.set_query_context_end_index(index),
-        }
+        self.siddhi_element_mut_ref().query_context_end_index = index;
     }
 }
 
-// Placeholder method for StreamStateElement to use in StateInputStream
-// This is a bit of a hack due to module organization. Ideally, StreamStateElement would provide this.
-impl StreamStateElement {
-    pub(crate) fn get_stream_id_placeholder(&self) -> String {
-        // This needs access to BasicSingleInputStream's stream_id
-        // For now, returning a placeholder.
-        // In a real implementation, this would properly access the ID.
-        self.basic_single_input_stream.inner.get_stream_id_str().to_string()
-    }
-}
+// Removed placeholder: impl StreamStateElement { pub(crate) fn get_stream_id_placeholder(&self) -> String }
+// This functionality should be part of StreamStateElement's own API if needed by other modules.

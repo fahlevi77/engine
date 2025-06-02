@@ -1,18 +1,11 @@
 // Corresponds to io.siddhi.query.api.definition.AggregationDefinition
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
 use crate::query_api::annotation::Annotation;
-use crate::query_api::execution::query::input::stream::BasicSingleInputStream;
+// BasicSingleInputStream was merged into SingleInputStream; AggregationDefinition should use SingleInputStream.
+use crate::query_api::execution::query::input::stream::SingleInputStream;
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::expression::Variable;
-
-// Placeholder for TimePeriod until its module (aggregation) is defined
-// This would ideally be: use crate::query_api::aggregation::TimePeriod;
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct TimePeriod { /* TODO: Define fields based on Java's TimePeriod */
-    // Example: pub duration: Option<crate::query_api::expression::Expression>, or specific like Seconds(u64), etc.
-    // For now, keeping it simple as it's a placeholder.
-    pub value: String, // Simplified placeholder
-}
+use crate::query_api::aggregation::TimePeriod; // Using actual TimePeriod
 
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
@@ -21,7 +14,7 @@ pub struct AggregationDefinition {
     pub abstract_definition: AbstractDefinition,
 
     // Fields specific to AggregationDefinition
-    pub basic_single_input_stream: Option<BasicSingleInputStream>,
+    pub basic_single_input_stream: Option<SingleInputStream>, // Changed from BasicSingleInputStream
     pub selector: Option<Selector>, // In Java, it's Selector, not BasicSelector for the field type
     pub aggregate_attribute: Option<Variable>, // This is 'aggregateBy' in Java
     pub time_period: Option<TimePeriod>,     // This is 'every' in Java
@@ -47,7 +40,7 @@ impl AggregationDefinition {
     }
 
     // Builder-style methods from Java
-    pub fn from(mut self, stream: BasicSingleInputStream) -> Self {
+    pub fn from(mut self, stream: SingleInputStream) -> Self { // Changed from BasicSingleInputStream
         self.basic_single_input_stream = Some(stream);
         self
     }

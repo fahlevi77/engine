@@ -2,7 +2,7 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression; // Main Expression enum
 
-#[derive(Clone, Debug, PartialEq, Default)] // Added Default
+#[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Subtract {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 

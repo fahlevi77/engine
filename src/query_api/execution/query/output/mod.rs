@@ -1,9 +1,9 @@
 pub mod ratelimit;
-pub mod output_stream;
-// The `stream` module for specific actions like InsertIntoStreamAction was not created in this subtask.
-// It would be `pub mod stream;` and `pub use self::stream::*;` if it existed.
+pub mod output_stream; // Defines the main OutputStream enum (wrapping actions) and OutputEventType
+pub mod stream; // Added this module for specific stream actions like SetAttribute
 
-// Re-exporting from output_stream.rs (which contains the main OutputStream enum and OutputEventType)
-pub use self::output_stream::{OutputStream, OutputEventType, SetAttributePlaceholder}; // Added SetAttributePlaceholder
-// Re-exporting from the ratelimit module
+pub use self::output_stream::{OutputStream, OutputEventType};
+// SetAttributePlaceholder was removed from output_stream.rs. SetAttribute is now re-exported below.
+
 pub use self::ratelimit::{OutputRate, OutputRateVariant, OutputRateBehavior, EventsOutputRate, TimeOutputRate, SnapshotOutputRate};
+pub use self::stream::{SetAttribute, UpdateSet}; // Re-exporting SetAttribute and UpdateSet

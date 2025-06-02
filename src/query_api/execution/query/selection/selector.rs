@@ -1,15 +1,14 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use super::output_attribute::OutputAttribute;
-use super::order_by_attribute::{OrderByAttribute, Order as OrderByOrder}; // Renamed to avoid conflict
-use crate::query_api::expression::Variable; // Corrected path
+use super::order_by_attribute::{OrderByAttribute, Order as OrderByOrder};
+use crate::query_api::expression::Variable;
 use crate::query_api::expression::Expression;
-use crate::query_api::expression::constant::Constant; // Path to the unified Constant struct
+use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
 
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Clone, Debug, PartialEq)] // Default is implemented manually
 pub struct Selector {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // Selector fields
     pub selection_list: Vec<OutputAttribute>,
@@ -21,11 +20,9 @@ pub struct Selector {
 }
 
 impl Selector {
-    // Default constructor, matches `new Selector()` in Java
     pub fn new() -> Self {
         Selector {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             selection_list: Vec::new(),
             group_by_list: Vec::new(),
             having_expression: None,
@@ -43,7 +40,7 @@ impl Selector {
     // Builder methods
     pub fn select(mut self, rename: String, expression: Expression) -> Self {
         // TODO: Add checkSelection logic from Java (duplicate rename check)
-        self.selection_list.push(OutputAttribute::new(rename, expression));
+        self.selection_list.push(OutputAttribute::new(Some(rename), expression)); // rename is Option<String>
         self
     }
 
@@ -89,21 +86,24 @@ impl Selector {
         self
     }
 
-    pub fn limit(mut self, constant: Constant) -> Self {
-        // TODO: Add type check from Java (IntConstant or LongConstant)
-        // This requires ConstantValue enum to be accessible.
-        // match constant.value {
-        //     ConstantValue::Int(_) | ConstantValue::Long(_) => self.limit = Some(constant),
-        //     _ => panic!("'limit' only supports int or long constants"),
-        // }
-        self.limit = Some(constant); // Simplified for now
-        self
+    pub fn limit(mut self, constant: Constant) -> Result<Self, String> {
+        match constant.value {
+            ConstantValue::Int(_) | ConstantValue::Long(_) => {
+                self.limit = Some(constant);
+                Ok(self)
+            }
+            _ => Err("'limit' only supports int or long constants".to_string()),
+        }
     }
 
-    pub fn offset(mut self, constant: Constant) -> Self {
-        // TODO: Add type check similar to limit
-        self.offset = Some(constant); // Simplified for now
-        self
+    pub fn offset(mut self, constant: Constant) -> Result<Self, String> {
+        match constant.value {
+            ConstantValue::Int(_) | ConstantValue::Long(_) => {
+                self.offset = Some(constant);
+                Ok(self)
+            }
+            _ => Err("'offset' only supports int or long constants".to_string()),
+        }
     }
 }
 
@@ -113,9 +113,4 @@ impl Default for Selector {
     }
 }
 
-impl SiddhiElement for Selector {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// SiddhiElement is composed. Access via self.siddhi_element.

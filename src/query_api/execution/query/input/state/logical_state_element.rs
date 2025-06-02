@@ -1,38 +1,36 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.LogicalStateElement
 use crate::query_api::siddhi_element::SiddhiElement;
-// Changed from StreamStateElement to StateElement to allow combining, e.g., an absent stream and a regular stream.
 use super::state_element::StateElement;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Type {
     And,
     Or,
+    // NOT is not part of Java's LogicalStateElement.Type; it's handled by AbsentStreamStateElement.
 }
 
-#[derive(Clone, Debug, PartialEq)]
+impl Default for Type {
+    fn default() -> Self { Type::And } // Defaulting to AND
+}
+
+#[derive(Clone, Debug, PartialEq)] // Default is complex due to Box<StateElement>
 pub struct LogicalStateElement {
-    // SiddhiElement fields
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // LogicalStateElement fields
-    // These fields now take Box<StateElement> to allow different kinds of elements
-    // (e.g. StreamStateElement or AbsentStreamStateElement) to be combined.
-    // The StateElement should be a variant that represents a single effective stream.
     pub stream_state_element_1: Box<StateElement>,
     pub logical_type: Type,
-    pub stream_state_element_2: Box<StateElement>,
+    pub stream_state_element_2: Box<StateElement>, // Kept as required, not Option
 }
 
 impl LogicalStateElement {
     pub fn new(
-        sse1: StateElement, // Changed from StreamStateElement
+        sse1: StateElement,
         logical_type: Type,
-        sse2: StateElement, // Changed from StreamStateElement
+        sse2: StateElement,
     ) -> Self {
-        // Add validation: sse1 and sse2 should be 'single stream' effective states
-        // (e.g., StateElement::Stream, StateElement::AbsentStream).
-        // They should not be complex states like Next, Every, Count, or another Logical.
+        // Validation from previous step is good:
+        // Ensure sse1 and sse2 are variants that represent a single effective stream.
         match sse1 {
             StateElement::Stream(_) | StateElement::AbsentStream(_) => {},
             _ => panic!("LogicalStateElement operand 1 must be a Stream or AbsentStream type StateElement"),
@@ -43,8 +41,7 @@ impl LogicalStateElement {
         }
 
         LogicalStateElement {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             stream_state_element_1: Box::new(sse1),
             logical_type,
             stream_state_element_2: Box::new(sse2),
@@ -52,9 +49,19 @@ impl LogicalStateElement {
     }
 }
 
-impl SiddhiElement for LogicalStateElement {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// Custom Default implementation because Box<StateElement> requires StateElement to be Default,
+// which is tricky for enums with non-defaultable variants or recursive structures.
+// A truly useful Default for LogicalStateElement is unlikely without specific default StateElements.
+// For now, omitting Default derive and custom impl unless a clear default pattern emerges for StateElement.
+// If StateElement had a simple Default (e.g. StateElement::Stream(StreamStateElement::default())),
+// then this could be:
+// impl Default for LogicalStateElement {
+//     fn default() -> Self {
+//         Self {
+//             siddhi_element: SiddhiElement::default(),
+//             stream_state_element_1: Box::new(StateElement::default()), // Requires StateElement::default()
+//             logical_type: Type::default(),
+//             stream_state_element_2: Box::new(StateElement::default()), // Requires StateElement::default()
+//         }
+//     }
+// }

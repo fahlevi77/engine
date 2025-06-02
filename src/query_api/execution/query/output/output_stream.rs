@@ -1,72 +1,56 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use super::stream::{SetAttribute, UpdateSet}; // Using UpdateSet
 
-// Placeholder for SetAttribute, which is part of Update and UpdateOrInsert queries
-// This should eventually be moved to a more appropriate module if it's a standalone concept,
-// or be part of the specific action structs.
-#[derive(Clone, Debug, PartialEq)]
-pub struct SetAttributePlaceholder {
-    pub table_column: String, // Or Variable
-    pub value_to_set: Expression,
-}
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Copy
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub enum OutputEventType {
     ExpiredEvents,
     CurrentEvents,
     AllEvents,
     AllRawEvents,
-    ExpiredRawEvents, // Added from Java enum
+    ExpiredRawEvents,
 }
 
 impl Default for OutputEventType {
-    fn default() -> Self {
-        // As per Java's Query.outputStream default (ReturnStream with CURRENT_EVENTS)
-        // and updateOutputEventType logic.
-        OutputEventType::CurrentEvents
-    }
+    fn default() -> Self { OutputEventType::CurrentEvents }
 }
 
-// Structs for each specific output stream action, mirroring Java subclasses of OutputStream
-#[derive(Clone, Debug, PartialEq)]
+// Action Structs: These do not compose SiddhiElement directly.
+// The outer OutputStream struct holds the context.
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct InsertIntoStreamAction {
-    pub target_id: String,
-    pub is_inner_stream: bool, // Specific to InsertIntoStream in Java
-    pub is_fault_stream: bool, // Specific to InsertIntoStream in Java
-    // output_event_type is managed by the outer OutputStream struct
+    pub target_id: String, // Default::default() for String is empty
+    pub is_inner_stream: bool,
+    pub is_fault_stream: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct ReturnStreamAction {
-    // No specific fields, type itself defines the action.
-    // output_event_type is managed by the outer OutputStream struct
+    // No fields
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default removed (due to Expression)
 pub struct DeleteStreamAction {
     pub target_id: String,
     pub on_delete_expression: Expression,
-    // output_event_type is managed by the outer OutputStream struct
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default removed (due to Expression, SetAttribute)
 pub struct UpdateStreamAction {
     pub target_id: String,
-    pub on_update_expression: Expression,
-    pub update_set_attributes: Option<Vec<SetAttributePlaceholder>>, // Corresponds to UpdateSet
-    // output_event_type is managed by the outer OutputStream struct
+    pub on_update_expression: Expression, // This is the 'ON' condition for the update
+    pub update_set_clause: Option<UpdateSet>,      // This holds the SET assignments
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)] // Default removed (due to Expression, SetAttribute)
 pub struct UpdateOrInsertStreamAction {
     pub target_id: String,
-    pub on_update_expression: Expression,
-    pub update_set_attributes: Option<Vec<SetAttributePlaceholder>>, // Corresponds to UpdateSet
-    // output_event_type is managed by the outer OutputStream struct
+    pub on_update_expression: Expression,  // This is the 'ON' condition
+    pub update_set_clause: Option<UpdateSet>,       // This holds the SET assignments
 }
 
 
-// Enum to represent the different types of output actions.
 #[derive(Clone, Debug, PartialEq)]
 pub enum OutputStreamAction {
     InsertInto(InsertIntoStreamAction),
@@ -76,36 +60,38 @@ pub enum OutputStreamAction {
     UpdateOrInsert(UpdateOrInsertStreamAction),
 }
 
-// The main OutputStream struct, which wraps an action and common properties.
-#[derive(Clone, Debug, PartialEq)]
+impl Default for OutputStreamAction {
+    fn default() -> Self {
+        OutputStreamAction::Return(ReturnStreamAction::default())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct OutputStream {
-    pub query_context_start_index: Option<(i32, i32)>,
-    pub query_context_end_index: Option<(i32, i32)>,
+    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     pub action: OutputStreamAction,
-    pub output_event_type: Option<OutputEventType>, // Common to all, but can be set by Query logic
+    pub output_event_type: Option<OutputEventType>,
 }
 
 impl OutputStream {
-    // Constructor for a specific action
     pub fn new(action: OutputStreamAction, initial_event_type: Option<OutputEventType>) -> Self {
         OutputStream {
-            query_context_start_index: None,
-            query_context_end_index: None,
+            siddhi_element: SiddhiElement::default(),
             action,
-            output_event_type: initial_event_type,
+            // Defaulting to CurrentEvents if None, as per Java logic in Query/OnDemandQuery
+            output_event_type: initial_event_type.or(Some(OutputEventType::default())),
         }
     }
 
-    // Helper for default Query constructor (ReturnStream with CURRENT_EVENTS)
     pub fn default_return_stream() -> Self {
-        Self::new(
-            OutputStreamAction::Return(ReturnStreamAction {}),
-            Some(OutputEventType::CurrentEvents)
-        )
+        Self {
+            siddhi_element: SiddhiElement::default(),
+            action: OutputStreamAction::Return(ReturnStreamAction::default()),
+            output_event_type: Some(OutputEventType::CurrentEvents),
+        }
     }
 
-    // Getters and setters from Java's OutputStream
     pub fn get_target_id(&self) -> Option<&str> {
         match &self.action {
             OutputStreamAction::InsertInto(a) => Some(&a.target_id),
@@ -131,9 +117,8 @@ impl OutputStream {
     }
 }
 
-impl SiddhiElement for OutputStream {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// SiddhiElement is composed. Access via self.siddhi_element.
+// If OutputStream needed to be passed as `dyn SiddhiElement`:
+// impl SiddhiElement for OutputStream { ... delegate to self.siddhi_element ... }
+// However, the main Query/OnDemandQuery structs compose SiddhiElement themselves,
+// and OutputStream is a field. So direct composition and access is likely intended.

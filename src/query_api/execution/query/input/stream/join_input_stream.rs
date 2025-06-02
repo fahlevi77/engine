@@ -3,16 +3,7 @@ use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 use super::single_input_stream::SingleInputStream;
 use super::input_stream::InputStreamTrait;
-
-// Placeholder for Within (io.siddhi.query.api.aggregation.Within)
-// This would ideally be defined in its own module: crate::query_api::aggregation::Within
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct Within {
-    // Define fields based on Java's Within: TimeRange or Expression
-    // For now, a simple placeholder:
-    pub time_range_start: Option<Expression>, // Simplified
-    pub time_range_end: Option<Expression>,   // Simplified
-}
+use crate::query_api::aggregation::Within; // Using the actual Within struct
 
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
@@ -49,7 +40,7 @@ pub struct JoinInputStream {
     pub on_compare: Option<Expression>,
 
     pub trigger: EventTrigger,
-    pub within: Option<Within>, // Using the placeholder Within struct
+    pub within: Option<Within>, // Using the actual Within struct
     pub per: Option<Expression>,
 }
 
@@ -60,7 +51,7 @@ impl JoinInputStream {
         right_input_stream: SingleInputStream,
         on_compare: Option<Expression>,
         trigger: EventTrigger,
-        within: Option<Within>,
+        within: Option<Within>, // Using the actual Within struct
         per: Option<Expression>,
     ) -> Self {
         JoinInputStream {
