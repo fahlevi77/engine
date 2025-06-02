@@ -1,0 +1,102 @@
+// Corresponds to io.siddhi.query.api.definition.AggregationDefinition
+use crate::query_api::definition::abstract_definition::AbstractDefinition;
+use crate::query_api::annotation::Annotation;
+use crate::query_api::execution::query::input::stream::BasicSingleInputStream;
+use crate::query_api::execution::query::selection::Selector;
+use crate::query_api::expression::Variable;
+
+// Placeholder for TimePeriod until its module (aggregation) is defined
+// This would ideally be: use crate::query_api::aggregation::TimePeriod;
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct TimePeriod { /* TODO: Define fields based on Java's TimePeriod */
+    // Example: pub duration: Option<crate::query_api::expression::Expression>, or specific like Seconds(u64), etc.
+    // For now, keeping it simple as it's a placeholder.
+    pub value: String, // Simplified placeholder
+}
+
+
+#[derive(Clone, Debug, PartialEq, Default)] // Added Default
+pub struct AggregationDefinition {
+    // Composition for inheritance from AbstractDefinition
+    pub abstract_definition: AbstractDefinition,
+
+    // Fields specific to AggregationDefinition
+    pub basic_single_input_stream: Option<BasicSingleInputStream>,
+    pub selector: Option<Selector>, // In Java, it's Selector, not BasicSelector for the field type
+    pub aggregate_attribute: Option<Variable>, // This is 'aggregateBy' in Java
+    pub time_period: Option<TimePeriod>,     // This is 'every' in Java
+
+    // annotations are in AbstractDefinition
+}
+
+impl AggregationDefinition {
+    // Constructor that takes an id, as per Java's `AggregationDefinition.id(aggregationName)`
+    pub fn new(id: String) -> Self {
+        AggregationDefinition {
+            abstract_definition: AbstractDefinition::new(id),
+            basic_single_input_stream: None,
+            selector: None, // Java initializes selector to null
+            aggregate_attribute: None,
+            time_period: None,
+        }
+    }
+
+    // Static factory `id` from Java
+    pub fn id(aggregation_name: String) -> Self {
+        Self::new(aggregation_name)
+    }
+
+    // Builder-style methods from Java
+    pub fn from(mut self, stream: BasicSingleInputStream) -> Self {
+        self.basic_single_input_stream = Some(stream);
+        self
+    }
+
+    // In Java, select takes BasicSelector, but field is Selector.
+    // Using Selector type here.
+    pub fn select(mut self, selector: Selector) -> Self {
+        self.selector = Some(selector);
+        self
+    }
+
+    pub fn aggregate_by(mut self, var: Variable) -> Self {
+        self.aggregate_attribute = Some(var);
+        self
+    }
+
+    pub fn every(mut self, period: TimePeriod) -> Self {
+        self.time_period = Some(period);
+        self
+    }
+
+    pub fn annotation(mut self, annotation: Annotation) -> Self {
+        self.abstract_definition.annotations.push(annotation);
+        self
+    }
+}
+
+// Provide access to AbstractDefinition fields and SiddhiElement fields
+impl AsRef<AbstractDefinition> for AggregationDefinition {
+    fn as_ref(&self) -> &AbstractDefinition {
+        &self.abstract_definition
+    }
+}
+
+impl AsMut<AbstractDefinition> for AggregationDefinition {
+    fn as_mut(&mut self) -> &mut AbstractDefinition {
+        &mut self.abstract_definition
+    }
+}
+
+use crate::query_api::siddhi_element::SiddhiElement;
+impl AsRef<SiddhiElement> for AggregationDefinition {
+    fn as_ref(&self) -> &SiddhiElement {
+        self.abstract_definition.as_ref()
+    }
+}
+
+impl AsMut<SiddhiElement> for AggregationDefinition {
+    fn as_mut(&mut self) -> &mut SiddhiElement {
+        self.abstract_definition.as_mut()
+    }
+}

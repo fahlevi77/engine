@@ -1,0 +1,88 @@
+// Corresponds to io.siddhi.query.api.definition.WindowDefinition
+use crate::query_api::definition::stream_definition::StreamDefinition;
+use crate::query_api::execution::query::input::handler::Window as WindowHandler; // Actual Window handler type
+use crate::query_api::execution::query::output::OutputEventType; // Actual OutputEventType enum
+
+#[derive(Clone, Debug, PartialEq)] // Default will be custom due to nested StreamDefinition
+pub struct WindowDefinition {
+    // Composition for inheritance from StreamDefinition
+    pub stream_definition: StreamDefinition,
+
+    // Fields specific to WindowDefinition
+    pub window_handler: Option<WindowHandler>, // Renamed from 'window' or 'window_placeholder'
+    pub output_event_type: OutputEventType, // Replaced placeholder, Java default is ALL_EVENTS
+}
+
+impl WindowDefinition {
+    pub fn new(id: String) -> Self {
+        WindowDefinition {
+            stream_definition: StreamDefinition::new(id),
+            window_handler: None,
+            output_event_type: OutputEventType::AllEvents, // Default in Java
+        }
+    }
+
+    // Static factory `id` from Java
+    pub fn id(window_id: String) -> Self {
+        Self::new(window_id)
+    }
+
+    // Builder method to set the window handler (fluent style)
+    pub fn window(mut self, window_handler: WindowHandler) -> Self {
+        self.window_handler = Some(window_handler);
+        self
+    }
+
+    // Builder method to set output event type (fluent style)
+    // Java uses `setOutputEventType`, this makes it builder style.
+    pub fn output_event_type(mut self, event_type: OutputEventType) -> Self {
+       self.output_event_type = event_type;
+       self
+    }
+}
+
+// Custom Default implementation if needed, or ensure StreamDefinition::default() is sensible.
+// If StreamDefinition requires an ID, WindowDefinition cannot have a simple Default.
+// Let's assume for now that an ID-less StreamDefinition is not typical for a Default.
+// impl Default for WindowDefinition { ... }
+
+
+// Provide access to StreamDefinition, AbstractDefinition, and SiddhiElement fields
+use crate::query_api::definition::abstract_definition::AbstractDefinition;
+use crate::query_api::siddhi_element::SiddhiElement;
+
+impl AsRef<StreamDefinition> for WindowDefinition {
+    fn as_ref(&self) -> &StreamDefinition {
+        &self.stream_definition
+    }
+}
+
+impl AsMut<StreamDefinition> for WindowDefinition {
+    fn as_mut(&mut self) -> &mut StreamDefinition {
+        &mut self.stream_definition
+    }
+}
+
+impl AsRef<AbstractDefinition> for WindowDefinition {
+    fn as_ref(&self) -> &AbstractDefinition {
+        self.stream_definition.as_ref()
+    }
+}
+
+impl AsMut<AbstractDefinition> for WindowDefinition {
+    fn as_mut(&mut self) -> &mut AbstractDefinition {
+        self.stream_definition.as_mut()
+    }
+}
+
+impl AsRef<SiddhiElement> for WindowDefinition {
+    fn as_ref(&self) -> &SiddhiElement {
+        self.stream_definition.as_ref().as_ref()
+    }
+}
+
+impl AsMut<SiddhiElement> for WindowDefinition {
+    fn as_mut(&mut self) -> &mut SiddhiElement {
+        self.stream_definition.as_mut().as_mut()
+    }
+}
