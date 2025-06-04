@@ -51,7 +51,48 @@ impl SiddhiQueryContext {
     //     self.siddhi_app_context.get_siddhi_context()
     // }
 
-    // ... other getters and setters for name, partitioned, output_event_type, etc. ...
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    pub fn is_partitioned(&self) -> bool {
+        self.partitioned
+    }
+
+    pub fn set_partitioned(&mut self, partitioned: bool) {
+        self.partitioned = partitioned;
+    }
+
+    pub fn get_output_event_type(&self) -> Option<OutputEventType> {
+        self.output_event_type.clone()
+    }
+
+    pub fn set_output_event_type(&mut self, output_event_type: OutputEventType) {
+        self.output_event_type = Some(output_event_type);
+    }
+
+    pub fn get_latency_tracker(&self) -> Option<&LatencyTrackerPlaceholder> {
+        self.latency_tracker.as_ref()
+    }
+
+    pub fn set_latency_tracker(&mut self, tracker: LatencyTrackerPlaceholder) {
+        self.latency_tracker = Some(tracker);
+    }
+
+    pub fn generate_new_id(&mut self) -> String {
+        // In Java this delegates to IdGenerator.createNewId()
+        // Here we mimic by returning a placeholder UUID
+        use uuid::Uuid;
+        Uuid::new_v4().to_string()
+    }
+
+    pub fn is_stateful(&self) -> bool {
+        self.stateful
+    }
 
     // TODO: Implement generateStateHolder methods (these are complex and involve SnapshotService, StateFactory etc.)
 }

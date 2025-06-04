@@ -2,8 +2,10 @@
 use std::sync::Arc;
 use std::collections::HashMap; // For scriptFunctionMap
 use crate::query_api::SiddhiApp; // From query_api
+use std::cell::RefCell;
 use super::siddhi_context::SiddhiContext;
 use crate::core::util::executor_service::ExecutorServicePlaceholder;
+use std::thread_local;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
 // use super::snapshot_service::SnapshotService; // TODO: Define later
@@ -29,6 +31,11 @@ use crate::core::util::executor_service::ExecutorServicePlaceholder;
 #[derive(Debug, Clone, Default)] pub struct DisruptorExceptionHandlerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ExceptionListenerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ScheduledExecutorServicePlaceholder {} // For scheduledExecutorService
+
+thread_local! {
+    static GROUP_BY_KEY: RefCell<Option<String>> = RefCell::new(None);
+    static PARTITION_KEY: RefCell<Option<String>> = RefCell::new(None);
+}
 
 
 // Placeholder for stats Level enum
@@ -82,6 +89,37 @@ pub struct SiddhiAppContext {
 }
 
 impl SiddhiAppContext {
+    // ---- Static flow utilities ----
+    pub fn start_group_by_flow(key: String) {
+        GROUP_BY_KEY.with(|k| *k.borrow_mut() = Some(key));
+    }
+
+    pub fn stop_group_by_flow() {
+        GROUP_BY_KEY.with(|k| *k.borrow_mut() = None);
+    }
+
+    pub fn start_partition_flow(key: String) {
+        PARTITION_KEY.with(|k| *k.borrow_mut() = Some(key));
+    }
+
+    pub fn stop_partition_flow() {
+        PARTITION_KEY.with(|k| *k.borrow_mut() = None);
+    }
+
+    pub fn get_current_flow_id() -> String {
+        let partition = PARTITION_KEY.with(|k| k.borrow().clone().unwrap_or_default());
+        let group_by = GROUP_BY_KEY.with(|k| k.borrow().clone().unwrap_or_default());
+        format!("{}--{}", partition, group_by)
+    }
+
+    pub fn get_partition_flow_id() -> Option<String> {
+        PARTITION_KEY.with(|k| k.borrow().clone())
+    }
+
+    pub fn get_group_by_flow_id() -> Option<String> {
+        GROUP_BY_KEY.with(|k| k.borrow().clone())
+    }
+
     // Constructor needs essential parts. Others can be set via builder methods or setters.
     pub fn new(
         siddhi_context: Arc<SiddhiContext>,
@@ -132,7 +170,97 @@ impl SiddhiAppContext {
         self.siddhi_context.get_attributes()
     }
 
-    // Many other getters/setters would follow for fields like is_playback, statistics_manager etc.
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    pub fn is_playback(&self) -> bool {
+        self.is_playback
+    }
+
+    pub fn set_playback(&mut self, playback: bool) {
+        self.is_playback = playback;
+    }
+
+    pub fn is_enforce_order(&self) -> bool {
+        self.is_enforce_order
+    }
+
+    pub fn set_enforce_order(&mut self, enforce: bool) {
+        self.is_enforce_order = enforce;
+    }
+
+    pub fn get_root_metrics_level(&self) -> MetricsLevelPlaceholder {
+        self.root_metrics_level
+    }
+
+    pub fn set_root_metrics_level(&mut self, level: MetricsLevelPlaceholder) {
+        self.root_metrics_level = level;
+    }
+
+    pub fn get_buffer_size(&self) -> i32 {
+        self.buffer_size
+    }
+
+    pub fn set_buffer_size(&mut self, size: i32) {
+        self.buffer_size = size;
+    }
+
+    pub fn is_transport_channel_creation_enabled(&self) -> bool {
+        self.transport_channel_creation_enabled
+    }
+
+    pub fn set_transport_channel_creation_enabled(&mut self, enabled: bool) {
+        self.transport_channel_creation_enabled = enabled;
+    }
+
+    pub fn get_snapshot_service(&self) -> Option<&SnapshotServicePlaceholder> {
+        self.snapshot_service.as_ref()
+    }
+
+    pub fn set_snapshot_service(&mut self, service: SnapshotServicePlaceholder) {
+        self.snapshot_service = Some(service);
+    }
+
+    pub fn get_thread_barrier(&self) -> Option<&ThreadBarrierPlaceholder> {
+        self.thread_barrier.as_ref()
+    }
+
+    pub fn set_thread_barrier(&mut self, barrier: ThreadBarrierPlaceholder) {
+        self.thread_barrier = Some(barrier);
+    }
+
+    pub fn get_executor_service(&self) -> Option<Arc<ExecutorServicePlaceholder>> {
+        self.executor_service.as_ref().cloned()
+    }
+
+    pub fn set_executor_service(&mut self, service: Arc<ExecutorServicePlaceholder>) {
+        self.executor_service = Some(service);
+    }
+
+    pub fn get_scheduled_executor_service(&self) -> Option<Arc<ScheduledExecutorServicePlaceholder>> {
+        self.scheduled_executor_service.as_ref().cloned()
+    }
+
+    pub fn set_scheduled_executor_service(&mut self, service: Arc<ScheduledExecutorServicePlaceholder>) {
+        self.scheduled_executor_service = Some(service);
+    }
+
+    pub fn get_timestamp_generator(&self) -> &TimestampGeneratorPlaceholder {
+        &self.timestamp_generator
+    }
+
+    pub fn set_timestamp_generator(&mut self, generator: TimestampGeneratorPlaceholder) {
+        self.timestamp_generator = generator;
+    }
+
+    pub fn set_id_generator(&mut self, id_gen: IdGeneratorPlaceholder) {
+        self.id_generator = Some(id_gen);
+    }
 }
 
 #[cfg(test)]

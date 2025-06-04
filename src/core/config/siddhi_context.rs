@@ -62,20 +62,21 @@ use std::sync::RwLock; // Added for scalar_function_factories and attributes, da
 /// Shared context for all Siddhi Apps in a SiddhiManager instance.
 #[derive(Debug)] // Default will be custom, Clone removed due to Arc<RwLock<...>> direct Clone
 pub struct SiddhiContext {
-    // siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>, // Original placeholder
-    // deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
-    // persistence_store: Option<PersistenceStorePlaceholder>,
-    // incremental_persistence_store: Option<IncrementalPersistenceStorePlaceholder>,
-    // error_store: Option<ErrorStorePlaceholder>,
-    // siddhi_data_sources: HashMap<String, DataSourcePlaceholder>,
     pub statistics_configuration: StatisticsConfiguration,
-    // extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
-    // config_manager: ConfigManagerPlaceholder,
-    // sink_handler_manager: Option<SinkHandlerManagerPlaceholder>,
-    // source_handler_manager: Option<SourceHandlerManagerPlaceholder>,
-    // record_table_handler_manager: Option<RecordTableHandlerManagerPlaceholder>,
-    attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>, // Made thread-safe and shared
-    // default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder,
+    attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>,
+
+    // --- Placeholders mirroring Java fields ---
+    siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
+    deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
+    persistence_store: Option<PersistenceStorePlaceholder>,
+    incremental_persistence_store: Option<IncrementalPersistenceStorePlaceholder>,
+    error_store: Option<ErrorStorePlaceholder>,
+    extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
+    config_manager: ConfigManagerPlaceholder,
+    sink_handler_manager: Option<SinkHandlerManagerPlaceholder>,
+    source_handler_manager: Option<SourceHandlerManagerPlaceholder>,
+    record_table_handler_manager: Option<RecordTableHandlerManagerPlaceholder>,
+    default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder,
 
     // Actual fields for extensions and data sources
     /// Stores factories for User-Defined Scalar Functions. Key: "namespace:name" or "name", Value: clonable factory instance.
@@ -83,10 +84,6 @@ pub struct SiddhiContext {
     /// Stores registered data sources. Key: data source name.
     data_sources: Arc<RwLock<HashMap<String, Arc<dyn DataSource>>>>,
 
-    // Simplified placeholder fields for now to allow compilation if others are not used yet
-    _siddhi_extensions_placeholder: HashMap<String, String>, // General extensions
-    _persistence_store_placeholder: Option<String>,
-    _config_manager_placeholder: String,
     pub dummy_field_siddhi_context_extensions: String,
 }
 
@@ -97,28 +94,58 @@ impl SiddhiContext {
             attributes: Arc::new(RwLock::new(HashMap::new())),
             scalar_function_factories: Arc::new(RwLock::new(HashMap::new())),
             data_sources: Arc::new(RwLock::new(HashMap::new())),
-            _siddhi_extensions_placeholder: HashMap::new(),
-            _persistence_store_placeholder: None,
-            _config_manager_placeholder: "InMemoryConfigManager_Placeholder".to_string(),
+            siddhi_extensions: HashMap::new(),
+            deprecated_siddhi_extensions: HashMap::new(),
+            persistence_store: None,
+            incremental_persistence_store: None,
+            error_store: None,
+            extension_holder_map: HashMap::new(),
+            config_manager: "InMemoryConfigManager_Placeholder".to_string(),
+            sink_handler_manager: None,
+            source_handler_manager: None,
+            record_table_handler_manager: None,
+            default_disrupter_exception_handler: "DefaultDisruptorExceptionHandler".to_string(),
             dummy_field_siddhi_context_extensions: String::new(),
         }
     }
 
     // Example methods translated (simplified)
     pub fn get_siddhi_extensions(&self) -> &HashMap<String, String> {
-        &self._siddhi_extensions_placeholder
-        // &self.siddhi_extensions
+        &self.siddhi_extensions
     }
 
     pub fn get_persistence_store(&self) -> Option<&String> {
-        self._persistence_store_placeholder.as_ref()
+        self.persistence_store.as_ref()
         // self.persistence_store.as_ref()
     }
 
     pub fn set_persistence_store(&mut self, persistence_store: String) {
-        // TODO: Add logic from Java about only one type of persistence store
-        self._persistence_store_placeholder = Some(persistence_store);
+        // Mirroring Java logic: only one persistence store allowed
+        if self.incremental_persistence_store.is_some() {
+            // In a full implementation this would return an error type
+            panic!("Only one type of persistence store can exist. Incremental persistence store already registered!");
+        }
+        self.persistence_store = Some(persistence_store);
         // self.persistence_store = Some(persistence_store);
+    }
+
+    pub fn get_incremental_persistence_store(&self) -> Option<&String> {
+        self.incremental_persistence_store.as_ref()
+    }
+
+    pub fn set_incremental_persistence_store(&mut self, store: String) {
+        if self.persistence_store.is_some() {
+            panic!("Only one type of persistence store can exist. Persistence store already registered!");
+        }
+        self.incremental_persistence_store = Some(store);
+    }
+
+    pub fn get_error_store(&self) -> Option<&String> {
+        self.error_store.as_ref()
+    }
+
+    pub fn set_error_store(&mut self, store: String) {
+        self.error_store = Some(store);
     }
 
     // ... other getters and setters for various managers and stores ...
@@ -140,13 +167,41 @@ impl SiddhiContext {
     }
 
     pub fn get_config_manager(&self) -> &String {
-        &self._config_manager_placeholder
+        &self.config_manager
         // &self.config_manager
     }
 
     pub fn set_config_manager(&mut self, config_manager: String) {
-        self._config_manager_placeholder = config_manager;
+        self.config_manager = config_manager;
         // self.config_manager = config_manager;
+    }
+
+    pub fn get_sink_handler_manager(&self) -> Option<&String> {
+        self.sink_handler_manager.as_ref()
+    }
+
+    pub fn set_sink_handler_manager(&mut self, manager: String) {
+        self.sink_handler_manager = Some(manager);
+    }
+
+    pub fn get_source_handler_manager(&self) -> Option<&String> {
+        self.source_handler_manager.as_ref()
+    }
+
+    pub fn set_source_handler_manager(&mut self, manager: String) {
+        self.source_handler_manager = Some(manager);
+    }
+
+    pub fn get_record_table_handler_manager(&self) -> Option<&String> {
+        self.record_table_handler_manager.as_ref()
+    }
+
+    pub fn set_record_table_handler_manager(&mut self, manager: String) {
+        self.record_table_handler_manager = Some(manager);
+    }
+
+    pub fn get_default_disruptor_exception_handler(&self) -> &String {
+        &self.default_disrupter_exception_handler
     }
 
     pub fn get_attributes(&self) -> RwLockReadGuard<'_, HashMap<String, AttributeValuePlaceholder>> { // Return guard
@@ -182,9 +237,17 @@ impl Clone for SiddhiContext {
             attributes: Arc::clone(&self.attributes),
             scalar_function_factories: Arc::clone(&self.scalar_function_factories),
             data_sources: Arc::clone(&self.data_sources),
-            _siddhi_extensions_placeholder: self._siddhi_extensions_placeholder.clone(),
-            _persistence_store_placeholder: self._persistence_store_placeholder.clone(),
-            _config_manager_placeholder: self._config_manager_placeholder.clone(),
+            siddhi_extensions: self.siddhi_extensions.clone(),
+            deprecated_siddhi_extensions: self.deprecated_siddhi_extensions.clone(),
+            persistence_store: self.persistence_store.clone(),
+            incremental_persistence_store: self.incremental_persistence_store.clone(),
+            error_store: self.error_store.clone(),
+            extension_holder_map: self.extension_holder_map.clone(),
+            config_manager: self.config_manager.clone(),
+            sink_handler_manager: self.sink_handler_manager.clone(),
+            source_handler_manager: self.source_handler_manager.clone(),
+            record_table_handler_manager: self.record_table_handler_manager.clone(),
+            default_disrupter_exception_handler: self.default_disrupter_exception_handler.clone(),
             dummy_field_siddhi_context_extensions: self.dummy_field_siddhi_context_extensions.clone(),
         }
     }

@@ -22,6 +22,21 @@ impl StatisticsConfiguration {
             factory,
         }
     }
+
+    /// Returns the statistics tracker factory associated with this configuration.
+    pub fn get_factory(&self) -> &StatisticsTrackerFactoryPlaceholder {
+        &self.factory
+    }
+
+    /// Returns the configured metric prefix.
+    pub fn get_metric_prefix(&self) -> &str {
+        &self.metric_prefix
+    }
+
+    /// Sets the metric prefix. Mirrors the Java setter.
+    pub fn set_metric_prefix(&mut self, metric_prefix: String) {
+        self.metric_prefix = metric_prefix;
+    }
 }
 
 impl Default for StatisticsConfiguration {
