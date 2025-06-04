@@ -59,7 +59,7 @@ impl Processor for CallbackProcessor {
         if !events_vec.is_empty() {
             // Lock the Mutex to call receive.
             // The receive method takes Vec<Event>, not &[Event].
-            self.callback.lock().expect("Callback Mutex poisoned").receive(events_vec);
+            self.callback.lock().expect("Callback Mutex poisoned").receive_events(&events_vec);
         }
     }
 

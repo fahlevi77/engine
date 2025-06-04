@@ -110,6 +110,13 @@ impl SingleInputStream {
             SingleInputStreamKind::Anonymous { stream_id, .. } => stream_id,
         }
     }
+
+    pub fn get_stream_reference_id_str(&self) -> Option<&str> {
+        match &self.kind {
+            SingleInputStreamKind::Basic { stream_reference_id, .. } => stream_reference_id.as_deref(),
+            SingleInputStreamKind::Anonymous { stream_reference_id, .. } => stream_reference_id.as_deref(),
+        }
+    }
     // ... other getters for is_fault_stream, is_inner_stream, stream_reference_id ...
 
     pub fn get_stream_handlers(&self) -> &Vec<StreamHandler> {
@@ -132,12 +139,12 @@ impl SingleInputStream {
     }
 
     pub fn function(mut self, namespace: Option<String>, name: String, params: Vec<Expression>) -> Self {
-        self.get_stream_handlers_mut().push(StreamHandler::Function(StreamFunction::new(namespace, name, params)));
+        self.get_stream_handlers_mut().push(StreamHandler::Function(StreamFunction::new(name, namespace, params)));
         self
     }
 
     pub fn window(mut self, namespace: Option<String>, name: String, params: Vec<Expression>) -> Self {
-        self.get_stream_handlers_mut().push(StreamHandler::Window(WindowHandler::new(namespace, name, params)));
+        self.get_stream_handlers_mut().push(StreamHandler::Window(Box::new(WindowHandler::new(name, namespace, params))));
         self
     }
 

@@ -7,7 +7,6 @@ use std::fmt;
 // query_api::definition::attribute::Type enum has STRING, INT, LONG, FLOAT, DOUBLE, BOOL, OBJECT.
 // This enum should reflect those types for data carrying.
 
-#[derive(Clone)] // Removed Debug and PartialEq for Box<dyn Any>
 pub enum AttributeValue {
     String(String),
     Int(i32),
@@ -54,6 +53,21 @@ impl PartialEq for AttributeValue {
            _ => false, // Different enum variants
        }
    }
+}
+
+impl Clone for AttributeValue {
+    fn clone(&self) -> Self {
+        match self {
+            AttributeValue::String(s) => AttributeValue::String(s.clone()),
+            AttributeValue::Int(i) => AttributeValue::Int(*i),
+            AttributeValue::Long(l) => AttributeValue::Long(*l),
+            AttributeValue::Float(f) => AttributeValue::Float(*f),
+            AttributeValue::Double(d) => AttributeValue::Double(*d),
+            AttributeValue::Bool(b) => AttributeValue::Bool(*b),
+            AttributeValue::Object(_) => AttributeValue::Object(None),
+            AttributeValue::Null => AttributeValue::Null,
+        }
+    }
 }
 
 impl Default for AttributeValue {

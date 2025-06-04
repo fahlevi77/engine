@@ -85,7 +85,6 @@ pub struct SiddhiContext {
 
     // Simplified placeholder fields for now to allow compilation if others are not used yet
     _siddhi_extensions_placeholder: HashMap<String, String>, // General extensions
-    // _data_sources_placeholder: HashMap<String, String>, // Replaced by actual data_sources field
     _persistence_store_placeholder: Option<String>,
     _config_manager_placeholder: String,
     pub dummy_field_siddhi_context_extensions: String,
@@ -97,9 +96,8 @@ impl SiddhiContext {
             statistics_configuration: StatisticsConfiguration::default(),
             attributes: Arc::new(RwLock::new(HashMap::new())),
             scalar_function_factories: Arc::new(RwLock::new(HashMap::new())),
-            // data_sources: Arc::new(RwLock::new(HashMap::new())),
+            data_sources: Arc::new(RwLock::new(HashMap::new())),
             _siddhi_extensions_placeholder: HashMap::new(),
-            _data_sources_placeholder: HashMap::new(),
             _persistence_store_placeholder: None,
             _config_manager_placeholder: "InMemoryConfigManager_Placeholder".to_string(),
             dummy_field_siddhi_context_extensions: String::new(),
@@ -125,14 +123,12 @@ impl SiddhiContext {
 
     // ... other getters and setters for various managers and stores ...
 
-    pub fn get_siddhi_data_source(&self, name: &str) -> Option<&String> {
-        self._data_sources_placeholder.get(name)
-        // self.siddhi_data_sources.get(name)
+    pub fn get_data_source(&self, name: &str) -> Option<Arc<dyn DataSource>> {
+        self.data_sources.read().unwrap().get(name).cloned()
     }
 
-    pub fn add_siddhi_data_source(&mut self, name: String, data_source: String) {
-        self._data_sources_placeholder.insert(name, data_source);
-        // self.siddhi_data_sources.insert(name, data_source);
+    pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
+        self.data_sources.write().unwrap().insert(name, data_source);
     }
 
     pub fn get_statistics_configuration(&self) -> &StatisticsConfiguration {
@@ -185,9 +181,8 @@ impl Clone for SiddhiContext {
             statistics_configuration: self.statistics_configuration.clone(),
             attributes: Arc::clone(&self.attributes),
             scalar_function_factories: Arc::clone(&self.scalar_function_factories),
-            // data_sources: Arc::clone(&self.data_sources),
+            data_sources: Arc::clone(&self.data_sources),
             _siddhi_extensions_placeholder: self._siddhi_extensions_placeholder.clone(),
-            _data_sources_placeholder: self._data_sources_placeholder.clone(),
             _persistence_store_placeholder: self._persistence_store_placeholder.clone(),
             _config_manager_placeholder: self._config_manager_placeholder.clone(),
             dummy_field_siddhi_context_extensions: self.dummy_field_siddhi_context_extensions.clone(),

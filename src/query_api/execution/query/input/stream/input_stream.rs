@@ -12,8 +12,7 @@ use super::state_input_stream::{StateInputStream, Type as StateInputStreamType};
 use crate::query_api::execution::query::input::state::StateElement;
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
-// use crate::query_api::aggregation::Within; // TODO: Define if Within is used by JoinInputStream factories
-type WithinPlaceholder = String; // Placeholder
+use crate::query_api::aggregation::Within; // Actual Within struct
 
 
 // Trait for common methods of InputStream (from Java's InputStream abstract class)
@@ -96,7 +95,7 @@ impl InputStream {
         right_stream: SingleInputStream,
         on_compare: Option<Expression>,
         trigger: Option<JoinEventTrigger>, // Made Option, Java defaults to ALL
-        within: Option<WithinPlaceholder>, // TODO: Replace with actual Within type
+        within: Option<Within>,
         per: Option<Expression>
     ) -> Self {
         InputStream::Join(Box::new(JoinInputStream::new(

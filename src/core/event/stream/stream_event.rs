@@ -7,7 +7,7 @@ use std::fmt::Debug;
 
 
 /// A concrete implementation of ComplexEvent for stream processing.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct StreamEvent {
     pub timestamp: i64,
     pub output_data: Option<Vec<AttributeValue>>,

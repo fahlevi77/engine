@@ -208,7 +208,7 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0))?)),
                 (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0))?)),
                 _ => { // UDF lookup from context
-                    if let Some(scalar_fn_factory) = context.siddhi_app_context.siddhi_context().get_scalar_function_factory(&function_lookup_name) {
+                    if let Some(scalar_fn_factory) = context.siddhi_app_context.get_siddhi_context().get_scalar_function_factory(&function_lookup_name) {
                         Ok(Box::new(AttributeFunctionExpressionExecutor::new(
                             scalar_fn_factory.clone_scalar_function(),
                             arg_execs,

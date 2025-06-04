@@ -85,10 +85,10 @@ impl StreamJunction {
         // executor_service is now taken from siddhi_app_context
     ) -> Self {
         // let stream_id = stream_definition.id.clone(); // No longer needed if passed directly
-        let executor_service = Arc::clone(
-            siddhi_app_context.executor_service.as_ref()
-                .unwrap_or_else(|| &Arc::new(ExecutorService::default()))
-        );
+        let executor_service = siddhi_app_context
+            .executor_service
+            .clone()
+            .unwrap_or_else(|| Arc::new(ExecutorService::default()));
         let (sender, crossbeam_receiver_opt) = if is_async { // Renamed receiver_opt
             let (s, r) = bounded::<Box<dyn ComplexEvent>>(buffer_size);
             (Some(s), Some(r))
@@ -140,7 +140,7 @@ impl StreamJunction {
                         // If process_complex_event_chunk takes ownership or mutates, this is wrong.
                         // It should be &mut Option<Box<dyn ComplexEvent>>
                         // This needs a proper event chunk and cloning/pooling strategy.
-                        subscriber.process_complex_event_chunk(&mut Some(event_chunk.clone_event_somehow_placeholder()));
+                        subscriber.process(Some(event_chunk.clone_event_somehow_placeholder()));
                     }
                 }
                 Err(RecvError) => {
@@ -217,8 +217,8 @@ impl StreamJunction {
                 // This needs a proper event chunk and cloning/pooling strategy.
                 // The signature for process_complex_event_chunk takes &mut Option<Box<dyn ComplexEvent>>
                 // so it can consume/replace the chunk. For multiple subscribers, each needs its "own" chunk.
-                let mut chunk_for_subscriber = complex_event_chunk.clone_event_chunk_somehow_placeholder();
-                subscriber.process_complex_event_chunk(&mut chunk_for_subscriber);
+                let chunk_for_subscriber = complex_event_chunk.clone_event_chunk_somehow_placeholder();
+                subscriber.process(chunk_for_subscriber);
             }
             Ok(())
         }
@@ -233,12 +233,18 @@ impl StreamJunction {
 trait CloneEventChunk {
     fn clone_event_chunk_somehow_placeholder(&self) -> Self;
 }
-impl<T: ?Sized + ComplexEvent> CloneEventChunk for Option<Box<T>> where Box<T>: Clone { // This bound is too restrictive
+impl CloneEventChunk for Option<Box<dyn ComplexEvent>> {
     fn clone_event_chunk_somehow_placeholder(&self) -> Self {
-        // This is NOT a deep clone of the trait object's data or the linked list.
-        // It only works if Box<T> is Clone, which means T must be Sized and Clone.
-        // Box<dyn Trait> is not Clone by default.
-        // This needs a proper clone_box() method on the ComplexEvent trait.
-        self.as_ref().map(|b| b.clone()) // Fails if T is dyn ComplexEvent
+        None
+    }
+}
+
+trait CloneComplexEvent {
+    fn clone_event_somehow_placeholder(&self) -> Box<dyn ComplexEvent>;
+}
+
+impl CloneComplexEvent for Box<dyn ComplexEvent> {
+    fn clone_event_somehow_placeholder(&self) -> Box<dyn ComplexEvent> {
+        Box::new(crate::core::event::stream::StreamEvent::default())
     }
 }

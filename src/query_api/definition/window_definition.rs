@@ -77,12 +77,12 @@ impl AsMut<AbstractDefinition> for WindowDefinition {
 
 impl AsRef<SiddhiElement> for WindowDefinition {
     fn as_ref(&self) -> &SiddhiElement {
-        self.stream_definition.as_ref().as_ref()
+        self.stream_definition.abstract_definition.as_ref()
     }
 }
 
 impl AsMut<SiddhiElement> for WindowDefinition {
     fn as_mut(&mut self) -> &mut SiddhiElement {
-        self.stream_definition.as_mut().as_mut()
+        self.stream_definition.abstract_definition.as_mut()
     }
 }

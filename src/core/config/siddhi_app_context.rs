@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::collections::HashMap; // For scriptFunctionMap
 use crate::query_api::SiddhiApp; // From query_api
 use super::siddhi_context::SiddhiContext;
+use crate::core::util::executor_service::ExecutorServicePlaceholder;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
 // use super::snapshot_service::SnapshotService; // TODO: Define later
@@ -27,7 +28,6 @@ use super::siddhi_context::SiddhiContext;
 #[derive(Debug, Clone, Default)] pub struct SchedulerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct DisruptorExceptionHandlerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ExceptionListenerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct ExecutorServicePlaceholder {} // For executorService
 #[derive(Debug, Clone, Default)] pub struct ScheduledExecutorServicePlaceholder {} // For scheduledExecutorService
 
 
@@ -50,8 +50,8 @@ pub struct SiddhiAppContext {
     pub statistics_manager: Option<StatisticsManagerPlaceholder>, // Manages collection and reporting of runtime statistics. Option because it's set post-construction in Java.
 
     // Threading and scheduling (using placeholders)
-    pub executor_service: Option<ExecutorServicePlaceholder>, // General purpose thread pool for the Siddhi App.
-    pub scheduled_executor_service: Option<ScheduledExecutorServicePlaceholder>, // Thread pool for scheduled tasks (e.g., time windows).
+    pub executor_service: Option<Arc<ExecutorServicePlaceholder>>, // General purpose thread pool for the Siddhi App.
+    pub scheduled_executor_service: Option<Arc<ScheduledExecutorServicePlaceholder>>, // Thread pool for scheduled tasks (e.g., time windows).
 
     // External references and lifecycle management (using placeholders)
     // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
@@ -127,8 +127,9 @@ impl SiddhiAppContext {
     }
 
     // In Java, getAttributes() delegates to siddhiContext.getAttributes().
-    pub fn get_attributes(&self) -> &HashMap<String, String> { // Assuming String for placeholder AttributeValue
-        &self.siddhi_context.attributes // Assuming SiddhiContext has pub attributes
+    pub fn get_attributes(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, String>> {
+        // Delegate to SiddhiContext's thread-safe attributes map
+        self.siddhi_context.get_attributes()
     }
 
     // Many other getters/setters would follow for fields like is_playback, statistics_manager etc.

@@ -79,7 +79,7 @@ impl Processor for InsertIntoStreamProcessor {
     fn get_processing_mode(&self) -> ProcessingMode {
         // Usually determined by upstream processors (e.g., window, aggregation)
         // For a simple insert, it might be considered DEFAULT or pass-through.
-        self.meta.siddhi_query_context.processing_mode_placeholder // TODO: Add this field to SiddhiQueryContext
+        self.meta.siddhi_query_context.processing_mode_placeholder()
     }
 
     fn is_stateful(&self) -> bool {

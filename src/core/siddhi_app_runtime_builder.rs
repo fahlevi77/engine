@@ -56,7 +56,7 @@ impl SiddhiAppRuntimeBuilder {
 
     // --- Methods to add API definitions ---
     pub fn add_stream_definition(&mut self, stream_def: Arc<ApiStreamDefinition>) {
-        self.stream_definition_map.insert(stream_def.id.clone(), stream_def);
+        self.stream_definition_map.insert(stream_def.abstract_definition.id.clone(), stream_def);
     }
     pub fn add_table_definition(&mut self, table_def: Arc<crate::query_api::definition::TableDefinition>) {
         self.table_definition_map.insert(table_def.abstract_definition.id.clone(), table_def);

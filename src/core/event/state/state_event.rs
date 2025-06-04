@@ -6,7 +6,7 @@ use crate::core::event::value::AttributeValue;
 use std::any::Any;
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Default)] // Default is placeholder
+#[derive(Debug, Default)] // Default is placeholder
 pub struct StateEvent {
     // Fields from Java StateEvent
     pub stream_events: Vec<Option<StreamEvent>>, // Java: StreamEvent[], can have nulls

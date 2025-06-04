@@ -63,36 +63,36 @@ impl ExpressionExecutor for CompareExpressionExecutor {
                         ConditionCompareOperator::Equal => l == r,
                         ConditionCompareOperator::NotEqual => l != r,
                         ConditionCompareOperator::GreaterThan => l > r,
-                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::GreaterThanEqual => l >= r,
                         ConditionCompareOperator::LessThan => l < r,
-                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                        ConditionCompareOperator::LessThanEqual => l <= r,
                     },
                     // Long comparisons
                     (AttributeValue::Long(l), AttributeValue::Long(r)) => match self.operator {
                         ConditionCompareOperator::Equal => l == r,
                         ConditionCompareOperator::NotEqual => l != r,
                         ConditionCompareOperator::GreaterThan => l > r,
-                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::GreaterThanEqual => l >= r,
                         ConditionCompareOperator::LessThan => l < r,
-                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                        ConditionCompareOperator::LessThanEqual => l <= r,
                     },
                     // Float comparisons
                     (AttributeValue::Float(l), AttributeValue::Float(r)) => match self.operator {
                         ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON, // Approx equal for floats
                         ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
                         ConditionCompareOperator::GreaterThan => l > r,
-                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::GreaterThanEqual => l >= r,
                         ConditionCompareOperator::LessThan => l < r,
-                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                        ConditionCompareOperator::LessThanEqual => l <= r,
                     },
                     // Double comparisons
                     (AttributeValue::Double(l), AttributeValue::Double(r)) => match self.operator {
                         ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON, // Approx equal for doubles
                         ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
                         ConditionCompareOperator::GreaterThan => l > r,
-                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::GreaterThanEqual => l >= r,
                         ConditionCompareOperator::LessThan => l < r,
-                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                        ConditionCompareOperator::LessThanEqual => l <= r,
                     },
                     // String comparisons (Equality and NotEqual only for now)
                     (AttributeValue::String(l), AttributeValue::String(r)) => match self.operator {
@@ -231,7 +231,7 @@ mod tests {
     fn test_compare_clone() {
         let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(100), ApiAttributeType::LONG));
         let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(50), ApiAttributeType::LONG));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThanOrEqual);
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThanEqual);
 
         let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
         let cloned_exec = cmp_exec.clone_executor(&app_ctx_placeholder);

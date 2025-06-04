@@ -25,7 +25,7 @@ impl FilterProcessor {
         siddhi_app_context: Arc<SiddhiAppContext>,
         siddhi_query_context: Arc<SiddhiQueryContext>, // query_name is in here
     ) -> Result<Self, String> {
-        if condition_executor.get_return_type() != crate::query_api::definition::Attribute::Type::BOOL {
+        if condition_executor.get_return_type() != crate::query_api::definition::AttributeType::BOOL {
             return Err(format!(
                 "Filter condition executor must return BOOL, but found {:?}",
                 condition_executor.get_return_type()

@@ -13,6 +13,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
+use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
 // use super::partition_parser::PartitionParser; // To be created
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
@@ -36,10 +37,10 @@ mod query_parser_placeholder {
             let query_name = _api_query.get_query_name_placeholder().unwrap_or_else(|| "unknown_query".to_string());
             let input_stream_id = _api_query.get_input_stream_id_placeholder().unwrap_or_else(|| "unknown_input".to_string());
 
-            let input_junction = _stream_junction_map.get(&input_stream_id)
+            let _input_junction = _stream_junction_map.get(&input_stream_id)
                 .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?.clone();
 
-            Ok(QueryRuntime::new(query_name, input_junction))
+            Ok(QueryRuntime::new(query_name))
         }
     }
     // Placeholder getters on query_api::Query
@@ -82,11 +83,11 @@ impl SiddhiAppParser {
             let is_async = false; // TODO: Read from @async annotation on stream_def
 
             let stream_junction = Arc::new(Mutex::new(StreamJunction::new(
-                Arc::clone(stream_def_arc), // StreamJunction now takes Arc<ApiStreamDefinition>
-                Arc::clone(&siddhi_app_context.executor_service.as_ref().unwrap_or_else(|| &Arc::new(crate::core::util::executor_service::ExecutorServicePlaceholder::default()))), // Provide default if None
+                stream_id.clone(),
+                Arc::clone(stream_def_arc),
+                siddhi_app_context.clone(),
                 buffer_size,
                 is_async,
-                siddhi_app_context.clone(),
             )));
             builder.add_stream_junction(stream_id.clone(), stream_junction);
         }
@@ -138,8 +139,8 @@ impl ApiInputStream {
     fn get_first_stream_id_placeholder(&self) -> Option<String> {
         match self {
             ApiInputStream::Single(s) => Some(s.get_stream_id_str().to_string()),
-            ApiInputStream::Join(j) => j.left_input_stream.get_all_stream_ids().first().cloned(),
-            ApiInputStream::State(s) => s.get_all_stream_ids().first().cloned(),
+            ApiInputStream::Join(j) => j.left_input_stream.get_unique_stream_ids().first().cloned(),
+            ApiInputStream::State(s) => s.get_unique_stream_ids().first().cloned(),
         }
     }
 }

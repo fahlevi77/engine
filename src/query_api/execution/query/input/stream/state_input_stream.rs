@@ -72,7 +72,7 @@ impl StateInputStream {
         // BasicSingleInputStream is within StreamStateElement
         // And BasicSingleInputStream wraps a SingleInputStream
         // SingleInputStream has get_all_stream_ids() from InputStreamTrait
-        stream_ids.extend(stream_state.basic_single_input_stream.inner.get_all_stream_ids());
+        stream_ids.extend(stream_state.basic_single_input_stream.get_all_stream_ids());
     }
 }
 

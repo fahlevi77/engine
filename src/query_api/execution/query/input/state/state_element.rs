@@ -25,7 +25,7 @@ impl StateElement {
     fn siddhi_element_ref(&self) -> &SiddhiElement {
         match self {
             StateElement::Stream(s) => &s.siddhi_element,
-            StateElement::AbsentStream(a) => &a.siddhi_element,
+            StateElement::AbsentStream(a) => a.siddhi_element(),
             StateElement::Logical(l) => &l.siddhi_element,
             StateElement::Next(n) => &n.siddhi_element,
             StateElement::Count(c) => &c.siddhi_element,
@@ -36,7 +36,7 @@ impl StateElement {
     fn siddhi_element_mut_ref(&mut self) -> &mut SiddhiElement {
         match self {
             StateElement::Stream(s) => &mut s.siddhi_element,
-            StateElement::AbsentStream(a) => &mut a.siddhi_element,
+            StateElement::AbsentStream(a) => a.siddhi_element_mut(),
             StateElement::Logical(l) => &mut l.siddhi_element,
             StateElement::Next(n) => &mut n.siddhi_element,
             StateElement::Count(c) => &mut c.siddhi_element,

@@ -41,14 +41,14 @@ impl Store {
             siddhi_element: SiddhiElement::default(),
             // BasicSingleInputStream::new functionality is now part of SingleInputStream::new_basic_from_id or similar.
             // Assuming a basic, non-fault, non-inner stream for a simple store definition.
-            single_input_stream: SingleInputStream::new_basic_from_id(store_id),
+            single_input_stream: SingleInputStream::new_basic(store_id, false, false, None, Vec::new()),
         }
     }
 
     pub fn new_with_ref(store_reference_id: String, store_id: String) -> Self {
         Store {
             siddhi_element: SiddhiElement::default(),
-            single_input_stream: SingleInputStream::new_basic_from_ref_id(store_reference_id, store_id),
+            single_input_stream: SingleInputStream::new_basic(store_id, false, false, Some(store_reference_id), Vec::new()),
         }
     }
 

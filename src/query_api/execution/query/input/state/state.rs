@@ -37,10 +37,10 @@ impl State {
 
     pub fn logical_not(stream_state_element: StreamStateElement, time: Option<ExpressionConstant>) -> AbsentStreamStateElement {
         // Assuming get_single_input_stream() returns a reference to the SingleInputStream composed in StreamStateElement
-        if stream_state_element.get_single_input_stream().inner.get_stream_reference_id_str().is_some() {
+        if stream_state_element.get_single_input_stream().get_stream_reference_id_str().is_some() {
              // TODO: This should ideally return a Result or handle error more gracefully
             panic!("SiddhiAppValidationException: NOT pattern cannot have reference id but found {}",
-                stream_state_element.get_single_input_stream().inner.get_stream_reference_id_str().unwrap_or_default()
+                stream_state_element.get_single_input_stream().get_stream_reference_id_str().unwrap_or_default()
             );
         }
         // AbsentStreamStateElement::new expects an owned SingleInputStream.

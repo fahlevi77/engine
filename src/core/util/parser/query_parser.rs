@@ -116,7 +116,7 @@ impl QueryParser {
         for (idx, api_out_attr) in api_selector.selection_list.iter().enumerate() {
             let expr_exec = parse_expression(&api_out_attr.expression, &expr_parser_context)?;
             // OutputAttributeProcessor needs the output position.
-            let oap = OutputAttributeProcessor::new(expr_exec, idx);
+            let oap = OutputAttributeProcessor::new(expr_exec);
 
             let attr_name = api_out_attr.rename.clone().unwrap_or_else(|| {
                 // Try to infer name from expression, or generate. Very simplified.
@@ -136,11 +136,13 @@ impl QueryParser {
         let output_stream_id_from_query = api_query.output_stream.get_target_id() // output_stream is not Option
             .ok_or_else(|| format!("Query '{}' must have a target output stream for INSERT INTO", query_name))?;
 
-        let select_output_stream_def = Arc::new(ApiStreamDefinition::new(
-            format!("_internal_{}_select_output", query_name),
-            output_attributes_for_def,
-            Vec::new()
-        ));
+        let mut temp_def = ApiStreamDefinition::new(
+            format!("_internal_{}_select_output", query_name)
+        );
+        for attr in output_attributes_for_def {
+            temp_def.abstract_definition.attribute_list.push(attr);
+        }
+        let select_output_stream_def = Arc::new(temp_def);
 
         let select_processor = Arc::new(Mutex::new(SelectProcessor::new(
             api_selector, // Pass the API selector for limit/offset etc.
