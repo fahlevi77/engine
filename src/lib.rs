@@ -160,7 +160,11 @@ mod tests {
             CoreAttributeValue::Int(20),
             CoreAttributeValue::String("event_one_val2".to_string()),
         ];
-        input_handler.send_event_with_timestamp(event1_ts, event1_data).expect("Test: Failed to send event1");
+        input_handler
+            .lock()
+            .expect("input handler mutex")
+            .send_event_with_timestamp(event1_ts, event1_data)
+            .expect("Test: Failed to send event1");
         println!("Test: Sent event1 (attribute1=20, should pass filter)");
 
         let event2_ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
@@ -168,7 +172,11 @@ mod tests {
             CoreAttributeValue::Int(5),
             CoreAttributeValue::String("event_two_val2".to_string()),
         ];
-        input_handler.send_event_with_timestamp(event2_ts, event2_data).expect("Test: Failed to send event2");
+        input_handler
+            .lock()
+            .expect("input handler mutex")
+            .send_event_with_timestamp(event2_ts, event2_data)
+            .expect("Test: Failed to send event2");
         println!("Test: Sent event2 (attribute1=5, should be filtered out)");
 
         let event3_ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
@@ -176,7 +184,11 @@ mod tests {
             CoreAttributeValue::Int(30),
             CoreAttributeValue::String("event_three_val2".to_string()),
         ];
-        input_handler.send_event_with_timestamp(event3_ts, event3_data).expect("Test: Failed to send event3");
+        input_handler
+            .lock()
+            .expect("input handler mutex")
+            .send_event_with_timestamp(event3_ts, event3_data)
+            .expect("Test: Failed to send event3");
         println!("Test: Sent event3 (attribute1=30, should pass filter)");
 
         // Allow some time for async processing if any (though current setup is mostly sync)
