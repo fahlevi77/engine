@@ -4,6 +4,14 @@ use crate::core::query::processor::Processor; // The Processor trait
 use crate::core::stream::stream_junction::StreamJunction; // For input stream junction
 use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
+use crate::query_api::execution::query::Query as ApiQuery;
+use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+
+pub trait QueryRuntimeTrait: Debug + Send + Sync {
+    fn get_query_id(&self) -> &str;
+    fn is_stateful(&self) -> bool;
+    fn get_query(&self) -> Option<Arc<ApiQuery>>;
+}
 
 // Represents the runtime of a single query.
 // In Java, QueryRuntimeImpl has fields for queryName, SiddhiQueryContext,
@@ -12,6 +20,8 @@ use std::fmt::Debug;
 #[derive(Debug)]
 pub struct QueryRuntime {
     pub query_name: String,
+    pub api_query: Option<Arc<ApiQuery>>,
+    pub siddhi_query_context: Option<Arc<SiddhiQueryContext>>,
     // The input stream junction this query consumes from.
     // The QueryRuntime itself doesn't directly "own" the input junction,
     // but it needs to be registered with it.
@@ -37,14 +47,46 @@ pub struct QueryRuntime {
 impl QueryRuntime {
     // query_name is usually derived from annotations or generated.
     // input_junction is needed by QueryParser to connect the processor chain.
-    pub fn new(query_name: String /*, siddhi_query_context: Arc<SiddhiQueryContext> */) -> Self {
+    pub fn new(query_name: String) -> Self {
         Self {
             query_name,
+            api_query: None,
+            siddhi_query_context: None,
             processor_chain_head: None,
-            // siddhi_query_context,
-            // ... initialize other Option fields to None ...
         }
     }
+
+    pub fn new_with_context(
+        query_name: String,
+        api_query: Arc<ApiQuery>,
+        siddhi_query_context: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        Self {
+            query_name,
+            api_query: Some(api_query),
+            siddhi_query_context: Some(siddhi_query_context),
+            processor_chain_head: None,
+        }
+    }
+
+}
+
+impl QueryRuntimeTrait for QueryRuntime {
+    fn get_query_id(&self) -> &str {
+        &self.query_name
+    }
+
+    fn is_stateful(&self) -> bool {
+        self.siddhi_query_context
+            .as_ref()
+            .map(|ctx| ctx.is_stateful())
+            .unwrap_or(false)
+    }
+
+    fn get_query(&self) -> Option<Arc<ApiQuery>> {
+        self.api_query.as_ref().map(Arc::clone)
+    }
+}
 
     // TODO: Implement methods from QueryRuntimeImpl if needed, e.g.,
     // get_query_name(), get_input_handler() (if it has one directly),
@@ -53,4 +95,3 @@ impl QueryRuntime {
     // notify_updater(), get_snapshot(), restore_from_snapshot(),
     // start(), stop().
     // Many of these will involve interacting with the processor chain.
-}

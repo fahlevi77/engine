@@ -174,7 +174,11 @@ impl QueryParser {
         }
 
         // 7. Create QueryRuntime
-        let mut query_runtime = QueryRuntime::new(query_name.clone() /*, siddhi_query_context */);
+        let mut query_runtime = QueryRuntime::new_with_context(
+            query_name.clone(),
+            Arc::new(api_query.clone()),
+            Arc::clone(&siddhi_query_context),
+        );
         query_runtime.processor_chain_head = processor_chain_head;
 
         // 8. Register the entry processor with the input stream junction

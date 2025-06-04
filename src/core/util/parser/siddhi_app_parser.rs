@@ -40,7 +40,12 @@ mod query_parser_placeholder {
             let _input_junction = _stream_junction_map.get(&input_stream_id)
                 .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?.clone();
 
-            Ok(QueryRuntime::new(query_name))
+            let query_ctx = Arc::new(SiddhiQueryContext::new(
+                Arc::clone(_siddhi_app_context),
+                query_name.clone(),
+                None,
+            ));
+            Ok(QueryRuntime::new_with_context(query_name, Arc::new(_api_query.clone()), query_ctx))
         }
     }
     // Placeholder getters on query_api::Query
