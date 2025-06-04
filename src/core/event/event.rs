@@ -1,6 +1,7 @@
 // siddhi_rust/src/core/event/event.rs
 // Corresponds to io.siddhi.core.event.Event
 use super::value::AttributeValue;
+use super::complex_event::{ComplexEvent, ComplexEventType};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // Global atomic counter for generating unique event IDs.
@@ -110,13 +111,30 @@ impl Event {
         self.data = other_event.data.clone();
     }
 
-    // copyFrom(ComplexEvent complexEvent) - This will be tricky as ComplexEvent is a trait.
-    // It implies ComplexEvent needs methods to expose its data in a compatible format.
-    // pub fn copy_from_complex(&mut self, complex_event: &dyn ComplexEvent) {
-    //     self.timestamp = complex_event.get_timestamp();
-    //     // Assuming complex_event.get_output_data() returns something convertible to Vec<AttributeValue>
-    //     // and complex_event.get_type() returns something mappable to is_expired.
-    //     // This requires ComplexEvent trait to be more defined.
-    //     unimplemented!("copy_from_complex");
-    // }
+    /// Copy data from a [`ComplexEvent`] into this event.
+    ///
+    /// The ID of `self` is preserved.  Output data from the complex event is
+    /// cloned into this event's `data` vector.  Expired status is determined by
+    /// the complex event type.
+    pub fn copy_from_complex(&mut self, complex_event: &dyn ComplexEvent) {
+        self.timestamp = complex_event.get_timestamp();
+        self.is_expired = complex_event.get_event_type() == ComplexEventType::Expired;
+        if let Some(out) = complex_event.get_output_data() {
+            self.data = out.to_vec();
+        } else {
+            self.data.clear();
+        }
+    }
+}
+
+use std::fmt;
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Event{{id={}, timestamp={}, data={:?}, is_expired={}}}",
+            self.id, self.timestamp, self.data, self.is_expired
+        )
+    }
 }

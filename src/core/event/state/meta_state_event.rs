@@ -37,10 +37,46 @@ impl MetaStateEvent {
         }
     }
 
-    // TODO: Implement methods from MetaStateEvent.java
-    // get_meta_stream_event(position)
-    // add_event(MetaStreamEvent)
-    // add_output_data_allowing_duplicate(MetaStateEventAttribute)
-    // set_output_definition(StreamDefinition)
-    // clone()
+    pub fn get_meta_stream_event(&self, position: usize) -> Option<&MetaStreamEvent> {
+        self.meta_stream_events.get(position)?.as_ref()
+    }
+
+    pub fn get_meta_stream_event_mut(&mut self, position: usize) -> Option<&mut MetaStreamEvent> {
+        self.meta_stream_events.get_mut(position)?.as_mut()
+    }
+
+    pub fn add_event(&mut self, meta_stream_event: MetaStreamEvent) {
+        self.meta_stream_events.push(Some(meta_stream_event));
+    }
+
+    pub fn add_output_data_allowing_duplicate(&mut self, attr: QueryApiAttribute) {
+        match &mut self.output_data_attributes {
+            Some(vec) => vec.push(attr),
+            None => self.output_data_attributes = Some(vec![attr]),
+        }
+    }
+
+    pub fn set_output_definition(&mut self, def: StreamDefinition) {
+        self.output_stream_definition = Some(Arc::new(def));
+    }
+
+    pub fn get_output_data_attributes(&self) -> &[QueryApiAttribute] {
+        self.output_data_attributes.as_deref().unwrap_or(&[])
+    }
+
+    pub fn stream_event_count(&self) -> usize {
+        self.meta_stream_events.len()
+    }
+
+    pub fn clone_meta_state_event(&self) -> Self {
+        let mut clone = MetaStateEvent {
+            meta_stream_events: Vec::with_capacity(self.meta_stream_events.len()),
+            output_stream_definition: self.output_stream_definition.clone(),
+            output_data_attributes: self.output_data_attributes.clone(),
+        };
+        for opt in &self.meta_stream_events {
+            clone.meta_stream_events.push(opt.clone());
+        }
+        clone
+    }
 }

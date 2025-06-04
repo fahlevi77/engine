@@ -1,7 +1,11 @@
 // siddhi_rust/src/core/event/stream/stream_event.rs
 // Corresponds to io.siddhi.core.event.stream.StreamEvent
-use crate::core::event::complex_event::{ComplexEvent, ComplexEventType}; // Using ComplexEventType from complex_event.rs
+use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::value::AttributeValue;
+use crate::core::util::siddhi_constants::{
+    BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+};
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -20,8 +24,13 @@ pub struct StreamEvent {
 }
 
 impl StreamEvent {
-   pub fn new(timestamp: i64, before_window_data_size: usize, on_after_window_data_size: usize, output_data_size: usize) -> Self {
-       StreamEvent {
+    pub fn new(
+        timestamp: i64,
+        before_window_data_size: usize,
+        on_after_window_data_size: usize,
+        output_data_size: usize,
+    ) -> Self {
+        StreamEvent {
            timestamp,
            output_data: if output_data_size > 0 { Some(vec![AttributeValue::default(); output_data_size]) } else { None },
            event_type: ComplexEventType::default(), // Defaults to Current
@@ -30,8 +39,96 @@ impl StreamEvent {
            next: None,
        }
    }
-   // TODO: Implement get_attribute_by_position and set_attribute_by_position from Java StreamEvent,
-   // which use SiddhiConstants for position array interpretation.
+    /// Retrieve an attribute using the Siddhi position array convention.
+    /// Only `position[STREAM_ATTRIBUTE_TYPE_INDEX]` and
+    /// `position[STREAM_ATTRIBUTE_INDEX_IN_TYPE]` are respected.
+    pub fn get_attribute_by_position(&self, position: &[i32]) -> Option<&AttributeValue> {
+        let attr_index = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize;
+        match position.get(STREAM_ATTRIBUTE_TYPE_INDEX).copied()? as usize {
+            BEFORE_WINDOW_DATA_INDEX => self.before_window_data.get(attr_index),
+            OUTPUT_DATA_INDEX => self
+                .output_data
+                .as_ref()
+                .and_then(|v| v.get(attr_index)),
+            ON_AFTER_WINDOW_DATA_INDEX => self.on_after_window_data.get(attr_index),
+            _ => None,
+        }
+    }
+
+    /// Set an attribute value using a Siddhi style position array.
+    pub fn set_attribute_by_position(
+        &mut self,
+        value: AttributeValue,
+        position: &[i32],
+    ) -> Result<(), String> {
+        let attr_index = *position
+            .get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)
+            .ok_or("position array too short")? as usize;
+        match position.get(STREAM_ATTRIBUTE_TYPE_INDEX).copied().ok_or("position array too short")? as usize {
+            BEFORE_WINDOW_DATA_INDEX => {
+                if attr_index < self.before_window_data.len() {
+                    self.before_window_data[attr_index] = value;
+                    Ok(())
+                } else {
+                    Err("index out of bounds".into())
+                }
+            }
+            OUTPUT_DATA_INDEX => {
+                if let Some(ref mut vec) = self.output_data {
+                    if attr_index < vec.len() {
+                        vec[attr_index] = value;
+                        Ok(())
+                    } else {
+                        Err("index out of bounds".into())
+                    }
+                } else {
+                    Err("output_data is None".into())
+                }
+            }
+            ON_AFTER_WINDOW_DATA_INDEX => {
+                if attr_index < self.on_after_window_data.len() {
+                    self.on_after_window_data[attr_index] = value;
+                    Ok(())
+                } else {
+                    Err("index out of bounds".into())
+                }
+            }
+            _ => Err("unknown attribute type".into()),
+        }
+    }
+
+    pub fn set_output_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+        match self.output_data {
+            Some(ref mut vec) if index < vec.len() => {
+                vec[index] = value;
+                Ok(())
+            }
+            Some(_) => Err("index out of bounds".into()),
+            None => Err("output_data is None".into()),
+        }
+    }
+
+    pub fn set_before_window_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+        if index < self.before_window_data.len() {
+            self.before_window_data[index] = value;
+            Ok(())
+        } else {
+            Err("index out of bounds".into())
+        }
+    }
+
+    pub fn set_on_after_window_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+        if index < self.on_after_window_data.len() {
+            self.on_after_window_data[index] = value;
+            Ok(())
+        } else {
+            Err("index out of bounds".into())
+        }
+    }
+
+    pub fn has_next(&self) -> bool {
+        self.next.is_some()
+    }
 }
 
 impl ComplexEvent for StreamEvent {

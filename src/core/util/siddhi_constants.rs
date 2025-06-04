@@ -1,14 +1,35 @@
 // siddhi_rust/src/core/util/siddhi_constants.rs
 
-// Placeholder for core-specific constants.
-// If these are meant to be the same as query_api/constants.rs,
-// this module could re-export them.
+//! Constants used inside the Siddhi core implementation.  These mirror the
+//! values found in the Java `io.siddhi.core.util.SiddhiConstants` class that are
+//! required by the currently ported modules.  Only the subset needed by the Rust
+//! code base is included here.
+
+// Position indexes for attribute arrays used by `StreamEvent`/`StateEvent`.
+pub const BEFORE_WINDOW_DATA_INDEX: usize = 0;
+pub const ON_AFTER_WINDOW_DATA_INDEX: usize = 1;
+pub const OUTPUT_DATA_INDEX: usize = 2;
+pub const STATE_OUTPUT_DATA_INDEX: usize = 3;
+
+pub const STREAM_EVENT_CHAIN_INDEX: usize = 0;
+pub const STREAM_EVENT_INDEX_IN_CHAIN: usize = 1;
+pub const STREAM_ATTRIBUTE_TYPE_INDEX: usize = 2;
+pub const STREAM_ATTRIBUTE_INDEX_IN_TYPE: usize = 3;
+
+// Misc index values used by `StateEvent` when navigating chains
+pub const CURRENT: i32 = -1;
+pub const LAST: i32 = -2;
+pub const ANY: i32 = -1;
+pub const UNKNOWN_STATE: i32 = -1;
+
+// When additional constants become necessary they should be added here to keep
+// the mapping with the Java implementation explicit.
+
+// Re‑export the query API constants so users of `core` only need one import.
+pub use crate::query_api::constants::*;
+
+/// Empty struct kept for backwards compatibility with earlier code that
+/// expected a type named `SiddhiConstants` in this module.  New code should
+/// directly use the constants above.
 pub struct SiddhiConstants;
 
-// Example if re-exporting from query_api:
-// pub use crate::query_api::constants::*;
-// And then SiddhiAppParser would use:
-// use crate::core::util::XYZ_CONSTANT; // directly
-// Or if it needs a struct to group them:
-// pub struct CoreSiddhiConstants { ... }
-// For now, an empty struct to satisfy the import.

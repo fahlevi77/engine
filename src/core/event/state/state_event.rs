@@ -5,6 +5,9 @@ use crate::core::event::stream::StreamEvent; // StateEvent holds StreamEvents
 use crate::core::event::value::AttributeValue;
 use std::any::Any;
 use std::fmt::Debug;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_STATE_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Default)] // Default is placeholder
 pub struct StateEvent {
@@ -35,10 +38,39 @@ impl StateEvent {
             event_type: ComplexEventType::default(),
             output_data: if output_size > 0 { Some(vec![AttributeValue::default(); output_size]) } else { None },
             next: None,
-            id: 0, // TODO: ID generation for StateEvent if needed differently from plain Event
+            id: NEXT_STATE_EVENT_ID.fetch_add(1, Ordering::Relaxed),
         }
     }
-    // TODO: Implement methods from StateEvent.java (getStreamEvent, addEvent, setEvent, removeLastEvent etc.)
+    pub fn get_stream_event(&self, position: usize) -> Option<&StreamEvent> {
+        self.stream_events.get(position)?.as_ref()
+    }
+
+    pub fn set_event(&mut self, position: usize, event: StreamEvent) {
+        if position < self.stream_events.len() {
+            self.stream_events[position] = Some(event);
+        }
+    }
+
+    pub fn add_event(&mut self, position: usize, stream_event: StreamEvent) {
+        // Simplified: just append if slot empty, otherwise replace existing next chain head.
+        if position >= self.stream_events.len() {
+            return;
+        }
+        match &mut self.stream_events[position] {
+            None => self.stream_events[position] = Some(stream_event),
+            Some(existing) => existing.next = Some(Box::new(stream_event)),
+        }
+    }
+
+    pub fn remove_last_event(&mut self, position: usize) {
+        if position >= self.stream_events.len() {
+            return;
+        }
+        if let Some(ref mut event) = self.stream_events[position] {
+            // Simplified: drop the chain entirely
+            event.next = None;
+        }
+    }
 }
 
 // Inherent methods for StateEvent
