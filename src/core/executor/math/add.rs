@@ -2,14 +2,14 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
 
 #[derive(Debug)] // Clone not straightforward due to Box<dyn ExpressionExecutor>
 pub struct AddExpressionExecutor {
     left_executor: Box<dyn ExpressionExecutor>,
     right_executor: Box<dyn ExpressionExecutor>,
-    return_type: Attribute::Type, // Determined at construction based on operand types
+    return_type: ApiAttributeType, // Determined at construction based on operand types
 }
 
 impl AddExpressionExecutor {
@@ -17,25 +17,20 @@ impl AddExpressionExecutor {
         let left_type = left.get_return_type();
         let right_type = right.get_return_type();
 
-        // Simplified type promotion logic (matches common SQL-like behavior)
-        // TODO: Align strictly with Siddhi's specific type promotion rules.
         let return_type = match (left_type, right_type) {
-            (Attribute::Type::STRING, _) | (_, Attribute::Type::STRING) => {
-                // String concatenation if enabled, or error. Siddhi does not support + for strings.
+            (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) => {
                 return Err(format!("String concatenation with '+' is not supported. Use str:concat(). Found input types {:?} and {:?}.", left_type, right_type));
             }
-            (Attribute::Type::BOOL, _) | (_, Attribute::Type::BOOL) => {
+            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) => {
                 return Err(format!("Arithmetic addition not supported for BOOL types. Found input types {:?} and {:?}.", left_type, right_type));
             }
-            (Attribute::Type::OBJECT, _) | (_, Attribute::Type::OBJECT) => {
+            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
                  return Err(format!("Arithmetic addition not supported for OBJECT types. Found input types {:?} and {:?}.", left_type, right_type));
             }
-            (Attribute::Type::DOUBLE, _) | (_, Attribute::Type::DOUBLE) => Attribute::Type::DOUBLE,
-            (Attribute::Type::FLOAT, _) | (_, Attribute::Type::FLOAT) => Attribute::Type::FLOAT,
-            (Attribute::Type::LONG, _) | (_, Attribute::Type::LONG) => Attribute::Type::LONG,
-            (Attribute::Type::INT, _) | (_, Attribute::Type::INT) => Attribute::Type::INT,
-            // If one is INT and other is not yet covered (e.g. custom numeric type if any)
-            // This default case should ideally not be reached if all numeric types are handled above.
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
+            (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
+            (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT,
             _ => return Err(format!("Addition not supported for incompatible types: {:?} and {:?}", left_type, right_type)),
 
         };
@@ -50,52 +45,118 @@ impl ExpressionExecutor for AddExpressionExecutor {
 
         match (left_val_opt, right_val_opt) {
             (Some(left_val), Some(right_val)) => {
-                // Handle NULL propagation: if either operand is Null, result is Null.
                 if matches!(left_val, AttributeValue::Null) || matches!(right_val, AttributeValue::Null) {
                     return Some(AttributeValue::Null);
                 }
-
-                // Coerce operands to the target return_type and perform addition
                 match self.return_type {
-                    Attribute::Type::INT => {
+                    ApiAttributeType::INT => {
                         let l = left_val.to_i32_or_err_str("Add")?;
                         let r = right_val.to_i32_or_err_str("Add")?;
-                        Some(AttributeValue::Int(l.wrapping_add(r))) // Use wrapping_add for overflow resilience like Java
+                        Some(AttributeValue::Int(l.wrapping_add(r)))
                     }
-                    Attribute::Type::LONG => {
+                    ApiAttributeType::LONG => {
                         let l = left_val.to_i64_or_err_str("Add")?;
                         let r = right_val.to_i64_or_err_str("Add")?;
                         Some(AttributeValue::Long(l.wrapping_add(r)))
                     }
-                    Attribute::Type::FLOAT => {
+                    ApiAttributeType::FLOAT => {
                         let l = left_val.to_f32_or_err_str("Add")?;
                         let r = right_val.to_f32_or_err_str("Add")?;
                         Some(AttributeValue::Float(l + r))
                     }
-                    Attribute::Type::DOUBLE => {
+                    ApiAttributeType::DOUBLE => {
                         let l = left_val.to_f64_or_err_str("Add")?;
                         let r = right_val.to_f64_or_err_str("Add")?;
                         Some(AttributeValue::Double(l + r))
                     }
                     _ => {
-                        // This should not be reached if constructor validation is correct.
-                        // log_error!("Addition resulted in unexpected return type: {:?}", self.return_type);
                         None
                     }
                 }
             }
-            _ => None, // If any operand execution fails (returns None)
+            _ => None,
         }
     }
-    fn get_return_type(&self) -> Attribute::Type { self.return_type }
+    fn get_return_type(&self) -> ApiAttributeType { self.return_type }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(AddExpressionExecutor {
-    //         left_executor: self.left_executor.clone_executor(),
-    //         right_executor: self.right_executor.clone_executor(),
-    //         return_type: self.return_type,
-    //     })
-    // }
+     fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+         Box::new(AddExpressionExecutor {
+             left_executor: self.left_executor.clone_executor(siddhi_app_context),
+             right_executor: self.right_executor.clone_executor(siddhi_app_context),
+             return_type: self.return_type,
+         })
+     }
 }
 
-// CoerceNumeric trait and impl removed from here, now in common.rs
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+    use crate::core::event::value::AttributeValue;
+    // ApiAttributeType is imported in the outer scope
+    use crate::core::executor::expression_executor::ExpressionExecutor;
+    use crate::core::config::siddhi_app_context::SiddhiAppContext;
+    use std::sync::Arc;
+
+    // Copied helper for SiddhiAppContext for testing clone_executor
+    impl SiddhiAppContext {
+        pub fn default_for_testing() -> Self {
+            use crate::core::config::siddhi_context::SiddhiContext;
+            use crate::query_api::SiddhiApp as ApiSiddhiApp;
+
+            Self::new(
+                Arc::new(SiddhiContext::default()),
+                "test_app_ctx_for_add_exec".to_string(),
+                Arc::new(ApiSiddhiApp::new("test_api_app_for_add_exec".to_string())),
+                String::new()
+            )
+        }
+    }
+
+    #[test]
+    fn test_add_int_int() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
+        let add_exec = AddExpressionExecutor::new(left_exec, right_exec).unwrap();
+
+        assert_eq!(add_exec.get_return_type(), ApiAttributeType::INT);
+        let result = add_exec.execute(None); // Event is None for constant operands
+        assert_eq!(result, Some(AttributeValue::Int(15)));
+    }
+
+    #[test]
+    fn test_add_float_int_to_float() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(5.5), ApiAttributeType::FLOAT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
+        // Constructor should promote return type to FLOAT
+        let add_exec = AddExpressionExecutor::new(left_exec, right_exec).unwrap();
+
+        assert_eq!(add_exec.get_return_type(), ApiAttributeType::FLOAT);
+        let result = add_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Float(15.5)));
+    }
+
+    #[test]
+    fn test_add_null_propagation() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Null, ApiAttributeType::INT)); // One operand is Null
+        let add_exec = AddExpressionExecutor::new(left_exec, right_exec).unwrap();
+
+        let result = add_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Null)); // Expect Null result
+    }
+
+     #[test]
+    fn test_add_clone() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(7), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(8), ApiAttributeType::INT));
+        let add_exec = AddExpressionExecutor::new(left_exec, right_exec).unwrap();
+
+        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let cloned_add_exec = add_exec.clone_executor(&app_ctx_placeholder);
+
+        assert_eq!(cloned_add_exec.get_return_type(), ApiAttributeType::INT);
+        let result = cloned_add_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Int(15)));
+    }
+}

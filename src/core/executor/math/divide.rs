@@ -2,14 +2,14 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
 
 #[derive(Debug)]
 pub struct DivideExpressionExecutor {
     left_executor: Box<dyn ExpressionExecutor>,
     right_executor: Box<dyn ExpressionExecutor>,
-    return_type: Attribute::Type, // Division often results in float/double
+    return_type: ApiAttributeType, // Division often results in float/double
 }
 
 impl DivideExpressionExecutor {
@@ -23,21 +23,21 @@ impl DivideExpressionExecutor {
         // If strict integer division is needed, a separate DivInt executor or different operator could be used.
         // For now, promoting to DOUBLE for `/` operator.
         let return_type = match (left_type, right_type) {
-             (Attribute::Type::STRING, _) | (_, Attribute::Type::STRING) |
-            (Attribute::Type::BOOL, _) | (_, Attribute::Type::BOOL) |
-            (Attribute::Type::OBJECT, _) | (_, Attribute::Type::OBJECT) => {
+             (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) |
+            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) |
+            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!("Division not supported for input types {:?} and {:?}", left_type, right_type));
             }
             // Any division involving numbers results in DOUBLE for safety and precision by default
-            _ => Attribute::Type::DOUBLE,
+            _ => ApiAttributeType::DOUBLE,
         };
         // One could refine this: if both are INT, maybe return INT (integer division), or if both are LONG, return LONG.
         // Or, if strict type matching like Java's per-type executors is desired:
         // let return_type = match (left_type, right_type) {
-        //     (Attribute::Type::DOUBLE, _) | (_, Attribute::Type::DOUBLE) => Attribute::Type::DOUBLE,
-        //     (Attribute::Type::FLOAT, _) | (_, Attribute::Type::FLOAT) => Attribute::Type::FLOAT,
-        //     (Attribute::Type::LONG, _) | (_, Attribute::Type::LONG) => Attribute::Type::LONG, // if long div long -> long
-        //     (Attribute::Type::INT, _) | (_, Attribute::Type::INT) => Attribute::Type::INT, // if int div int -> int
+        //     (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+        //     (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
+        //     (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG, // if long div long -> long
+        //     (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT, // if int div int -> int
         //     _ => return Err(...)
         // };
         // The prompt example for Add determined return type by promoting. Let's follow that.
@@ -72,10 +72,10 @@ impl ExpressionExecutor for DivideExpressionExecutor {
                 let result = l / r;
 
                 match self.return_type { // This logic might be simplified if return_type is always DOUBLE
-                    Attribute::Type::DOUBLE => Some(AttributeValue::Double(result)),
-                    Attribute::Type::FLOAT => Some(AttributeValue::Float(result as f32)),
-                    Attribute::Type::LONG => Some(AttributeValue::Long(result as i64)), // Truncating
-                    Attribute::Type::INT => Some(AttributeValue::Int(result as i32)), // Truncating
+                    ApiAttributeType::DOUBLE => Some(AttributeValue::Double(result)),
+                    ApiAttributeType::FLOAT => Some(AttributeValue::Float(result as f32)),
+                    ApiAttributeType::LONG => Some(AttributeValue::Long(result as i64)), // Truncating
+                    ApiAttributeType::INT => Some(AttributeValue::Int(result as i32)), // Truncating
                     _ => {
                         // log_error!("Division resulted in unexpected return type: {:?}", self.return_type);
                         None
@@ -85,6 +85,12 @@ impl ExpressionExecutor for DivideExpressionExecutor {
             _ => None,
         }
     }
-    fn get_return_type(&self) -> Attribute::Type { self.return_type }
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> { /* ... */ }
+    fn get_return_type(&self) -> ApiAttributeType { self.return_type }
+    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(DivideExpressionExecutor {
+            left_executor: self.left_executor.clone_executor(siddhi_app_context),
+            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            return_type: self.return_type,
+        })
+    }
 }

@@ -45,23 +45,7 @@ impl StateElement {
     }
 }
 
-impl SiddhiElement for StateElement {
-    fn query_context_start_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_start_index
-    }
-
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_start_index = index;
-    }
-
-    fn query_context_end_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_end_index
-    }
-
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_end_index = index;
-    }
-}
+// `impl SiddhiElement for StateElement` removed.
 
 // Removed placeholder: impl StreamStateElement { pub(crate) fn get_stream_id_placeholder(&self) -> String }
 // This functionality should be part of StreamStateElement's own API if needed by other modules.

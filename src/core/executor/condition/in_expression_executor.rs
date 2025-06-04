@@ -3,7 +3,9 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 // use crate::core::table::Table; // TODO: Define Table trait/struct
 // use crate::core::util::collection::operator::CompiledCondition; // TODO: Define CompiledCondition
 
@@ -64,12 +66,16 @@ impl ExpressionExecutor for InExpressionExecutor {
         Some(AttributeValue::Bool(false)) // Placeholder: always return false
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
-        Attribute::Type::BOOL
+    fn get_return_type(&self) -> ApiAttributeType {
+        ApiAttributeType::BOOL
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     // Cloning this would be complex due to Table reference and CompiledCondition
-    //     unimplemented!("InExpressionExecutor cloning not yet supported")
-    // }
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        // Cloning this would be complex due to Table reference and CompiledCondition in a full impl.
+        // For the current placeholder, it's simpler.
+        Box::new(InExpressionExecutor::new(
+            self.value_executor.clone_executor(siddhi_app_context),
+            self.collection_placeholder.clone()
+        ))
+    }
 }

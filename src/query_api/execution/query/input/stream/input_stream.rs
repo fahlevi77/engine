@@ -5,8 +5,8 @@ use crate::query_api::siddhi_element::SiddhiElement;
 use super::single_input_stream::SingleInputStream;
 use super::join_input_stream::{JoinInputStream, Type as JoinType, EventTrigger as JoinEventTrigger};
 use super::state_input_stream::{StateInputStream, Type as StateInputStreamType};
-use super::basic_single_input_stream::BasicSingleInputStream; // For factory methods
-use super::anonymous_input_stream::AnonymousInputStream; // For factory methods
+// BasicSingleInputStream and AnonymousInputStream were removed and functionality moved into SingleInputStream.
+// Factory methods will now directly use SingleInputStream::new_basic... or SingleInputStream::new_anonymous...
 
 // For factory methods that need these:
 use crate::query_api::execution::query::input::state::StateElement;
@@ -50,20 +50,7 @@ impl InputStream {
     }
 }
 
-impl SiddhiElement for InputStream {
-    fn query_context_start_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_start_index
-    }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_start_index = index;
-    }
-    fn query_context_end_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_end_index
-    }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_end_index = index;
-    }
-}
+// `impl SiddhiElement for InputStream` removed.
 
 impl InputStreamTrait for InputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

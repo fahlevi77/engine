@@ -2,14 +2,16 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Corrected import
 use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
+use std::sync::Arc;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 
 #[derive(Debug)]
 pub struct MultiplyExpressionExecutor {
     left_executor: Box<dyn ExpressionExecutor>,
     right_executor: Box<dyn ExpressionExecutor>,
-    return_type: Attribute::Type,
+    return_type: ApiAttributeType, // Corrected type
 }
 
 impl MultiplyExpressionExecutor {
@@ -18,15 +20,15 @@ impl MultiplyExpressionExecutor {
         let right_type = right.get_return_type();
 
         let return_type = match (left_type, right_type) {
-            (Attribute::Type::STRING, _) | (_, Attribute::Type::STRING) |
-            (Attribute::Type::BOOL, _) | (_, Attribute::Type::BOOL) |
-            (Attribute::Type::OBJECT, _) | (_, Attribute::Type::OBJECT) => {
+            (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) |
+            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) |
+            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!("Multiplication not supported for input types {:?} and {:?}", left_type, right_type));
             }
-            (Attribute::Type::DOUBLE, _) | (_, Attribute::Type::DOUBLE) => Attribute::Type::DOUBLE,
-            (Attribute::Type::FLOAT, _) | (_, Attribute::Type::FLOAT) => Attribute::Type::FLOAT,
-            (Attribute::Type::LONG, _) | (_, Attribute::Type::LONG) => Attribute::Type::LONG,
-            (Attribute::Type::INT, _) | (_, Attribute::Type::INT) => Attribute::Type::INT,
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
+            (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
+            (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT,
              _ => return Err(format!("Multiplication not supported for incompatible types: {:?} and {:?}", left_type, right_type)),
         };
         Ok(Self { left_executor: left, right_executor: right, return_type })
@@ -44,22 +46,22 @@ impl ExpressionExecutor for MultiplyExpressionExecutor {
                     return Some(AttributeValue::Null);
                 }
                 match self.return_type {
-                    Attribute::Type::INT => {
+                    ApiAttributeType::INT => {
                         let l = left_val.to_i32_or_err_str("Multiply")?;
                         let r = right_val.to_i32_or_err_str("Multiply")?;
                         Some(AttributeValue::Int(l.wrapping_mul(r)))
                     }
-                    Attribute::Type::LONG => {
+                    ApiAttributeType::LONG => {
                         let l = left_val.to_i64_or_err_str("Multiply")?;
                         let r = right_val.to_i64_or_err_str("Multiply")?;
                         Some(AttributeValue::Long(l.wrapping_mul(r)))
                     }
-                    Attribute::Type::FLOAT => {
+                    ApiAttributeType::FLOAT => {
                         let l = left_val.to_f32_or_err_str("Multiply")?;
                         let r = right_val.to_f32_or_err_str("Multiply")?;
                         Some(AttributeValue::Float(l * r))
                     }
-                    Attribute::Type::DOUBLE => {
+                    ApiAttributeType::DOUBLE => {
                         let l = left_val.to_f64_or_err_str("Multiply")?;
                         let r = right_val.to_f64_or_err_str("Multiply")?;
                         Some(AttributeValue::Double(l * r))
@@ -70,6 +72,12 @@ impl ExpressionExecutor for MultiplyExpressionExecutor {
             _ => None,
         }
     }
-    fn get_return_type(&self) -> Attribute::Type { self.return_type }
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> { /* ... */ }
+    fn get_return_type(&self) -> ApiAttributeType { self.return_type } // Corrected
+
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(MultiplyExpressionExecutor::new(
+            self.left_executor.clone_executor(siddhi_app_context),
+            self.right_executor.clone_executor(siddhi_app_context),
+        ).expect("Cloning MultiplyExpressionExecutor failed"))
+    }
 }

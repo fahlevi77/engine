@@ -6,6 +6,7 @@ use super::{OutputStream, OutputRate, OutputEventType}; // Use parent module's r
 use crate::query_api::execution::execution_element::ExecutionElementTrait;
 
 
+/// Defines a Siddhi query with input, selection, output, etc.
 #[derive(Clone, Debug, PartialEq)] // Default will be custom or via new()
 pub struct Query {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
@@ -78,6 +79,106 @@ impl Query {
     // Getter for annotations, needed by ExecutionElementTrait impl
     pub fn get_annotations(&self) -> &Vec<Annotation> {
         &self.annotations
+    }
+
+    // Other Getters
+    pub fn get_input_stream(&self) -> Option<&InputStream> {
+        self.input_stream.as_ref()
+    }
+
+    pub fn get_selector(&self) -> &Selector {
+        &self.selector
+    }
+
+    pub fn get_output_stream(&self) -> &OutputStream {
+        &self.output_stream
+    }
+
+    pub fn get_output_rate(&self) -> Option<&OutputRate> {
+        self.output_rate.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query_api::execution::query::input::stream::{InputStream, SingleInputStream};
+    use crate::query_api::execution::query::selection::Selector;
+    use crate::query_api::execution::query::output::output_stream::OutputStream;
+    use crate::query_api::execution::query::output::ratelimit::{OutputRate, OutputRateVariant};
+    use crate::query_api::annotation::Annotation;
+
+    #[test]
+    fn test_query_new() {
+        let q = Query::new();
+        assert!(q.get_input_stream().is_none());
+        assert_eq!(q.get_selector(), &Selector::new()); // Assumes Selector derives PartialEq and has a new
+        assert_eq!(q.get_output_stream(), &OutputStream::default_return_stream()); // Assumes OutputStream has PartialEq and a default
+        assert!(q.get_output_rate().is_none());
+        assert!(q.get_annotations().is_empty());
+        assert_eq!(q.siddhi_element.query_context_start_index, None);
+    }
+
+    #[test]
+    fn test_query_builder() {
+        let input_stream = InputStream::Single(SingleInputStream::new_basic_from_id("MyStream".to_string()));
+        let selector = Selector::new(vec![]); // Empty selector
+        let output_stream = OutputStream::default_return_stream().target_id("OutStream".to_string());
+        let output_rate = OutputRate::new(OutputRateVariant::Events(10.into())); // Output every 10 events
+        let annotation = Annotation::new("TestAnn".to_string());
+
+        let q = Query::query()
+            .from(input_stream.clone())
+            .select(selector.clone())
+            .out_stream(output_stream.clone())
+            .output(output_rate.clone())
+            .annotation(annotation.clone());
+
+        assert_eq!(q.get_input_stream().unwrap(), &input_stream);
+        assert_eq!(q.get_selector(), &selector);
+
+        // out_stream might modify output_stream's event type, so compare relevant fields
+        // or ensure the clone for comparison is made *after* potential modification if it matters.
+        // For this test, we check the target_id set and that event type logic is hit.
+        assert_eq!(q.get_output_stream().action.get_target_id().unwrap(), "OutStream");
+        assert_eq!(q.get_output_rate().unwrap(), &output_rate);
+        assert_eq!(q.get_annotations().len(), 1);
+        assert_eq!(q.get_annotations()[0].name, "TestAnn");
+    }
+
+    #[test]
+    fn test_query_update_output_event_type() {
+        let mut q = Query::query();
+
+        // Default output event type should be CurrentEvents
+        q.update_output_event_type(); // Called internally by out_stream and output, but can be called directly
+        assert_eq!(q.output_stream.get_output_event_type(), Some(&OutputEventType::CurrentEvents));
+
+        // If output rate is snapshot, it should be AllEvents
+        let snapshot_rate = OutputRate::new_snapshot(1000.into(), None); // Snapshot every 1000ms
+        q = q.output(snapshot_rate); // This will call update_output_event_type
+        assert_eq!(q.output_stream.get_output_event_type(), Some(&OutputEventType::AllEvents));
+
+        // If output rate is not snapshot, and type was already set, it should not change
+        // (unless explicitly set to None first and then a non-snapshot rate is applied)
+        // Let's reset the query to test this part
+        let mut q2 = Query::query();
+        // Manually set an output event type
+        q2.output_stream.set_output_event_type_if_none(OutputEventType::ExpiredEvents);
+        assert_eq!(q2.output_stream.get_output_event_type(), Some(&OutputEventType::ExpiredEvents));
+
+        // Add a non-snapshot output rate
+        let events_rate = OutputRate::new(OutputRateVariant::Events(5.into()));
+        q2 = q2.output(events_rate);
+        // The event type should remain ExpiredEvents because it was already set
+        assert_eq!(q2.output_stream.get_output_event_type(), Some(&OutputEventType::ExpiredEvents));
+
+        // If output_event_type is None and a non-snapshot rate is applied, it should become CurrentEvents
+        let mut q3 = Query::query();
+        q3.output_stream.output_event_type = None; // Explicitly set to None
+        let time_rate = OutputRate::new(OutputRateVariant::Time(100.into())); // time based, not snapshot
+        q3 = q3.output(time_rate);
+        assert_eq!(q3.output_stream.get_output_event_type(), Some(&OutputEventType::CurrentEvents));
     }
 }
 

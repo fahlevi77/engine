@@ -3,8 +3,10 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use uuid::Uuid; // Requires `uuid` crate with "v4" feature
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 
 // Java UUIDFunctionExecutor extends FunctionExecutor but is stateless and takes no arguments.
 #[derive(Debug, Default, Clone)] // Can be Clone and Default as it has no fields
@@ -25,11 +27,11 @@ impl ExpressionExecutor for UuidFunctionExecutor {
         Some(AttributeValue::String(Uuid::new_v4().hyphenated().to_string()))
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
-        Attribute::Type::STRING
+    fn get_return_type(&self) -> ApiAttributeType {
+        ApiAttributeType::STRING
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(self.clone())
-    // }
+    fn clone_executor(&self, _siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(self.clone())
+    }
 }

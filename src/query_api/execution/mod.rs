@@ -19,4 +19,3 @@ pub use self::query::selection;
 // For example, to allow `execution::input::InputStream`
 // or `execution::output::OutputStream`
 // or `execution::selection::Selector`
-```

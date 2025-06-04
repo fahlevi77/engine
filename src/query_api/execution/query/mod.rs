@@ -25,7 +25,7 @@ pub use self::selection::Order as OrderByOrder;
 pub use self::output::OutputStream;
 pub use self::output::OutputEventType;
 pub use self::output::OutputRate;
-pub use self::output::SetAttributePlaceholder; // If this is intended to be widely used
+pub use self::output::SetAttribute; // Changed from SetAttributePlaceholder
 
 // The aliases ActualOutputStream etc. are no longer needed if the output/mod.rs directly exports OutputStream.
 // The previous `output/mod.rs` was:
@@ -37,4 +37,3 @@ pub use self::output::SetAttributePlaceholder; // If this is intended to be wide
 // pub use self::output_stream::{OutputStream, OutputEventType, SetAttributePlaceholder};
 // pub use self::ratelimit::{OutputRate, OutputRateVariant, OutputRateBehavior, EventsOutputRate, TimeOutputRate, SnapshotOutputRate};
 // This is good. So, the re-exports above are correct.
-```

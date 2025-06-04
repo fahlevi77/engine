@@ -2,7 +2,7 @@
 use crate::query_api::siddhi_element::SiddhiElement; // For direct composition if not delegating
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
 use super::stream_state_element::StreamStateElement;
-use crate::query_api::execution::query::input::stream::BasicSingleInputStream;
+use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
 
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward
@@ -19,11 +19,11 @@ pub struct AbsentStreamStateElement {
 }
 
 impl AbsentStreamStateElement {
-    // Constructor takes BasicSingleInputStream to create the inner StreamStateElement,
+    // Constructor takes SingleInputStream to create the inner StreamStateElement,
     // and the waiting_time.
-    pub fn new(basic_single_input_stream: BasicSingleInputStream, waiting_time: Option<ExpressionConstant>) -> Self {
+    pub fn new(single_input_stream: SingleInputStream, waiting_time: Option<ExpressionConstant>) -> Self { // Changed parameter type
         AbsentStreamStateElement {
-            stream_state_element: StreamStateElement::new(basic_single_input_stream),
+            stream_state_element: StreamStateElement::new(single_input_stream), // Pass SingleInputStream
             waiting_time,
         }
     }
@@ -37,8 +37,8 @@ impl AbsentStreamStateElement {
         }
     }
 
-    pub fn get_basic_single_input_stream(&self) -> &BasicSingleInputStream {
-        self.stream_state_element.get_basic_single_input_stream()
+    pub fn get_single_input_stream(&self) -> &SingleInputStream { // Changed method name and return type
+        self.stream_state_element.get_single_input_stream()
     }
 
     // Expose siddhi_element for direct access if needed by StateElement enum dispatch.

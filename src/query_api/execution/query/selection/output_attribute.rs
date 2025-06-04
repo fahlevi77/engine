@@ -2,22 +2,7 @@ use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::Variable;
 
-#[derive(Clone, Debug, PartialEq, Default)] // Added Default
-pub struct OutputAttribute {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
-
-    // OutputAttribute fields
-    pub rename: Option<String>,
-    // Expression cannot be Default easily, so OutputAttribute::default() will have a default Expression variant.
-    // This makes Default derive problematic if Expression itself is not Default.
-    // Let's assume Expression will have a usable default (e.g. Constant(Default)).
-    pub expression: Expression,
-}
-// Reconsidering Default for OutputAttribute: if Expression is not Default, this cannot be Default.
-// Expression enum does not have a Default derive.
-// So, OutputAttribute cannot derive Default.
-
-// Corrected structure:
+// Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]
 pub struct OutputAttribute {
     pub siddhi_element: SiddhiElement,

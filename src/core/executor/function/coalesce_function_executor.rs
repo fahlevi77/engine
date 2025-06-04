@@ -3,14 +3,14 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 // Note: Java CoalesceFunctionExecutor extends FunctionExecutor, which handles state.
 // This simplified Rust version makes it stateless for now.
 
 #[derive(Debug)] // Clone not straightforward due to Vec<Box<dyn ExpressionExecutor>>
 pub struct CoalesceFunctionExecutor {
     attribute_executors: Vec<Box<dyn ExpressionExecutor>>,
-    return_type: Attribute::Type, // Determined by the first non-nullable executor, or common type.
+    return_type: ApiAttributeType, // Determined by the first non-nullable executor, or common type.
 }
 
 impl CoalesceFunctionExecutor {
@@ -53,12 +53,15 @@ impl ExpressionExecutor for CoalesceFunctionExecutor {
         Some(AttributeValue::Null) // If all executors returned Null or None
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
+    fn get_return_type(&self) -> ApiAttributeType {
         self.return_type
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     let cloned_execs = self.attribute_executors.iter().map(|e| e.clone_executor()).collect();
-    //     Box::new(CoalesceFunctionExecutor::new(cloned_execs, self.return_type)) // Assuming new takes return_type
-    // }
+    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        let cloned_execs = self.attribute_executors.iter().map(|e| e.clone_executor(siddhi_app_context)).collect();
+        // new already determines the return type from the cloned_execs.
+        // If new fails (e.g. if cloning results in incompatible types somehow, though unlikely here),
+        // this clone_executor call will panic. This might be acceptable if cloning is expected to succeed.
+        Box::new(CoalesceFunctionExecutor::new(cloned_execs).expect("Cloning CoalesceFunctionExecutor failed"))
+    }
 }

@@ -50,21 +50,7 @@ impl InputStore {
     }
 }
 
-// Implement SiddhiElement for the enum
-impl SiddhiElement for InputStore {
-    fn query_context_start_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_start_index
-    }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_start_index = index;
-    }
-    fn query_context_end_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_end_index
-    }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_end_index = index;
-    }
-}
+// `impl SiddhiElement for InputStore` removed.
 
 // Implement InputStoreTrait for the enum
 impl InputStoreTrait for InputStore {

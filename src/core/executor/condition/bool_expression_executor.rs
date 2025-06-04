@@ -3,7 +3,9 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 
 #[derive(Debug)]
 pub struct BoolExpressionExecutor {
@@ -12,7 +14,7 @@ pub struct BoolExpressionExecutor {
 
 impl BoolExpressionExecutor {
     pub fn new(condition_executor: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
-        if condition_executor.get_return_type() != Attribute::Type::BOOL {
+        if condition_executor.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
                 "BoolConditionExpressionExecutor expects an inner executor returning BOOL, but got {:?}",
                 condition_executor.get_return_type()
@@ -36,13 +38,13 @@ impl ExpressionExecutor for BoolExpressionExecutor {
        }
    }
 
-   fn get_return_type(&self) -> Attribute::Type {
-       Attribute::Type::BOOL
+   fn get_return_type(&self) -> ApiAttributeType {
+       ApiAttributeType::BOOL
    }
 
-   // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-   //     Box::new(BoolExpressionExecutor {
-   //         condition_executor: self.condition_executor.clone_executor(),
-   //     })
-   // }
+   fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+       Box::new(BoolExpressionExecutor::new(
+           self.condition_executor.clone_executor(siddhi_app_context)
+       ).expect("Cloning BoolExpressionExecutor failed")) // new returns Result
+   }
 }

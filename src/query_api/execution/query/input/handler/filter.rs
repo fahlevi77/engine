@@ -2,17 +2,7 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq, Default)] // Added Default
-pub struct Filter {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
-    pub filter_expression: Expression, // Needs default if Filter is Default. Expression enum has no default.
-                                       // Making Filter::new require expression. Default derive removed.
-}
-// Re-evaluating Default for Filter: Since filter_expression is not Option and Expression has no Default,
-// Filter cannot easily derive Default. It should be constructed with an expression.
-// Removing Default derive from Filter.
-
-// Corrected structure:
+// Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]
 pub struct Filter {
     pub siddhi_element: SiddhiElement,

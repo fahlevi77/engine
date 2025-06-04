@@ -7,7 +7,7 @@ use super::next_state_element::NextStateElement;
 use super::count_state_element::{CountStateElement, ANY_COUNT};
 use super::every_state_element::EveryStateElement;
 
-use crate::query_api::execution::query::input::stream::BasicSingleInputStream;
+use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
 use crate::query_api::expression::constant::Constant as ExpressionConstant; // Renamed TimeConstant
 
 // Utility struct to hold factory methods
@@ -36,13 +36,19 @@ impl State {
     }
 
     pub fn logical_not(stream_state_element: StreamStateElement, time: Option<ExpressionConstant>) -> AbsentStreamStateElement {
-        if stream_state_element.get_basic_single_input_stream().inner.get_stream_reference_id_str().is_some() {
+        // Assuming get_single_input_stream() returns a reference to the SingleInputStream composed in StreamStateElement
+        if stream_state_element.get_single_input_stream().inner.get_stream_reference_id_str().is_some() {
              // TODO: This should ideally return a Result or handle error more gracefully
             panic!("SiddhiAppValidationException: NOT pattern cannot have reference id but found {}",
-                stream_state_element.get_basic_single_input_stream().inner.get_stream_reference_id_str().unwrap_or_default()
+                stream_state_element.get_single_input_stream().inner.get_stream_reference_id_str().unwrap_or_default()
             );
         }
-        AbsentStreamStateElement::new(stream_state_element.basic_single_input_stream, time)
+        // AbsentStreamStateElement::new expects an owned SingleInputStream.
+        // StreamStateElement.basic_single_input_stream is an owned SingleInputStream.
+        // We need to clone it if StreamStateElement is not consumed.
+        // If StreamStateElement is consumed, we can move it.
+        // For now, assuming clone() is available and appropriate.
+        AbsentStreamStateElement::new(stream_state_element.basic_single_input_stream.clone(), time)
     }
 
     // Now this can be implemented correctly
@@ -70,12 +76,12 @@ impl State {
         Self::count(stream_state_element, ANY_COUNT, max)
     }
 
-    pub fn stream(basic_single_input_stream: BasicSingleInputStream) -> StreamStateElement {
-        StreamStateElement::new(basic_single_input_stream)
+    pub fn stream(single_input_stream: SingleInputStream) -> StreamStateElement { // Changed parameter type
+        StreamStateElement::new(single_input_stream)
     }
 
-    pub fn stream_element(basic_single_input_stream: BasicSingleInputStream) -> StateElement {
-        StateElement::Stream(Self::stream(basic_single_input_stream))
+    pub fn stream_element(single_input_stream: SingleInputStream) -> StateElement { // Changed parameter type
+        StateElement::Stream(Self::stream(single_input_stream))
     }
 
     pub fn zero_or_many(stream_state_element: StreamStateElement) -> StateElement {

@@ -90,13 +90,6 @@ impl Default for Partition {
     }
 }
 
-impl SiddhiElement for Partition {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
-
 // Implement ExecutionElement for Partition (conceptual, actual trait defined elsewhere)
 use crate::query_api::execution::execution_element::ExecutionElementTrait;
 impl ExecutionElementTrait for Partition {

@@ -8,7 +8,8 @@ pub mod trigger_definition;
 pub mod window_definition;
 
 pub use self::abstract_definition::AbstractDefinition;
-pub use self::aggregation_definition::{AggregationDefinition, TimePeriod as AggregationTimePeriod}; // Renamed placeholder
+pub use self::aggregation_definition::AggregationDefinition; // Keep this
+pub use crate::query_api::aggregation::TimePeriod as AggregationTimePeriod; // Import directly
 pub use self::attribute::{Attribute, Type as AttributeType};
 pub use self::function_definition::FunctionDefinition;
 pub use self::stream_definition::StreamDefinition;

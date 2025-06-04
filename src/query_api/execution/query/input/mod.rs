@@ -11,8 +11,8 @@ pub use self::stream::{
     SingleInputStream,
     JoinInputStream,
     StateInputStream,
-    BasicSingleInputStream,
-    AnonymousInputStream,
+    // BasicSingleInputStream, // Removed
+    // AnonymousInputStream, // Removed
     JoinType, // Enum from JoinInputStream
     StateInputStreamType, // Enum from StateInputStream
     JoinEventTrigger, // Enum from JoinInputStream
@@ -23,7 +23,7 @@ pub use self::handler::{
     StreamHandler, // Enum or Trait
     Filter,
     StreamFunction,
-    Window as WindowHandler, // Renamed to avoid conflict with definition::WindowDefinition
+    WindowHandler, // Use the already aliased WindowHandler from handler/mod.rs
 };
 
 // Re-export key elements from state module

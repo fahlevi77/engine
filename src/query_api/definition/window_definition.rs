@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.definition.WindowDefinition
 use crate::query_api::definition::stream_definition::StreamDefinition;
-use crate::query_api::execution::query::input::handler::Window as WindowHandler; // Actual Window handler type
+use crate::query_api::execution::query::input::handler::WindowHandler; // Use the re-exported WindowHandler
 use crate::query_api::execution::query::output::OutputEventType; // Actual OutputEventType enum
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom due to nested StreamDefinition

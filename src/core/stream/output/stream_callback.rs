@@ -108,16 +108,13 @@ impl StreamCallback for LogStreamCallback {
     fn receive_events(&self, events: &[Event]) {
         println!("[{}] Received events: {:?}", self.stream_id, events);
     }
+    // The get_stream_id required by StreamJunctionReceiver (which StreamCallback extends)
+    // will be provided by the generic impl of StreamJunctionReceiver for T: StreamCallback.
+    // However, that generic impl currently has a placeholder for get_stream_id.
+    // For LogStreamCallback to work with the generic impl, StreamCallback trait would need to
+    // require get_stream_id, or LogStreamCallback needs to provide it in a way the generic impl can use,
+    // or the generic impl's get_stream_id needs to be removed (making it non-object-safe for StreamJunctionReceiver alone).
+    // This is a deeper design issue with the generic impl's get_stream_id.
+    // For now, removing the specific conflicting impl is the direct fix for E0119.
 }
-// This concrete type would also need to implement StreamJunctionReceiver
-// by calling its own StreamCallback default methods or directly receive_events.
-// The blanket impl above for `T: StreamCallback` tries to provide this, but get_stream_id is an issue.
-// A better pattern might be to have StreamJunction.Receiver methods call StreamCallback.receive_events directly
-// after conversion.
-impl StreamJunctionReceiver for LogStreamCallback {
-    fn get_stream_id(&self) -> &str { &self.stream_id }
-    fn receive_complex_event_chunk(&self, complex_event_chunk: &mut Option<Box<dyn ComplexEvent>>) {
-        self.default_receive_complex_event_chunk(complex_event_chunk);
-    }
-    // ... other receive methods from StreamJunction.Receiver, calling the default_... helpers ...
-}
+// Removed specific `impl StreamJunctionReceiver for LogStreamCallback`

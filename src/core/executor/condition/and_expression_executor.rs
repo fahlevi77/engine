@@ -3,7 +3,9 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 
 #[derive(Debug)] // Cannot Clone/Default easily due to Box<dyn ExpressionExecutor>
 pub struct AndExpressionExecutor {
@@ -16,13 +18,13 @@ pub struct AndExpressionExecutor {
 impl AndExpressionExecutor {
     pub fn new(left: Box<dyn ExpressionExecutor>, right: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
         // Java constructor checks if both return BOOL.
-        if left.get_return_type() != Attribute::Type::BOOL {
+        if left.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
                 "Left operand for AND executor returns {:?} instead of BOOL",
                 left.get_return_type()
             ));
         }
-        if right.get_return_type() != Attribute::Type::BOOL {
+        if right.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
                 "Right operand for AND executor returns {:?} instead of BOOL",
                 right.get_return_type()
@@ -62,14 +64,14 @@ impl ExpressionExecutor for AndExpressionExecutor {
         }
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
-        Attribute::Type::BOOL
+    fn get_return_type(&self) -> ApiAttributeType {
+        ApiAttributeType::BOOL
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(AndExpressionExecutor {
-    //         left_executor: self.left_executor.clone_executor(),
-    //         right_executor: self.right_executor.clone_executor(),
-    //     })
-    // }
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(AndExpressionExecutor::new(
+            self.left_executor.clone_executor(siddhi_app_context),
+            self.right_executor.clone_executor(siddhi_app_context),
+        ).expect("Cloning AndExpressionExecutor failed")) // Assumes new won't fail if original was valid
+    }
 }

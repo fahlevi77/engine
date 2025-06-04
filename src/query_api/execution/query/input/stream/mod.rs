@@ -15,7 +15,8 @@ pub use self::single_input_stream::{SingleInputStream, SingleInputStreamKind};
 // Their logic is within SingleInputStream or specific constructors.
 // pub use self::basic_single_input_stream::BasicSingleInputStream; // Removed
 // pub use self::anonymous_input_stream::AnonymousInputStream; // Removed
-pub use self::join_input_stream::{JoinInputStream, Type as JoinType, EventTrigger as JoinEventTrigger, Within as JoinWithin}; // Added Within re-export
+pub use self::join_input_stream::{JoinInputStream, Type as JoinType, EventTrigger as JoinEventTrigger}; // Removed Within from here
+pub use crate::query_api::aggregation::Within as JoinWithin; // Import Within directly and alias
 pub use self::state_input_stream::{StateInputStream, Type as StateInputStreamType};
 
 

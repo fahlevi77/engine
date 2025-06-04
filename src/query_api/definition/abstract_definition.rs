@@ -26,6 +26,15 @@ impl AbstractDefinition {
         }
     }
 
+    // Getter methods
+    pub fn get_id(&self) -> &String {
+        &self.id
+    }
+
+    pub fn get_attribute_list(&self) -> &Vec<Attribute> {
+        &self.attribute_list
+    }
+
     // TODO: Builder methods from Java for attribute and annotation
     // pub fn attribute(mut self, attribute_name: String, attribute_type: crate::query_api::definition::attribute::Type) -> Self {
     //     // TODO: checkAttribute logic

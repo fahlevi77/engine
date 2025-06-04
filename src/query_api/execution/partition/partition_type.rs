@@ -49,33 +49,5 @@ impl PartitionType {
     }
 }
 
-// Implement SiddhiElement for the wrapper PartitionType struct.
-// It could potentially draw its context from its variant, or have its own.
-// The Java interface implies PartitionType *is* a SiddhiElement.
-impl SiddhiElement for PartitionType {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> {
-        // Prefer own context, but could fall back to variant's if design requires
-        self.query_context_start_index.or_else(|| match &self.variant {
-            PartitionTypeVariant::Value(v) => v.query_context_start_index(),
-            PartitionTypeVariant::Range(r) => r.query_context_start_index(),
-        })
-    }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        self.query_context_start_index = index;
-        // Optionally propagate to variant if they should share context:
-        // match &mut self.variant {
-        //     PartitionTypeVariant::Value(v) => v.set_query_context_start_index(index),
-        //     PartitionTypeVariant::Range(r) => r.set_query_context_start_index(index),
-        // }
-    }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> {
-        self.query_context_end_index.or_else(|| match &self.variant {
-            PartitionTypeVariant::Value(v) => v.query_context_end_index(),
-            PartitionTypeVariant::Range(r) => r.query_context_end_index(),
-        })
-    }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        self.query_context_end_index = index;
-        // Optionally propagate
-    }
-}
+// The impl SiddhiElement for PartitionType block has been removed.
+// PartitionType now directly holds its SiddhiElement-like fields.

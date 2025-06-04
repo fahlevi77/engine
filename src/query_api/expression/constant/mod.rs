@@ -67,6 +67,11 @@ impl Constant {
             value,
         }
     }
+
+    // Getter method
+    pub fn get_value(&self) -> &ConstantValueWithFloat {
+        &self.value
+    }
 }
 
 // Helper constructors similar to Expression.value() static methods in Java
@@ -127,4 +132,102 @@ impl TimeUtil {
     pub fn week(val: i64) -> Constant { Constant::time(Self::week_val(val)) }
     pub fn month(val: i64) -> Constant { Constant::time(Self::month_val(val)) }
     pub fn year(val: i64) -> Constant { Constant::time(Self::year_val(val)) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_constant_string() {
+        let c = Constant::string("hello".to_string());
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::String("hello".to_string()));
+        assert_eq!(c.siddhi_element.query_context_start_index, None);
+    }
+
+    #[test]
+    fn test_constant_int() {
+        let c = Constant::int(123);
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Int(123));
+    }
+
+    #[test]
+    fn test_constant_long() {
+        let c = Constant::long(1234567890);
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Long(1234567890));
+    }
+
+    #[test]
+    fn test_constant_float() {
+        let c = Constant::float(12.34);
+        // Direct comparison of floats can be tricky. PartialEq should handle it.
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Float(12.34));
+    }
+
+    #[test]
+    fn test_constant_double() {
+        let c = Constant::double(123.456);
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Double(123.456));
+    }
+
+    #[test]
+    fn test_constant_bool() {
+        let c = Constant::bool(true);
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Bool(true));
+    }
+
+    #[test]
+    fn test_constant_time() {
+        let c = Constant::time(5000); // Represents a time duration in milliseconds
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(5000));
+    }
+
+    #[test]
+    fn test_constant_default() {
+        let c = Constant::default();
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::default()); // String("")
+        assert_eq!(c.siddhi_element.query_context_start_index, None);
+    }
+
+    #[test]
+    fn test_time_util_sec() {
+        let c = TimeUtil::sec(5); // 5 seconds
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(5000)); // 5 * 1000
+    }
+
+    #[test]
+    fn test_time_util_minute() {
+        let c = TimeUtil::minute(2); // 2 minutes
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(2 * 60 * 1000));
+    }
+
+    #[test]
+    fn test_time_util_hour() {
+        let c = TimeUtil::hour(1); // 1 hour
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(1 * 60 * 60 * 1000));
+    }
+
+    #[test]
+    fn test_time_util_day() {
+        let c = TimeUtil::day(1); // 1 day
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(1 * 24 * 60 * 60 * 1000));
+    }
+
+    #[test]
+    fn test_time_util_week() {
+        let c = TimeUtil::week(1); // 1 week
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(1 * 7 * 24 * 60 * 60 * 1000));
+    }
+
+    #[test]
+    fn test_time_util_month() {
+        let c = TimeUtil::month(1); // 1 month
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(2_630_000_000));
+    }
+
+    #[test]
+    fn test_time_util_year() {
+        let c = TimeUtil::year(1); // 1 year
+        assert_eq!(c.get_value(), &ConstantValueWithFloat::Time(31_556_900_000));
+    }
 }

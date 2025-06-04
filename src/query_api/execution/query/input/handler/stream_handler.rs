@@ -50,24 +50,9 @@ impl StreamHandlerTrait for StreamHandler {
     }
 }
 
-// Implement SiddhiElement for the enum by dispatching
-impl SiddhiElement for StreamHandler {
-    fn query_context_start_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_start_index
-    }
-
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_start_index = index;
-    }
-
-    fn query_context_end_index(&self) -> Option<(i32, i32)> {
-        self.siddhi_element_ref().query_context_end_index
-    }
-
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) {
-        self.siddhi_element_mut_ref().query_context_end_index = index;
-    }
-}
+// The `impl SiddhiElement for StreamHandler` block was removed because SiddhiElement is a struct, not a trait.
+// Access to the underlying SiddhiElement's fields can be done via methods on StreamHandler
+// that use siddhi_element_ref() or siddhi_element_mut_ref() if needed.
 
 // Note: Individual structs (Filter, StreamFunction, WindowHandler) will need to:
 // 1. Compose `siddhi_element: SiddhiElement`.

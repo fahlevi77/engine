@@ -41,20 +41,9 @@ impl StateEvent {
     // TODO: Implement methods from StateEvent.java (getStreamEvent, addEvent, setEvent, removeLastEvent etc.)
 }
 
-impl ComplexEvent for StateEvent {
-    fn get_next(&self) -> Option<&dyn ComplexEvent> {
-        self.next.as_deref()
-    }
-
-    fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) {
-        self.next = next_event;
-    }
-
-    fn get_output_data(&self) -> Option<&[AttributeValue]> {
-        self.output_data.as_deref()
-    }
-
-    fn set_output_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+// Inherent methods for StateEvent
+impl StateEvent {
+    pub fn set_output_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
         if let Some(data) = self.output_data.as_mut() {
             if index < data.len() {
                 data[index] = value;
@@ -63,9 +52,7 @@ impl ComplexEvent for StateEvent {
                 Err(format!("Index {} out of bounds for output_data with len {}", index, data.len()))
             }
         } else {
-             // If output_data is None, try to initialize it based on index.
-             // This behavior might need refinement; Java code assumes outputData is pre-sized.
-            if index == 0 { // Only allow setting at index 0 if None and trying to create new
+            if index == 0 {
                 let mut new_data = vec![AttributeValue::default(); index + 1];
                 new_data[index] = value;
                 self.output_data = Some(new_data);
@@ -76,7 +63,31 @@ impl ComplexEvent for StateEvent {
         }
     }
 
-    fn set_output_data_vec(&mut self, data: Option<Vec<AttributeValue>>) {
+    pub fn set_output_data_vec(&mut self, data: Option<Vec<AttributeValue>>) {
+        self.output_data = data;
+    }
+}
+
+impl ComplexEvent for StateEvent {
+    fn get_next(&self) -> Option<&dyn ComplexEvent> {
+        self.next.as_deref()
+    }
+
+    fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>> {
+        let old_next = self.next.take();
+        self.next = next_event;
+        old_next
+    }
+
+    fn mut_next_ref_option(&mut self) -> &mut Option<Box<dyn ComplexEvent>> {
+        &mut self.next
+    }
+
+    fn get_output_data(&self) -> Option<&[AttributeValue]> {
+        self.output_data.as_deref()
+    }
+
+    fn set_output_data(&mut self, data: Option<Vec<AttributeValue>>) {
         self.output_data = data;
     }
 
@@ -96,11 +107,6 @@ impl ComplexEvent for StateEvent {
         self.event_type = event_type;
     }
 
-    // get_attribute_by_position and set_attribute_by_position are complex for StateEvent.
-    // They involve indexing into streamEvents array and then into StreamEvent's data arrays.
-    // fn get_attribute_by_position(&self, position: &[i32]) -> Option<AttributeValue> { ... }
-    // fn set_attribute_by_position(&mut self, value: AttributeValue, position: &[i32]) -> Result<(), String> { ... }
-
     fn as_any(&self) -> &dyn Any { self }
-    fn as_any_mut(&mut self) -> &mut Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn Any { self }
 }

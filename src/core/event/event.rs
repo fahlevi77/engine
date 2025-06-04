@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 // The prompt includes `id: u64`.
 static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 
+/// Represents a single data event in Siddhi with a timestamp and data payload.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Event {
     pub id: u64, // Unique ID, added as per prompt
@@ -22,7 +23,7 @@ pub struct Event {
 impl Event {
     // Constructor matching Event(long timestamp, Object[] data)
     // Data is passed directly.
-    pub fnnew_with_data(timestamp: i64, data: Vec<AttributeValue>) -> Self {
+    pub fn new_with_data(timestamp: i64, data: Vec<AttributeValue>) -> Self { // Corrected: fn new_with_data
         Event {
             id: NEXT_EVENT_ID.fetch_add(1, Ordering::Relaxed), // Relaxed ordering sufficient for unique ID
             timestamp,
@@ -32,7 +33,7 @@ impl Event {
     }
 
     // Constructor matching Event(int dataSize), initializes with nulls/defaults
-    pub fnnew_with_size(timestamp: i64, data_len: usize) -> Self {
+    pub fn new_with_size(timestamp: i64, data_len: usize) -> Self {
         Event {
             id: NEXT_EVENT_ID.fetch_add(1, Ordering::Relaxed),
             timestamp,

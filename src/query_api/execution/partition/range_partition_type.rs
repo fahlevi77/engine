@@ -20,12 +20,7 @@ impl RangePartitionProperty {
     }
 }
 
-impl SiddhiElement for RangePartitionProperty {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// impl SiddhiElement for RangePartitionProperty removed
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RangePartitionType {
@@ -53,9 +48,4 @@ impl RangePartitionType {
     }
 }
 
-impl SiddhiElement for RangePartitionType {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.query_context_end_index = index; }
-}
+// impl SiddhiElement for RangePartitionType removed

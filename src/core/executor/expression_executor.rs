@@ -3,12 +3,13 @@
 
 use crate::core::event::complex_event::ComplexEvent; // The ComplexEvent trait
 use crate::core::event::value::AttributeValue; // The enum for actual data values
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use std::fmt::Debug;
 // use std::sync::Arc; // Not needed for trait definition itself
 
 // ExpressionExecutor is an interface in Java. In Rust, it's a trait.
 // It's responsible for executing a parsed Siddhi expression and returning a value.
+/// Trait for all expression executors which can be executed on an event.
 pub trait ExpressionExecutor: Debug + Send + Sync + 'static {
     // `event` is Option<&dyn ComplexEvent> because some expressions (like constants)
     // don't need an event to be evaluated. Others (like variables) do.
@@ -19,17 +20,28 @@ pub trait ExpressionExecutor: Debug + Send + Sync + 'static {
     fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue>;
 
     // Returns the data type of the value that this executor will return.
-    fn get_return_type(&self) -> Attribute::Type;
+    fn get_return_type(&self) -> ApiAttributeType;
 
-    // Optional: A method to clone the executor.
-    // This is useful if the execution plan needs to be cloned, for example, for partitioning.
-    // Each concrete executor would implement this to clone itself.
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor>;
+    // Method to clone the executor.
+    // This is useful if the execution plan needs to be cloned (e.g., for partitioning).
+    // Requires SiddhiAppContext because some executors might hold references or need context for cloning.
+    // For stateless executors like ConstantExpressionExecutor, context might not be strictly needed for cloning itself,
+    // but the interface should be consistent.
+    // Child executors (if any) would be cloned recursively using their own clone_executor methods.
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor>;
 }
 
-// If ExpressionExecutor instances need to be cloned as trait objects:
-// impl Clone for Box<dyn ExpressionExecutor> {
-//     fn clone(&self) -> Self {
-//         self.clone_executor()
+// To allow `Box<dyn ExpressionExecutor>` to be `Clone`.
+// This requires that all implementors of `ExpressionExecutor` are also `Clone`
+// and that their `clone_executor` method correctly reconstructs them.
+// However, making the trait itself require Clone (pub trait ExpressionExecutor: Debug + Send + Sync + Clone)
+// is often problematic with trait objects. The clone_box pattern (or clone_executor here) is preferred.
+// We don't need `impl Clone for Box<dyn ExpressionExecutor>` if we just call `executor.clone_executor()`.
+//         self.clone_executor(???) // Problem: clone() doesn't take app_context
 //     }
 // }
+// So, direct calls to `some_box_dyn_exec.clone_executor(ctx)` are better.
+
+// Added Arc import, which might be needed by clone_executor implementations if they store Arc<SiddhiAppContext>
+use std::sync::Arc;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;

@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.core.config.SiddhiContext
 use std::collections::HashMap;
-use std::sync::Arc; // For shared, thread-safe components
+use std::sync::{Arc, RwLockReadGuard}; // For shared, thread-safe components, Added RwLockReadGuard
 
 use super::statistics_configuration::StatisticsConfiguration;
 
@@ -28,6 +28,7 @@ pub type IncrementalPersistenceStorePlaceholder = String; // Simplified
 // pub type ErrorStoreType = Arc<dyn ErrorStore + Send + Sync>;
 pub type ErrorStorePlaceholder = String; // Simplified
 
+use crate::core::persistence::data_source::DataSource; // Using actual DataSource trait
 // pub trait ConfigManager {} // Example
 // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
 pub type ConfigManagerPlaceholder = String; // Simplified
@@ -55,40 +56,53 @@ pub type AttributeValuePlaceholder = String;
 pub type DisruptorExceptionHandlerPlaceholder = String;
 
 
-#[derive(Debug, Clone)] // Default will be custom
+use crate::core::executor::function::ScalarFunctionExecutor; // Added
+use std::sync::RwLock; // Added for scalar_function_factories and attributes, data_sources
+
+/// Shared context for all Siddhi Apps in a SiddhiManager instance.
+#[derive(Debug)] // Default will be custom, Clone removed due to Arc<RwLock<...>> direct Clone
 pub struct SiddhiContext {
-    // siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
+    // siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>, // Original placeholder
     // deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
     // persistence_store: Option<PersistenceStorePlaceholder>,
     // incremental_persistence_store: Option<IncrementalPersistenceStorePlaceholder>,
     // error_store: Option<ErrorStorePlaceholder>,
-    // siddhi_data_sources: HashMap<String, DataSourcePlaceholder>, // Java uses ConcurrentHashMap
-    pub statistics_configuration: StatisticsConfiguration, // In Java, this is new-ed in constructor
-    // extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>, // Key is Class, simplified to String
-    // config_manager: ConfigManagerPlaceholder, // In Java, this is new-ed in constructor
+    // siddhi_data_sources: HashMap<String, DataSourcePlaceholder>,
+    pub statistics_configuration: StatisticsConfiguration,
+    // extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
+    // config_manager: ConfigManagerPlaceholder,
     // sink_handler_manager: Option<SinkHandlerManagerPlaceholder>,
     // source_handler_manager: Option<SourceHandlerManagerPlaceholder>,
     // record_table_handler_manager: Option<RecordTableHandlerManagerPlaceholder>,
-    attributes: HashMap<String, AttributeValuePlaceholder>, // Java uses ConcurrentHashMap
-    // default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder, // Complex initialization
+    attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>, // Made thread-safe and shared
+    // default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder,
 
-    // Simplified placeholder fields for now to allow compilation
-    _siddhi_extensions_placeholder: HashMap<String, String>,
-    _data_sources_placeholder: HashMap<String, String>,
+    // Actual fields for extensions and data sources
+    /// Stores factories for User-Defined Scalar Functions. Key: "namespace:name" or "name", Value: clonable factory instance.
+    scalar_function_factories: Arc<RwLock<HashMap<String, Box<dyn ScalarFunctionExecutor>>>>,
+    /// Stores registered data sources. Key: data source name.
+    data_sources: Arc<RwLock<HashMap<String, Arc<dyn DataSource>>>>,
+
+    // Simplified placeholder fields for now to allow compilation if others are not used yet
+    _siddhi_extensions_placeholder: HashMap<String, String>, // General extensions
+    // _data_sources_placeholder: HashMap<String, String>, // Replaced by actual data_sources field
     _persistence_store_placeholder: Option<String>,
     _config_manager_placeholder: String,
+    pub dummy_field_siddhi_context_extensions: String,
 }
 
 impl SiddhiContext {
     pub fn new() -> Self {
-        // Mimic Java constructor's defaults where placeholders allow
         Self {
             statistics_configuration: StatisticsConfiguration::default(),
-            attributes: HashMap::new(),
+            attributes: Arc::new(RwLock::new(HashMap::new())),
+            scalar_function_factories: Arc::new(RwLock::new(HashMap::new())),
+            // data_sources: Arc::new(RwLock::new(HashMap::new())),
             _siddhi_extensions_placeholder: HashMap::new(),
             _data_sources_placeholder: HashMap::new(),
             _persistence_store_placeholder: None,
-            _config_manager_placeholder: "InMemoryConfigManager_Placeholder".to_string(), // Java defaults to InMemoryConfigManager
+            _config_manager_placeholder: "InMemoryConfigManager_Placeholder".to_string(),
+            dummy_field_siddhi_context_extensions: String::new(),
         }
     }
 
@@ -139,17 +153,44 @@ impl SiddhiContext {
         // self.config_manager = config_manager;
     }
 
-    pub fn get_attributes(&self) -> &HashMap<String, AttributeValuePlaceholder> {
-        &self.attributes
+    pub fn get_attributes(&self) -> RwLockReadGuard<'_, HashMap<String, AttributeValuePlaceholder>> { // Return guard
+        self.attributes.read().unwrap()
     }
 
-    pub fn set_attribute(&mut self, key: String, value: AttributeValuePlaceholder) {
-        self.attributes.insert(key, value);
+    pub fn set_attribute(&self, key: String, value: AttributeValuePlaceholder) { // Takes &self due to RwLock
+        self.attributes.write().unwrap().insert(key, value);
+    }
+
+    // --- Scalar Function Methods ---
+    pub fn add_scalar_function_factory(&self, name: String, function_factory: Box<dyn ScalarFunctionExecutor>) {
+        self.scalar_function_factories.write().unwrap().insert(name, function_factory);
+    }
+
+    pub fn get_scalar_function_factory(&self, name: &str) -> Option<Box<dyn ScalarFunctionExecutor>> {
+        // .clone() on Box<dyn ScalarFunctionExecutor> calls the trait's clone_scalar_function()
+        self.scalar_function_factories.read().unwrap().get(name).cloned()
     }
 }
 
 impl Default for SiddhiContext {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Clone implementation for SiddhiContext needs to handle Arc fields by cloning the Arc, not the underlying data.
+impl Clone for SiddhiContext {
+    fn clone(&self) -> Self {
+        Self {
+            statistics_configuration: self.statistics_configuration.clone(),
+            attributes: Arc::clone(&self.attributes),
+            scalar_function_factories: Arc::clone(&self.scalar_function_factories),
+            // data_sources: Arc::clone(&self.data_sources),
+            _siddhi_extensions_placeholder: self._siddhi_extensions_placeholder.clone(),
+            _data_sources_placeholder: self._data_sources_placeholder.clone(),
+            _persistence_store_placeholder: self._persistence_store_placeholder.clone(),
+            _config_manager_placeholder: self._config_manager_placeholder.clone(),
+            dummy_field_siddhi_context_extensions: self.dummy_field_siddhi_context_extensions.clone(),
+        }
     }
 }

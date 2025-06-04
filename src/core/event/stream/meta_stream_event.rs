@@ -1,9 +1,16 @@
 // siddhi_rust/src/core/event/stream/meta_stream_event.rs
-// Corresponds to io.siddhi.core.event.stream.MetaStreamEvent
-use crate::query_api::definition::{Attribute, StreamDefinition, AbstractDefinition}; // From query_api
-use std::sync::Arc; // If definitions are shared
+// Simplified for initial ExpressionParser - focuses on a single input stream.
+// The full MetaStreamEvent in Java handles multiple input definitions, output defs, etc.
+use crate::query_api::definition::{
+    StreamDefinition as ApiStreamDefinition,
+    Attribute as ApiAttribute,
+    attribute::Type as ApiAttributeType, // Import the Type enum
+};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-// MetaStreamEvent in Java has EventType enum (TABLE, WINDOW, AGGREGATE, DEFAULT)
+// MetaStreamEvent in Java has an EventType enum (TABLE, WINDOW, AGGREGATE, DEFAULT)
+// This was defined in subtask 0015, turn 10.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum MetaStreamEventType {
     #[default] DEFAULT,
@@ -12,39 +19,77 @@ pub enum MetaStreamEventType {
     AGGREGATE,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MetaStreamEvent {
-    // Using Vec<Attribute> directly, as in Java
-    pub before_window_data: Vec<Attribute>,
-    pub on_after_window_data: Option<Vec<Attribute>>, // Initialized on demand in Java
-    pub output_data: Option<Vec<Attribute>>,          // Initialized on demand in Java
+    // For simple parsing, assumes one input stream providing all attributes.
+    pub input_stream_definition: Arc<ApiStreamDefinition>,
 
-    // Using Arc for definitions as they are likely shared across multiple meta events
-    pub input_definitions: Vec<Arc<StreamDefinition>>, // Java uses AbstractDefinition, but usually they are StreamDefinition for stream events
-    pub input_reference_id: Option<String>,
-    pub output_stream_definition: Option<Arc<StreamDefinition>>,
+    // Pre-calculated map for quick attribute lookup from the input_stream_definition.
+    // Maps attribute name to (index_in_event_data_array, attribute_type).
+    // This assumes that the 'data' array in a core::Event or core::StreamEvent
+    // directly corresponds to the attributes in this input_stream_definition.
+    attribute_info: HashMap<String, (usize, ApiAttributeType)>, // Use ApiAttributeType
 
-    pub event_type: MetaStreamEventType,
-    pub is_multi_value: bool, // Java: multiValue
+    // Other fields from Java MetaStreamEvent, commented out for this simplified version:
+    // pub on_after_window_data_attrs: Option<Vec<ApiAttribute>>,
+    // pub output_data_attrs: Option<Vec<ApiAttribute>>,
+    // pub input_definitions: Vec<Arc<ApiStreamDefinition>>, // Java uses AbstractDefinition
+    // pub input_reference_id: Option<String>,
+    // pub output_stream_definition: Option<Arc<ApiStreamDefinition>>,
+    pub event_type: MetaStreamEventType, // From Java
+    // pub is_multi_value: bool,
 }
 
 impl MetaStreamEvent {
-    pub fn new() -> Self {
-        Default::default() // Relies on Default derive for Vec and Option
+    // Constructor for the simplified single input stream case.
+    pub fn new_for_single_input(input_stream_def: Arc<ApiStreamDefinition>) -> Self {
+        let mut attribute_info = HashMap::new();
+        // Assuming get_attribute_list() is available on ApiStreamDefinition (likely via AbstractDefinition)
+        for (index, api_attr) in input_stream_def.abstract_definition.attribute_list.iter().enumerate() {
+            // Assuming get_name() and get_type() are available on ApiAttribute
+            attribute_info.insert(api_attr.name.clone(), (index, api_attr.attribute_type.clone()));
+        }
+        Self {
+            input_stream_definition: input_stream_def,
+            attribute_info,
+            event_type: MetaStreamEventType::default(), // Default type
+            // Initialize other fields if they were present
+        }
     }
 
-    // TODO: Implement methods from MetaStreamEvent.java
-    // initialize_on_after_window_data()
-    // add_data(Attribute) -> i32 (returns constant indicating where it was added)
-    // add_output_data(Attribute)
-    // add_output_data_allowing_duplicate(Attribute)
-    // add_input_definition(AbstractDefinition) -> should take Arc<StreamDefinition>
-    // set_output_definition(StreamDefinition) -> should take Arc<StreamDefinition>
-    // get_last_input_definition() -> Option<Arc<StreamDefinition>>
-    // clone() -> MetaStreamEvent (derive Clone is fine for this structure if Arc is used)
+    // Finds attribute info from the (single) input_stream_definition it holds.
+    // Returns (index_in_data_array, attribute_type)
+    pub fn find_attribute_info(&self, attribute_name: &str) -> Option<&(usize, ApiAttributeType)> { // Use ApiAttributeType
+        self.attribute_info.get(attribute_name)
+    }
+
+    // This method was in the prompt. It might be useful for constructing output events
+    // or for a VariableExpressionExecutor that needs to know the output structure if it's
+    // different from the input (e.g., after projections).
+    // For a simple VEE based on input, this specific list might not be directly used by VEE.execute(),
+    // but could be used during VEE construction to determine its return type and index.
+    pub fn get_input_attribute_name_type_list(&self) -> Vec<(String, ApiAttributeType)> { // Use ApiAttributeType
+       self.input_stream_definition.abstract_definition.attribute_list.iter()
+           .map(|attr| (attr.name.clone(), attr.attribute_type.clone()))
+           .collect()
+    }
+
+    // TODO: Add other methods from Java MetaStreamEvent as needed for more complex parsing,
+    // e.g., addData, addOutputData, addInputDefinition, setOutputDefinition, etc.
+    // The Java version's addData method is particularly complex as it manages
+    // beforeWindowData, onAfterWindowData, and determines where an attribute is "first" seen.
 }
 
-// Note: The distinction between AbstractDefinition and StreamDefinition for input_definitions
-// needs to be handled. If other definition types (TableDefinition etc.) can be "input"
-// to a stream processing path represented by MetaStreamEvent, then a Definition enum from query_api
-// might be needed here, wrapped in Arc. For now, assuming StreamDefinition for simplicity.
+// Default implementation might not be very useful if input_stream_definition is mandatory.
+// However, if used in Option fields, Default could be:
+impl Default for MetaStreamEvent {
+    fn default() -> Self {
+        // Creates an empty MetaStreamEvent, likely invalid for actual use without further setup.
+        // This requires ApiStreamDefinition to be Default.
+        Self {
+            input_stream_definition: Arc::new(ApiStreamDefinition::default()),
+            attribute_info: HashMap::new(),
+            event_type: MetaStreamEventType::default(),
+        }
+    }
+}

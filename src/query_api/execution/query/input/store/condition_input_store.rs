@@ -25,12 +25,7 @@ impl ConditionInputStore {
     // pub fn new_optional_condition(store: Store, on_condition: Option<Expression>) -> Self { ... }
 }
 
-impl SiddhiElement for ConditionInputStore {
-    fn query_context_start_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_start_index }
-    fn set_query_context_start_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_start_index = index; }
-    fn query_context_end_index(&self) -> Option<(i32,i32)> { self.siddhi_element.query_context_end_index }
-    fn set_query_context_end_index(&mut self, index: Option<(i32,i32)>) { self.siddhi_element.query_context_end_index = index; }
-}
+// `impl SiddhiElement for ConditionInputStore` removed.
 
 impl InputStoreTrait for ConditionInputStore {
     fn get_store_id(&self) -> &str {

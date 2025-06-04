@@ -3,14 +3,14 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 
 #[derive(Debug)]
 pub struct IfThenElseFunctionExecutor {
     condition_executor: Box<dyn ExpressionExecutor>,
     then_expression_executor: Box<dyn ExpressionExecutor>,
     else_expression_executor: Box<dyn ExpressionExecutor>,
-    return_type: Attribute::Type, // Determined by compatible type of then/else
+    return_type: ApiAttributeType, // Determined by compatible type of then/else
 }
 
 impl IfThenElseFunctionExecutor {
@@ -19,7 +19,7 @@ impl IfThenElseFunctionExecutor {
         then_exec: Box<dyn ExpressionExecutor>,
         else_exec: Box<dyn ExpressionExecutor>
     ) -> Result<Self, String> {
-        if cond_exec.get_return_type() != Attribute::Type::BOOL {
+        if cond_exec.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
                 "Condition for IfThenElse must return BOOL, found {:?}",
                 cond_exec.get_return_type()
@@ -73,15 +73,15 @@ impl ExpressionExecutor for IfThenElseFunctionExecutor {
         }
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
+    fn get_return_type(&self) -> ApiAttributeType {
         self.return_type
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(IfThenElseFunctionExecutor::new(
-    //         self.condition_executor.clone_executor(),
-    //         self.then_expression_executor.clone_executor(),
-    //         self.else_expression_executor.clone_executor()
-    //     ).unwrap()) // Unwarp assumes new will succeed if current instance is valid
-    // }
+    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(IfThenElseFunctionExecutor::new(
+            self.condition_executor.clone_executor(siddhi_app_context),
+            self.then_expression_executor.clone_executor(siddhi_app_context),
+            self.else_expression_executor.clone_executor(siddhi_app_context)
+        ).expect("Cloning IfThenElseFunctionExecutor failed")) // unwrap() is risky if new can fail for other reasons
+    }
 }

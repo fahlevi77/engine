@@ -3,7 +3,7 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 // Use ConditionCompareOperator from query_api, as it's part of the expression definition
 use crate::query_api::expression::condition::CompareOperator as ConditionCompareOperator;
 
@@ -56,13 +56,68 @@ impl ExpressionExecutor for CompareExpressionExecutor {
                 // This is complex: type coercion (e.g. Int vs Long vs Float vs Double), string compares etc.
                 // This requires a robust type promotion and comparison system.
                 // Example simplified comparison (primarily for equality, and only if types are somewhat aligned):
-                let result = match self.operator {
-                    ConditionCompareOperator::Equal => left == right, // Uses AttributeValue::PartialEq
-                    ConditionCompareOperator::NotEqual => left != right, // Uses AttributeValue::PartialEq
-                    // Placeholder for other operators (LT, GT, LTE, GTE) which need numeric/string type logic
+                // Updated comparison logic
+                let result = match (&left, &right) {
+                    // Integer comparisons
+                    (AttributeValue::Int(l), AttributeValue::Int(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => l == r,
+                        ConditionCompareOperator::NotEqual => l != r,
+                        ConditionCompareOperator::GreaterThan => l > r,
+                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::LessThan => l < r,
+                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                    },
+                    // Long comparisons
+                    (AttributeValue::Long(l), AttributeValue::Long(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => l == r,
+                        ConditionCompareOperator::NotEqual => l != r,
+                        ConditionCompareOperator::GreaterThan => l > r,
+                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::LessThan => l < r,
+                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                    },
+                    // Float comparisons
+                    (AttributeValue::Float(l), AttributeValue::Float(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON, // Approx equal for floats
+                        ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
+                        ConditionCompareOperator::GreaterThan => l > r,
+                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::LessThan => l < r,
+                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                    },
+                    // Double comparisons
+                    (AttributeValue::Double(l), AttributeValue::Double(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON, // Approx equal for doubles
+                        ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                        ConditionCompareOperator::GreaterThan => l > r,
+                        ConditionCompareOperator::GreaterThanOrEqual => l >= r,
+                        ConditionCompareOperator::LessThan => l < r,
+                        ConditionCompareOperator::LessThanOrEqual => l <= r,
+                    },
+                    // String comparisons (Equality and NotEqual only for now)
+                    (AttributeValue::String(l), AttributeValue::String(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => l == r,
+                        ConditionCompareOperator::NotEqual => l != r,
+                        _ => {
+                            // log_warn!("Unsupported comparison operator ({:?}) for String types", self.operator);
+                            return Some(AttributeValue::Bool(false)); // Or handle as error
+                        }
+                    },
+                    // Bool comparisons
+                    (AttributeValue::Bool(l), AttributeValue::Bool(r)) => match self.operator {
+                        ConditionCompareOperator::Equal => l == r,
+                        ConditionCompareOperator::NotEqual => l != r,
+                        _ => {
+                            // log_warn!("Unsupported comparison operator ({:?}) for Bool types", self.operator);
+                            return Some(AttributeValue::Bool(false));
+                        }
+                    }
+                    // TODO: Add type promotion/coercion logic for mixed types (e.g., Int vs Long, Int vs Float)
+                    // For now, strict type equality is required for comparison apart from Null handling.
                     _ => {
-                        // log_warn!("Unsupported comparison operator ({:?}) or types for CompareExpressionExecutor", self.operator);
-                        return None; // Or Some(AttributeValue::Bool(false)) or error
+                        // log_warn!("Unsupported type combination for comparison: {:?} and {:?}", left.get_type(), right.get_type());
+                        // If types are different and not handled by coercion, consider it false or error.
+                        return Some(AttributeValue::Bool(false)); // Default to false if types are incompatible
                     }
                 };
                 Some(AttributeValue::Bool(result))
@@ -71,17 +126,118 @@ impl ExpressionExecutor for CompareExpressionExecutor {
         }
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
-        Attribute::Type::BOOL
+    fn get_return_type(&self) -> ApiAttributeType {
+        ApiAttributeType::BOOL
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(CompareExpressionExecutor {
-    //         left_executor: self.left_executor.clone_executor(),
-    //         right_executor: self.right_executor.clone_executor(),
-    //         operator: self.operator,
-    //         // left_type: self.left_type,
-    //         // right_type: self.right_type,
-    //     })
-    // }
+    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(CompareExpressionExecutor {
+            left_executor: self.left_executor.clone_executor(siddhi_app_context),
+            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            operator: self.operator,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query_api::expression::condition::compare::Operator as ApiCompareOperator;
+    use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+    use crate::core::event::value::AttributeValue;
+    // ApiAttributeType is imported in the outer scope
+    use crate::core::executor::expression_executor::ExpressionExecutor;
+    use std::sync::Arc;
+    use crate::core::config::siddhi_app_context::SiddhiAppContext;
+
+    // Helper for SiddhiAppContext
+    impl SiddhiAppContext {
+        pub fn default_for_testing() -> Self {
+            use crate::core::config::siddhi_context::SiddhiContext;
+            use crate::query_api::SiddhiApp as ApiSiddhiApp;
+            Self::new(
+                Arc::new(SiddhiContext::default()),
+                "test_app_ctx_for_compare".to_string(),
+                Arc::new(ApiSiddhiApp::new("test_api_app_for_compare".to_string())),
+                String::new()
+            )
+        }
+    }
+
+    #[test]
+    fn test_compare_greater_than_int_true() { // Renamed as per subtask suggestion (though original would be fine too)
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan);
+
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(true)));
+        assert_eq!(cmp_exec.get_return_type(), ApiAttributeType::BOOL);
+    }
+
+    #[test]
+    fn test_compare_less_than_int_false() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::LessThan);
+
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(false)));
+    }
+
+    #[test]
+    fn test_compare_equal_float_true() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(10.5), ApiAttributeType::FLOAT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(10.5), ApiAttributeType::FLOAT));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::Equal);
+
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_compare_not_equal_string_true() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("hello".to_string()), ApiAttributeType::STRING));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("world".to_string()), ApiAttributeType::STRING));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::NotEqual);
+
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_compare_with_null_operand() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Null, ApiAttributeType::INT)); // Null operand
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan);
+
+        // Current logic: if either operand is Null, returns Bool(false)
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(false)));
+    }
+
+    #[test]
+    fn test_compare_incompatible_types() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("text".to_string()), ApiAttributeType::STRING));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan);
+
+        // Current logic: if types are incompatible for the operation, returns Bool(false)
+        let result = cmp_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(false)));
+    }
+
+    #[test]
+    fn test_compare_clone() {
+        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(100), ApiAttributeType::LONG));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(50), ApiAttributeType::LONG));
+        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThanOrEqual);
+
+        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let cloned_exec = cmp_exec.clone_executor(&app_ctx_placeholder);
+
+        let result = cloned_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Bool(true)));
+        assert_eq!(cloned_exec.get_return_type(), ApiAttributeType::BOOL);
+    }
 }

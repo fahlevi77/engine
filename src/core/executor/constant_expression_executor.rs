@@ -3,16 +3,17 @@
 use super::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue; // Enum for actual data
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 
+/// Executor that returns a constant value.
 #[derive(Debug, Clone)] // Constant values are cloneable
 pub struct ConstantExpressionExecutor {
     value: AttributeValue, // Stores the constant value directly using our AttributeValue enum
-    return_type: Attribute::Type, // Stores the type of the constant
+    return_type: ApiAttributeType, // Stores the type of the constant
 }
 
 impl ConstantExpressionExecutor {
-    pub fn new(value: AttributeValue, return_type: Attribute::Type) -> Self {
+    pub fn new(value: AttributeValue, return_type: ApiAttributeType) -> Self {
         // In a more robust implementation, we might validate that the AttributeValue variant
         // matches the provided Attribute::Type.
         // e.g., if return_type is Attribute::Type::INT, value should be AttributeValue::Int.
@@ -33,11 +34,77 @@ impl ExpressionExecutor for ConstantExpressionExecutor {
         Some(self.value.clone())
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
+    fn get_return_type(&self) -> ApiAttributeType {
         self.return_type
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(self.clone())
-    // }
+     fn clone_executor(&self, _siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+         Box::new(self.clone())
+     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::event::value::AttributeValue;
+    // ApiAttributeType is already imported in the outer scope
+    use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
+    use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor signature
+    use std::sync::Arc;
+
+    // Helper for testing if SiddhiAppContext is needed for clone_executor
+    // This needs to be available or defined in a way that tests can use it.
+    // It might be better in a central test_utils module.
+    // For now, defining a local helper or assuming a simple default path.
+    // Let's assume SiddhiAppContext has a simple default for testing purposes here.
+    impl SiddhiAppContext {
+        pub fn default_for_testing() -> Self {
+            use crate::core::config::siddhi_context::SiddhiContext;
+            use crate::query_api::SiddhiApp as ApiSiddhiApp;
+
+            Self::new(
+                Arc::new(SiddhiContext::default()), // Assumes SiddhiContext is Default
+                "test_app_ctx_for_clone".to_string(),
+                Arc::new(ApiSiddhiApp::new("test_api_app_for_clone".to_string())), // Assumes ApiSiddhiApp::new
+                String::new() // empty app string
+            )
+        }
+    }
+
+
+    #[test]
+    fn test_constant_string() {
+        let exec = ConstantExpressionExecutor::new(
+            AttributeValue::String("hello".to_string()),
+            ApiAttributeType::STRING
+        );
+        let result = exec.execute(None); // Event is None for constant
+        assert_eq!(result, Some(AttributeValue::String("hello".to_string())));
+        assert_eq!(exec.get_return_type(), ApiAttributeType::STRING);
+    }
+
+    #[test]
+    fn test_constant_int() {
+        let exec = ConstantExpressionExecutor::new(
+            AttributeValue::Int(123),
+            ApiAttributeType::INT
+        );
+        let result = exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::Int(123)));
+        assert_eq!(exec.get_return_type(), ApiAttributeType::INT);
+    }
+
+    #[test]
+    fn test_constant_clone() {
+        let exec = ConstantExpressionExecutor::new(
+            AttributeValue::String("clone_me".to_string()),
+            ApiAttributeType::STRING
+        );
+        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let cloned_exec = exec.clone_executor(&app_ctx_placeholder);
+
+        let result = cloned_exec.execute(None);
+        assert_eq!(result, Some(AttributeValue::String("clone_me".to_string())));
+        assert_eq!(cloned_exec.get_return_type(), ApiAttributeType::STRING);
+    }
 }

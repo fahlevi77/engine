@@ -2,7 +2,7 @@
 // Corresponds to io.siddhi.core.stream.StreamJunction
 use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
-use crossbeam_channel::{bounded, Sender, Receiver, SendError, TrySendError, RecvError}; // For event buffer
+use crossbeam_channel::{bounded, Sender, Receiver as CrossbeamReceiver, SendError, TrySendError, RecvError}; // For event buffer, aliased Receiver
 use crate::core::config::siddhi_app_context::SiddhiAppContext; // Actual struct
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
@@ -34,6 +34,7 @@ pub trait Receiver: Debug + Send + Sync {
 // Here, StreamJunction itself can provide the send methods, or we can have a separate Publisher struct.
 // For now, send methods are directly on StreamJunction.
 
+/// Routes events between producers and subscribing Processors.
 pub struct StreamJunction {
     pub stream_id: String,
     stream_definition: Arc<StreamDefinition>, // Added, as it's used in constructor and error handling
@@ -51,9 +52,9 @@ pub struct StreamJunction {
 
     // For async processing with internal buffer (Disruptor in Java)
     event_sender: Option<Sender<Box<dyn ComplexEvent>>>,
-    // The consuming task for async would own the Receiver.
-    // For simplicity, not storing the Receiver side of the channel here.
-    // The executor_service would manage the task that polls the receiver.
+    // The consuming task for async would own the CrossbeamReceiver.
+    // For simplicity, not storing the CrossbeamReceiver side of the channel here.
+    // The executor_service would manage the task that polls the CrossbeamReceiver.
 
     on_error_action: OnErrorAction,
     // fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>, // For fault stream redirection
@@ -76,14 +77,19 @@ impl Debug for StreamJunction {
 
 impl StreamJunction {
     pub fn new(
+        stream_id: String, // Added stream_id as direct parameter
         stream_definition: Arc<StreamDefinition>,
-        executor_service: Arc<ExecutorService>,
+        siddhi_app_context: Arc<SiddhiAppContext>, // Moved app_context earlier
         buffer_size: usize,
         is_async: bool, // Derived from @async annotation in Java
-        siddhi_app_context: Arc<SiddhiAppContext>
+        // executor_service is now taken from siddhi_app_context
     ) -> Self {
-        let stream_id = stream_definition.id.clone();
-        let (sender, receiver_opt) = if is_async {
+        // let stream_id = stream_definition.id.clone(); // No longer needed if passed directly
+        let executor_service = Arc::clone(
+            siddhi_app_context.executor_service.as_ref()
+                .unwrap_or_else(|| &Arc::new(ExecutorService::default()))
+        );
+        let (sender, crossbeam_receiver_opt) = if is_async { // Renamed receiver_opt
             let (s, r) = bounded::<Box<dyn ComplexEvent>>(buffer_size);
             (Some(s), Some(r))
         } else {
@@ -91,10 +97,10 @@ impl StreamJunction {
         };
 
         let junction = Self {
-            stream_id: stream_id.clone(),
+            stream_id, // Use passed stream_id
             stream_definition,
             siddhi_app_context: Arc::clone(&siddhi_app_context),
-            executor_service,
+            executor_service, // Use executor_service from context
             is_async,
             buffer_size,
             latency_tracker: None, // TODO: Initialize from statistics_manager if enabled
@@ -105,17 +111,23 @@ impl StreamJunction {
             // fault_stream_junction: None, // TODO: Set up if fault stream defined
         };
 
-        if let Some(receiver) = receiver_opt {
+        if let Some(cb_receiver) = crossbeam_receiver_opt { // Use renamed variable
             // Spawn a task for async processing if async is true
             let internal_subscribers = Arc::clone(&junction.subscribers);
-            junction.executor_service.execute(move || {
-                Self::async_event_loop(receiver, internal_subscribers);
+            // Use the cloned executor_service for the task
+            let task_executor_service = Arc::clone(&junction.executor_service);
+            task_executor_service.execute(move || {
+                Self::async_event_loop(cb_receiver, internal_subscribers); // Pass aliased receiver
             });
         }
         junction
     }
 
-    fn async_event_loop(receiver: Receiver<Box<dyn ComplexEvent>>, subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>) {
+    pub fn get_stream_definition(&self) -> Arc<StreamDefinition> {
+        Arc::clone(&self.stream_definition)
+    }
+
+    fn async_event_loop(receiver: CrossbeamReceiver<Box<dyn ComplexEvent>>, subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>) { // Corrected to CrossbeamReceiver
         // TODO: Implement batching as in Java's StreamHandler if batchSize > 1
         loop {
             match receiver.recv() {

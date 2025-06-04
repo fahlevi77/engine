@@ -23,7 +23,7 @@ impl StreamStateElement {
         }
     }
 
-    pub fn get_basic_single_input_stream(&self) -> &SingleInputStream { // Return type changed
+    pub fn get_single_input_stream(&self) -> &SingleInputStream { // Method name and return type changed
         &self.basic_single_input_stream
     }
 

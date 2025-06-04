@@ -8,7 +8,7 @@ pub mod function;  // Added for function executors
 
 pub use self::expression_executor::ExpressionExecutor;
 pub use self::constant_expression_executor::ConstantExpressionExecutor;
-pub use self::variable_expression_executor::{VariableExpressionExecutor, VariablePosition, EventDataArrayType};
+pub use self::variable_expression_executor::VariableExpressionExecutor; // Removed VariablePosition, EventDataArrayType
 pub use self::condition::*;
 pub use self::math::*;
 pub use self::function::*; // Re-export function executors

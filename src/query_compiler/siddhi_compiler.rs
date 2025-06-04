@@ -20,7 +20,8 @@ const PARSING_NOT_IMPLEMENTED: &str = "SiddhiQL parsing via ANTLR not yet implem
 // update_variables function (ported from Java SiddhiCompiler)
 // This function needs to be pub if called directly from outside, or pub(crate) if only by parse functions here.
 // The prompt implies it's called by the parse functions.
-fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
+// Making it public as per later interpretation of prompt.
+pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
     if !siddhi_app_string.contains('$') {
         return Ok(siddhi_app_string.to_string());
     }
@@ -130,36 +131,5 @@ pub fn parse_expression(expr_string: &str) -> Result<Expression, String> {
     // Ok(Expression::default()) // Expression enum has no default
 }
 
-// The public visibility of update_variables is as per the prompt.
-// If it's only an internal helper for the parse_* functions, it could be private.
-// Making it pub as requested.
-pub use update_variables as public_update_variables; // Keep original fn private
-                                                    // and export it with a different name if needed,
-                                                    // or just make update_variables pub.
-                                                    // For now, directly making update_variables pub.
-
-// To make original `update_variables` pub:
-// pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> { ... }
-// (The definition above is already pub if at top level of module, or needs pub keyword if in impl block)
-// The prompt shows it as a free function, so it's pub if not in an `impl` block.
-// My current structure has it as a free private function. I will make it pub.
-
-// Re-defining update_variables here to be pub.
-// (This is part of the same file creation block)
-// The previous definition of update_variables was implicitly private.
-
-// --- Start of pub update_variables ---
-// (This code will be part of the create_file_with_block for siddhi_compiler.rs)
-// (The definition of update_variables from the prompt will be placed here, made public)
-// --- End of pub update_variables ---
-// This is handled by just defining it as a pub fn at the top level of the module.
-// The definition provided in step 4 of the prompt will be used.
-// The current definition above is fine, just need to ensure it's `pub`.
-// The structure of the prompt is:
-// pub fn update_variables(...) { ... }
-// pub fn parse(...) { let _ = update_variables(...); ... }
-// This is fine. I'll use the provided `update_variables` code block directly.The `update_variables` function from the prompt is intended to be a top-level public function. My current structure for `siddhi_compiler.rs` has helper functions at the top. I will make `update_variables` public as requested and place its definition (from prompt step 4) into the file.
-
-The placeholder functions will call this public `update_variables`.
-
-Correcting `siddhi_rust/src/query_compiler/siddhi_compiler.rs` with the public `update_variables` and other parse functions:
+// The problematic comments and `pub use` below are removed.
+// `update_variables` is now directly public.

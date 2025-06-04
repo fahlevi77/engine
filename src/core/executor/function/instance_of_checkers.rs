@@ -2,11 +2,11 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute; // For Attribute::Type enum
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 
 // Macro to define InstanceOf*FunctionExecutor structs and their impls
 macro_rules! define_instance_of_executor {
-    ($struct_name:ident, $attribute_variant:pat) => {
+    ($struct_name:ident, $variant_name:ident) => { // Changed to take variant identifier
         #[derive(Debug)] // Clone not straightforward due to Box<dyn ExpressionExecutor>
         pub struct $struct_name {
             executor: Box<dyn ExpressionExecutor>
@@ -26,32 +26,32 @@ macro_rules! define_instance_of_executor {
                 // Java execute(Object data, S state) -> data instanceof <Type>
                 // Here, `data` is the result of self.executor.execute(event)
                 match self.executor.execute(event) {
-                    Some($attribute_variant(_)) => Some(AttributeValue::Bool(true)),
+                    Some(AttributeValue::$variant_name(_)) => Some(AttributeValue::Bool(true)), // Construct pattern here
                     Some(AttributeValue::Null) => Some(AttributeValue::Bool(false)), // null is not an instance of any specific type
                     Some(_) => Some(AttributeValue::Bool(false)), // Other type
                     None => Some(AttributeValue::Bool(false)), // No value from executor, not an instance
                 }
             }
 
-            fn get_return_type(&self) -> Attribute::Type {
-                Attribute::Type::BOOL
+            fn get_return_type(&self) -> ApiAttributeType {
+                ApiAttributeType::BOOL
             }
 
-            // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-            //     Box::new(Self { // Using Self works within macro
-            //         executor: self.executor.clone_executor(),
-            //     })
-            // }
+            fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+                Box::new(Self { // Using Self works within macro
+                    executor: self.executor.clone_executor(siddhi_app_context),
+                })
+            }
         }
     };
 }
 
-define_instance_of_executor!(InstanceOfBooleanExpressionExecutor, AttributeValue::Bool);
-define_instance_of_executor!(InstanceOfStringExpressionExecutor, AttributeValue::String);
-define_instance_of_executor!(InstanceOfIntegerExpressionExecutor, AttributeValue::Int); // Java: Integer
-define_instance_of_executor!(InstanceOfLongExpressionExecutor, AttributeValue::Long);
-define_instance_of_executor!(InstanceOfFloatExpressionExecutor, AttributeValue::Float);
-define_instance_of_executor!(InstanceOfDoubleExpressionExecutor, AttributeValue::Double);
+define_instance_of_executor!(InstanceOfBooleanExpressionExecutor, Bool);
+define_instance_of_executor!(InstanceOfStringExpressionExecutor, String);
+define_instance_of_executor!(InstanceOfIntegerExpressionExecutor, Int); // Java: Integer
+define_instance_of_executor!(InstanceOfLongExpressionExecutor, Long);
+define_instance_of_executor!(InstanceOfFloatExpressionExecutor, Float);
+define_instance_of_executor!(InstanceOfDoubleExpressionExecutor, Double);
 
 // InstanceOfObjectFunctionExecutor in Java would check if `data != null`.
 // This is slightly different as our AttributeValue::Object can hold None.

@@ -11,6 +11,7 @@ use super::math::{Add, Subtract, Multiply, Divide, ModOp};
 use super::condition::{And, Or, Not, Compare, InOp, IsNull, CompareOperator}; // Renamed Operator to CompareOperator
 
 
+/// Represents various types of expressions in a Siddhi query.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     Constant(Constant),

@@ -3,7 +3,9 @@
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 
 #[derive(Debug)]
 pub struct IsNullExpressionExecutor {
@@ -31,13 +33,13 @@ impl ExpressionExecutor for IsNullExpressionExecutor {
         }
     }
 
-    fn get_return_type(&self) -> Attribute::Type {
-        Attribute::Type::BOOL
+    fn get_return_type(&self) -> ApiAttributeType {
+        ApiAttributeType::BOOL
     }
 
-    // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-    //     Box::new(IsNullExpressionExecutor {
-    //         executor: self.executor.clone_executor(),
-    //     })
-    // }
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(IsNullExpressionExecutor::new(
+            self.executor.clone_executor(siddhi_app_context)
+        )) // new doesn't return Result, so no unwrap needed
+    }
 }

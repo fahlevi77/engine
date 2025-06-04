@@ -78,6 +78,10 @@ impl InputManager {
         None
     }
 
+    pub fn add_input_handler(&self, stream_id: String, handler: Arc<InputHandler>) {
+        self.input_handlers.lock().expect("Mutex poisoned").insert(stream_id, handler);
+    }
+
     // pub fn get_table_input_handler(&self, table_id: &str) -> Option<Arc<TableInputHandlerPlaceholder>> {
     //     // Similar logic to get_input_handler with dynamic creation.
     //     None

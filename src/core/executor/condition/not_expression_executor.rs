@@ -1,18 +1,20 @@
 // siddhi_rust/src/core/executor/condition/not_expression_executor.rs
-// Corresponds to io.siddhi.core.executor.condition.NotConditionExpressionExecutor
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::event::complex_event::ComplexEvent;
+use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::Attribute;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
+use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
+
 
 #[derive(Debug)]
 pub struct NotExpressionExecutor {
-    executor: Box<dyn ExpressionExecutor>
+    executor: Box<dyn ExpressionExecutor>,
 }
 
 impl NotExpressionExecutor {
     pub fn new(executor: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
-        if executor.get_return_type() != Attribute::Type::BOOL {
+        if executor.get_return_type() != ApiAttributeType::BOOL { // Corrected
             return Err(format!(
                 "Operand for NOT executor returns {:?} instead of BOOL",
                 executor.get_return_type()
@@ -25,23 +27,22 @@ impl NotExpressionExecutor {
 impl ExpressionExecutor for NotExpressionExecutor {
    fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
        match self.executor.execute(event) {
-           Some(AttributeValue::Bool(b)) => Some(AttributeValue::Bool(!b)),
-           Some(AttributeValue::Null) => Some(AttributeValue::Bool(true)), // NOT NULL is true in some SQL contexts,
-                                                                      // but Siddhi might treat NOT NULL as NULL or error.
-                                                                      // Java: Boolean result = (Boolean) conditionExecutor.execute(event);
-                                                                      // if (result == Boolean.TRUE) return Boolean.FALSE; else return Boolean.TRUE;
-                                                                      // This implies nulls are treated as false by the inner condition.
-                                                                      // So, if inner is null (false), NOT makes it true.
-           None => None, // Propagate error/no-value
-           _ => None, // Type error
-       }
+            Some(AttributeValue::Bool(b)) => Some(AttributeValue::Bool(!b)),
+            Some(AttributeValue::Null) => Some(AttributeValue::Null), // NOT NULL is NULL
+            None => None, // Error or no value from child
+            _ => { // Type error
+                Some(AttributeValue::Bool(false)) // Or None or Err
+            }
+        }
+    }
+
+   fn get_return_type(&self) -> ApiAttributeType { // Corrected
+       ApiAttributeType::BOOL // Corrected
    }
-   fn get_return_type(&self) -> Attribute::Type {
-       Attribute::Type::BOOL
-   }
-   // fn clone_executor(&self) -> Box<dyn ExpressionExecutor> {
-   //     Box::new(NotExpressionExecutor {
-   //         executor: self.executor.clone_executor(),
-   //     })
-   // }
+
+    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(NotExpressionExecutor::new(
+            self.executor.clone_executor(siddhi_app_context),
+        ).expect("Cloning NotExpressionExecutor failed"))
+    }
 }

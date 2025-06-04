@@ -36,6 +36,7 @@ use super::siddhi_context::SiddhiContext;
 pub enum MetricsLevelPlaceholder { #[default] OFF, BASIC, DETAIL }
 
 
+/// Context specific to a single Siddhi Application instance.
 #[derive(Debug, Clone)] // Default is tricky due to Arc<SiddhiApp> and Arc<SiddhiContext>
 pub struct SiddhiAppContext {
     pub siddhi_context: Arc<SiddhiContext>, // Shared global context
@@ -46,31 +47,31 @@ pub struct SiddhiAppContext {
     pub is_playback: bool,
     pub is_enforce_order: bool,
     pub root_metrics_level: MetricsLevelPlaceholder,
-    pub statistics_manager: Option<StatisticsManagerPlaceholder>, // Option because it's set post-construction in Java
+    pub statistics_manager: Option<StatisticsManagerPlaceholder>, // Manages collection and reporting of runtime statistics. Option because it's set post-construction in Java.
 
     // Threading and scheduling (using placeholders)
-    pub executor_service: Option<ExecutorServicePlaceholder>,
-    pub scheduled_executor_service: Option<ScheduledExecutorServicePlaceholder>,
+    pub executor_service: Option<ExecutorServicePlaceholder>, // General purpose thread pool for the Siddhi App.
+    pub scheduled_executor_service: Option<ScheduledExecutorServicePlaceholder>, // Thread pool for scheduled tasks (e.g., time windows).
 
     // External references and lifecycle management (using placeholders)
-    // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // In Java, synchronized List
-    // pub trigger_holders: Vec<TriggerPlaceholder>, // In Java, synchronized List
+    // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
+    // pub trigger_holders: Vec<TriggerPlaceholder>, // Holds trigger runtime instances.
 
-    pub snapshot_service: Option<SnapshotServicePlaceholder>, // Option because it's set
-    pub thread_barrier: Option<ThreadBarrierPlaceholder>,     // Option because it's set
-    pub timestamp_generator: TimestampGeneratorPlaceholder,   // Has a default in Java if not set by user
-    pub id_generator: Option<IdGeneratorPlaceholder>,         // Option because it's set
+    pub snapshot_service: Option<SnapshotServicePlaceholder>, // Manages state snapshotting and persistence. Option because it's set.
+    pub thread_barrier: Option<ThreadBarrierPlaceholder>,     // Used for coordinating threads, e.g., in playback. Option because it's set.
+    pub timestamp_generator: TimestampGeneratorPlaceholder,   // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
+    pub id_generator: Option<IdGeneratorPlaceholder>,         // Generates unique IDs for runtime elements. Option because it's set.
 
-    // pub script_function_map: HashMap<String, ScriptPlaceholder>,
+    // pub script_function_map: HashMap<String, ScriptPlaceholder>, // Holds script function implementations.
 
     // Exception handling (using placeholders)
-    // pub disruptor_exception_handler: Option<DisruptorExceptionHandlerPlaceholder>,
-    // pub runtime_exception_listener: Option<ExceptionListenerPlaceholder>,
+    // pub disruptor_exception_handler: Option<DisruptorExceptionHandlerPlaceholder>, // Handles exceptions from async event processing.
+    // pub runtime_exception_listener: Option<ExceptionListenerPlaceholder>, // Listener for runtime exceptions.
 
-    pub buffer_size: i32, // int in Java
-    // pub included_metrics: Option<Vec<String>>, // List<String> in Java
-    pub transport_channel_creation_enabled: bool,
-    // pub scheduler_list: Vec<SchedulerPlaceholder>,
+    pub buffer_size: i32, // Default buffer size for event channels.
+    // pub included_metrics: Option<Vec<String>>, // Specific metrics to include if statistics are enabled.
+    pub transport_channel_creation_enabled: bool, // Whether transport channels (for sources/sinks) should be created.
+    // pub scheduler_list: Vec<SchedulerPlaceholder>, // List of schedulers.
 
     // Simplified placeholder fields for now
     _external_refs_placeholder: Vec<String>,
