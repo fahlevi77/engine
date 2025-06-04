@@ -2,13 +2,14 @@
 // Corresponds to io.siddhi.core.stream.StreamJunction
 use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
-use crossbeam_channel::{bounded, Sender, Receiver as CrossbeamReceiver, SendError, TrySendError, RecvError}; // For event buffer, aliased Receiver
+use crossbeam_channel::{bounded, Sender, Receiver as CrossbeamReceiver, SendError, TrySendError, RecvError};
 use crate::core::config::siddhi_app_context::SiddhiAppContext; // Actual struct
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::stream::StreamEvent; // Actual struct for conversion
 use crate::core::query::processor::Processor; // Trait
 use crate::core::util::executor_service::ExecutorService;
+use crate::core::stream::input::input_handler::InputProcessor;
 use crate::core::util::metrics_placeholders::*;
 use crate::query_api::definition::StreamDefinition; // From query_api
 
@@ -30,11 +31,41 @@ pub trait Receiver: Debug + Send + Sync {
     // These can be default methods on the trait if they all convert to ComplexEventChunk and call the primary method.
 }
 
+#[derive(Debug, Clone)]
+pub struct Publisher {
+    stream_junction: Arc<StreamJunction>,
+}
+
+impl Publisher {
+    pub fn new(stream_junction: Arc<StreamJunction>) -> Self {
+        Self { stream_junction }
+    }
+}
+
+impl InputProcessor for Publisher {
+    fn send_event_with_data(&mut self, timestamp: i64, data: Vec<crate::core::event::value::AttributeValue>, _stream_index: usize) -> Result<(), String> {
+        let event = Event::new_with_data(timestamp, data);
+        self.stream_junction.send_event(event);
+        Ok(())
+    }
+
+    fn send_single_event(&mut self, event: Event, _stream_index: usize) -> Result<(), String> {
+        self.stream_junction.send_event(event);
+        Ok(())
+    }
+
+    fn send_multiple_events(&mut self, events: Vec<Event>, _stream_index: usize) -> Result<(), String> {
+        self.stream_junction.send_events(events);
+        Ok(())
+    }
+}
+
 // StreamJunction.Publisher in Java is an inner class that implements InputProcessor.
 // Here, StreamJunction itself can provide the send methods, or we can have a separate Publisher struct.
 // For now, send methods are directly on StreamJunction.
 
 /// Routes events between producers and subscribing Processors.
+#[derive(Clone)]
 pub struct StreamJunction {
     pub stream_id: String,
     stream_definition: Arc<StreamDefinition>, // Added, as it's used in constructor and error handling
@@ -127,20 +158,20 @@ impl StreamJunction {
         Arc::clone(&self.stream_definition)
     }
 
+    pub fn construct_publisher(&self) -> Publisher {
+        Publisher::new(Arc::new(self.clone()))
+    }
+
     fn async_event_loop(receiver: CrossbeamReceiver<Box<dyn ComplexEvent>>, subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>) { // Corrected to CrossbeamReceiver
         // TODO: Implement batching as in Java's StreamHandler if batchSize > 1
         loop {
             match receiver.recv() {
                 Ok(mut event_chunk) => { // Renamed for clarity, it's a chunk head
                     let subs = subscribers.lock().expect("Mutex poisoned during async loop");
+                    let mut maybe_chunk = Some(event_chunk);
                     for subscriber_lock in subs.iter() {
                         let mut subscriber = subscriber_lock.lock().expect("Subscriber mutex poisoned");
-                        // TODO: Event cloning/passing strategy for multiple subscribers.
-                        // For now, this doesn't properly clone for each subscriber.
-                        // If process_complex_event_chunk takes ownership or mutates, this is wrong.
-                        // It should be &mut Option<Box<dyn ComplexEvent>>
-                        // This needs a proper event chunk and cloning/pooling strategy.
-                        subscriber.process(Some(event_chunk.clone_event_somehow_placeholder()));
+                        subscriber.process(maybe_chunk.take());
                     }
                 }
                 Err(RecvError) => {
@@ -217,34 +248,9 @@ impl StreamJunction {
                 // This needs a proper event chunk and cloning/pooling strategy.
                 // The signature for process_complex_event_chunk takes &mut Option<Box<dyn ComplexEvent>>
                 // so it can consume/replace the chunk. For multiple subscribers, each needs its "own" chunk.
-                let chunk_for_subscriber = complex_event_chunk.clone_event_chunk_somehow_placeholder();
-                subscriber.process(chunk_for_subscriber);
+                subscriber.process(complex_event_chunk.take());
             }
             Ok(())
         }
-    }
-
-    // Placeholder for cloning complex event chunk
-    // In a real system, this would involve an event pool and reference counting or deep cloning.
-}
-
-// TODO: This is a temporary placeholder for the complex logic of cloning a Box<dyn ComplexEvent>
-// or a chunk of them. Actual implementation requires a mechanism (e.g., a `clone_box` method on `ComplexEvent` trait).
-trait CloneEventChunk {
-    fn clone_event_chunk_somehow_placeholder(&self) -> Self;
-}
-impl CloneEventChunk for Option<Box<dyn ComplexEvent>> {
-    fn clone_event_chunk_somehow_placeholder(&self) -> Self {
-        None
-    }
-}
-
-trait CloneComplexEvent {
-    fn clone_event_somehow_placeholder(&self) -> Box<dyn ComplexEvent>;
-}
-
-impl CloneComplexEvent for Box<dyn ComplexEvent> {
-    fn clone_event_somehow_placeholder(&self) -> Box<dyn ComplexEvent> {
-        Box::new(crate::core::event::stream::StreamEvent::default())
     }
 }

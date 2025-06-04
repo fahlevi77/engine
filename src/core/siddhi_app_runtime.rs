@@ -7,6 +7,7 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For add_ca
 use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::stream::input::input_manager::InputManager;
 use crate::core::stream::input::input_handler::InputHandler;
+use std::sync::{Arc, Mutex};
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
@@ -15,7 +16,6 @@ use crate::core::query::output::callback_processor::CallbackProcessor; // To be 
 use crate::core::query::processor::Processor; // Trait for CallbackProcessor
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// Manages the runtime lifecycle of a single Siddhi Application.
 #[derive(Debug)] // Default removed, construction via new() -> Result
@@ -67,7 +67,7 @@ impl SiddhiAppRuntime {
         builder.build(api_siddhi_app) // Pass the Arc<ApiSiddhiApp> again
     }
 
-    pub fn get_input_handler(&self, stream_id: &str) -> Option<Arc<InputHandler>> {
+    pub fn get_input_handler(&self, stream_id: &str) -> Option<Arc<Mutex<InputHandler>>> {
         self.input_manager.get_input_handler(stream_id)
     }
 

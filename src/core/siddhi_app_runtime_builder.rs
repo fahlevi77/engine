@@ -96,21 +96,10 @@ impl SiddhiAppRuntimeBuilder {
     // build() method that consumes the builder and returns a SiddhiAppRuntime
     pub fn build(self, api_siddhi_app: Arc<ApiSiddhiApp>) -> Result<SiddhiAppRuntime, String> {
         // Create InputManager and populate it
-        let mut input_manager = crate::core::stream::input::input_manager::InputManager::new(
-            Arc::clone(&self.siddhi_app_context)
+        let input_manager = crate::core::stream::input::input_manager::InputManager::new(
+            Arc::clone(&self.siddhi_app_context),
+            self.stream_junction_map.clone(),
         );
-        for (stream_id, junction_arc) in &self.stream_junction_map {
-            // StreamJunction::get_stream_definition() returns Arc<ApiStreamDefinition>
-            // let stream_def = junction_arc.lock().unwrap().get_stream_definition();
-
-            // InputHandler::new now takes (stream_id, siddhi_app_context, stream_junction)
-            let input_handler = Arc::new(crate::core::stream::input::input_handler::InputHandler::new(
-                stream_id.clone(),
-                Arc::clone(&self.siddhi_app_context),
-                Arc::clone(junction_arc),
-            ));
-            input_manager.add_input_handler(stream_id.clone(), input_handler);
-        }
 
         Ok(SiddhiAppRuntime {
             name: self.siddhi_app_context.name.clone(),
