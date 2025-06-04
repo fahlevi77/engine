@@ -2,7 +2,7 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 
 /// Defines the data type of an attribute.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)] // Added Eq, Hash
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)] // Added Copy for easier usage
 pub enum Type {
     STRING,
     INT,

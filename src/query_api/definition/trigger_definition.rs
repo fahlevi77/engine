@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.definition.TriggerDefinition
 use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::constant::{Constant, ConstantValue};
+use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
 
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
@@ -42,11 +42,11 @@ impl TriggerDefinition {
     // Builder method for TimeConstant
     pub fn at_every_time_constant(mut self, time_constant: Constant) -> Result<Self, String> {
         match time_constant.value {
-            ConstantValue::Time(ms) => {
+            ConstantValueWithFloat::Time(ms) => {
                 self.at_every = Some(ms);
                 Ok(self)
             }
-            ConstantValue::Long(ms) => { // Also allow Long for flexibility as in Java
+            ConstantValueWithFloat::Long(ms) => { // Also allow Long for flexibility as in Java
                 self.at_every = Some(ms);
                 Ok(self)
             }

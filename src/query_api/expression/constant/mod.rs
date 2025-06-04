@@ -10,7 +10,7 @@ use crate::query_api::siddhi_element::SiddhiElement;
 // pub mod string_constant;
 // pub mod time_constant;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)] // Added Eq, Hash
+#[derive(Clone, Debug, PartialEq)]
 pub enum ConstantValue {
     String(String),
     Int(i32),
