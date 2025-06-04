@@ -35,6 +35,14 @@ impl OrderByAttribute {
     pub fn new_default_order(variable: Variable) -> Self {
         Self::new(variable, Order::default())
     }
+
+    pub fn get_variable(&self) -> &Variable {
+        &self.variable
+    }
+
+    pub fn get_order(&self) -> &Order {
+        &self.order
+    }
 }
 
 // If Variable is Default, OrderByAttribute can derive Default.

@@ -225,22 +225,22 @@ mod tests {
         let s = Selector::selector().order_by(var.clone());
         assert_eq!(s.get_order_by_list().len(), 1);
         assert_eq!(s.get_order_by_list()[0].get_variable(), &var);
-        assert_eq!(s.get_order_by_list()[0].get_order(), &OrderByOrder::ASC); // Default order
+        assert_eq!(s.get_order_by_list()[0].get_order(), &OrderByOrder::Asc); // Default order
     }
 
     #[test]
     fn test_selector_order_by_with_order() {
         let var = Variable::new("attr_order_desc".to_string());
-        let s = Selector::selector().order_by_with_order(var.clone(), OrderByOrder::DESC);
+        let s = Selector::selector().order_by_with_order(var.clone(), OrderByOrder::Desc);
         assert_eq!(s.get_order_by_list().len(), 1);
         assert_eq!(s.get_order_by_list()[0].get_variable(), &var);
-        assert_eq!(s.get_order_by_list()[0].get_order(), &OrderByOrder::DESC);
+        assert_eq!(s.get_order_by_list()[0].get_order(), &OrderByOrder::Desc);
     }
 
     #[test]
     fn test_selector_add_order_by_list() {
-        let ob1 = OrderByAttribute::new(Variable::new("o1".to_string()), OrderByOrder::ASC);
-        let ob2 = OrderByAttribute::new(Variable::new("o2".to_string()), OrderByOrder::DESC);
+        let ob1 = OrderByAttribute::new(Variable::new("o1".to_string()), OrderByOrder::Asc);
+        let ob2 = OrderByAttribute::new(Variable::new("o2".to_string()), OrderByOrder::Desc);
         let s = Selector::selector().add_order_by_list(vec![ob1.clone(), ob2.clone()]);
         assert_eq!(s.get_order_by_list().len(), 2);
     }

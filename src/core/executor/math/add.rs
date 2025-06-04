@@ -98,20 +98,6 @@ mod tests {
     use crate::core::config::siddhi_app_context::SiddhiAppContext;
     use std::sync::Arc;
 
-    // Copied helper for SiddhiAppContext for testing clone_executor
-    impl SiddhiAppContext {
-        pub fn default_for_testing() -> Self {
-            use crate::core::config::siddhi_context::SiddhiContext;
-            use crate::query_api::SiddhiApp as ApiSiddhiApp;
-
-            Self::new(
-                Arc::new(SiddhiContext::default()),
-                "test_app_ctx_for_add_exec".to_string(),
-                Arc::new(ApiSiddhiApp::new("test_api_app_for_add_exec".to_string())),
-                String::new()
-            )
-        }
-    }
 
     #[test]
     fn test_add_int_int() {

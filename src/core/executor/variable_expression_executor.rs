@@ -114,21 +114,6 @@ mod tests {
         se
     }
 
-    // Copied helper for testing if SiddhiAppContext is needed for clone_executor
-    // This should ideally be in a central test_utils module.
-    impl SiddhiAppContext {
-        pub fn default_for_testing() -> Self {
-            use crate::core::config::siddhi_context::SiddhiContext;
-            use crate::query_api::SiddhiApp as ApiSiddhiApp;
-
-            Self::new(
-                Arc::new(SiddhiContext::default()),
-                "test_app_ctx_for_vee".to_string(),
-                Arc::new(ApiSiddhiApp::new("test_api_app_for_vee".to_string())),
-                String::new()
-            )
-        }
-    }
 
     #[test]
     fn test_variable_access_from_before_window_data_string() { // Renamed and adapted
@@ -174,30 +159,49 @@ mod tests {
         // So, to test the `else` branch of `if let Some(stream_event) = ...`, we need a non-StreamEvent.
         // Let's create a simple mock for that.
 
+        #[derive(Debug)]
         struct MockComplexEvent {
             output_data: Option<Vec<AttributeValue>>,
+            next: Option<Box<dyn ComplexEvent>>,
+            event_type: ComplexEventType,
         }
         impl ComplexEvent for MockComplexEvent {
-            fn get_id(&self) -> i64 { 0 }
-            fn set_id(&mut self, _id: i64) {}
+            fn get_next(&self) -> Option<&dyn ComplexEvent> {
+                self.next.as_deref()
+            }
+            fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>> {
+                std::mem::replace(&mut self.next, next_event)
+            }
+            fn mut_next_ref_option(&mut self) -> &mut Option<Box<dyn ComplexEvent>> {
+                &mut self.next
+            }
+
+            fn get_output_data(&self) -> Option<&[AttributeValue]> {
+                self.output_data.as_deref()
+            }
+            fn set_output_data(&mut self, data: Option<Vec<AttributeValue>>) {
+                self.output_data = data;
+            }
+
             fn get_timestamp(&self) -> i64 { 0 }
             fn set_timestamp(&mut self, _timestamp: i64) {}
-            fn get_output_data(&self) -> Option<&Vec<AttributeValue>> { self.output_data.as_ref() }
-            fn set_output_data(&mut self, _data: Option<Vec<AttributeValue>>) {}
-            fn get_type(&self) -> ComplexEventType { ComplexEventType::Current }
-            fn set_type(&mut self, _event_type: ComplexEventType) {}
-            fn get_next(&self) -> Option<*mut dyn ComplexEvent> { None }
-            fn set_next(&mut self, _event: Option<*mut dyn ComplexEvent>) {}
-            fn is_expired(&self) -> bool { false }
-            fn set_expired(&mut self, _is_expired: bool) {}
+
+            fn get_event_type(&self) -> ComplexEventType { self.event_type }
+            fn set_event_type(&mut self, event_type: ComplexEventType) { self.event_type = event_type; }
+
             fn as_any(&self) -> &dyn std::any::Any { self }
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
         }
 
         let exec = VariableExpressionExecutor::new(
             0, ApiAttributeType::STRING, "fallback_attr".to_string()
         );
         let mock_event_data = vec![AttributeValue::String("fallback_val".to_string())];
-        let mock_event = MockComplexEvent { output_data: Some(mock_event_data) };
+        let mock_event = MockComplexEvent {
+            output_data: Some(mock_event_data),
+            next: None,
+            event_type: ComplexEventType::Current,
+        };
 
         let result = exec.execute(Some(&mock_event as &dyn ComplexEvent));
         assert_eq!(result, Some(AttributeValue::String("fallback_val".to_string())));

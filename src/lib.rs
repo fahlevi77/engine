@@ -11,7 +11,6 @@ mod tests {
     use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
     use crate::query_api::definition::{
         StreamDefinition as ApiStreamDefinition,
-        Attribute as ApiAttribute,
         attribute::Type as ApiAttributeType // Explicitly importing Type
     };
     use crate::query_api::execution::{
@@ -52,39 +51,42 @@ mod tests {
         let mut app_to_run = ApiSiddhiApp::new("TestApp".to_string());
 
         // Input Stream Definition: define stream InputStream (attribute1 int, attribute2 string);
-        let input_stream_def = ApiStreamDefinition::new(
-            "InputStream".to_string(),
-            vec![
-                ApiAttribute::new("attribute1".to_string(), ApiAttributeType::INT),
-                ApiAttribute::new("attribute2".to_string(), ApiAttributeType::STRING),
-            ],
-            Vec::new() // No annotations
-        );
+        let input_stream_def = ApiStreamDefinition::new("InputStream".to_string())
+            .attribute("attribute1".to_string(), ApiAttributeType::INT)
+            .attribute("attribute2".to_string(), ApiAttributeType::STRING);
         app_to_run.stream_definition_map.insert("InputStream".to_string(), Arc::new(input_stream_def));
 
         // Output Stream Definition: define stream OutputStream (projected_attr1 int, renamed_attr2 string);
-        let output_stream_def = ApiStreamDefinition::new(
-            "OutputStream".to_string(),
-            vec![
-                ApiAttribute::new("projected_attr1".to_string(), ApiAttributeType::INT),
-                ApiAttribute::new("renamed_attr2".to_string(), ApiAttributeType::STRING),
-            ],
-            Vec::new()
-        );
+        let output_stream_def = ApiStreamDefinition::new("OutputStream".to_string())
+            .attribute("projected_attr1".to_string(), ApiAttributeType::INT)
+            .attribute("renamed_attr2".to_string(), ApiAttributeType::STRING);
         app_to_run.stream_definition_map.insert("OutputStream".to_string(), Arc::new(output_stream_def));
 
         // Query Definition: FROM InputStream[attribute1 > 10] SELECT attribute1 as projected_attr1, attribute2 as renamed_attr2 INSERT INTO OutputStream;
 
         // Filter: attribute1 > 10
         let filter_condition = ApiExpression::Compare(Box::new(ApiCompare::new(
-            Box::new(ApiExpression::Variable(ApiVariable::new("attribute1".to_string()))),
+            ApiExpression::Variable(ApiVariable::new("attribute1".to_string())),
             ApiCompareOperator::GreaterThan,
-            Box::new(ApiExpression::Constant(ApiConstant::new(ApiConstantValue::Int(10))))
+            ApiExpression::Constant(ApiConstant::new(ApiConstantValue::Int(10)))
         )));
 
         // FROM InputStream[attribute1 > 10]
-        let mut api_single_input_stream = ApiSingleInputStream::new_basic_from_id("InputStream".to_string());
-        // Add filter using a conceptual method (actual method might be on a builder or direct manipulation)
+        let api_single_input_stream = ApiSingleInputStream::new_basic(
+            "InputStream".to_string(),
+            false,
+            false,
+            None,
+            {
+                let mut handlers = Vec::new();
+                handlers.push(
+                    crate::query_api::execution::query::input::handler::StreamHandler::Filter(
+                        crate::query_api::execution::query::input::handler::Filter::new(filter_condition.clone()),
+                    ),
+                );
+                handlers
+            },
+        );
         // Assuming SingleInputStream from query_api has a method to add filters, or its handlers field is public.
         // For now, this relies on how `QueryParser` would interpret handlers.
         // Let's assume SingleInputStream has a field `pub stream_handlers: Vec<StreamHandler>`
@@ -92,40 +94,21 @@ mod tests {
         // The `filter` field was on `SingleInputStreamKind::Basic`.
         // This part of query_api construction needs to be robust.
         // For this test, QueryParser will extract this filter.
-        // A more direct way for query_api:
-        let mut input_stream_handlers = Vec::new();
-        if let Some(condition_expr) = Some(filter_condition) { // Example, filter is not optional for this query
-             input_stream_handlers.push(
-                 crate::query_api::execution::query::input::handler::StreamHandler::Filter(
-                     crate::query_api::execution::query::input::handler::Filter::new(condition_expr)
-                 )
-             );
-        }
-        // This assumes SingleInputStream can be constructed with handlers.
-        // The current SingleInputStream::new_basic_from_id doesn't take handlers.
-        // Let's refine constructor or use a builder pattern for ApiSingleInputStream.
-        // For now, manually creating the kind.
-        api_single_input_stream.kind = crate::query_api::execution::query::input::stream::SingleInputStreamKind::Basic {
-            is_fault_stream: false,
-            is_inner_stream: false,
-            stream_id: "InputStream".to_string(),
-            stream_reference_id: None,
-            stream_handlers: input_stream_handlers,
-        };
         let input_s = ApiInputStream::Single(api_single_input_stream);
 
 
         // Selector: attribute1 as projected_attr1, attribute2 as renamed_attr2
-        let selector = ApiSelector::new(vec![
-            ApiOutputAttribute::new( // get_expression, get_rename
+        let mut selector = ApiSelector::new();
+        selector.selection_list = vec![
+            ApiOutputAttribute::new(
                 Some("projected_attr1".to_string()),
-                ApiExpression::Variable(ApiVariable::new("attribute1".to_string()))
+                ApiExpression::Variable(ApiVariable::new("attribute1".to_string())),
             ),
             ApiOutputAttribute::new(
                 Some("renamed_attr2".to_string()),
-                ApiExpression::Variable(ApiVariable::new("attribute2".to_string()))
+                ApiExpression::Variable(ApiVariable::new("attribute2".to_string())),
             ),
-        ]);
+        ];
 
         // Output Stream for Query: INSERT INTO OutputStream
         // ApiOutputStream::new takes OutputStreamAction and Option<OutputEventType>
@@ -140,12 +123,10 @@ mod tests {
             None // Let Query/SiddhiAppRuntimeBuilder determine default OutputEventType
         );
 
-        let query = ApiQuery::new(
-            Some(input_s), // input_stream is Option<ApiInputStream>
-            selector,      // selector is ApiSelector
-            output_s,      // output_stream is ApiOutputStream
-            Vec::new()     // annotations
-        );
+        let query = ApiQuery::query()
+            .from(input_s)
+            .select(selector)
+            .out_stream(output_s);
         app_to_run.execution_element_list.push(ApiExecutionElement::Query(query));
 
         let runnable_api_app = Arc::new(app_to_run);

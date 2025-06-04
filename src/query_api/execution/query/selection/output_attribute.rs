@@ -29,6 +29,14 @@ impl OutputAttribute {
             expression: Expression::Variable(variable),
         }
     }
+
+    pub fn get_rename(&self) -> &Option<String> {
+        &self.rename
+    }
+
+    pub fn get_expression(&self) -> &Expression {
+        &self.expression
+    }
 }
 
 // No Default derive.

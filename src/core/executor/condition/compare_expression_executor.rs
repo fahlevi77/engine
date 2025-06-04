@@ -150,20 +150,6 @@ mod tests {
     use std::sync::Arc;
     use crate::core::config::siddhi_app_context::SiddhiAppContext;
 
-    // Helper for SiddhiAppContext
-    impl SiddhiAppContext {
-        pub fn default_for_testing() -> Self {
-            use crate::core::config::siddhi_context::SiddhiContext;
-            use crate::query_api::SiddhiApp as ApiSiddhiApp;
-            Self::new(
-                Arc::new(SiddhiContext::default()),
-                "test_app_ctx_for_compare".to_string(),
-                Arc::new(ApiSiddhiApp::new("test_api_app_for_compare".to_string())),
-                String::new()
-            )
-        }
-    }
-
     #[test]
     fn test_compare_greater_than_int_true() { // Renamed as per subtask suggestion (though original would be fine too)
         let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));

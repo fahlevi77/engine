@@ -52,25 +52,6 @@ mod tests {
     use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor signature
     use std::sync::Arc;
 
-    // Helper for testing if SiddhiAppContext is needed for clone_executor
-    // This needs to be available or defined in a way that tests can use it.
-    // It might be better in a central test_utils module.
-    // For now, defining a local helper or assuming a simple default path.
-    // Let's assume SiddhiAppContext has a simple default for testing purposes here.
-    impl SiddhiAppContext {
-        pub fn default_for_testing() -> Self {
-            use crate::core::config::siddhi_context::SiddhiContext;
-            use crate::query_api::SiddhiApp as ApiSiddhiApp;
-
-            Self::new(
-                Arc::new(SiddhiContext::default()), // Assumes SiddhiContext is Default
-                "test_app_ctx_for_clone".to_string(),
-                Arc::new(ApiSiddhiApp::new("test_api_app_for_clone".to_string())), // Assumes ApiSiddhiApp::new
-                String::new() // empty app string
-            )
-        }
-    }
-
 
     #[test]
     fn test_constant_string() {

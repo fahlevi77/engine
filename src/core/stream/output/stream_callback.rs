@@ -104,6 +104,17 @@ pub struct LogStreamCallback {
     pub stream_definition: Option<Arc<AbstractDefinitionApi>>, // For toMap
     pub siddhi_app_context: Option<Arc<SiddhiAppContext>>,
 }
+
+impl LogStreamCallback {
+    /// Simple constructor used in tests and examples.
+    pub fn new(stream_id: String) -> Self {
+        Self {
+            stream_id,
+            stream_definition: None,
+            siddhi_app_context: None,
+        }
+    }
+}
 impl StreamCallback for LogStreamCallback {
     fn receive_events(&self, events: &[Event]) {
         println!("[{}] Received events: {:?}", self.stream_id, events);

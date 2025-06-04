@@ -134,3 +134,21 @@ impl SiddhiAppContext {
 
     // Many other getters/setters would follow for fields like is_playback, statistics_manager etc.
 }
+
+#[cfg(test)]
+impl SiddhiAppContext {
+    /// Convenience constructor used across unit tests to build a minimal
+    /// `SiddhiAppContext` instance.  Having this single implementation avoids
+    /// multiple `impl` blocks in test modules which previously caused duplicate
+    /// method definition errors during compilation.
+    pub fn default_for_testing() -> Self {
+        use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
+
+        Self::new(
+            Arc::new(SiddhiContext::default()),
+            "test_app_ctx".to_string(),
+            Arc::new(ApiSiddhiApp::new("test_api_app".to_string())),
+            String::new(),
+        )
+    }
+}
