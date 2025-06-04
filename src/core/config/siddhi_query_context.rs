@@ -1,13 +1,13 @@
 // Corresponds to io.siddhi.core.config.SiddhiQueryContext
 use std::sync::Arc;
 use super::siddhi_app_context::SiddhiAppContext;
+use crate::core::util::id_generator::IdGenerator;
 use crate::query_api::execution::query::output::OutputEventType; // From query_api, as Java uses it.
 // use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
 // use crate::core::util::IdGenerator; // TODO: Define IdGenerator
 
 // Placeholders
 #[derive(Debug, Clone, Default)] pub struct LatencyTrackerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct IdGeneratorPlaceholder {}
 
 
 #[derive(Debug, Clone)] // Default needs SiddhiAppContext and name
@@ -22,7 +22,7 @@ pub struct SiddhiQueryContext {
     pub partitioned: bool, // Java default false
     pub output_event_type: Option<OutputEventType>, // Java type, optional
     pub latency_tracker: Option<LatencyTrackerPlaceholder>, // transient in Java, Option in Rust
-    pub id_generator: IdGeneratorPlaceholder, // new-ed in Java constructor
+    pub id_generator: IdGenerator, // new-ed in Java constructor
     pub stateful: bool, // Java default false
 }
 
@@ -36,7 +36,7 @@ impl SiddhiQueryContext {
             partitioned: false,
             output_event_type: None,
             latency_tracker: None,
-            id_generator: IdGeneratorPlaceholder::default(),
+            id_generator: IdGenerator::default(),
             stateful: false,
         }
     }
@@ -84,10 +84,7 @@ impl SiddhiQueryContext {
     }
 
     pub fn generate_new_id(&mut self) -> String {
-        // In Java this delegates to IdGenerator.createNewId()
-        // Here we mimic by returning a placeholder UUID
-        use uuid::Uuid;
-        Uuid::new_v4().to_string()
+        self.id_generator.create_new_id()
     }
 
     pub fn is_stateful(&self) -> bool {

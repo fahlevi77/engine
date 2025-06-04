@@ -1,33 +1,79 @@
 // siddhi_rust/src/core/util/executor_service.rs
-// Placeholder for Java's ExecutorService
+// Very small thread pool used as a stand in for Java's ExecutorService.
 
-#[derive(Debug, Clone, Default)]
-pub struct ExecutorServicePlaceholder {
-    // In a real scenario, this would wrap a thread pool, e.g., from rayon or a custom one.
-    // For now, it's just a named placeholder.
-    pub name: String,
+use crossbeam_channel::{unbounded, Sender};
+use std::thread::{self, JoinHandle};
+use std::sync::{Arc, Mutex};
+
+enum Message {
+    Run(Box<dyn FnOnce() + Send + 'static>),
+    Shutdown,
 }
 
-impl ExecutorServicePlaceholder {
-    pub fn new(name: &str) -> Self {
-        Self { name: name.to_string() }
+#[derive(Debug)]
+pub struct ExecutorService {
+    name: String,
+    sender: Sender<Message>,
+    workers: Arc<Mutex<Vec<JoinHandle<()>>>>,
+}
+
+impl Default for ExecutorService {
+    fn default() -> Self {
+        ExecutorService::new("executor", 1)
+    }
+}
+
+impl ExecutorService {
+    /// Create a new executor with the given number of worker threads.
+    pub fn new(name: &str, threads: usize) -> Self {
+        let (tx, rx) = unbounded::<Message>();
+        let workers = Arc::new(Mutex::new(Vec::new()));
+        let shared_rx = Arc::new(Mutex::new(rx));
+        for i in 0..threads {
+            let rx = Arc::clone(&shared_rx);
+            let handle = thread::Builder::new()
+                .name(format!("{}-{}", name, i))
+                .spawn(move || {
+                    loop {
+                        let msg = {
+                            let lock = rx.lock().expect("rx mutex");
+                            lock.recv()
+                        };
+                        match msg {
+                            Ok(Message::Run(job)) => { job(); }
+                            Ok(Message::Shutdown) | Err(_) => break,
+                        }
+                    }
+                })
+                .expect("thread spawn");
+            workers.lock().unwrap().push(handle);
+        }
+        Self { name: name.to_string(), sender: tx, workers }
     }
 
-    // Placeholder for execute method.
-    // The closure needs to be Send + 'static to be sent to another thread.
-    pub fn execute<F: FnOnce() + Send + 'static>(&self, कार्य: F) {
-        // In a real implementation, this would submit the closure to the thread pool.
-        // For the placeholder, we can just execute it synchronously for simplicity,
-        // or do nothing to truly simulate deferral.
-        // कार्य(); // Example: synchronous execution
-        println!("ExecutorServicePlaceholder [{}]: Submitted a task (placeholder, not actually run async).", self.name);
-        // To avoid unused variable warning if not running:
-        let _ = कार्य;
+    /// Submit a task for asynchronous execution.
+    pub fn execute<F>(&self, task: F)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        let _ = self.sender.send(Message::Run(Box::new(task)));
     }
 
-    // Java ExecutorService has many other methods like submit, shutdown, awaitTermination, etc.
-    // These would be added here if needed.
+    /// Signal all worker threads to shut down and wait for them to finish.
     pub fn shutdown(&self) {
-        println!("ExecutorServicePlaceholder [{}]: shutdown() called (placeholder).", self.name);
+        for _ in 0..self.workers.lock().unwrap().len() {
+            let _ = self.sender.send(Message::Shutdown);
+        }
+        let mut workers = self.workers.lock().unwrap();
+        while let Some(h) = workers.pop() {
+            let _ = h.join();
+        }
     }
 }
+
+impl Drop for ExecutorService {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+

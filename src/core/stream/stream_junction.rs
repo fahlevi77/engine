@@ -8,7 +8,7 @@ use crate::core::event::event::Event; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::stream::StreamEvent; // Actual struct for conversion
 use crate::core::query::processor::Processor; // Trait
-use crate::core::util::executor_service::ExecutorServicePlaceholder as ExecutorService;
+use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::metrics_placeholders::*;
 use crate::query_api::definition::StreamDefinition; // From query_api
 

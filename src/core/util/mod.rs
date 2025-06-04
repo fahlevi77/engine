@@ -1,6 +1,8 @@
 // siddhi_rust/src/core/util/mod.rs
 
 pub mod executor_service;
+pub mod attribute_converter;
+pub mod id_generator;
 pub mod metrics_placeholders;
 pub mod parser; // Added parser module
 pub mod siddhi_constants; // Added siddhi_constants module
@@ -19,7 +21,9 @@ pub mod siddhi_constants; // Added siddhi_constants module
 // pub mod transport;
 
 
-pub use self::executor_service::ExecutorServicePlaceholder;
+pub use self::executor_service::ExecutorService;
+pub use self::attribute_converter::{get_property_value, get_property_value_from_str};
+pub use self::id_generator::IdGenerator;
 pub use self::metrics_placeholders::*;
 pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export key items from parser
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants

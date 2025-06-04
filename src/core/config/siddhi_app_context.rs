@@ -4,7 +4,8 @@ use std::collections::HashMap; // For scriptFunctionMap
 use crate::query_api::SiddhiApp; // From query_api
 use std::cell::RefCell;
 use super::siddhi_context::SiddhiContext;
-use crate::core::util::executor_service::ExecutorServicePlaceholder;
+use crate::core::util::executor_service::ExecutorService;
+use crate::core::util::id_generator::IdGenerator;
 use std::thread_local;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
@@ -23,7 +24,6 @@ use std::thread_local;
 #[derive(Debug, Clone, Default)] pub struct TimestampGeneratorPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct SnapshotServicePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ThreadBarrierPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct IdGeneratorPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ScriptPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ExternalReferencedHolderPlaceholder {}
@@ -57,7 +57,7 @@ pub struct SiddhiAppContext {
     pub statistics_manager: Option<StatisticsManagerPlaceholder>, // Manages collection and reporting of runtime statistics. Option because it's set post-construction in Java.
 
     // Threading and scheduling (using placeholders)
-    pub executor_service: Option<Arc<ExecutorServicePlaceholder>>, // General purpose thread pool for the Siddhi App.
+    pub executor_service: Option<Arc<ExecutorService>>, // General purpose thread pool for the Siddhi App.
     pub scheduled_executor_service: Option<Arc<ScheduledExecutorServicePlaceholder>>, // Thread pool for scheduled tasks (e.g., time windows).
 
     // External references and lifecycle management (using placeholders)
@@ -67,7 +67,7 @@ pub struct SiddhiAppContext {
     pub snapshot_service: Option<SnapshotServicePlaceholder>, // Manages state snapshotting and persistence. Option because it's set.
     pub thread_barrier: Option<ThreadBarrierPlaceholder>,     // Used for coordinating threads, e.g., in playback. Option because it's set.
     pub timestamp_generator: TimestampGeneratorPlaceholder,   // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
-    pub id_generator: Option<IdGeneratorPlaceholder>,         // Generates unique IDs for runtime elements. Option because it's set.
+    pub id_generator: Option<IdGenerator>,         // Generates unique IDs for runtime elements. Option because it's set.
 
     // pub script_function_map: HashMap<String, ScriptPlaceholder>, // Holds script function implementations.
 
@@ -234,11 +234,11 @@ impl SiddhiAppContext {
         self.thread_barrier = Some(barrier);
     }
 
-    pub fn get_executor_service(&self) -> Option<Arc<ExecutorServicePlaceholder>> {
+    pub fn get_executor_service(&self) -> Option<Arc<ExecutorService>> {
         self.executor_service.as_ref().cloned()
     }
 
-    pub fn set_executor_service(&mut self, service: Arc<ExecutorServicePlaceholder>) {
+    pub fn set_executor_service(&mut self, service: Arc<ExecutorService>) {
         self.executor_service = Some(service);
     }
 
@@ -258,7 +258,7 @@ impl SiddhiAppContext {
         self.timestamp_generator = generator;
     }
 
-    pub fn set_id_generator(&mut self, id_gen: IdGeneratorPlaceholder) {
+    pub fn set_id_generator(&mut self, id_gen: IdGenerator) {
         self.id_generator = Some(id_gen);
     }
 }
