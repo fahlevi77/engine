@@ -190,19 +190,20 @@ impl StreamJunction {
 
     // send_event (from Event)
     pub fn send_event(&self, event: Event) {
-        // 1. Convert Event to a concrete ComplexEvent type (e.g., StreamEvent)
-        // This requires knowing the event structure (before/onAfter/output data sizes)
-        // For now, assume output_data of Event maps to output_data of StreamEvent.
-        // A proper StreamEventFactory or MetaStreamEvent would be used here.
-        let complex_event = Box::new(StreamEvent::new(
+        // Convert Event to a StreamEvent using the event's data as the
+        // `before_window_data` so that early processors like filters can
+        // access the attributes.  This mirrors the behaviour of Siddhi's
+        // `StreamEventConverter` which populates the beforeWindowData array for
+        // new events entering the pipeline.
+        let mut stream_event = StreamEvent::new(
             event.timestamp,
-            0, // beforeWindowData size (unknown from plain Event)
-            0, // onAfterWindowData size (unknown from plain Event)
-            event.data.len(), // outputData size
-        ));
-        // TODO: Populate data fields of complex_event from event.data
+            event.data.len(), // before_window_data size
+            0,                 // on_after_window_data size
+            0,                 // output_data size
+        );
+        stream_event.before_window_data = event.data;
 
-        if let Err(e) = self.send_complex_event_chunk(Some(complex_event)) {
+        if let Err(e) = self.send_complex_event_chunk(Some(Box::new(stream_event))) {
             // TODO: Proper error handling via faultStreamJunction or ErrorStore
             eprintln!("Error sending event to StreamJunction {}: {:?}", self.stream_id, e);
         }
