@@ -129,6 +129,21 @@ impl StreamEvent {
     pub fn has_next(&self) -> bool {
         self.next.is_some()
     }
+
+    /// Create a shallow clone of this `StreamEvent` without cloning the `next`
+    /// pointer.  This mirrors the behavior of `EventVariableFunctionExecutor`
+    /// in the Java implementation which extracts a single `StreamEvent` from a
+    /// `StateEvent` without its chain.
+    pub fn clone_without_next(&self) -> Self {
+        StreamEvent {
+            timestamp: self.timestamp,
+            output_data: self.output_data.clone(),
+            event_type: self.event_type,
+            before_window_data: self.before_window_data.clone(),
+            on_after_window_data: self.on_after_window_data.clone(),
+            next: None,
+        }
+    }
 }
 
 impl ComplexEvent for StreamEvent {
