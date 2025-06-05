@@ -18,6 +18,7 @@ use crate::query_api::execution::query::input::stream::input_stream::InputStream
 // use super::partition_parser::PartitionParser; // To be created
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
 use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
+use super::query_parser::QueryParser; // Use the real QueryParser implementation
 
 // Placeholder for QueryParser and PartitionParser logic
 // In a full system, these would be in their own modules.
@@ -114,12 +115,10 @@ impl SiddhiAppParser {
                 ApiExecutionElement::Query(api_query) => {
                     // The QueryParser needs access to various maps (stream_junctions, tables, windows, aggregations)
                     // from the builder to resolve references.
-                    let query_runtime = query_parser_placeholder::QueryParser::parse_query(
+                    let query_runtime = QueryParser::parse_query(
                         api_query,
                         &siddhi_app_context,
-                        &mut builder.stream_junction_map, // Pass mut ref to allow QueryParser to potentially add junctions (e.g., for joins)
-                        // &mut builder.table_map,
-                        // ... other maps ...
+                        &builder.stream_junction_map,
                     )?;
                     builder.add_query_runtime(Arc::new(query_runtime));
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);
