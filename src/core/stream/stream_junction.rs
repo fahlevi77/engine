@@ -88,6 +88,7 @@ pub struct StreamJunction {
     // The executor_service would manage the task that polls the CrossbeamReceiver.
 
     on_error_action: OnErrorAction,
+    started: bool,
     // fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>, // For fault stream redirection
     // exception_listener: Option<...>; // From SiddhiAppContext
     // is_trace_enabled: bool;
@@ -139,6 +140,7 @@ impl StreamJunction {
             subscribers: Arc::new(Mutex::new(Vec::new())),
             event_sender: sender,
             on_error_action: OnErrorAction::default(), // TODO: Read from annotations
+            started: false,
             // fault_stream_junction: None, // TODO: Set up if fault stream defined
         };
 
@@ -184,8 +186,38 @@ impl StreamJunction {
 
     // In Java, StreamJunction has subscribe(Receiver) where Receiver is an interface.
     // Processors (like QueryFinalProcessor, StreamProcessor) implement Receiver.
-    pub fn add_subscriber(&self, processor: Arc<Mutex<dyn Processor>>) {
-        self.subscribers.lock().expect("Mutex poisoned").push(processor);
+    pub fn subscribe(&self, processor: Arc<Mutex<dyn Processor>>) {
+        // avoid duplicates when the same processor subscribes twice
+        let mut subs = self.subscribers.lock().expect("Mutex poisoned");
+        if !subs.iter().any(|p| Arc::ptr_eq(p, &processor)) {
+            subs.push(processor);
+        }
+    }
+
+    pub fn unsubscribe(&self, processor: &Arc<Mutex<dyn Processor>>) {
+        let mut subs = self.subscribers.lock().expect("Mutex poisoned");
+        subs.retain(|p| !Arc::ptr_eq(p, processor));
+    }
+
+    /// Initialize async processing and notify callbacks.
+    pub fn start_processing(&mut self) {
+        if self.started {
+            return;
+        }
+        self.started = true;
+        if self.is_async && self.event_sender.is_none() {
+            let (sender, receiver) = bounded::<Box<dyn ComplexEvent>>(self.buffer_size);
+            self.event_sender = Some(sender);
+            let subs = Arc::clone(&self.subscribers);
+            let exec = Arc::clone(&self.executor_service);
+            exec.execute(move || Self::async_event_loop(receiver, subs));
+        }
+    }
+
+    /// Stop async processing loop.
+    pub fn stop_processing(&mut self) {
+        self.event_sender = None;
+        self.started = false;
     }
 
     // send_event (from Event)
@@ -252,6 +284,17 @@ impl StreamJunction {
                 subscriber.process(complex_event_chunk.take());
             }
             Ok(())
+        }
+    }
+
+    fn handle_error(&self, _event: &str, e: &dyn std::error::Error) {
+        match self.on_error_action {
+            OnErrorAction::LOG | OnErrorAction::DROP => {
+                eprintln!("[{}] Error handling event: {}", self.stream_id, e);
+            }
+            OnErrorAction::STREAM | OnErrorAction::STORE => {
+                eprintln!("[{}] Error handling event: {} (STREAM/STORE not implemented)", self.stream_id, e);
+            }
         }
     }
 }

@@ -90,7 +90,7 @@ impl SiddhiAppRuntime {
             query_context_for_callback,
             // query_name_for_callback, // query_name is now in query_context
         )));
-        output_junction.lock().expect("Output StreamJunction Mutex poisoned").add_subscriber(callback_processor);
+        output_junction.lock().expect("Output StreamJunction Mutex poisoned").subscribe(callback_processor);
         Ok(())
     }
 

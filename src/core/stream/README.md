@@ -9,6 +9,9 @@ thread barriers are represented by placeholders.
 
 * `StreamJunction` – routes events between publishers and subscribers.  Supports
   optional asynchronous processing using a bounded channel.
+  `subscribe` and `unsubscribe` mirror the Java methods for managing
+  downstream processors.  `start_processing`/`stop_processing` start or
+  shut down the internal async task.
 * `Publisher` – equivalent to the Java inner class. Implements the
   `InputProcessor` trait so it can be used by the input subsystem.
 * `InputHandler`, `InputManager`, `InputDistributor` and `InputEntryValve` –

@@ -183,7 +183,7 @@ impl QueryParser {
 
         // 8. Register the entry processor with the input stream junction
         if let Some(head_proc_arc) = &query_runtime.processor_chain_head {
-            input_junction.lock().expect("Input junction Mutex poisoned").add_subscriber(Arc::clone(head_proc_arc));
+            input_junction.lock().expect("Input junction Mutex poisoned").subscribe(Arc::clone(head_proc_arc));
         } else {
             // This might be valid if a query only defines things but has no direct input-to-output flow
             // (e.g. a query that only defines named windows used by other queries).

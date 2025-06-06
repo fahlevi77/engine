@@ -66,6 +66,30 @@ pub trait StreamCallback: StreamJunctionReceiver + Debug + Send + Sync {
         self.receive_events(events);
     }
 
+    fn to_map(&self, event: &Event, definition: &AbstractDefinitionApi) -> Option<HashMap<String, Option<crate::core::event::value::AttributeValue>>> {
+        let mut map = HashMap::new();
+        let attrs = &definition.attribute_list;
+        if attrs.len() != event.data.len() {
+            return None;
+        }
+        map.insert("_timestamp".to_string(), Some(crate::core::event::value::AttributeValue::Long(event.timestamp)));
+        for (attr, value) in attrs.iter().zip(event.data.iter()) {
+            map.insert(attr.name.clone(), Some(value.clone()));
+        }
+        Some(map)
+    }
+
+    fn to_map_array(&self, events: &[Event], definition: &AbstractDefinitionApi) -> Option<Vec<HashMap<String, Option<crate::core::event::value::AttributeValue>>>> {
+        let mut vec = Vec::new();
+        for e in events {
+            if let Some(m) = self.to_map(e, definition) {
+                vec.push(m);
+            }
+        }
+        Some(vec)
+    }
+
+
     // Default provided methods from Java StreamCallback (if any beyond Receiver impl)
     // e.g., toMap - this requires streamDefinition to be accessible.
     // If StreamCallback structs store their StreamDefinition:
