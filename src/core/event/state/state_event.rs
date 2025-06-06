@@ -3,6 +3,11 @@
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent; // StateEvent holds StreamEvents
 use crate::core::event::value::AttributeValue;
+use crate::core::util::siddhi_constants::{
+    BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+    STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN, CURRENT, LAST,
+};
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -45,6 +50,10 @@ impl StateEvent {
         self.stream_events.get(position)?.as_ref()
     }
 
+    pub fn get_stream_events(&self) -> &Vec<Option<StreamEvent>> {
+        &self.stream_events
+    }
+
     pub fn set_event(&mut self, position: usize, event: StreamEvent) {
         if position < self.stream_events.len() {
             self.stream_events[position] = Some(event);
@@ -60,6 +69,54 @@ impl StateEvent {
             None => self.stream_events[position] = Some(stream_event),
             Some(existing) => existing.next = Some(Box::new(stream_event)),
         }
+    }
+
+    /// Retrieve a stream event based on Siddhi position array logic.
+    pub fn get_stream_event_by_position(&self, position: &[i32]) -> Option<&StreamEvent> {
+        use crate::core::util::siddhi_constants::{
+            CURRENT, LAST, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
+        };
+        let mut stream_event = self
+            .stream_events
+            .get(*position.get(STREAM_EVENT_CHAIN_INDEX)? as usize)?
+            .as_ref()?;
+        let mut current = stream_event as &dyn ComplexEvent;
+        let idx = *position.get(STREAM_EVENT_INDEX_IN_CHAIN)?;
+        if idx >= 0 {
+            for _ in 1..=idx {
+                current = current.get_next()?;
+                stream_event = current.as_any().downcast_ref::<StreamEvent>()?;
+            }
+        } else if idx == CURRENT {
+            while let Some(next) = current.get_next() {
+                current = next;
+                stream_event = current.as_any().downcast_ref::<StreamEvent>()?;
+            }
+        } else if idx == LAST {
+            if current.get_next().is_none() {
+                return None;
+            }
+            while let Some(next_next) = current.get_next().and_then(|n| n.get_next()) {
+                current = current.get_next()?;
+                stream_event = current.as_any().downcast_ref::<StreamEvent>()?;
+                if next_next.get_next().is_none() {
+                    break;
+                }
+            }
+        } else {
+            let mut list = Vec::new();
+            let mut tmp: Option<&dyn ComplexEvent> = Some(current);
+            while let Some(ev) = tmp {
+                list.push(ev.as_any().downcast_ref::<StreamEvent>()?);
+                tmp = ev.get_next();
+            }
+            let index = list.len() as i32 + idx;
+            if index < 0 {
+                return None;
+            }
+            stream_event = list.get(index as usize)?;
+        }
+        Some(stream_event)
     }
 
     pub fn remove_last_event(&mut self, position: usize) {
@@ -97,6 +154,72 @@ impl StateEvent {
 
     pub fn set_output_data_vec(&mut self, data: Option<Vec<AttributeValue>>) {
         self.output_data = data;
+    }
+
+    pub fn get_output_data(&self) -> Option<&[AttributeValue]> {
+        self.output_data.as_deref()
+    }
+
+    pub fn get_attribute(&self, position: &[i32]) -> Option<&AttributeValue> {
+        use crate::core::util::siddhi_constants::{
+            BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+            STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+        };
+        if *position.get(STREAM_ATTRIBUTE_TYPE_INDEX)? as usize == STATE_OUTPUT_DATA_INDEX {
+            return self
+                .output_data
+                .as_ref()
+                .and_then(|d| d.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize));
+        }
+        let se = self.get_stream_event_by_position(position)?;
+        match *position.get(STREAM_ATTRIBUTE_TYPE_INDEX)? as usize {
+            BEFORE_WINDOW_DATA_INDEX => se.before_window_data.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            OUTPUT_DATA_INDEX => se.output_data.as_ref()?.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            ON_AFTER_WINDOW_DATA_INDEX => se.on_after_window_data.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            _ => None,
+        }
+    }
+
+    pub fn set_attribute(&mut self, value: AttributeValue, position: &[i32]) -> Result<(), String> {
+        use crate::core::util::siddhi_constants::{
+            BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+            STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+        };
+        if *position.get(STREAM_ATTRIBUTE_TYPE_INDEX).ok_or("pos")? as usize == STATE_OUTPUT_DATA_INDEX {
+            if let Some(ref mut vec) = self.output_data {
+                let idx = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE).ok_or("pos")? as usize;
+                if idx < vec.len() {
+                    vec[idx] = value;
+                    return Ok(());
+                } else {
+                    return Err("index out of bounds".into());
+                }
+            } else {
+                return Err("output_data is None".into());
+            }
+        }
+        let se_position = *position.get(crate::core::util::siddhi_constants::STREAM_EVENT_CHAIN_INDEX).ok_or("pos")? as usize;
+        if se_position >= self.stream_events.len() {
+            return Err("stream position out of bounds".into());
+        }
+        let se = self.stream_events[se_position].as_mut().ok_or("no stream event")?;
+        let idx = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE).ok_or("pos")? as usize;
+        match *position.get(STREAM_ATTRIBUTE_TYPE_INDEX).ok_or("pos")? as usize {
+            BEFORE_WINDOW_DATA_INDEX => {
+                if idx < se.before_window_data.len() { se.before_window_data[idx] = value; Ok(()) } else { Err("index out".into()) }
+            }
+            OUTPUT_DATA_INDEX => {
+                if let Some(ref mut out) = se.output_data {
+                    if idx < out.len() { out[idx] = value; Ok(()) } else { Err("index out".into()) }
+                } else {
+                    Err("output_data None".into())
+                }
+            }
+            ON_AFTER_WINDOW_DATA_INDEX => {
+                if idx < se.on_after_window_data.len() { se.on_after_window_data[idx] = value; Ok(()) } else { Err("index out".into()) }
+            }
+            _ => Err("invalid type".into()),
+        }
     }
 }
 

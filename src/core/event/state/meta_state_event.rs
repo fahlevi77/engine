@@ -6,7 +6,7 @@ use std::sync::Arc; // If definitions are shared
 
 // MetaStateEventAttribute is an inner class in Java, not read yet.
 // For now, assuming output data attributes can be represented by query_api::Attribute
-use crate::query_api::definition::Attribute as QueryApiAttribute;
+use crate::core::event::state::MetaStateEventAttribute;
 
 
 #[derive(Debug, Clone, Default)]
@@ -17,11 +17,9 @@ pub struct MetaStateEvent {
 
     pub output_stream_definition: Option<Arc<StreamDefinition>>,
 
-    // In Java, outputDataAttributes is List<MetaStateEventAttribute>.
-    // MetaStateEventAttribute seems to just wrap a (streamId, Attribute) pair,
-    // indicating which input stream's attribute is part of the output.
-    // For simplicity, using query_api::Attribute directly as a placeholder.
-    pub output_data_attributes: Option<Vec<QueryApiAttribute>>,
+    // In Java, outputDataAttributes is `List<MetaStateEventAttribute>`.
+    // The Rust port mirrors this structure.
+    pub output_data_attributes: Option<Vec<MetaStateEventAttribute>>,
 }
 
 impl MetaStateEvent {
@@ -49,7 +47,7 @@ impl MetaStateEvent {
         self.meta_stream_events.push(Some(meta_stream_event));
     }
 
-    pub fn add_output_data_allowing_duplicate(&mut self, attr: QueryApiAttribute) {
+    pub fn add_output_data_allowing_duplicate(&mut self, attr: MetaStateEventAttribute) {
         match &mut self.output_data_attributes {
             Some(vec) => vec.push(attr),
             None => self.output_data_attributes = Some(vec![attr]),
@@ -60,7 +58,7 @@ impl MetaStateEvent {
         self.output_stream_definition = Some(Arc::new(def));
     }
 
-    pub fn get_output_data_attributes(&self) -> &[QueryApiAttribute] {
+    pub fn get_output_data_attributes(&self) -> &[MetaStateEventAttribute] {
         self.output_data_attributes.as_deref().unwrap_or(&[])
     }
 

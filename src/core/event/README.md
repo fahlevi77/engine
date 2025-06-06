@@ -28,7 +28,8 @@ execution but several areas still need work:
 - Comprehensive cloning of event chains.
 - Full parity with all methods of the Java classes (some advanced
   serialization helpers are omitted).
-- Additional utility types under `state` and `stream` packages are not
-  yet ported.
+- Additional utility types under `state` and `stream` packages are only
+  partially ported.  Basic factories and attribute mapping structures are
+  available but cloners and populaters are TODO.
 
 Contributions and further improvements are welcome.
