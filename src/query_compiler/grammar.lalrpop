@@ -1,0 +1,101 @@
+// Minimal Siddhi grammar using LALRPOP
+// Supports stream/table/query definitions used in tests
+
+grammar;
+
+use crate::query_api::definition::{StreamDefinition, TableDefinition};
+use crate::query_api::definition::attribute::Type as AttributeType;
+use crate::query_api::execution::query::{Query};
+use crate::query_api::execution::query::input::InputStream;
+use crate::query_api::execution::query::selection::Selector;
+use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
+use crate::query_api::expression::{Expression, variable::Variable};
+
+
+pub StreamDef: StreamDefinition = {
+    "define" "stream" <id:Ident> "(" <attrs:AttrList> ")" => {
+        let mut d = StreamDefinition::new(id);
+        for (n,t) in attrs { d = d.attribute(n, t); }
+        d
+    }
+};
+
+pub TableDef: TableDefinition = {
+    "define" "table" <id:Ident> "(" <attrs:AttrList> ")" => {
+        let mut d = TableDefinition::new(id);
+        for (n,t) in attrs { d = d.attribute(n, t); }
+        d
+    }
+};
+
+pub QueryStmt: Query = {
+    "from" <in_id:Ident> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
+        let input = InputStream::stream(in_id);
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
+        let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
+        Query::query().from(input).select(selector).out_stream(output_stream)
+    }
+};
+
+
+SelectList: Vec<(Expression, Option<String>)> = {
+    <first:SelectItem> <rest:("," SelectItem)*> => {
+        let mut v = vec![first];
+        for (_, a) in rest { v.push(a); }
+        v
+    },
+    => Vec::new()
+};
+
+SelectItem: (Expression, Option<String>) = {
+    <e:Expression> "as" <a:Ident> => (e, Some(a)),
+    <e:Expression> => (e, None),
+};
+
+AttrList: Vec<(String, AttributeType)> = {
+    <first:Attribute> <rest:("," Attribute)*> => {
+        let mut v = vec![first];
+        for (_, a) in rest { v.push(a); }
+        v
+    },
+    => Vec::new()
+};
+
+Attribute: (String, AttributeType) = { <name:Ident> <ty:Type> => (name, ty) };
+
+Type: AttributeType = {
+    "string" => AttributeType::STRING,
+    "int" => AttributeType::INT,
+    "long" => AttributeType::LONG,
+    "float" => AttributeType::FLOAT,
+    "double" => AttributeType::DOUBLE,
+    "bool" => AttributeType::BOOL,
+    "boolean" => AttributeType::BOOL,
+    "object" => AttributeType::OBJECT,
+};
+
+pub Expression: Expression = {
+    <s:STRING> => Expression::value_string(s),
+    <n:NUMBER> => Expression::value_long(n),
+    <id:Ident> => Expression::variable(id),
+};
+
+Ident: String = { <r"[A-Za-z_][A-Za-z0-9_]*"> => <>.to_string() };
+
+STRING: String = {
+    <r#"'([^']*)'"#> => { let s = <>; s[1..s.len()-1].to_string() },
+    <r#"\"([^\"]*)\""#> => { let s = <>; s[1..s.len()-1].to_string() },
+};
+
+NUMBER: i64 = { <r"[0-9]+"> => <>.parse().unwrap() };
+
