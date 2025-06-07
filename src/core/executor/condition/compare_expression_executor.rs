@@ -112,12 +112,153 @@ impl ExpressionExecutor for CompareExpressionExecutor {
                             return Some(AttributeValue::Bool(false));
                         }
                     }
-                    // TODO: Add type promotion/coercion logic for mixed types (e.g., Int vs Long, Int vs Float)
-                    // For now, strict type equality is required for comparison apart from Null handling.
+                    // Mixed numeric comparisons with coercion
+                    (AttributeValue::Int(l), AttributeValue::Long(r)) => {
+                        let l = *l as i64;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => l == r,
+                            ConditionCompareOperator::NotEqual => l != r,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Long(l), AttributeValue::Int(r)) => {
+                        let l = *l;
+                        let r = *r as i64;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => l == r,
+                            ConditionCompareOperator::NotEqual => l != r,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Int(l), AttributeValue::Float(r)) => {
+                        let l = *l as f32;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Float(l), AttributeValue::Int(r)) => {
+                        let l = *l;
+                        let r = *r as f32;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Int(l), AttributeValue::Double(r)) => {
+                        let l = *l as f64;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Double(l), AttributeValue::Int(r)) => {
+                        let l = *l;
+                        let r = *r as f64;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Long(l), AttributeValue::Float(r)) => {
+                        let l = *l as f32;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Float(l), AttributeValue::Long(r)) => {
+                        let l = *l;
+                        let r = *r as f32;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f32::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f32::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Long(l), AttributeValue::Double(r)) => {
+                        let l = *l as f64;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Double(l), AttributeValue::Long(r)) => {
+                        let l = *l;
+                        let r = *r as f64;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Float(l), AttributeValue::Double(r)) => {
+                        let l = *l as f64;
+                        let r = *r;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
+                    (AttributeValue::Double(l), AttributeValue::Float(r)) => {
+                        let l = *l;
+                        let r = *r as f64;
+                        match self.operator {
+                            ConditionCompareOperator::Equal => (l - r).abs() < f64::EPSILON,
+                            ConditionCompareOperator::NotEqual => (l - r).abs() >= f64::EPSILON,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
+                        }
+                    }
                     _ => {
-                        // log_warn!("Unsupported type combination for comparison: {:?} and {:?}", left.get_type(), right.get_type());
-                        // If types are different and not handled by coercion, consider it false or error.
-                        return Some(AttributeValue::Bool(false)); // Default to false if types are incompatible
+                        return Some(AttributeValue::Bool(false));
                     }
                 };
                 Some(AttributeValue::Bool(result))

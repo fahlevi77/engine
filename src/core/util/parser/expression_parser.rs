@@ -23,7 +23,7 @@ use crate::core::executor::function::scalar_function_executor::ScalarFunctionExe
 
 
 use std::sync::Arc;
-// use std::collections::HashMap;
+use std::collections::HashMap;
 
 // Wrapper executor for calling ScalarFunctionExecutor (UDFs and complex built-ins)
 #[derive(Debug)]
@@ -84,13 +84,17 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
 
 
 // Simplified context for initial ExpressionParser focusing on single input stream scenarios.
-/// Context for ExpressionParser, providing necessary metadata.
-/// Current limitations: Assumes a single input stream via `meta_input_event`.
-/// Does not yet handle variables from tables, aggregations, window functions, or complex stream joins.
-pub struct ExpressionParserContext<'a> { // Added lifetime 'a for query_name
+/// Context for `ExpressionParser`, providing necessary metadata for variable
+/// resolution.
+///
+/// The `stream_meta_map` contains `MetaStreamEvent` instances keyed by the
+/// stream/table/window/aggregation identifier.  `default_source` indicates which
+/// entry should be used when a variable does not explicitly specify a source.
+pub struct ExpressionParserContext<'a> {
     pub siddhi_app_context: Arc<SiddhiAppContext>,
-    pub meta_input_event: Arc<MetaStreamEvent>,
-    pub query_name: &'a str, // Added query_name for context in errors/logging
+    pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
+    pub default_source: String,
+    pub query_name: &'a str,
 }
 
 
@@ -108,54 +112,141 @@ pub fn parse_expression<'a>( // Added lifetime 'a
         }
         ApiExpression::Variable(api_var) => {
             let attribute_name = &api_var.attribute_name;
-            if let Some((index, attr_type)) = context.meta_input_event.find_attribute_info(attribute_name) {
-                Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())))
+            let stream_id = api_var.stream_id.as_deref().unwrap_or(&context.default_source);
+            if let Some(meta) = context.stream_meta_map.get(stream_id) {
+                if let Some((index, attr_type)) = meta.find_attribute_info(attribute_name) {
+                    Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())))
+                } else {
+                    let loc = api_var
+                        .siddhi_element
+                        .query_context_start_index
+                        .map(|(l, c)| format!("line {}, column {}", l, c))
+                        .unwrap_or_else(|| "unknown location".to_string());
+                    Err(format!(
+                        "Variable '{}.{}' not found at {} in query '{}'",
+                        stream_id, attribute_name, loc, context.query_name
+                    ))
+                }
             } else {
-                Err(format!("Variable '{}' not found in input stream definition provided by MetaStreamEvent for query '{}'.", attribute_name, context.query_name))
+                let loc = api_var
+                    .siddhi_element
+                    .query_context_start_index
+                    .map(|(l, c)| format!("line {}, column {}", l, c))
+                    .unwrap_or_else(|| "unknown location".to_string());
+                Err(format!(
+                    "Source '{}' not found for variable '{}.{}' at {} in query '{}'",
+                    stream_id, stream_id, attribute_name, loc, context.query_name
+                ))
             }
         }
         ApiExpression::Add(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;
             let right_exec = parse_expression(&api_op.right_value, context)?;
-            Ok(Box::new(AddExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                AddExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Subtract(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;
             let right_exec = parse_expression(&api_op.right_value, context)?;
-            Ok(Box::new(SubtractExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                SubtractExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Multiply(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;
             let right_exec = parse_expression(&api_op.right_value, context)?;
-            Ok(Box::new(MultiplyExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                MultiplyExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Divide(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;
             let right_exec = parse_expression(&api_op.right_value, context)?;
-            Ok(Box::new(DivideExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                DivideExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Mod(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;
             let right_exec = parse_expression(&api_op.right_value, context)?;
-            Ok(Box::new(ModExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                ModExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::And(api_op) => {
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
-            Ok(Box::new(AndExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                AndExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Or(api_op) => {
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
-            Ok(Box::new(OrExpressionExecutor::new(left_exec, right_exec)?))
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Ok(Box::new(
+                OrExpressionExecutor::new(left_exec, right_exec)
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+            ))
         }
         ApiExpression::Not(api_op) => {
             let exec = parse_expression(&api_op.expression, context)?;
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
             Ok(Box::new(NotExpressionExecutor::new(exec)?))
         }
         ApiExpression::Compare(api_op) => {
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
+            let loc = api_op
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
             Ok(Box::new(CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())))
         }
         ApiExpression::IsNull(api_op) => {
@@ -176,6 +267,12 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 arg_execs.push(parse_expression(arg_expr, context)?);
             }
 
+            let loc = api_func
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+
             let function_lookup_name = if let Some(ns) = &api_func.extension_namespace {
                 if ns.is_empty() { api_func.function_name.clone() }
                 else { format!("{}:{}", ns, api_func.function_name) }
@@ -185,34 +282,36 @@ pub fn parse_expression<'a>( // Added lifetime 'a
 
             // Try built-in common functions first
             match (api_func.extension_namespace.as_deref(), api_func.function_name.as_str()) {
-                (None | Some(""), "coalesce") => Ok(Box::new(CoalesceFunctionExecutor::new(arg_execs)?)),
+                (None | Some(""), "coalesce") => Ok(Box::new(CoalesceFunctionExecutor::new(arg_execs).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), "ifThenElse") => {
                     if arg_execs.len() == 3 {
                         let else_e = arg_execs.remove(2);
                         let then_e = arg_execs.remove(1);
                         let cond_e = arg_execs.remove(0);
-                        Ok(Box::new(IfThenElseFunctionExecutor::new(cond_e, then_e, else_e)?))
+                        Ok(Box::new(IfThenElseFunctionExecutor::new(cond_e, then_e, else_e).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
                     } else {
                         Err(format!("ifThenElse expects 3 arguments, found {}", arg_execs.len()))
                     }
                 }
                 (None | Some(""), "uuid") => {
-                    if !arg_execs.is_empty() { return Err("uuid() function takes no arguments".to_string()); }
+                    if !arg_execs.is_empty() { return Err(format!("uuid() function takes no arguments at {} in query '{}'", loc, context.query_name)); }
                     Ok(Box::new(UuidFunctionExecutor::new()))
                 }
-                (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0))?)),
-                (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfStringExpressionExecutor::new(arg_execs.remove(0))?)),
-                (None | Some(""), name) if name == "instanceOfInteger" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0))?)),
-                (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfLongExpressionExecutor::new(arg_execs.remove(0))?)),
-                (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0))?)),
-                (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0))?)),
+                (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfInteger" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 _ => { // UDF lookup from context
                     if let Some(scalar_fn_factory) = context.siddhi_app_context.get_siddhi_context().get_scalar_function_factory(&function_lookup_name) {
-                        Ok(Box::new(AttributeFunctionExpressionExecutor::new(
-                            scalar_fn_factory.clone_scalar_function(),
-                            arg_execs,
-                            Arc::clone(&context.siddhi_app_context)
-                        )?))
+                        Ok(Box::new(
+                            AttributeFunctionExpressionExecutor::new(
+                                scalar_fn_factory.clone_scalar_function(),
+                                arg_execs,
+                                Arc::clone(&context.siddhi_app_context),
+                            ).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+                        ))
                     } else {
                         Err(format!("Unsupported or unknown function: {}", function_lookup_name))
                     }

@@ -71,12 +71,15 @@ impl QueryParser {
 
         let input_stream_def_from_junction = input_junction.lock().expect("Input junction Mutex poisoned").get_stream_definition();
 
-        // 3. Create MetaStreamEvent for ExpressionParserContext (based on single input stream)
+        // 3. Create MetaStreamEvent map for ExpressionParserContext
         let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(input_stream_def_from_junction));
+        let mut stream_meta_map = HashMap::new();
+        stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
         let expr_parser_context = ExpressionParserContext {
             siddhi_app_context: Arc::clone(siddhi_app_context),
-            meta_input_event: Arc::clone(&meta_input_event),
-            query_name: &query_name, // Pass as reference
+            stream_meta_map,
+            default_source: input_stream_id.clone(),
+            query_name: &query_name,
         };
 
         let mut processor_chain_head: Option<Arc<Mutex<dyn Processor>>> = None;
