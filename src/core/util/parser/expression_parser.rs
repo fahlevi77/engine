@@ -74,10 +74,9 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
          match AttributeFunctionExpressionExecutor::new(cloned_scalar_fn, cloned_args, Arc::clone(siddhi_app_context)) {
             Ok(exec) => Box::new(exec),
             Err(e) => {
-                // TODO: Proper error handling. Cloning shouldn't ideally fail if original was valid.
-                // This might panic if init logic in a UDF isn't designed to be repeatedly callable on clones,
-                // or if context isn't fully available.
-                panic!("Failed to clone AttributeFunctionExpressionExecutor due to init error: {}", e);
+                // If cloning fails log the error and fall back to a constant NULL executor
+                eprintln!("Failed to clone AttributeFunctionExpressionExecutor: {}", e);
+                Box::new(ConstantExpressionExecutor::new(CoreAttributeValue::Null, ApiAttributeType::OBJECT))
             }
          }
     }

@@ -222,19 +222,7 @@ impl StreamJunction {
 
     // send_event (from Event)
     pub fn send_event(&self, event: Event) {
-        // Convert Event to a StreamEvent using the event's data as the
-        // `before_window_data` so that early processors like filters can
-        // access the attributes.  This mirrors the behaviour of Siddhi's
-        // `StreamEventConverter` which populates the beforeWindowData array for
-        // new events entering the pipeline.
-        let mut stream_event = StreamEvent::new(
-            event.timestamp,
-            event.data.len(), // before_window_data size
-            0,                 // on_after_window_data size
-            0,                 // output_data size
-        );
-        stream_event.before_window_data = event.data;
-
+        let stream_event = Self::event_to_stream_event(event);
         if let Err(e) = self.send_complex_event_chunk(Some(Box::new(stream_event))) {
             // TODO: Proper error handling via faultStreamJunction or ErrorStore
             eprintln!("Error sending event to StreamJunction {}: {:?}", self.stream_id, e);
@@ -244,11 +232,36 @@ impl StreamJunction {
     // send_events (from Vec<Event>)
     pub fn send_events(&self, events: Vec<Event>) {
         if events.is_empty() { return; }
-        // TODO: Convert Vec<Event> to a linked list of ComplexEvents (StreamEvents)
-        // For now, sending one by one (inefficient for async if not batched by sender channel)
-        for event in events {
-            self.send_event(event);
+        let mut iter = events.into_iter();
+        let first = match iter.next() {
+            Some(ev) => Self::event_to_stream_event(ev),
+            None => return,
+        };
+
+        let mut head: Box<dyn ComplexEvent> = Box::new(first);
+        let mut tail_ref = head.mut_next_ref_option();
+        for ev in iter {
+            let boxed = Box::new(Self::event_to_stream_event(ev));
+            *tail_ref = Some(boxed);
+            if let Some(ref mut last) = *tail_ref {
+                tail_ref = last.mut_next_ref_option();
+            }
         }
+
+        if let Err(e) = self.send_complex_event_chunk(Some(head)) {
+            eprintln!("Error sending events to StreamJunction {}: {:?}", self.stream_id, e);
+        }
+    }
+
+    fn event_to_stream_event(event: Event) -> StreamEvent {
+        let mut stream_event = StreamEvent::new(
+            event.timestamp,
+            event.data.len(),
+            0,
+            0,
+        );
+        stream_event.before_window_data = event.data;
+        stream_event
     }
 
     // Renamed from send_complex_event to indicate it can be a chunk

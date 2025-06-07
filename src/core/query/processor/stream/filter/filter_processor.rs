@@ -45,11 +45,7 @@ impl Processor for FilterProcessor {
         // More advanced/performant versions might try to modify the chunk in-place
         // or use an event pool.
 
-        let mut filtered_chunk_head: Option<Box<dyn ComplexEvent>> = None;
-        // A raw pointer to the `next` field of the last event in the new filtered_chunk.
-        // This is UNSAFE and only for illustration of how Java's ComplexEventChunk linking works.
-        // In safe Rust, we'd build a Vec<Box<dyn ComplexEvent>> first, then link them.
-        let mut current_filtered_tail_next_field: Option<*mut Option<Box<dyn ComplexEvent>>> = None;
+        let mut filtered_events: Vec<Box<dyn ComplexEvent>> = Vec::new();
 
         let mut current_event_opt = complex_event_chunk;
         while let Some(mut current_event_box) = current_event_opt {
@@ -67,44 +63,24 @@ impl Processor for FilterProcessor {
             };
 
             if passes_filter {
-                // Add current_event_box to the filtered_chunk
-                if filtered_chunk_head.is_none() { // Renamed
-                    filtered_chunk_head = Some(current_event_box); // Renamed
-                    // Get a raw pointer to the 'next' field of the new head.
-                    // current_filtered_tail_next_field = filtered_chunk_head.as_mut().map(|h| &mut h.as_mut().get_next_mut_ref()); // Hypothetical
-                    // This is where direct pointer manipulation would happen in Java.
-                    // For Rust, let's assume we'd use a Vec and link later, or pass one-by-one if next_processor handles it.
-                    // For this placeholder, we'll just collect and pass the whole new chunk.
-                    // The line below is if we were building a list using a raw pointer to `next` field.
-                    // current_filtered_tail_next_field = Some(&mut (filtered_head.as_mut().unwrap().as_mut().get_next_mut_field_ref_somehow()));
-                } else {
-                    // This is where the unsafe raw pointer would be used to append.
-                    // if let Some(tail_next_ptr) = current_filtered_tail_next_field {
-                    //    unsafe { *tail_next_ptr = Some(current_event_box); }
-                    //    current_filtered_tail_next_field = Some(&mut (*tail_next_ptr).as_mut().unwrap().as_mut().get_next_mut_field_ref_somehow());
-                    // }
-                    // Simplified: For now, this means only the first matching event is kept if we don't manage list tail.
-                    // To fix this correctly without unsafe, we'd build a Vec, or properly manage tail.
-                    // Let's assume for the sake of this placeholder that we are just forwarding the first match
-                    // or that the chunking logic will be fully implemented later with a Vec.
-                    // This is a MAJOR simplification.
-                }
+                filtered_events.push(current_event_box);
             } // else: event is dropped
 
             current_event_opt = next_event_in_original_chunk;
         }
 
-        // After iterating through the whole input chunk, pass the 'filtered_chunk_head' to the next processor.
-        if filtered_chunk_head.is_some() { // Only pass if there's something to pass // Renamed
-            if let Some(ref next_proc_arc) = self.meta.next_processor {
-                // The process method of the next processor takes ownership of the Option.
-                next_proc_arc.lock().unwrap().process(filtered_chunk_head); // Renamed
+        // Reconstruct linked list from Vec of passed events
+        let mut filtered_chunk_head: Option<Box<dyn ComplexEvent>> = None;
+        let mut tail_next_ref: &mut Option<Box<dyn ComplexEvent>> = &mut filtered_chunk_head;
+        for mut event_box in filtered_events {
+            *tail_next_ref = Some(event_box);
+            if let Some(ref mut current_tail) = *tail_next_ref {
+                tail_next_ref = current_tail.mut_next_ref_option();
             }
-        } else {
-             // If nothing was filtered and there's a next processor, pass None to signify empty chunk.
-            if let Some(ref next_proc_arc) = self.meta.next_processor {
-                 next_proc_arc.lock().unwrap().process(None);
-            }
+        }
+
+        if let Some(ref next_proc_arc) = self.meta.next_processor {
+            next_proc_arc.lock().unwrap().process(filtered_chunk_head);
         }
     }
 

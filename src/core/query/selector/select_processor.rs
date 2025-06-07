@@ -68,7 +68,9 @@ impl SelectProcessor {
         batching_enabled: Option<bool>,
     ) -> Self {
         let query_name = siddhi_query_context.name.clone();
-        let contains_aggregator_flag = output_attribute_processors.iter().any(|_oap| false /* TODO: Check if OAP contains aggregator */ );
+        let contains_aggregator_flag = output_attribute_processors
+            .iter()
+            .any(|oap| oap.is_aggregator());
 
         Self {
             meta: CommonProcessorMeta::new(siddhi_app_context, siddhi_query_context),
@@ -130,10 +132,18 @@ impl Processor for SelectProcessor {
             }
             // Timestamp usually remains the same or is explicitly set by a projection.
 
-            // TODO: Implement HAVING condition check
-            // if let Some(ref having_exec) = self.having_condition_executor {
-            //    if !having_exec.execute(Some(current_event_box.as_ref())) ... { skip }
-            // }
+            // Apply HAVING condition if present
+            if let Some(ref having_exec) = self.having_condition_executor {
+                let passes_having = match having_exec.execute(Some(current_event_box.as_ref())) {
+                    Some(AttributeValue::Bool(true)) => true,
+                    Some(AttributeValue::Bool(false)) | Some(AttributeValue::Null) | None => false,
+                    _ => false,
+                };
+                if !passes_having {
+                    input_event_opt = next_event_in_original_chunk;
+                    continue;
+                }
+            }
 
             processed_events.push(current_event_box);
             input_event_opt = next_event_in_original_chunk;
@@ -198,8 +208,16 @@ impl Processor for SelectProcessor {
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
-        // TODO: Determine based on aggregation, groupby etc.
-        ProcessingMode::DEFAULT
+        if self.contains_aggregator
+            || self.is_group_by
+            || self.is_order_by
+            || self.limit.is_some()
+            || self.offset.is_some()
+        {
+            ProcessingMode::BATCH
+        } else {
+            ProcessingMode::DEFAULT
+        }
     }
 
     fn is_stateful(&self) -> bool {
