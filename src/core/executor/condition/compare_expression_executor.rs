@@ -94,22 +94,28 @@ impl ExpressionExecutor for CompareExpressionExecutor {
                         ConditionCompareOperator::LessThan => l < r,
                         ConditionCompareOperator::LessThanEqual => l <= r,
                     },
-                    // String comparisons (Equality and NotEqual only for now)
-                    (AttributeValue::String(l), AttributeValue::String(r)) => match self.operator {
-                        ConditionCompareOperator::Equal => l == r,
-                        ConditionCompareOperator::NotEqual => l != r,
-                        _ => {
-                            // log_warn!("Unsupported comparison operator ({:?}) for String types", self.operator);
-                            return Some(AttributeValue::Bool(false)); // Or handle as error
+                    // String comparisons with ordering
+                    (AttributeValue::String(l), AttributeValue::String(r)) => {
+                        match self.operator {
+                            ConditionCompareOperator::Equal => l == r,
+                            ConditionCompareOperator::NotEqual => l != r,
+                            ConditionCompareOperator::GreaterThan => l > r,
+                            ConditionCompareOperator::GreaterThanEqual => l >= r,
+                            ConditionCompareOperator::LessThan => l < r,
+                            ConditionCompareOperator::LessThanEqual => l <= r,
                         }
-                    },
-                    // Bool comparisons
-                    (AttributeValue::Bool(l), AttributeValue::Bool(r)) => match self.operator {
-                        ConditionCompareOperator::Equal => l == r,
-                        ConditionCompareOperator::NotEqual => l != r,
-                        _ => {
-                            // log_warn!("Unsupported comparison operator ({:?}) for Bool types", self.operator);
-                            return Some(AttributeValue::Bool(false));
+                    }
+                    // Bool comparisons (false < true)
+                    (AttributeValue::Bool(l), AttributeValue::Bool(r)) => {
+                        let l_val = if *l { 1 } else { 0 };
+                        let r_val = if *r { 1 } else { 0 };
+                        match self.operator {
+                            ConditionCompareOperator::Equal => l_val == r_val,
+                            ConditionCompareOperator::NotEqual => l_val != r_val,
+                            ConditionCompareOperator::GreaterThan => l_val > r_val,
+                            ConditionCompareOperator::GreaterThanEqual => l_val >= r_val,
+                            ConditionCompareOperator::LessThan => l_val < r_val,
+                            ConditionCompareOperator::LessThanEqual => l_val <= r_val,
                         }
                     }
                     // Mixed numeric comparisons with coercion
@@ -366,5 +372,53 @@ mod tests {
         let result = cloned_exec.execute(None);
         assert_eq!(result, Some(AttributeValue::Bool(true)));
         assert_eq!(cloned_exec.get_return_type(), ApiAttributeType::BOOL);
+    }
+
+    #[test]
+    fn test_operator_equal_int() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::Equal);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_operator_not_equal_long() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(5), ApiAttributeType::LONG));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(10), ApiAttributeType::LONG));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::NotEqual);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_operator_greater_than_cross() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(7.5), ApiAttributeType::FLOAT));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(7), ApiAttributeType::INT));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThan);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_operator_greater_than_equal_cross() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Double(7.0), ApiAttributeType::DOUBLE));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(7), ApiAttributeType::LONG));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThanEqual);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_operator_less_than_string() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("apple".to_string()), ApiAttributeType::STRING));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("banana".to_string()), ApiAttributeType::STRING));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThan);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn test_operator_less_than_equal_bool() {
+        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Bool(false), ApiAttributeType::BOOL));
+        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Bool(true), ApiAttributeType::BOOL));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThanEqual);
+        assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 }
