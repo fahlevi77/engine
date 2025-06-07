@@ -259,7 +259,11 @@ pub fn parse_expression<'a>( // Added lifetime 'a
         }
         ApiExpression::In(api_op) => {
             let val_exec = parse_expression(&api_op.expression, context)?;
-            Ok(Box::new(InExpressionExecutor::new(val_exec, api_op.source_id.clone())))
+            Ok(Box::new(InExpressionExecutor::new(
+                val_exec,
+                api_op.source_id.clone(),
+                Arc::clone(&context.siddhi_app_context),
+            )))
         }
         ApiExpression::AttributeFunction(api_func) => {
             let mut arg_execs: Vec<Box<dyn ExpressionExecutor>> = Vec::new();

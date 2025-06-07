@@ -34,7 +34,10 @@ This port is **far from feature-complete** with the Java version. Users should b
 *   **`ExpressionExecutor` Implementations**:
     *   `VariableExpressionExecutor`: `execute` method uses a simplified data access model (assumes data in `StreamEvent::output_data` or `before_window_data` via a simple index). Needs to correctly handle different event types, data arrays (input, output, before/after window data), and dynamic resolution (tables, stores).
     *   `CompareExpressionExecutor`: Currently only implements basic integer comparison for `>`. Full type comparison logic (all numeric types, strings, bools, temporal, null handling) for all operators is missing.
-    *   `InExpressionExecutor`: Placeholder.
+    *   `InExpressionExecutor`: Provides a basic `IN` operator. It evaluates the inner
+        expression and checks membership using `Table::contains`. The full
+        Siddhi semantics of compiling a condition and using
+        `Table::containsEvent` are **not** implemented yet.
     *   Many function executors (casts, conversions, string ops, date ops, math ops beyond basic arithmetic) are not ported.
     *   Stateful function executors are not handled.
 *   **Stream Processors & Query Logic**:
@@ -44,7 +47,9 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Patterns & Sequences**: No pattern or sequence processors implemented.
     *   **Aggregations**: No aggregation runtime or aggregator functions ported.
 *   **State Management & Persistence**:
-    *   **Tables**: No `Table` implementations (in-memory, RDBMS via DataSource) or table operation processors (update, delete, in-table select/join) are ported.
+    *   **Tables**: A simple `InMemoryTable` is available for tests. It supports
+        insertion and basic lookup operations but lacks compiled condition queries or
+        persistent storage backends.
     *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.
 *   **Runtime & Orchestration**:
     *   `SiddhiAppParser` & `QueryParser`: Can only handle very simple queries (single stream, optional filter, simple select, insert into). Cannot parse partitions, windows, joins, patterns, sequences, tables, aggregations.
