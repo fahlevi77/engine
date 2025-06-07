@@ -307,6 +307,53 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), "cast") => {
+                    if arg_execs.len() == 2 {
+                        let type_exec = arg_execs.remove(1);
+                        let val_exec = arg_execs.remove(0);
+                        Ok(Box::new(CastFunctionExecutor::new(val_exec, type_exec).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
+                    } else {
+                        Err(format!("cast expects 2 arguments, found {}", arg_execs.len()))
+                    }
+                }
+                (None | Some(""), "concat") => Ok(Box::new(ConcatFunctionExecutor::new(arg_execs).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), "length") => {
+                    if arg_execs.len() == 1 {
+                        Ok(Box::new(LengthFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
+                    } else {
+                        Err(format!("length expects 1 argument, found {}", arg_execs.len()))
+                    }
+                }
+                (None | Some(""), "currentTimestamp") => {
+                    if !arg_execs.is_empty() {
+                        Err(format!("currentTimestamp() takes no arguments, found {}", arg_execs.len()))
+                    } else {
+                        Ok(Box::new(CurrentTimestampFunctionExecutor::default()))
+                    }
+                }
+                (None | Some(""), "formatDate") => {
+                    if arg_execs.len() == 2 {
+                        let pattern_exec = arg_execs.remove(1);
+                        let ts_exec = arg_execs.remove(0);
+                        Ok(Box::new(FormatDateFunctionExecutor::new(ts_exec, pattern_exec).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
+                    } else {
+                        Err(format!("formatDate expects 2 arguments, found {}", arg_execs.len()))
+                    }
+                }
+                (None | Some(""), "round") => {
+                    if arg_execs.len() == 1 {
+                        Ok(Box::new(RoundFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
+                    } else {
+                        Err(format!("round expects 1 argument, found {}", arg_execs.len()))
+                    }
+                }
+                (None | Some(""), "sqrt") => {
+                    if arg_execs.len() == 1 {
+                        Ok(Box::new(SqrtFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
+                    } else {
+                        Err(format!("sqrt expects 1 argument, found {}", arg_execs.len()))
+                    }
+                }
                 _ => { // UDF lookup from context
                     if let Some(scalar_fn_factory) = context.siddhi_app_context.get_siddhi_context().get_scalar_function_factory(&function_lookup_name) {
                         Ok(Box::new(
