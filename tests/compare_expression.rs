@@ -1,0 +1,53 @@
+use siddhi_rust::core::executor::condition::CompareExpressionExecutor;
+use siddhi_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
+use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::query_api::definition::attribute::Type as AttrType;
+use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
+use std::sync::Arc;
+use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
+use siddhi_rust::core::config::siddhi_context::SiddhiContext;
+use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+
+fn dummy_ctx() -> Arc<SiddhiAppContext> {
+    Arc::new(SiddhiAppContext::new(
+        Arc::new(SiddhiContext::default()),
+        "cmp_test".to_string(),
+        Arc::new(SiddhiApp::new("app".to_string())),
+        String::new(),
+    ))
+}
+
+#[test]
+fn test_numeric_comparison() {
+    let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), AttrType::INT));
+    let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(3), AttrType::INT));
+    let cmp = CompareExpressionExecutor::new(left, right, CompareOp::GreaterThan);
+    assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+}
+
+#[test]
+fn test_string_equality() {
+    let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("a".to_string()), AttrType::STRING));
+    let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("a".to_string()), AttrType::STRING));
+    let cmp = CompareExpressionExecutor::new(left, right, CompareOp::Equal);
+    assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+}
+
+#[test]
+fn test_cross_type_compare() {
+    let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), AttrType::INT));
+    let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Double(4.5), AttrType::DOUBLE));
+    let cmp = CompareExpressionExecutor::new(left, right, CompareOp::GreaterThan);
+    assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+}
+
+#[test]
+fn test_clone_executor() {
+    let ctx = dummy_ctx();
+    let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("b".to_string()), AttrType::STRING));
+    let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("a".to_string()), AttrType::STRING));
+    let cmp = CompareExpressionExecutor::new(left, right, CompareOp::GreaterThan);
+    let cloned = cmp.clone_executor(&ctx);
+    assert_eq!(cloned.execute(None), Some(AttributeValue::Bool(true)));
+}

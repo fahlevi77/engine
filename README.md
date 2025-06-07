@@ -33,13 +33,10 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Error Handling**: Error reporting from parsing is basic (String-based).
 *   **`ExpressionExecutor` Implementations**:
     *   `VariableExpressionExecutor`: `execute` method uses a simplified data access model (assumes data in `StreamEvent::output_data` or `before_window_data` via a simple index). Needs to correctly handle different event types, data arrays (input, output, before/after window data), and dynamic resolution (tables, stores).
-    *   `CompareExpressionExecutor`: Currently only implements basic integer comparison for `>`. Full type comparison logic (all numeric types, strings, bools, temporal, null handling) for all operators is missing.
-    *   `InExpressionExecutor`: Provides a basic `IN` operator. It evaluates the inner
-        expression and checks membership using `Table::contains`. The full
-        Siddhi semantics of compiling a condition and using
-        `Table::containsEvent` are **not** implemented yet.
-    *   Many function executors (casts, conversions, string ops, date ops, math ops beyond basic arithmetic) are not ported.
-    *   Stateful function executors are not handled.
+    *   `CompareExpressionExecutor`: Supports numeric, boolean and string comparisons with type coercion.
+    *   `InExpressionExecutor`: Implements the `IN` operator using registered tables such as `InMemoryTable`.
+    *   Built‑in function executors cover casts, string operations, date utilities, math functions and UUID generation.
+    *   Stateful user-defined functions are supported via the `ScalarFunctionExecutor` trait.
 *   **Stream Processors & Query Logic**:
     *   `FilterProcessor` & `SelectProcessor`: Event chunk (linked list) manipulation is simplified (uses `Vec` intermediate for `SelectProcessor`). Advanced features for `SelectProcessor` (group by, having, order by, limit, offset) are not implemented.
     *   **Windows**: No window processors (`TimeWindow`, `LengthWindow`, etc.) are ported. This is a major feature set.
@@ -47,9 +44,7 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Patterns & Sequences**: No pattern or sequence processors implemented.
     *   **Aggregations**: No aggregation runtime or aggregator functions ported.
 *   **State Management & Persistence**:
-    *   **Tables**: A simple `InMemoryTable` is available for tests. It supports
-        insertion and basic lookup operations but lacks compiled condition queries or
-        persistent storage backends.
+    *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks.
     *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.
 *   **Runtime & Orchestration**:
     *   `SiddhiAppParser` & `QueryParser`: Can only handle very simple queries (single stream, optional filter, simple select, insert into). Cannot parse partitions, windows, joins, patterns, sequences, tables, aggregations.
@@ -57,7 +52,7 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   `SiddhiAppRuntime`: Lifecycle methods (`start`, `shutdown`) are very basic. `persist`, `restore` not implemented.
     *   Error handling throughout `siddhi-core` is minimal.
 *   **Extensions Framework**:
-    *   `ScalarFunctionExecutor` (UDF) framework is foundational. Actual UDF loading/management beyond direct registration is basic.
+    *   `ScalarFunctionExecutor` allows registering stateful user-defined functions.
     *   Placeholders for other extension types (Window, Sink, Source, Store, Mapper, AttributeAggregator, Script) are largely missing.
 *   **DataSources**: `DataSource` trait is a placeholder. No actual implementations or integration with table stores.
 *   **Concurrency**: While `Arc<Mutex<T>>` is used in places, detailed analysis and implementation of Siddhi's concurrency model (thread pools for async junctions, partitioned execution) are pending.
@@ -69,10 +64,62 @@ This port is **far from feature-complete** with the Java version. Users should b
 *   **Integration Testing**: A test case for a simple filter/projection query (`FROM InputStream[filter] SELECT ... INSERT INTO OutputStream`) has been outlined. This test was used to conceptually verify the design of Phase 1 components. **Actual execution and passing of this test requires further implementation and debugging.**
 *   **Benchmarking**: Not yet performed.
 
+## Registering Tables and UDFs
+
+Tables can be registered through the `SiddhiContext` obtained from a `SiddhiManager`:
+
+```rust
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::table::{InMemoryTable, Table};
+use siddhi_rust::core::event::value::AttributeValue;
+use std::sync::Arc;
+
+let manager = SiddhiManager::new();
+let ctx = manager.siddhi_context();
+let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
+table.insert(&[AttributeValue::Int(1)]);
+ctx.add_table("MyTable".to_string(), table);
+```
+
+User-defined scalar functions implement `ScalarFunctionExecutor` and are registered with the manager:
+
+```rust
+use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+
+#[derive(Debug, Clone)]
+struct CounterFn;
+
+impl ScalarFunctionExecutor for CounterFn {
+    fn init(&mut self, _args: &Vec<Box<dyn ExpressionExecutor>>, _ctx: &Arc<SiddhiAppContext>) -> Result<(), String> { Ok(()) }
+    fn get_name(&self) -> String { "counter".to_string() }
+    fn clone_scalar_function(&self) -> Box<dyn ScalarFunctionExecutor> { Box::new(self.clone()) }
+}
+
+let manager = SiddhiManager::new();
+manager.add_scalar_function_factory("counter".to_string(), Box::new(CounterFn));
+```
+
+### Example Usage
+
+```rust
+use siddhi_rust::core::executor::condition::CompareExpressionExecutor;
+use siddhi_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+use siddhi_rust::query_api::expression::condition::compare::Operator;
+use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::query_api::definition::attribute::Type;
+
+let cmp = CompareExpressionExecutor::new(
+    Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), Type::INT)),
+    Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(3), Type::INT)),
+    Operator::GreaterThan,
+);
+assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
+```
+
 ## Next Planned Phases (High-Level)
 
 1.  **Stabilize Phase 1**: Make the `test_simple_filter_projection_query` compile and run successfully by fully implementing the simplified logic paths in `ExpressionParser`, `VariableExpressionExecutor`, `FilterProcessor`, `SelectProcessor`, and event data handling.
-2.  **Basic Stateful Operations**: Introduce `LengthWindowProcessor` and a simple `InMemoryTable` with basic insert/select capabilities.
+2.  **Basic Stateful Operations**: Introduce `LengthWindowProcessor` and other simple stateful processors.
 3.  **Expand Core Logic**: Gradually implement more expression executors, stream processors, join capabilities, and aggregation functions.
 4.  **SiddhiQL Parsing**: Integrate a proper SiddhiQL parser (potentially by exploring options like FFI to the Java ANTLR parser, or using a Rust parsing library for a subset of SiddhiQL).
 
