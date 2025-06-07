@@ -82,6 +82,12 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
     }
 }
 
+impl Drop for AttributeFunctionExpressionExecutor {
+    fn drop(&mut self) {
+        self.scalar_function_executor.destroy();
+    }
+}
+
 
 // Simplified context for initial ExpressionParser focusing on single input stream scenarios.
 /// Context for `ExpressionParser`, providing necessary metadata for variable

@@ -1,26 +1,37 @@
 // siddhi_rust/src/core/executor/function/scalar_function_executor.rs
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use std::sync::Arc;
+use std::any::Any;
 use std::fmt::Debug;
+use std::sync::Arc;
 
-// ScalarFunctionExecutor represents a user-defined scalar function.
-// It extends ExpressionExecutor because it's ultimately an expression that can be executed.
-// The `init` method allows it to configure itself based on the arguments it receives
-// (e.g., validate types, number of args, store argument types if needed for its execute logic).
-// The `clone_scalar_function` is crucial for allowing the parser to create new instances
-// of this function when building the execution plan, especially if plans are partitioned or
-// if multiple parts of a query use the same UDF (they'd get independent instances).
+/// Trait for implementing user defined scalar functions (UDFs).
+///
+/// A `ScalarFunctionExecutor` is both a factory and the runtime instance of a
+/// scalar function.  The same instance that is registered with
+/// [`SiddhiManager`](crate::core::siddhi_manager::SiddhiManager) will be cloned
+/// using [`clone_scalar_function`] whenever the parser requires a new copy for a
+/// query plan.  Implementations are therefore free to hold arbitrary internal
+/// state (for example inside a `Box<dyn Any>`) which can be initialised during
+/// [`init`] and cleaned up in [`destroy`].
 pub trait ScalarFunctionExecutor: ExpressionExecutor {
-    // Called by ExpressionParser after parsing function arguments into executors.
-    // Allows the UDF to validate/configure itself based on argument types/count.
-    // `argument_executors` are the already parsed executors for the function call's arguments.
+    /// Initialise the function instance.
+    ///
+    /// This hook is invoked by the expression parser once the argument
+    /// executors for a function call are available.  Implementations may use it
+    /// to validate argument types, capture references to the arguments or set up
+    /// any internal state required for [`execute`](ExpressionExecutor::execute).
     fn init(
         &mut self,
         argument_executors: &Vec<Box<dyn ExpressionExecutor>>,
         siddhi_app_context: &Arc<SiddhiAppContext>,
-        // extension_configs: &HashMap<String, String> // If functions can have static configs from deployment.yaml
-    ) -> Result<(), String>; // Return error if init fails (e.g. wrong arg count/type)
+    ) -> Result<(), String>;
+
+    /// Release any resources held by this instance.
+    ///
+    /// Called when the corresponding [`AttributeFunctionExpressionExecutor`]
+    /// is dropped.  The default implementation does nothing.
+    fn destroy(&mut self) {}
 
     // Returns the name of the function (e.g., "myUDF" or "custom:myUDF")
     // Used for identification and potentially by the Debug impl.
