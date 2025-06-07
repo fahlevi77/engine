@@ -12,6 +12,7 @@ use crate::query_api::{
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
+use crate::core::window::WindowRuntime;
 use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
@@ -98,14 +99,14 @@ impl SiddhiAppParser {
             builder.add_stream_junction(stream_id.clone(), stream_junction);
         }
 
-        // TODO: Define TableDefinitions, WindowDefinitions, AggregationDefinitions
-        // This involves creating TableRuntime, WindowRuntime, AggregationRuntime instances
-        // and adding them to the builder. Example:
-        // for (table_id, table_def) in &api_siddhi_app.table_definition_map {
-        //     builder.add_table_definition(table_def.clone());
-        //     let table_runtime = TableParser::parse_table(table_def, &siddhi_app_context, &builder.stream_junction_map);
-        //     builder.add_table(table_id.clone(), table_runtime);
-        // }
+        // TableDefinitions, WindowDefinitions, AggregationDefinitions
+        for (window_id, window_def) in &api_siddhi_app.window_definition_map {
+            builder.add_window_definition(Arc::clone(window_def));
+            builder.add_window(
+                window_id.clone(),
+                Arc::new(Mutex::new(WindowRuntime::new(Arc::clone(window_def)))),
+            );
+        }
 
         // TODO: Initialize Windows after all tables/windows are defined (as in Java)
 

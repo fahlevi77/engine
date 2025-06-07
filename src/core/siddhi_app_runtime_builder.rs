@@ -3,6 +3,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
+use crate::core::window::WindowRuntime;
 use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition; // Added this import
 
@@ -11,7 +12,6 @@ use std::sync::{Arc, Mutex};
 
 // Placeholders for runtime components until they are defined
 #[derive(Debug, Clone, Default)] pub struct TableRuntimePlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct WindowRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct AggregationRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct PartitionRuntimePlaceholder {}
@@ -28,7 +28,7 @@ pub struct SiddhiAppRuntimeBuilder {
 
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
-    pub window_map: HashMap<String, Arc<Mutex<WindowRuntimePlaceholder>>>,
+    pub window_map: HashMap<String, Arc<Mutex<crate::core::window::WindowRuntime>>>,
     pub aggregation_map: HashMap<String, Arc<Mutex<AggregationRuntimePlaceholder>>>,
 
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
@@ -76,7 +76,7 @@ impl SiddhiAppRuntimeBuilder {
     pub fn add_table(&mut self, table_id: String, table_runtime: Arc<Mutex<TableRuntimePlaceholder>>) {
         self.table_map.insert(table_id, table_runtime);
     }
-     pub fn add_window(&mut self, window_id: String, window_runtime: Arc<Mutex<WindowRuntimePlaceholder>>) {
+    pub fn add_window(&mut self, window_id: String, window_runtime: Arc<Mutex<crate::core::window::WindowRuntime>>) {
         self.window_map.insert(window_id, window_runtime);
     }
     pub fn add_aggregation_runtime(&mut self, agg_id: String, agg_runtime: Arc<Mutex<AggregationRuntimePlaceholder>>) {

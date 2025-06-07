@@ -16,6 +16,7 @@ use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::query::processor::stream::filter::FilterProcessor;
+use crate::core::query::processor::stream::window::create_window_processor;
 use crate::core::query::selector::select_processor::SelectProcessor;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
@@ -96,19 +97,28 @@ impl QueryParser {
             last_processor_in_chain = Some(new_processor_arc);
         };
 
-        // 4. Filter (Optional) - from SingleInputStream's handlers
-        // TODO: Iterate through all handlers on api_single_input_stream, not just one filter.
-        // For now, assuming only one optional filter for simplicity.
-        if let Some(filter_api_expr) = api_single_input_stream.get_stream_handlers().iter()
-            .find_map(|h| match h { crate::query_api::execution::query::input::handler::StreamHandler::Filter(f) => Some(&f.filter_expression), _ => None }) {
-            let condition_executor = parse_expression(filter_api_expr, &expr_parser_context)?;
-            let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
-                condition_executor,
-                Arc::clone(siddhi_app_context),
-                Arc::clone(&siddhi_query_context),
-                // query_name.clone() // query_name is in siddhi_query_context
-            )?)); // FilterProcessor::new now returns Result
-            link_processor(filter_processor);
+        // 4. Stream Handlers (Windows, Filters, etc.) in the order defined
+        for handler in api_single_input_stream.get_stream_handlers() {
+            match handler {
+                crate::query_api::execution::query::input::handler::StreamHandler::Window(w) => {
+                    let win_proc = create_window_processor(
+                        w.as_ref(),
+                        Arc::clone(siddhi_app_context),
+                        Arc::clone(&siddhi_query_context),
+                    )?;
+                    link_processor(win_proc);
+                }
+                crate::query_api::execution::query::input::handler::StreamHandler::Filter(f) => {
+                    let condition_executor = parse_expression(&f.filter_expression, &expr_parser_context)?;
+                    let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
+                        condition_executor,
+                        Arc::clone(siddhi_app_context),
+                        Arc::clone(&siddhi_query_context),
+                    )?));
+                    link_processor(filter_processor);
+                }
+                _ => {}
+            }
         }
 
         // 5. Selector (Projections)
