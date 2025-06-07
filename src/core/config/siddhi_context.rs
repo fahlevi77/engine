@@ -58,6 +58,7 @@ pub type DisruptorExceptionHandlerPlaceholder = String;
 
 use crate::core::executor::function::ScalarFunctionExecutor; // Added
 use std::sync::RwLock; // Added for scalar_function_factories and attributes, data_sources
+use crate::core::table::Table;
 
 /// Shared context for all Siddhi Apps in a SiddhiManager instance.
 #[derive(Debug)] // Default will be custom, Clone removed due to Arc<RwLock<...>> direct Clone
@@ -83,6 +84,8 @@ pub struct SiddhiContext {
     scalar_function_factories: Arc<RwLock<HashMap<String, Box<dyn ScalarFunctionExecutor>>>>,
     /// Stores registered data sources. Key: data source name.
     data_sources: Arc<RwLock<HashMap<String, Arc<dyn DataSource>>>>,
+    /// Registered tables available for queries.
+    tables: Arc<RwLock<HashMap<String, Arc<dyn Table>>>>,
 
     pub dummy_field_siddhi_context_extensions: String,
 }
@@ -94,6 +97,7 @@ impl SiddhiContext {
             attributes: Arc::new(RwLock::new(HashMap::new())),
             scalar_function_factories: Arc::new(RwLock::new(HashMap::new())),
             data_sources: Arc::new(RwLock::new(HashMap::new())),
+            tables: Arc::new(RwLock::new(HashMap::new())),
             siddhi_extensions: HashMap::new(),
             deprecated_siddhi_extensions: HashMap::new(),
             persistence_store: None,
@@ -156,6 +160,14 @@ impl SiddhiContext {
 
     pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
         self.data_sources.write().unwrap().insert(name, data_source);
+    }
+
+    pub fn add_table(&self, name: String, table: Arc<dyn Table>) {
+        self.tables.write().unwrap().insert(name, table);
+    }
+
+    pub fn get_table(&self, name: &str) -> Option<Arc<dyn Table>> {
+        self.tables.read().unwrap().get(name).cloned()
     }
 
     pub fn get_statistics_configuration(&self) -> &StatisticsConfiguration {
@@ -237,6 +249,7 @@ impl Clone for SiddhiContext {
             attributes: Arc::clone(&self.attributes),
             scalar_function_factories: Arc::clone(&self.scalar_function_factories),
             data_sources: Arc::clone(&self.data_sources),
+            tables: Arc::clone(&self.tables),
             siddhi_extensions: self.siddhi_extensions.clone(),
             deprecated_siddhi_extensions: self.deprecated_siddhi_extensions.clone(),
             persistence_store: self.persistence_store.clone(),
