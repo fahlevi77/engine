@@ -32,11 +32,8 @@ impl QueryParser {
     pub fn parse_query(
         api_query: &ApiQuery,
         siddhi_app_context: &Arc<SiddhiAppContext>,
-        // These maps are from SiddhiAppRuntimeBuilder
         stream_junction_map: &HashMap<String, Arc<Mutex<StreamJunction>>>,
-        // table_map: &HashMap<String, Arc<Mutex<crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder>>>,
-        // window_map: &HashMap<String, Arc<Mutex<crate::core::siddhi_app_runtime_builder::WindowRuntimePlaceholder>>>,
-        // aggregation_map: &HashMap<String, Arc<Mutex<crate::core::siddhi_app_runtime_builder::AggregationRuntimePlaceholder>>>,
+        table_def_map: &HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
     ) -> Result<QueryRuntime, String> {
 
         // 1. Determine Query Name (from @info(name='foo') or generate)
@@ -76,9 +73,18 @@ impl QueryParser {
         let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(input_stream_def_from_junction));
         let mut stream_meta_map = HashMap::new();
         stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
+
+        let mut table_meta_map = HashMap::new();
+        for (table_id, table_def) in table_def_map {
+            let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+            let meta = MetaStreamEvent::new_for_single_input(stream_def);
+            table_meta_map.insert(table_id.clone(), Arc::new(meta));
+        }
+
         let expr_parser_context = ExpressionParserContext {
             siddhi_app_context: Arc::clone(siddhi_app_context),
             stream_meta_map,
+            table_meta_map,
             default_source: input_stream_id.clone(),
             query_name: &query_name,
         };
@@ -172,16 +178,28 @@ impl QueryParser {
         // This needs to match on api_query.output_stream.action
         match &api_query.output_stream.action {
             crate::query_api::execution::query::output::output_stream::OutputStreamAction::InsertInto(insert_action) => {
-                 let target_junction = stream_junction_map.get(&insert_action.target_id)
-                    .ok_or_else(|| format!("Output stream '{}' not found for query '{}'", insert_action.target_id, query_name))?
-                    .clone();
-
-                let insert_processor = Arc::new(Mutex::new(InsertIntoStreamProcessor::new(
-                    target_junction,
-                    Arc::clone(siddhi_app_context),
-                    Arc::clone(&siddhi_query_context),
-                )));
-                link_processor(insert_processor);
+                if let Some(target_junction) = stream_junction_map.get(&insert_action.target_id) {
+                    let insert_processor = Arc::new(Mutex::new(InsertIntoStreamProcessor::new(
+                        target_junction.clone(),
+                        Arc::clone(siddhi_app_context),
+                        Arc::clone(&siddhi_query_context),
+                    )));
+                    link_processor(insert_processor);
+                } else if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&insert_action.target_id) {
+                    let insert_processor = Arc::new(Mutex::new(
+                        crate::core::query::output::InsertIntoTableProcessor::new(
+                            table,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        ),
+                    ));
+                    link_processor(insert_processor);
+                } else {
+                    return Err(format!(
+                        "Output target '{}' not found for query '{}'",
+                        insert_action.target_id, query_name
+                    ));
+                }
             }
             _ => return Err(format!("Query '{}': Only INSERT INTO output supported for now.", query_name)),
         }

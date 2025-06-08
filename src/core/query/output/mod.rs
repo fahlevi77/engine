@@ -5,8 +5,9 @@
 // and rate limiters that operate on core event chunks.
 
 pub mod insert_into_stream_processor;
-// pub mod delete_stream_processor; // For DELETE operations
-// pub mod update_stream_processor; // For UPDATE operations
+pub mod insert_into_table_processor;
+pub mod update_table_processor;
+pub mod delete_table_processor;
 // pub mod update_or_insert_stream_processor; // For UPDATE OR INSERT
 // pub mod output_rate_limiter; // Core engine's rate limiter
 pub mod callback_processor; // Added
@@ -15,4 +16,7 @@ pub mod callback_processor; // Added
 // Query-specific output callbacks (QueryCallback in Java) might also go here or a sub-module.
 
 pub use self::insert_into_stream_processor::InsertIntoStreamProcessor;
+pub use self::insert_into_table_processor::InsertIntoTableProcessor;
+pub use self::update_table_processor::UpdateTableProcessor;
+pub use self::delete_table_processor::DeleteTableProcessor;
 pub use self::callback_processor::CallbackProcessor; // Added

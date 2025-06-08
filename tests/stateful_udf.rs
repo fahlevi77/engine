@@ -86,6 +86,7 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
     ExpressionParserContext {
         siddhi_app_context: app_ctx,
         stream_meta_map: HashMap::new(),
+        table_meta_map: HashMap::new(),
         default_source: "default".to_string(),
         query_name: "q",
     }

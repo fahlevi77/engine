@@ -41,7 +41,7 @@ fn test_length_window_query_parse() {
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
     let query = Query::query().from(input).select(selector).out_stream(out_stream);
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions);
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
     assert!(res.is_ok());
 }
 
@@ -56,7 +56,7 @@ fn test_time_window_query_parse() {
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
     let query = Query::query().from(input).select(selector).out_stream(out_stream);
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions);
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
     assert!(res.is_ok());
 }
 

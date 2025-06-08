@@ -35,6 +35,7 @@ fn test_parse_expression_multi_stream_variable() {
     let ctx = ExpressionParserContext {
         siddhi_app_context: make_app_ctx(),
         stream_meta_map: map,
+        table_meta_map: HashMap::new(),
         default_source: "A".to_string(),
         query_name: "Q1",
     };
@@ -52,6 +53,7 @@ fn test_compare_type_coercion_int_double() {
     let ctx = ExpressionParserContext {
         siddhi_app_context: make_app_ctx(),
         stream_meta_map: HashMap::new(),
+        table_meta_map: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: "Q2",
     };
@@ -77,6 +79,7 @@ fn test_variable_not_found_error() {
     let ctx = ExpressionParserContext {
         siddhi_app_context: make_app_ctx(),
         stream_meta_map: map,
+        table_meta_map: HashMap::new(),
         default_source: "A".to_string(),
         query_name: "Q3",
     };

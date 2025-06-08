@@ -99,6 +99,7 @@ impl Drop for AttributeFunctionExpressionExecutor {
 pub struct ExpressionParserContext<'a> {
     pub siddhi_app_context: Arc<SiddhiAppContext>,
     pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
+    pub table_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub default_source: String,
     pub query_name: &'a str,
 }
@@ -121,29 +122,22 @@ pub fn parse_expression<'a>( // Added lifetime 'a
             let stream_id = api_var.stream_id.as_deref().unwrap_or(&context.default_source);
             if let Some(meta) = context.stream_meta_map.get(stream_id) {
                 if let Some((index, attr_type)) = meta.find_attribute_info(attribute_name) {
-                    Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())))
-                } else {
-                    let loc = api_var
-                        .siddhi_element
-                        .query_context_start_index
-                        .map(|(l, c)| format!("line {}, column {}", l, c))
-                        .unwrap_or_else(|| "unknown location".to_string());
-                    Err(format!(
-                        "Variable '{}.{}' not found at {} in query '{}'",
-                        stream_id, attribute_name, loc, context.query_name
-                    ))
+                    return Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())));
                 }
-            } else {
-                let loc = api_var
-                    .siddhi_element
-                    .query_context_start_index
-                    .map(|(l, c)| format!("line {}, column {}", l, c))
-                    .unwrap_or_else(|| "unknown location".to_string());
-                Err(format!(
-                    "Source '{}' not found for variable '{}.{}' at {} in query '{}'",
-                    stream_id, stream_id, attribute_name, loc, context.query_name
-                ))
+            } else if let Some(meta) = context.table_meta_map.get(stream_id) {
+                if let Some((index, attr_type)) = meta.find_attribute_info(attribute_name) {
+                    return Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())));
+                }
             }
+            let loc = api_var
+                .siddhi_element
+                .query_context_start_index
+                .map(|(l, c)| format!("line {}, column {}", l, c))
+                .unwrap_or_else(|| "unknown location".to_string());
+            Err(format!(
+                "Variable '{}.{}' not found at {} in query '{}'",
+                stream_id, attribute_name, loc, context.query_name
+            ))
         }
         ApiExpression::Add(api_op) => {
             let left_exec = parse_expression(&api_op.left_value, context)?;

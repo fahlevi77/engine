@@ -21,6 +21,7 @@ fn empty_ctx(query: &str) -> ExpressionParserContext {
     ExpressionParserContext {
         siddhi_app_context: make_app_ctx(),
         stream_meta_map: HashMap::new(),
+        table_meta_map: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: query,
     }

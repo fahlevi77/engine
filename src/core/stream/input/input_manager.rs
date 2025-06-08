@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use super::input_distributor::InputDistributor;
 use super::input_entry_valve::InputEntryValve;
 use super::input_handler::{InputHandler, InputProcessor};
+use super::table_input_handler::TableInputHandler;
 use crate::core::config::siddhi_app_context::{SiddhiAppContext, ThreadBarrierPlaceholder};
 use crate::core::stream::stream_junction::{StreamJunction, Publisher};
 
@@ -11,6 +12,7 @@ use crate::core::stream::stream_junction::{StreamJunction, Publisher};
 pub struct InputManager {
     siddhi_app_context: Arc<SiddhiAppContext>,
     input_handlers: Mutex<HashMap<String, Arc<Mutex<InputHandler>>>>,
+    table_input_handlers: Mutex<HashMap<String, TableInputHandler>>,
     stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     input_distributor: Arc<Mutex<InputDistributor>>,
     input_entry_valve: Arc<Mutex<dyn InputProcessor>>,
@@ -30,6 +32,7 @@ impl InputManager {
         Self {
             siddhi_app_context,
             input_handlers: Mutex::new(HashMap::new()),
+            table_input_handlers: Mutex::new(HashMap::new()),
             stream_junction_map,
             input_distributor: distributor,
             input_entry_valve: entry_valve,
@@ -66,6 +69,27 @@ impl InputManager {
             return Some(h.clone());
         }
         self.construct_input_handler(stream_id).ok()
+    }
+
+    pub fn get_table_input_handler(&self, table_id: &str) -> Option<TableInputHandler> {
+        if let Some(h) = self.table_input_handlers.lock().unwrap().get(table_id) {
+            return Some(h.clone());
+        }
+        self.construct_table_input_handler(table_id).ok()
+    }
+
+    pub fn construct_table_input_handler(&self, table_id: &str) -> Result<TableInputHandler, String> {
+        let table = self
+            .siddhi_app_context
+            .get_siddhi_context()
+            .get_table(table_id)
+            .ok_or_else(|| format!("Table '{}' not found", table_id))?;
+        let handler = TableInputHandler::new(table, Arc::clone(&self.siddhi_app_context));
+        self.table_input_handlers
+            .lock()
+            .unwrap()
+            .insert(table_id.to_string(), handler.clone());
+        Ok(handler)
     }
 
     pub fn connect(&self) {
