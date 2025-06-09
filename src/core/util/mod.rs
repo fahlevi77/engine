@@ -8,6 +8,8 @@ pub mod parser; // Added parser module
 pub mod siddhi_constants; // Added siddhi_constants module
 pub mod scheduler; // new scheduler module
 pub mod scheduled_executor_service;
+pub mod serialization;
+pub mod event_serde;
 // Potentially other existing util submodules:
 // pub mod cache;
 // pub mod collection;
@@ -31,3 +33,5 @@ pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export 
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
 pub use self::scheduler::{Scheduler, Schedulable};
 pub use self::scheduled_executor_service::ScheduledExecutorService;
+pub use self::serialization::{to_bytes, from_bytes};
+pub use self::event_serde::{event_to_bytes, event_from_bytes};

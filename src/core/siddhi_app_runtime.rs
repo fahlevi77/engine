@@ -14,6 +14,7 @@ use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_si
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
 use crate::core::query::processor::Processor; // Trait for CallbackProcessor
+use crate::core::persistence::SnapshotService;
 
 use std::collections::HashMap;
 
@@ -54,12 +55,15 @@ impl SiddhiAppRuntime {
             .unwrap_or_else(|| format!("siddhi_app_{}", uuid::Uuid::new_v4().hyphenated()));
 
         // TODO: Populate SiddhiAppContext more fully from @app annotations and SiddhiContext
-        let siddhi_app_context = Arc::new(SiddhiAppContext::new(
+        let mut ctx = SiddhiAppContext::new(
             siddhi_context,
-            app_name,
+            app_name.clone(),
             Arc::clone(&api_siddhi_app),
-            String::new() // siddhi_app_string - can be empty if already parsed
-        ));
+            String::new(),
+        );
+        let snapshot_service = Arc::new(SnapshotService::new(app_name.clone()));
+        ctx.set_snapshot_service(Arc::clone(&snapshot_service));
+        let siddhi_app_context = Arc::new(ctx);
 
         // 2. Parse the ApiSiddhiApp into a builder
         let builder = SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context)?;
@@ -105,6 +109,24 @@ impl SiddhiAppRuntime {
 
     pub fn shutdown(&self) {
         println!("SiddhiAppRuntime '{}' shutdown", self.name);
+    }
+
+    /// Persist the current snapshot using the configured SnapshotService.
+    pub fn persist(&self) -> Result<String, String> {
+        let service = self
+            .siddhi_app_context
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        service.persist()
+    }
+
+    /// Restore the given revision using the SnapshotService.
+    pub fn restore_revision(&self, revision: &str) -> Result<(), String> {
+        let service = self
+            .siddhi_app_context
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        service.restore_revision(revision)
     }
 
     // TODO: Implement other methods from SiddhiAppRuntime interface:

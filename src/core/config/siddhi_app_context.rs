@@ -22,7 +22,7 @@ use std::thread_local;
 // Placeholders for complex Java/Siddhi types not yet ported/defined
 #[derive(Debug, Clone, Default)] pub struct StatisticsManagerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TimestampGeneratorPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct SnapshotServicePlaceholder {}
+use crate::core::persistence::SnapshotService;
 #[derive(Debug, Clone, Default)] pub struct ThreadBarrierPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ScriptPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerPlaceholder {}
@@ -63,7 +63,7 @@ pub struct SiddhiAppContext {
     // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
     // pub trigger_holders: Vec<TriggerPlaceholder>, // Holds trigger runtime instances.
 
-    pub snapshot_service: Option<SnapshotServicePlaceholder>, // Manages state snapshotting and persistence. Option because it's set.
+    pub snapshot_service: Option<Arc<SnapshotService>>, // Manages state snapshotting and persistence.
     pub thread_barrier: Option<ThreadBarrierPlaceholder>,     // Used for coordinating threads, e.g., in playback. Option because it's set.
     pub timestamp_generator: TimestampGeneratorPlaceholder,   // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
     pub id_generator: Option<IdGenerator>,         // Generates unique IDs for runtime elements. Option because it's set.
@@ -217,11 +217,11 @@ impl SiddhiAppContext {
         self.transport_channel_creation_enabled = enabled;
     }
 
-    pub fn get_snapshot_service(&self) -> Option<&SnapshotServicePlaceholder> {
-        self.snapshot_service.as_ref()
+    pub fn get_snapshot_service(&self) -> Option<Arc<SnapshotService>> {
+        self.snapshot_service.as_ref().map(Arc::clone)
     }
 
-    pub fn set_snapshot_service(&mut self, service: SnapshotServicePlaceholder) {
+    pub fn set_snapshot_service(&mut self, service: Arc<SnapshotService>) {
         self.snapshot_service = Some(service);
     }
 
