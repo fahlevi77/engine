@@ -3,13 +3,14 @@
 
 grammar;
 
-use crate::query_api::definition::{StreamDefinition, TableDefinition};
+use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition};
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::execution::query::{Query};
-use crate::query_api::execution::query::input::InputStream;
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
 use crate::query_api::expression::{Expression, variable::Variable};
+use crate::query_api::aggregation::TimePeriod;
+use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 
 
 pub StreamDef: StreamDefinition = {
@@ -28,9 +29,29 @@ pub TableDef: TableDefinition = {
     }
 };
 
+pub AggDef: AggregationDefinition = {
+    "define" "aggregation" <id:Ident> "from" <in_id:Ident> "select" <sel:SelectList> "group" "by" <grp:Ident> "aggregate" "every" <durs:DurationList> => {
+        let mut agg = AggregationDefinition::new(id);
+        let input_stream = crate::query_api::execution::query::input::InputStream::stream(in_id.clone());
+        let single = match input_stream { crate::query_api::execution::query::input::InputStream::Single(s) => s, _ => unreachable!() };
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        let period = TimePeriod::interval(durs);
+        agg.from(single).select(selector).aggregate_by(Variable::new(grp)).every(period)
+    }
+};
+
 pub QueryStmt: Query = {
     "from" <in_id:Ident> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
-        let input = InputStream::stream(in_id);
+        let input = crate::query_api::execution::query::input::InputStream::stream(in_id);
         let mut selector = Selector::new();
         for (expr, alias) in sel {
             match alias {
@@ -73,6 +94,24 @@ AttrList: Vec<(String, AttributeType)> = {
 
 Attribute: (String, AttributeType) = { <name:Ident> <ty:Type> => (name, ty) };
 
+DurationList: Vec<TimeDuration> = {
+    <first:Duration> <rest:("," Duration)*> => {
+        let mut v = vec![first];
+        for (_, d) in rest { v.push(d); }
+        v
+    },
+    => Vec::new()
+};
+
+Duration: TimeDuration = {
+    "seconds" => TimeDuration::Seconds,
+    "minutes" => TimeDuration::Minutes,
+    "hours" => TimeDuration::Hours,
+    "days" => TimeDuration::Days,
+    "months" => TimeDuration::Months,
+    "years" => TimeDuration::Years,
+};
+
 Type: AttributeType = {
     "string" => AttributeType::STRING,
     "int" => AttributeType::INT,
@@ -87,7 +126,17 @@ Type: AttributeType = {
 pub Expression: Expression = {
     <s:STRING> => Expression::value_string(s),
     <n:NUMBER> => Expression::value_long(n),
+    <id:Ident> "(" <args:ExprList> ")" => Expression::function_no_ns(id, args),
     <id:Ident> => Expression::variable(id),
+};
+
+ExprList: Vec<Expression> = {
+    <first:Expression> <rest:("," Expression)*> => {
+        let mut v = vec![first];
+        for (_, e) in rest { v.push(e); }
+        v
+    },
+    => Vec::new()
 };
 
 Ident: String = { <r"[A-Za-z_][A-Za-z0-9_]*"> => <>.to_string() };

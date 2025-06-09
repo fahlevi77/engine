@@ -125,3 +125,21 @@ assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
 
 ## Contributing
 (Placeholder for contribution guidelines)
+
+## Incremental Aggregation (Experimental)
+
+Basic support for defining incremental aggregations is available. An aggregation
+can be declared using SiddhiQL syntax:
+
+```
+define aggregation AggName
+from InputStream
+select sum(value) as total
+group by category
+aggregate every seconds, minutes;
+```
+
+After parsing, `AggregationRuntime` instances are created when building a
+`SiddhiAppRuntime`. Events fed to the runtime will update the aggregation buckets
+for each configured duration.  Query APIs for reading these buckets are not yet
+implemented, but tests demonstrate the accumulation logic.

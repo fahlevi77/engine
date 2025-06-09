@@ -30,7 +30,8 @@ pub struct SiddhiAppRuntime {
     pub input_manager: Arc<InputManager>,
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
     pub scheduler: Option<crate::core::util::Scheduler>,
-    // TODO: Add other runtime component maps (tables, windows, aggregations, partitions, triggers)
+    pub aggregation_map: HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
+    // TODO: Add other runtime component maps (tables, windows, partitions, triggers)
     // These would be moved from SiddhiAppRuntimeBuilder during the build() process.
     // For now, using a placeholder to acknowledge they would exist.
     pub _placeholder_table_map: HashMap<String, String>, // Example placeholder

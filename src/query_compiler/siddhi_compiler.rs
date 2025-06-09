@@ -114,8 +114,10 @@ pub fn parse_table_definition(table_def_string: &str) -> Result<TableDefinition,
 }
 
 pub fn parse_aggregation_definition(agg_def_string: &str) -> Result<AggregationDefinition, String> {
-    let _ = update_variables(agg_def_string)?;
-    Err("Aggregation parsing not implemented".to_string())
+    let s = update_variables(agg_def_string)?;
+    grammar::AggDefParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 pub fn parse_partition(partition_string: &str) -> Result<Partition, String> {

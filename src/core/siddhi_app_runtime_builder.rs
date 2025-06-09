@@ -4,6 +4,7 @@ use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
 use crate::core::window::WindowRuntime;
+use crate::core::aggregation::AggregationRuntime;
 use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition; // Added this import
 
@@ -12,7 +13,6 @@ use std::sync::{Arc, Mutex};
 
 // Placeholders for runtime components until they are defined
 #[derive(Debug, Clone, Default)] pub struct TableRuntimePlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct AggregationRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct PartitionRuntimePlaceholder {}
 
@@ -29,7 +29,7 @@ pub struct SiddhiAppRuntimeBuilder {
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
     pub window_map: HashMap<String, Arc<Mutex<crate::core::window::WindowRuntime>>>,
-    pub aggregation_map: HashMap<String, Arc<Mutex<AggregationRuntimePlaceholder>>>,
+    pub aggregation_map: HashMap<String, Arc<Mutex<AggregationRuntime>>>,
 
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
     pub partition_runtimes: Vec<Arc<PartitionRuntimePlaceholder>>,
@@ -79,7 +79,7 @@ impl SiddhiAppRuntimeBuilder {
     pub fn add_window(&mut self, window_id: String, window_runtime: Arc<Mutex<crate::core::window::WindowRuntime>>) {
         self.window_map.insert(window_id, window_runtime);
     }
-    pub fn add_aggregation_runtime(&mut self, agg_id: String, agg_runtime: Arc<Mutex<AggregationRuntimePlaceholder>>) {
+    pub fn add_aggregation_runtime(&mut self, agg_id: String, agg_runtime: Arc<Mutex<AggregationRuntime>>) {
         self.aggregation_map.insert(agg_id, agg_runtime);
     }
     pub fn add_query_runtime(&mut self, query_runtime: Arc<QueryRuntime>) {
@@ -108,9 +108,14 @@ impl SiddhiAppRuntimeBuilder {
             Some(crate::core::util::Scheduler::new(Arc::clone(&exec.executor)))
         } else {
             let exec = Arc::new(crate::core::util::ExecutorService::default());
-            let sched_exec = Arc::new(crate::core::util::ScheduledExecutorService::new(Arc::clone(&exec)));
             Some(crate::core::util::Scheduler::new(exec))
         };
+
+        let mut aggregation_map = HashMap::new();
+        for (id, _def) in &self.aggregation_definition_map {
+            let runtime = AggregationRuntime::new(id.clone(), HashMap::new());
+            aggregation_map.insert(id.clone(), Arc::new(Mutex::new(runtime)));
+        }
 
         Ok(SiddhiAppRuntime {
             name: self.siddhi_app_context.name.clone(),
@@ -120,7 +125,8 @@ impl SiddhiAppRuntimeBuilder {
             input_manager: Arc::new(input_manager),
             query_runtimes: self.query_runtimes,
             scheduler,
-            // Initialize other runtime fields (tables, windows, aggregations, partitions, triggers)
+            aggregation_map,
+            // Initialize other runtime fields (tables, windows, partitions, triggers)
             // These would typically be moved from the builder to the runtime instance.
             // For now, they are not fields on SiddhiAppRuntime placeholder.
             // tables: self.table_map,
