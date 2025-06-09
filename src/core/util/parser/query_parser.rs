@@ -20,6 +20,7 @@ use crate::core::query::processor::stream::window::create_window_processor;
 use crate::core::query::selector::select_processor::SelectProcessor;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
 use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
+use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
 use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
@@ -187,6 +188,73 @@ impl QueryParser {
                     query_name: &query_name,
                 };
                 ctx
+            }
+            ApiInputStream::State(state_stream) => {
+                use crate::query_api::execution::query::input::state::state_element::StateElement;
+                use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
+
+                // Only support simple Next(Stream, Stream)
+                let (first_id, second_id) = if let StateElement::Next(next_elem) = state_stream.state_element.as_ref() {
+                    if let (StateElement::Stream(s1), StateElement::Stream(s2)) = (&*next_elem.state_element, &*next_elem.next_state_element) {
+                        (s1.get_single_input_stream().get_stream_id_str().to_string(),
+                         s2.get_single_input_stream().get_stream_id_str().to_string())
+                    } else {
+                        return Err(format!("Query '{}': Only simple two-stream Next patterns supported", query_name));
+                    }
+                } else {
+                    return Err(format!("Query '{}': Only Next pattern supported", query_name));
+                };
+
+                let first_junction = stream_junction_map.get(&first_id).ok_or_else(|| format!("Input stream '{}' not found", first_id))?.clone();
+                let second_junction = stream_junction_map.get(&second_id).ok_or_else(|| format!("Input stream '{}' not found", second_id))?.clone();
+
+                let first_def = first_junction.lock().unwrap().get_stream_definition();
+                let second_def = second_junction.lock().unwrap().get_stream_definition();
+                let first_len = first_def.abstract_definition.attribute_list.len();
+                let second_len = second_def.abstract_definition.attribute_list.len();
+
+                let mut first_meta = MetaStreamEvent::new_for_single_input(first_def);
+                let mut second_meta = MetaStreamEvent::new_for_single_input(second_def);
+                second_meta.apply_attribute_offset(first_len);
+
+                let mut stream_meta_map = HashMap::new();
+                stream_meta_map.insert(first_id.clone(), Arc::new(first_meta));
+                stream_meta_map.insert(second_id.clone(), Arc::new(second_meta));
+
+                let mut table_meta_map = HashMap::new();
+                for (table_id, table_def) in table_def_map {
+                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
+                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
+                }
+
+                let seq_type = match state_stream.state_type {
+                    crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
+                    crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
+                };
+
+                let seq_proc = Arc::new(Mutex::new(SequenceProcessor::new(
+                    seq_type,
+                    first_len,
+                    second_len,
+                    Arc::clone(siddhi_app_context),
+                    Arc::clone(&siddhi_query_context),
+                )));
+                let first_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::First);
+                let second_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::Second);
+
+                first_junction.lock().unwrap().subscribe(first_side.clone());
+                second_junction.lock().unwrap().subscribe(second_side.clone());
+
+                link_processor(first_side.clone());
+
+                ExpressionParserContext {
+                    siddhi_app_context: Arc::clone(siddhi_app_context),
+                    stream_meta_map,
+                    table_meta_map,
+                    default_source: first_id.clone(),
+                    query_name: &query_name,
+                }
             }
             _ => {
                 return Err(format!("Query '{}': Unsupported input stream type", query_name));

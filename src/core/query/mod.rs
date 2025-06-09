@@ -21,3 +21,4 @@ pub use self::processor::{Processor, ProcessingMode, CommonProcessorMeta, Filter
 pub use self::selector::{SelectProcessor, OutputAttributeProcessor}; // Kept one
 pub use self::query_runtime::QueryRuntime; // Added
 pub use self::input::stream::join::{JoinProcessor, JoinStreamRuntime, JoinSide, JoinProcessorSide};
+pub use self::input::stream::state::{SequenceProcessor, SequenceProcessorSide, SequenceType};
