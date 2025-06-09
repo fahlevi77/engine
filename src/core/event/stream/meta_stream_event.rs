@@ -68,6 +68,20 @@ impl MetaStreamEvent {
         self.attribute_info.get(attribute_name)
     }
 
+    /// Offsets all stored attribute index positions by the given amount.
+    ///
+    /// This is useful when building composite events such as joins where
+    /// attributes from multiple streams are packed into a single event data
+    /// array.  By applying an offset to one stream's `MetaStreamEvent`
+    /// we can reuse the variable resolution logic over the combined array.
+    pub fn apply_attribute_offset(&mut self, offset: usize) {
+        self.attribute_info = self
+            .attribute_info
+            .iter()
+            .map(|(k, (idx, t))| (k.clone(), (idx + offset, t.clone())))
+            .collect();
+    }
+
     pub fn get_before_window_data(&self) -> &[ApiAttribute] {
         &self.before_window_data
     }

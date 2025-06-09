@@ -1,8 +1,8 @@
 // siddhi_rust/src/core/query/mod.rs
 
 pub mod processor;
+pub mod input; // For join stream runtimes and other input handling
 // Other query submodules will be added here: input, output, selector (core internal versions)
-// pub mod input;    // For core query input components (receivers, etc.)
 pub mod output;   // For core query output components (callbacks, rate limiters)
 pub mod selector; // For core query selector components (QuerySelector/SelectProcessor)
 // pub mod stream; // This was for query_api::execution::query::input::stream, not core stream processors
@@ -20,3 +20,4 @@ pub mod query_runtime; // Added
 pub use self::processor::{Processor, ProcessingMode, CommonProcessorMeta, FilterProcessor};
 pub use self::selector::{SelectProcessor, OutputAttributeProcessor}; // Kept one
 pub use self::query_runtime::QueryRuntime; // Added
+pub use self::input::stream::join::{JoinProcessor, JoinStreamRuntime, JoinSide, JoinProcessorSide};

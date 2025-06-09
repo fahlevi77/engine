@@ -19,6 +19,7 @@ use crate::core::query::processor::stream::filter::FilterProcessor;
 use crate::core::query::processor::stream::window::create_window_processor;
 use crate::core::query::selector::select_processor::SelectProcessor;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
+use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
 use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
@@ -54,45 +55,10 @@ impl QueryParser {
         let input_stream_api = api_query.input_stream.as_ref()
             .ok_or_else(|| format!("Query '{}' has no input stream defined.", query_name))?;
 
-        // This simplified parser currently only supports SingleInputStream as input.
-        let (input_stream_id, api_single_input_stream) = match input_stream_api {
-            ApiInputStream::Single(single_in_stream) => {
-                (single_in_stream.get_stream_id_str().to_string(), single_in_stream)
-            }
-            _ => return Err(format!("Query '{}': Only SingleInputStream supported for now. Found {:?}",
-                                    query_name, input_stream_api)),
-        };
-
-        let input_junction = stream_junction_map.get(&input_stream_id)
-            .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?
-            .clone();
-
-        let input_stream_def_from_junction = input_junction.lock().expect("Input junction Mutex poisoned").get_stream_definition();
-
-        // 3. Create MetaStreamEvent map for ExpressionParserContext
-        let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(input_stream_def_from_junction));
-        let mut stream_meta_map = HashMap::new();
-        stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
-
-        let mut table_meta_map = HashMap::new();
-        for (table_id, table_def) in table_def_map {
-            let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
-            let meta = MetaStreamEvent::new_for_single_input(stream_def);
-            table_meta_map.insert(table_id.clone(), Arc::new(meta));
-        }
-
-        let expr_parser_context = ExpressionParserContext {
-            siddhi_app_context: Arc::clone(siddhi_app_context),
-            stream_meta_map,
-            table_meta_map,
-            default_source: input_stream_id.clone(),
-            query_name: &query_name,
-        };
-
         let mut processor_chain_head: Option<Arc<Mutex<dyn Processor>>> = None;
         let mut last_processor_in_chain: Option<Arc<Mutex<dyn Processor>>> = None;
 
-        // Helper to link processors in a chain
+        // Helper closure to link processors
         let mut link_processor = |new_processor_arc: Arc<Mutex<dyn Processor>>| {
             if processor_chain_head.is_none() {
                 processor_chain_head = Some(new_processor_arc.clone());
@@ -103,29 +69,129 @@ impl QueryParser {
             last_processor_in_chain = Some(new_processor_arc);
         };
 
-        // 4. Stream Handlers (Windows, Filters, etc.) in the order defined
-        for handler in api_single_input_stream.get_stream_handlers() {
-            match handler {
-                crate::query_api::execution::query::input::handler::StreamHandler::Window(w) => {
-                    let win_proc = create_window_processor(
-                        w.as_ref(),
-                        Arc::clone(siddhi_app_context),
-                        Arc::clone(&siddhi_query_context),
-                    )?;
-                    link_processor(win_proc);
+        // Build metadata and input processors depending on stream type
+        let expr_parser_context: ExpressionParserContext = match input_stream_api {
+            ApiInputStream::Single(single_in_stream) => {
+                let input_stream_id = single_in_stream.get_stream_id_str().to_string();
+                let input_junction = stream_junction_map.get(&input_stream_id)
+                    .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?
+                    .clone();
+                let input_stream_def_from_junction = input_junction.lock().expect("Input junction Mutex poisoned").get_stream_definition();
+                let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(input_stream_def_from_junction));
+                let mut stream_meta_map = HashMap::new();
+                stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
+                let mut table_meta_map = HashMap::new();
+                for (table_id, table_def) in table_def_map {
+                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
+                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
                 }
-                crate::query_api::execution::query::input::handler::StreamHandler::Filter(f) => {
-                    let condition_executor = parse_expression(&f.filter_expression, &expr_parser_context)?;
-                    let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
-                        condition_executor,
-                        Arc::clone(siddhi_app_context),
-                        Arc::clone(&siddhi_query_context),
-                    )?));
-                    link_processor(filter_processor);
+                let ctx = ExpressionParserContext {
+                    siddhi_app_context: Arc::clone(siddhi_app_context),
+                    stream_meta_map,
+                    table_meta_map,
+                    default_source: input_stream_id.clone(),
+                    query_name: &query_name,
+                };
+
+                for handler in single_in_stream.get_stream_handlers() {
+                    match handler {
+                        crate::query_api::execution::query::input::handler::StreamHandler::Window(w) => {
+                            let win_proc = create_window_processor(
+                                w.as_ref(),
+                                Arc::clone(siddhi_app_context),
+                                Arc::clone(&siddhi_query_context),
+                            )?;
+                            link_processor(win_proc);
+                        }
+                        crate::query_api::execution::query::input::handler::StreamHandler::Filter(f) => {
+                            let condition_executor = parse_expression(&f.filter_expression, &ctx)?;
+                            let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
+                                condition_executor,
+                                Arc::clone(siddhi_app_context),
+                                Arc::clone(&siddhi_query_context),
+                            )?));
+                            link_processor(filter_processor);
+                        }
+                        _ => {}
+                    }
                 }
-                _ => {}
+
+                ctx
             }
-        }
+            ApiInputStream::Join(join_stream) => {
+                use crate::query_api::execution::query::input::stream::join_input_stream::JoinInputStream as ApiJoin;
+                let left_id = join_stream.left_input_stream.get_stream_id_str().to_string();
+                let right_id = join_stream.right_input_stream.get_stream_id_str().to_string();
+                let left_junction = stream_junction_map.get(&left_id).ok_or_else(|| format!("Input stream '{}' not found", left_id))?.clone();
+                let right_junction = stream_junction_map.get(&right_id).ok_or_else(|| format!("Input stream '{}' not found", right_id))?.clone();
+
+                let left_def = left_junction.lock().unwrap().get_stream_definition();
+                let right_def = right_junction.lock().unwrap().get_stream_definition();
+                let left_len = left_def.abstract_definition.attribute_list.len();
+                let right_len = right_def.abstract_definition.attribute_list.len();
+
+                let mut left_meta = MetaStreamEvent::new_for_single_input(left_def);
+                let mut right_meta = MetaStreamEvent::new_for_single_input(right_def);
+                right_meta.apply_attribute_offset(left_len);
+
+                let mut stream_meta_map = HashMap::new();
+                stream_meta_map.insert(left_id.clone(), Arc::new(left_meta));
+                stream_meta_map.insert(right_id.clone(), Arc::new(right_meta));
+
+                let mut table_meta_map = HashMap::new();
+                for (table_id, table_def) in table_def_map {
+                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
+                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
+                }
+
+                let cond_exec = if let Some(expr) = &join_stream.on_compare {
+                    Some(parse_expression(expr, &ExpressionParserContext {
+                        siddhi_app_context: Arc::clone(siddhi_app_context),
+                        stream_meta_map: stream_meta_map.clone(),
+                        table_meta_map: table_meta_map.clone(),
+                        default_source: left_id.clone(),
+                        query_name: &query_name,
+                    })?)
+                } else { None };
+
+                let join_proc = Arc::new(Mutex::new(JoinProcessor::new(
+                    join_stream.join_type,
+                    cond_exec,
+                    left_len,
+                    right_len,
+                    Arc::clone(siddhi_app_context),
+                    Arc::clone(&siddhi_query_context),
+                )));
+                let left_side = JoinProcessor::create_side_processor(&join_proc, JoinSide::Left);
+                let right_side = JoinProcessor::create_side_processor(&join_proc, JoinSide::Right);
+
+                left_junction.lock().unwrap().subscribe(left_side.clone());
+                right_junction.lock().unwrap().subscribe(right_side.clone());
+
+                // Treat the left side processor as the entry point for the
+                // processor chain so that downstream processors can be linked
+                // using the existing `link_processor` helper.
+                link_processor(left_side.clone());
+
+                // The right side is subscribed directly and shares the same
+                // JoinProcessor through `join_proc`, so it does not need to be
+                // part of the sequential chain.
+
+                let ctx = ExpressionParserContext {
+                    siddhi_app_context: Arc::clone(siddhi_app_context),
+                    stream_meta_map,
+                    table_meta_map,
+                    default_source: left_id.clone(),
+                    query_name: &query_name,
+                };
+                ctx
+            }
+            _ => {
+                return Err(format!("Query '{}': Unsupported input stream type", query_name));
+            }
+        };
 
         // 5. Selector (Projections)
         let api_selector = &api_query.selector; // Selector is not Option in query_api::Query
@@ -212,14 +278,11 @@ impl QueryParser {
         );
         query_runtime.processor_chain_head = processor_chain_head;
 
-        // 8. Register the entry processor with the input stream junction
+        // 8. Register the entry processor with the input stream junction if applicable
         if let Some(head_proc_arc) = &query_runtime.processor_chain_head {
-            input_junction.lock().expect("Input junction Mutex poisoned").subscribe(Arc::clone(head_proc_arc));
-        } else {
-            // This might be valid if a query only defines things but has no direct input-to-output flow
-            // (e.g. a query that only defines named windows used by other queries).
-            // For now, assume a query must have a processor chain if it has an input stream.
-            return Err(format!("Query '{}' resulted in an empty processor chain despite having an input stream.", query_name));
+            if let Some(junction) = stream_junction_map.get(&expr_parser_context.default_source) {
+                junction.lock().expect("Input junction Mutex poisoned").subscribe(Arc::clone(head_proc_arc));
+            }
         }
 
         Ok(query_runtime)
