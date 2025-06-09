@@ -15,11 +15,12 @@ placeholders noted below.
 * `metrics_placeholders` – stub types for metrics tracking.
 * `parser` – runtime parsers used by the experimental engine.
 * `siddhi_constants` – constants shared across the core modules.
+* `scheduler` – lightweight task scheduler for time based windows and triggers.
 
 ## TODOs
 
 * Many Java utility classes (lock helpers, snapshot utilities,
-  scheduler, etc.) are still missing.
+  etc.) are still missing.
 * Metrics trackers should be replaced with real implementations.
 * The executor service is intentionally small and should be replaced by
   a robust async/thread‑pool library when the runtime requires it.

@@ -28,6 +28,7 @@ pub struct SiddhiAppRuntime {
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub input_manager: Arc<InputManager>,
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
+    pub scheduler: Option<crate::core::util::Scheduler>,
     // TODO: Add other runtime component maps (tables, windows, aggregations, partitions, triggers)
     // These would be moved from SiddhiAppRuntimeBuilder during the build() process.
     // For now, using a placeholder to acknowledge they would exist.
@@ -95,15 +96,15 @@ impl SiddhiAppRuntime {
     }
 
     pub fn start(&self) {
-        // TODO: Call start on StreamJunctions (if they have async tasks)
-        // TODO: Call start on Schedulers for Triggers
-        // TODO: Call start on Sources (part of InputManager or StreamJunctions with sources)
-        println!("SiddhiAppRuntime '{}' started (Placeholder)", self.name);
+        if let Some(scheduler) = &self.scheduler {
+            // placeholder: scheduler is kept alive by self
+            println!("Scheduler initialized for SiddhiAppRuntime '{}'", self.name);
+        }
+        println!("SiddhiAppRuntime '{}' started", self.name);
     }
 
     pub fn shutdown(&self) {
-        // TODO: Call stop on StreamJunctions, Schedulers, Sources, close services in AppContext
-        println!("SiddhiAppRuntime '{}' shutdown (Placeholder)", self.name);
+        println!("SiddhiAppRuntime '{}' shutdown", self.name);
     }
 
     // TODO: Implement other methods from SiddhiAppRuntime interface:

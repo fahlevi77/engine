@@ -6,6 +6,8 @@ pub mod id_generator;
 pub mod metrics_placeholders;
 pub mod parser; // Added parser module
 pub mod siddhi_constants; // Added siddhi_constants module
+pub mod scheduler; // new scheduler module
+pub mod scheduled_executor_service;
 // Potentially other existing util submodules:
 // pub mod cache;
 // pub mod collection;
@@ -27,3 +29,5 @@ pub use self::id_generator::IdGenerator;
 pub use self::metrics_placeholders::*;
 pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export key items from parser
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
+pub use self::scheduler::{Scheduler, Schedulable};
+pub use self::scheduled_executor_service::ScheduledExecutorService;

@@ -30,7 +30,6 @@ use std::thread_local;
 #[derive(Debug, Clone, Default)] pub struct SchedulerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct DisruptorExceptionHandlerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ExceptionListenerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct ScheduledExecutorServicePlaceholder {} // For scheduledExecutorService
 
 thread_local! {
     static GROUP_BY_KEY: RefCell<Option<String>> = RefCell::new(None);
@@ -58,7 +57,7 @@ pub struct SiddhiAppContext {
 
     // Threading and scheduling (using placeholders)
     pub executor_service: Option<Arc<ExecutorService>>, // General purpose thread pool for the Siddhi App.
-    pub scheduled_executor_service: Option<Arc<ScheduledExecutorServicePlaceholder>>, // Thread pool for scheduled tasks (e.g., time windows).
+    pub scheduled_executor_service: Option<Arc<crate::core::util::ScheduledExecutorService>>, // Thread pool for scheduled tasks.
 
     // External references and lifecycle management (using placeholders)
     // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
@@ -242,11 +241,11 @@ impl SiddhiAppContext {
         self.executor_service = Some(service);
     }
 
-    pub fn get_scheduled_executor_service(&self) -> Option<Arc<ScheduledExecutorServicePlaceholder>> {
+    pub fn get_scheduled_executor_service(&self) -> Option<Arc<crate::core::util::ScheduledExecutorService>> {
         self.scheduled_executor_service.as_ref().cloned()
     }
 
-    pub fn set_scheduled_executor_service(&mut self, service: Arc<ScheduledExecutorServicePlaceholder>) {
+    pub fn set_scheduled_executor_service(&mut self, service: Arc<crate::core::util::ScheduledExecutorService>) {
         self.scheduled_executor_service = Some(service);
     }
 
