@@ -18,8 +18,11 @@ use crate::core::executor::{
 };
 use crate::core::event::value::AttributeValue as CoreAttributeValue;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::query::selector::attribute::aggregator::*;
+use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
 use crate::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+use crate::core::query::processor::ProcessingMode;
 
 
 use std::sync::Arc;
@@ -98,6 +101,7 @@ impl Drop for AttributeFunctionExpressionExecutor {
 /// entry should be used when a variable does not explicitly specify a source.
 pub struct ExpressionParserContext<'a> {
     pub siddhi_app_context: Arc<SiddhiAppContext>,
+    pub siddhi_query_context: Arc<SiddhiQueryContext>,
     pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub table_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub default_source: String,
@@ -353,6 +357,46 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                     } else {
                         Err(format!("sqrt expects 1 argument, found {}", arg_execs.len()))
                     }
+                }
+                (None | Some(""), "sum") => {
+                    let mut exec = SumAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "avg") => {
+                    let mut exec = AvgAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "count") => {
+                    let mut exec = CountAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "distinctCount") => {
+                    let mut exec = DistinctCountAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "min") => {
+                    let mut exec = MinAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "max") => {
+                    let mut exec = MaxAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "minForever") => {
+                    let mut exec = MinForeverAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
+                }
+                (None | Some(""), "maxForever") => {
+                    let mut exec = MaxForeverAttributeAggregatorExecutor::default();
+                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    Ok(Box::new(exec))
                 }
                 _ => { // UDF lookup from context
                     if let Some(scalar_fn_factory) = context.siddhi_app_context.get_siddhi_context().get_scalar_function_factory(&function_lookup_name) {

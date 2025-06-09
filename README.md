@@ -42,7 +42,7 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Windows**: No window processors (`TimeWindow`, `LengthWindow`, etc.) are ported. This is a major feature set.
     *   **Joins**: No join processors or join logic implemented.
     *   **Patterns & Sequences**: No pattern or sequence processors implemented.
-    *   **Aggregations**: No aggregation runtime or aggregator functions ported.
+    *   **Aggregations**: Basic attribute aggregator executors (sum, avg, count, distinctCount, min/max and forever variants) are implemented for use in queries.
 *   **State Management & Persistence**:
     *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks.
     *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.

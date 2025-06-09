@@ -89,6 +89,7 @@ impl QueryParser {
                 }
                 let ctx = ExpressionParserContext {
                     siddhi_app_context: Arc::clone(siddhi_app_context),
+                    siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
                     default_source: input_stream_id.clone(),
@@ -150,6 +151,7 @@ impl QueryParser {
                 let cond_exec = if let Some(expr) = &join_stream.on_compare {
                     Some(parse_expression(expr, &ExpressionParserContext {
                         siddhi_app_context: Arc::clone(siddhi_app_context),
+                        siddhi_query_context: Arc::clone(&siddhi_query_context),
                         stream_meta_map: stream_meta_map.clone(),
                         table_meta_map: table_meta_map.clone(),
                         default_source: left_id.clone(),
@@ -182,6 +184,7 @@ impl QueryParser {
 
                 let ctx = ExpressionParserContext {
                     siddhi_app_context: Arc::clone(siddhi_app_context),
+                    siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
                     default_source: left_id.clone(),
@@ -250,6 +253,7 @@ impl QueryParser {
 
                 ExpressionParserContext {
                     siddhi_app_context: Arc::clone(siddhi_app_context),
+                    siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
                     default_source: first_id.clone(),

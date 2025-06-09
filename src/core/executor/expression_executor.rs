@@ -5,6 +5,7 @@ use crate::core::event::complex_event::ComplexEvent; // The ComplexEvent trait
 use crate::core::event::value::AttributeValue; // The enum for actual data values
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use std::fmt::Debug;
+use std::any::Any;
 // use std::sync::Arc; // Not needed for trait definition itself
 
 // ExpressionExecutor is an interface in Java. In Rust, it's a trait.
@@ -29,6 +30,17 @@ pub trait ExpressionExecutor: Debug + Send + Sync + 'static {
     // but the interface should be consistent.
     // Child executors (if any) would be cloned recursively using their own clone_executor methods.
     fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor>;
+
+    fn as_any(&self) -> &dyn Any
+    where
+        Self: Sized + 'static,
+    {
+        self
+    }
+
+    fn is_attribute_aggregator(&self) -> bool {
+        false
+    }
 }
 
 // To allow `Box<dyn ExpressionExecutor>` to be `Clone`.

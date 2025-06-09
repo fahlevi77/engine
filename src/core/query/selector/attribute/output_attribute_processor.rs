@@ -51,9 +51,7 @@ impl OutputAttributeProcessor {
     }
 
     /// Whether this attribute processor involves an aggregator function.
-    /// The current simplified runtime has no aggregator implementations,
-    /// so this always returns `false`.
     pub fn is_aggregator(&self) -> bool {
-        false
+        self.expression_executor.is_attribute_aggregator()
     }
 }

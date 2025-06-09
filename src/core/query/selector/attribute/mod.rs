@@ -1,6 +1,8 @@
 // siddhi_rust/src/core/query/selector/attribute/mod.rs
 pub mod output_attribute_processor;
+pub mod aggregator;
 pub use self::output_attribute_processor::OutputAttributeProcessor;
+pub use self::aggregator::*;
 
 // aggregator/ and processor/ sub-packages from Java would be modules here if their contents are ported.
 // pub mod aggregator;

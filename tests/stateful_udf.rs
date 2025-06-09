@@ -2,6 +2,7 @@ use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
 use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::query_api::expression::Expression;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::query_api::definition::attribute::Type as ApiAttributeType;
@@ -83,8 +84,11 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
         String::new(),
     ));
 
+    let query_ctx = Arc::new(SiddhiQueryContext::new(Arc::clone(&app_ctx), "q".to_string(), None));
+
     ExpressionParserContext {
         siddhi_app_context: app_ctx,
+        siddhi_query_context: query_ctx,
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
         default_source: "default".to_string(),
