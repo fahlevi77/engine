@@ -95,6 +95,7 @@ impl SiddhiAppParser {
                 siddhi_app_context.clone(),
                 buffer_size,
                 is_async,
+                None,
             )));
             builder.add_stream_junction(stream_id.clone(), stream_junction);
         }

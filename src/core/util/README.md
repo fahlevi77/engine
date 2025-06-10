@@ -12,7 +12,8 @@ placeholders noted below.
 * `attribute_converter` – helper functions for converting generic values
   to `AttributeValue` according to an `Attribute::Type`.
 * `id_generator` – simple monotonically increasing id generator.
-* `metrics_placeholders` – stub types for metrics tracking.
+* `metrics` – simple in-memory metrics trackers for latency, throughput
+  and buffered event counts.
 * `parser` – runtime parsers used by the experimental engine.
 * `siddhi_constants` – constants shared across the core modules.
 * `scheduler` – lightweight task scheduler for time based windows and triggers.
@@ -21,6 +22,6 @@ placeholders noted below.
 
 * Many Java utility classes (lock helpers, snapshot utilities,
   etc.) are still missing.
-* Metrics trackers should be replaced with real implementations.
+* Metrics system is rudimentary and should be extended for production use.
 
 Contributions welcome!

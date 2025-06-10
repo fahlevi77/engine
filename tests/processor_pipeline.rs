@@ -26,8 +26,8 @@ fn setup_context() -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJu
     let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&siddhi_context), "App".to_string(), Arc::clone(&app), String::new()));
     let in_def = Arc::new(StreamDefinition::new("InputStream".to_string()).attribute("a".to_string(), AttrType::INT));
     let out_def = Arc::new(StreamDefinition::new("OutStream".to_string()).attribute("a".to_string(), AttrType::INT));
-    let in_j = Arc::new(Mutex::new(StreamJunction::new("InputStream".to_string(), Arc::clone(&in_def), Arc::clone(&app_ctx), 1024, false)));
-    let out_j = Arc::new(Mutex::new(StreamJunction::new("OutStream".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false)));
+    let in_j = Arc::new(Mutex::new(StreamJunction::new("InputStream".to_string(), Arc::clone(&in_def), Arc::clone(&app_ctx), 1024, false, None)));
+    let out_j = Arc::new(Mutex::new(StreamJunction::new("OutStream".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false, None)));
     let mut map = HashMap::new();
     map.insert("InputStream".to_string(), in_j);
     map.insert("OutStream".to_string(), out_j);

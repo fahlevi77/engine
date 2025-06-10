@@ -23,9 +23,9 @@ fn setup_context() -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJu
     let b_def = Arc::new(StreamDefinition::new("BStream".to_string()).attribute("val".to_string(), AttrType::INT));
     let out_def = Arc::new(StreamDefinition::new("OutStream".to_string()).attribute("aval".to_string(), AttrType::INT).attribute("bval".to_string(), AttrType::INT));
 
-    let a_junction = Arc::new(Mutex::new(StreamJunction::new("AStream".to_string(), Arc::clone(&a_def), Arc::clone(&app_ctx), 1024, false)));
-    let b_junction = Arc::new(Mutex::new(StreamJunction::new("BStream".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false)));
-    let out_junction = Arc::new(Mutex::new(StreamJunction::new("OutStream".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false)));
+    let a_junction = Arc::new(Mutex::new(StreamJunction::new("AStream".to_string(), Arc::clone(&a_def), Arc::clone(&app_ctx), 1024, false, None)));
+    let b_junction = Arc::new(Mutex::new(StreamJunction::new("BStream".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false, None)));
+    let out_junction = Arc::new(Mutex::new(StreamJunction::new("OutStream".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false, None)));
 
     let mut map = HashMap::new();
     map.insert("AStream".to_string(), a_junction);

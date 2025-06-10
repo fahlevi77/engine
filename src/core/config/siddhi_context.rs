@@ -24,9 +24,7 @@ pub type PersistenceStorePlaceholder = String; // Simplified
 // pub type IncrementalPersistenceStoreType = Arc<dyn IncrementalPersistenceStore + Send + Sync>;
 pub type IncrementalPersistenceStorePlaceholder = String; // Simplified
 
-// pub trait ErrorStore {} // Example
-// pub type ErrorStoreType = Arc<dyn ErrorStore + Send + Sync>;
-pub type ErrorStorePlaceholder = String; // Simplified
+use crate::core::exception::error_store::ErrorStore;
 
 use crate::core::persistence::data_source::DataSource; // Using actual DataSource trait
 // pub trait ConfigManager {} // Example
@@ -71,7 +69,7 @@ pub struct SiddhiContext {
     deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
     persistence_store: Option<PersistenceStorePlaceholder>,
     incremental_persistence_store: Option<IncrementalPersistenceStorePlaceholder>,
-    error_store: Option<ErrorStorePlaceholder>,
+    error_store: Option<Arc<dyn ErrorStore>>, 
     extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
     config_manager: ConfigManagerPlaceholder,
     sink_handler_manager: Option<SinkHandlerManagerPlaceholder>,
@@ -167,11 +165,11 @@ impl SiddhiContext {
         self.incremental_persistence_store = Some(store);
     }
 
-    pub fn get_error_store(&self) -> Option<&String> {
-        self.error_store.as_ref()
+    pub fn get_error_store(&self) -> Option<Arc<dyn ErrorStore>> {
+        self.error_store.as_ref().cloned()
     }
 
-    pub fn set_error_store(&mut self, store: String) {
+    pub fn set_error_store(&mut self, store: Arc<dyn ErrorStore>) {
         self.error_store = Some(store);
     }
 

@@ -23,6 +23,7 @@ thread barriers are represented by placeholders.
 
 * Event chunks are now cloned for each subscriber and dispatched using the
   improved executor service when a junction is marked asynchronous.
-* Metrics, fault stream handling and error storage are largely unimplemented.
+* Basic metrics tracking and fault stream/error store routing are now
+  implemented.
 * A real `ThreadBarrier` implementation is needed for accurate entry valve
   behaviour.

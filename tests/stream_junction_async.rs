@@ -43,7 +43,7 @@ fn setup_junction(async_mode: bool) -> (Arc<Mutex<StreamJunction>>, Arc<Mutex<Ve
     let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("App".to_string()));
     let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&siddhi_context), "App".to_string(), Arc::clone(&app), String::new()));
     let def = Arc::new(StreamDefinition::new("InputStream".to_string()).attribute("a".to_string(), AttrType::INT));
-    let junction = Arc::new(Mutex::new(StreamJunction::new("InputStream".to_string(), Arc::clone(&def), Arc::clone(&app_ctx), 1024, async_mode)));
+    let junction = Arc::new(Mutex::new(StreamJunction::new("InputStream".to_string(), Arc::clone(&def), Arc::clone(&app_ctx), 1024, async_mode, None)));
     let rec1 = Arc::new(Mutex::new(Vec::new()));
     let rec2 = Arc::new(Mutex::new(Vec::new()));
     let p1 = Arc::new(Mutex::new(RecordingProcessor { events: Arc::clone(&rec1) }));

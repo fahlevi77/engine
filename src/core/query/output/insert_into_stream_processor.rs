@@ -38,15 +38,11 @@ impl Processor for InsertIntoStreamProcessor {
         if let Some(chunk_head) = complex_event_chunk { // Take ownership if Some
             // StreamJunction::send_complex_event_chunk expects Option<Box<dyn ComplexEvent>>
             // and handles the linked list internally.
-            match self.output_stream_junction.lock().expect("Output StreamJunction Mutex poisoned")
-                      .send_complex_event_chunk(Some(chunk_head)) { // Pass Some(chunk_head)
-                Ok(_) => {}
-                Err(e) => {
-                    // TODO: Proper error logging/handling via SiddhiAppContext's error handling mechanisms
-                    // This might involve checking OnErrorAction of the output_stream_junction.
-                    eprintln!("Error sending event chunk to output stream junction '{}': {}",
-                        self.output_stream_junction.lock().unwrap().stream_id, e);
-                }
+            if let Err(e) = self.output_stream_junction
+                .lock().expect("Output StreamJunction Mutex poisoned")
+                .send_complex_event_chunk(Some(chunk_head)) {
+                eprintln!("Error sending event chunk to output stream junction '{}': {}",
+                    self.output_stream_junction.lock().unwrap().stream_id, e);
             }
         }
         // If complex_event_chunk was None, nothing to process.

@@ -20,6 +20,7 @@ The project is in the early stages of porting. Key modules have been structurall
     *   **Runtime Parsers (`util/parser/siddhi_app_parser.rs`, `util/parser/query_parser.rs`)**: Skeleton structure to take a `query_api::SiddhiApp` and build a runtime plan using the above core components (StreamJunctions, Processors).
     *   **Runtime (`siddhi_app_runtime.rs`)**: Basic `SiddhiAppRuntime` that can be constructed (via `SiddhiAppParser`), can receive input events, and add callbacks for output.
 *   **`SiddhiManager`**: Basic functionality for creating, retrieving, and shutting down `SiddhiAppRuntime` instances has been ported. Methods for managing extensions and data sources are placeholders pointing to `SiddhiContext`.
+*   **Metrics and Fault Handling**: Simple in-memory metrics trackers are available and stream junctions can route faults to fault streams or an error store.
 
 ## Key Omissions, Simplifications, and Major TODOs
 
