@@ -21,9 +21,8 @@ thread barriers are represented by placeholders.
 
 ## Notes / TODO
 
-* Event cloning for multiple subscribers is currently naive.  Events are passed
-  to the first subscriber only.  A proper event chunk cloning or pooling
-  mechanism is required.
+* Event chunks are now cloned for each subscriber and dispatched using the
+  improved executor service when a junction is marked asynchronous.
 * Metrics, fault stream handling and error storage are largely unimplemented.
 * A real `ThreadBarrier` implementation is needed for accurate entry valve
   behaviour.

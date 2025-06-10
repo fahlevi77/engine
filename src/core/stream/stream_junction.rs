@@ -2,7 +2,7 @@
 // Corresponds to io.siddhi.core.stream.StreamJunction
 use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
-use crossbeam_channel::{bounded, Sender, Receiver as CrossbeamReceiver, SendError, TrySendError, RecvError};
+use crossbeam_channel::{bounded, Sender, Receiver as CrossbeamReceiver, TrySendError, RecvError};
 use crate::core::config::siddhi_app_context::SiddhiAppContext; // Actual struct
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
@@ -147,10 +147,9 @@ impl StreamJunction {
         if let Some(cb_receiver) = crossbeam_receiver_opt { // Use renamed variable
             // Spawn a task for async processing if async is true
             let internal_subscribers = Arc::clone(&junction.subscribers);
-            // Use the cloned executor_service for the task
-            let task_executor_service = Arc::clone(&junction.executor_service);
-            task_executor_service.execute(move || {
-                Self::async_event_loop(cb_receiver, internal_subscribers); // Pass aliased receiver
+            let exec_for_task = Arc::clone(&junction.executor_service);
+            junction.executor_service.execute(move || {
+                Self::async_event_loop(cb_receiver, internal_subscribers, exec_for_task);
             });
         }
         junction
@@ -164,22 +163,26 @@ impl StreamJunction {
         Publisher::new(Arc::new(self.clone()))
     }
 
-    fn async_event_loop(receiver: CrossbeamReceiver<Box<dyn ComplexEvent>>, subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>) { // Corrected to CrossbeamReceiver
-        // TODO: Implement batching as in Java's StreamHandler if batchSize > 1
+    fn async_event_loop(
+        receiver: CrossbeamReceiver<Box<dyn ComplexEvent>>, 
+        subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>,
+        exec: Arc<ExecutorService>
+    ) {
         loop {
             match receiver.recv() {
-                Ok(mut event_chunk) => { // Renamed for clarity, it's a chunk head
-                    let subs = subscribers.lock().expect("Mutex poisoned during async loop");
-                    let mut maybe_chunk = Some(event_chunk);
-                    for subscriber_lock in subs.iter() {
-                        let mut subscriber = subscriber_lock.lock().expect("Subscriber mutex poisoned");
-                        subscriber.process(maybe_chunk.take());
+                Ok(event_chunk) => {
+                    let subs_guard = subscribers.lock().expect("Mutex poisoned during async loop");
+                    let subs: Vec<_> = subs_guard.iter().map(Arc::clone).collect();
+                    drop(subs_guard);
+                    for sub in subs {
+                        let chunk_clone = crate::core::event::complex_event::clone_event_chain(event_chunk.as_ref());
+                        let sub_arc = Arc::clone(&sub);
+                        exec.execute(move || {
+                            sub_arc.lock().expect("subscriber mutex").process(Some(chunk_clone));
+                        });
                     }
                 }
-                Err(RecvError) => {
-                    // Channel disconnected, producer (StreamJunction) likely shut down.
-                    break;
-                }
+                Err(RecvError) => break,
             }
         }
     }
@@ -209,8 +212,8 @@ impl StreamJunction {
             let (sender, receiver) = bounded::<Box<dyn ComplexEvent>>(self.buffer_size);
             self.event_sender = Some(sender);
             let subs = Arc::clone(&self.subscribers);
-            let exec = Arc::clone(&self.executor_service);
-            exec.execute(move || Self::async_event_loop(receiver, subs));
+            let exec_clone = Arc::clone(&self.executor_service);
+            self.executor_service.execute(move || Self::async_event_loop(receiver, subs, exec_clone));
         }
     }
 
@@ -287,14 +290,21 @@ impl StreamJunction {
             }
         } else {
             // Synchronous path
-            let subs = self.subscribers.lock().expect("Mutex poisoned");
-            for subscriber_lock in subs.iter() {
-                let mut subscriber = subscriber_lock.lock().expect("Subscriber mutex poisoned");
-                // TODO: Event cloning/passing strategy for multiple subscribers.
-                // This needs a proper event chunk and cloning/pooling strategy.
-                // The signature for process_complex_event_chunk takes &mut Option<Box<dyn ComplexEvent>>
-                // so it can consume/replace the chunk. For multiple subscribers, each needs its "own" chunk.
-                subscriber.process(complex_event_chunk.take());
+            let subs_guard = self.subscribers.lock().expect("Mutex poisoned");
+            let subs: Vec<_> = subs_guard.iter().map(Arc::clone).collect();
+            drop(subs_guard);
+            for (idx, subscriber_lock) in subs.iter().enumerate() {
+                let chunk_for_sub = if idx == subs.len() - 1 {
+                    complex_event_chunk.take()
+                } else {
+                    complex_event_chunk
+                        .as_ref()
+                        .map(|c| crate::core::event::complex_event::clone_event_chain(c.as_ref()))
+                };
+                subscriber_lock
+                    .lock()
+                    .expect("Subscriber mutex poisoned")
+                    .process(chunk_for_sub);
             }
             Ok(())
         }

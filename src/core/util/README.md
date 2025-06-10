@@ -7,8 +7,8 @@ placeholders noted below.
 
 ## Implemented Modules
 
-* `executor_service` – a very small thread pool acting as a stand in for
-  Java's `ExecutorService`.
+* `executor_service` – lightweight wrapper around a Rayon thread pool
+  providing an `ExecutorService` style API.
 * `attribute_converter` – helper functions for converting generic values
   to `AttributeValue` according to an `Attribute::Type`.
 * `id_generator` – simple monotonically increasing id generator.
@@ -22,7 +22,5 @@ placeholders noted below.
 * Many Java utility classes (lock helpers, snapshot utilities,
   etc.) are still missing.
 * Metrics trackers should be replaced with real implementations.
-* The executor service is intentionally small and should be replaced by
-  a robust async/thread‑pool library when the runtime requires it.
 
 Contributions welcome!

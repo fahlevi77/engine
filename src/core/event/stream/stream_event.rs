@@ -23,6 +23,19 @@ pub struct StreamEvent {
     pub next: Option<Box<dyn ComplexEvent>>,
 }
 
+impl Clone for StreamEvent {
+    fn clone(&self) -> Self {
+        StreamEvent {
+            timestamp: self.timestamp,
+            output_data: self.output_data.clone(),
+            event_type: self.event_type,
+            before_window_data: self.before_window_data.clone(),
+            on_after_window_data: self.on_after_window_data.clone(),
+            next: self.next.as_ref().map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
+        }
+    }
+}
+
 impl StreamEvent {
     pub fn new(
         timestamp: i64,

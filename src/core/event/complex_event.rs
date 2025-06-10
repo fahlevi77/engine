@@ -55,6 +55,33 @@ pub trait ComplexEvent: Debug + Send + Sync + 'static {
     // fn clone_complex_event(&self) -> Box<dyn ComplexEvent>;
 }
 
+/// Deep clone a [`ComplexEvent`] chain.
+pub fn clone_box_complex_event(event: &dyn ComplexEvent) -> Box<dyn ComplexEvent> {
+    if let Some(se) = event.as_any().downcast_ref::<crate::core::event::stream::StreamEvent>() {
+        Box::new(se.clone())
+    } else if let Some(se) = event.as_any().downcast_ref::<crate::core::event::state::StateEvent>() {
+        Box::new(se.clone())
+    } else {
+        panic!("Unknown ComplexEvent type for cloning");
+    }
+}
+
+/// Clone an entire chain of [`ComplexEvent`]s starting at `head`.
+pub fn clone_event_chain(head: &dyn ComplexEvent) -> Box<dyn ComplexEvent> {
+    let mut new_head = clone_box_complex_event(head);
+    let mut tail_ref = new_head.mut_next_ref_option();
+    let mut current_opt = head.get_next();
+    while let Some(curr) = current_opt {
+        let cloned = clone_box_complex_event(curr);
+        *tail_ref = Some(cloned);
+        if let Some(ref mut t) = *tail_ref {
+            tail_ref = t.mut_next_ref_option();
+        }
+        current_opt = curr.get_next();
+    }
+    new_head
+}
+
 // Example of how a concrete type might implement clone_box
 // This is now part of the trait comment as it's specific to implementors.
 // impl Clone for Box<dyn ComplexEvent> {

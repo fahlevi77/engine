@@ -29,7 +29,30 @@ pub struct StateEvent {
     pub id: u64, // Using u64 to match Event.id, though Java StateEvent.id is not static atomic
 }
 
+impl Clone for StateEvent {
+    fn clone(&self) -> Self {
+        StateEvent {
+            stream_events: self.stream_events.clone(),
+            timestamp: self.timestamp,
+            event_type: self.event_type,
+            output_data: self.output_data.clone(),
+            next: self.next.as_ref().map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
+            id: self.id,
+        }
+    }
+}
+
 impl StateEvent {
+    pub fn clone_without_next(&self) -> Self {
+        StateEvent {
+            stream_events: self.stream_events.clone(),
+            timestamp: self.timestamp,
+            event_type: self.event_type,
+            output_data: self.output_data.clone(),
+            next: None,
+            id: self.id,
+        }
+    }
     pub fn new(stream_events_size: usize, output_size: usize) -> Self {
         // Initialize stream_events with None
         let mut stream_events_vec = Vec::with_capacity(stream_events_size);
