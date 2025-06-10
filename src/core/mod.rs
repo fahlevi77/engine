@@ -21,6 +21,7 @@ pub mod trigger;
 pub mod util;
 pub mod window;
 pub mod persistence; // Added
+pub mod extension;
 
 // Re-export key public-facing structs from core
 pub use self::siddhi_app_runtime::SiddhiAppRuntime;

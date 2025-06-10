@@ -344,3 +344,85 @@ minmax_exec!(MinAttributeAggregatorExecutor, |v,current| v<current);
 minmax_exec!(MaxAttributeAggregatorExecutor, |v,current| v>current);
 minmax_exec!(MinForeverAttributeAggregatorExecutor, |v,current| v<current);
 minmax_exec!(MaxForeverAttributeAggregatorExecutor, |v,current| v>current);
+
+use crate::core::extension::AttributeAggregatorFactory;
+
+#[derive(Debug, Clone)]
+pub struct SumAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for SumAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(SumAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct AvgAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for AvgAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(AvgAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct CountAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for CountAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(CountAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct DistinctCountAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for DistinctCountAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(DistinctCountAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct MinAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for MinAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(MinAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct MaxAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for MaxAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(MaxAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct MinForeverAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for MinForeverAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(MinForeverAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}
+
+#[derive(Debug, Clone)]
+pub struct MaxForeverAttributeAggregatorFactory;
+
+impl AttributeAggregatorFactory for MaxForeverAttributeAggregatorFactory {
+    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        Box::new(MaxForeverAttributeAggregatorExecutor::default())
+    }
+    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(Self) }
+}

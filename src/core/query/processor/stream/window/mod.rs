@@ -2,6 +2,7 @@ use crate::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_query_con
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::execution::query::input::handler::WindowHandler;
+use crate::core::extension::WindowProcessorFactory;
 use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expression};
 use std::sync::{Arc, Mutex};
 
@@ -140,18 +141,69 @@ pub fn create_window_processor(
     app_ctx: Arc<SiddhiAppContext>,
     query_ctx: Arc<SiddhiQueryContext>,
 ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-    match handler.name.as_str() {
-        "length" => Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
+    if let Some(factory) = app_ctx
+        .get_siddhi_context()
+        .get_window_factory(&handler.name)
+    {
+        factory.create(handler, app_ctx, query_ctx)
+    } else {
+        match handler.name.as_str() {
+            "length" => Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
+                handler,
+                app_ctx,
+                query_ctx,
+            )?))),
+            "time" => Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
+                handler,
+                app_ctx,
+                query_ctx,
+            )?))),
+            other => Err(format!("Unsupported window type '{}'", other)),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LengthWindowFactory;
+
+impl WindowProcessorFactory for LengthWindowFactory {
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
             handler,
             app_ctx,
             query_ctx,
-        )?))),
-        "time" => Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
+        )?)))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TimeWindowFactory;
+
+impl WindowProcessorFactory for TimeWindowFactory {
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
             handler,
             app_ctx,
             query_ctx,
-        )?))),
-        other => Err(format!("Unsupported window type '{}'", other)),
+        )?)))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
     }
 }
 

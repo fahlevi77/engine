@@ -99,6 +99,16 @@ let manager = SiddhiManager::new();
 manager.add_scalar_function_factory("counter".to_string(), Box::new(CounterFn));
 ```
 
+Other extension types such as windows and attribute aggregators can also be registered using the `SiddhiManager`.
+
+```rust
+use siddhi_rust::core::extension::{WindowProcessorFactory, AttributeAggregatorFactory};
+
+let manager = SiddhiManager::new();
+// manager.add_window_factory("myWindow".to_string(), Box::new(MyWindowFactory));
+// manager.add_attribute_aggregator_factory("myAgg".to_string(), Box::new(MyAggFactory));
+```
+
 ### Example Usage
 
 ```rust

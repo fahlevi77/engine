@@ -123,6 +123,34 @@ impl SiddhiManager {
         self.siddhi_context.add_scalar_function_factory(name, function_factory);
     }
 
+    pub fn add_window_factory(&self, name: String, factory: Box<dyn crate::core::extension::WindowProcessorFactory>) {
+        self.siddhi_context.add_window_factory(name, factory);
+    }
+
+    pub fn add_attribute_aggregator_factory(&self, name: String, factory: Box<dyn crate::core::extension::AttributeAggregatorFactory>) {
+        self.siddhi_context.add_attribute_aggregator_factory(name, factory);
+    }
+
+    pub fn add_source_factory(&self, name: String, factory: Box<dyn crate::core::extension::SourceFactory>) {
+        self.siddhi_context.add_source_factory(name, factory);
+    }
+
+    pub fn add_sink_factory(&self, name: String, factory: Box<dyn crate::core::extension::SinkFactory>) {
+        self.siddhi_context.add_sink_factory(name, factory);
+    }
+
+    pub fn add_store_factory(&self, name: String, factory: Box<dyn crate::core::extension::StoreFactory>) {
+        self.siddhi_context.add_store_factory(name, factory);
+    }
+
+    pub fn add_source_mapper_factory(&self, name: String, factory: Box<dyn crate::core::extension::SourceMapperFactory>) {
+        self.siddhi_context.add_source_mapper_factory(name, factory);
+    }
+
+    pub fn add_sink_mapper_factory(&self, name: String, factory: Box<dyn crate::core::extension::SinkMapperFactory>) {
+        self.siddhi_context.add_sink_mapper_factory(name, factory);
+    }
+
     // Specific method for adding data sources
     pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
         self.siddhi_context.add_data_source(name, data_source);

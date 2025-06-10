@@ -398,8 +398,20 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                     exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
                     Ok(Box::new(exec))
                 }
-                _ => { // UDF lookup from context
-                    if let Some(scalar_fn_factory) = context.siddhi_app_context.get_siddhi_context().get_scalar_function_factory(&function_lookup_name) {
+                _ => {
+                    if let Some(factory) = context
+                        .siddhi_app_context
+                        .get_siddhi_context()
+                        .get_attribute_aggregator_factory(&function_lookup_name)
+                    {
+                        let mut exec = factory.create();
+                        exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                        Ok(exec)
+                    } else if let Some(scalar_fn_factory) = context
+                        .siddhi_app_context
+                        .get_siddhi_context()
+                        .get_scalar_function_factory(&function_lookup_name)
+                    {
                         Ok(Box::new(
                             AttributeFunctionExpressionExecutor::new(
                                 scalar_fn_factory.clone_scalar_function(),
