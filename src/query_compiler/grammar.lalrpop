@@ -3,8 +3,10 @@
 
 grammar;
 
-use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition};
+use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition, WindowDefinition};
 use crate::query_api::definition::attribute::Type as AttributeType;
+use crate::query_api::definition::attribute::Attribute;
+use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::execution::query::{Query};
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
@@ -25,6 +27,26 @@ pub TableDef: TableDefinition = {
     "define" "table" <id:Ident> "(" <attrs:AttrList> ")" => {
         let mut d = TableDefinition::new(id);
         for (n,t) in attrs { d = d.attribute(n, t); }
+        d
+    }
+};
+
+pub WindowParam: WindowHandler = {
+    <name:Ident> "(" <args:ExprList> ")" => WindowHandler::new(name, None, args),
+};
+
+WindowParamOpt: Option<WindowHandler> = {
+    <p:WindowParam> => Some(p),
+    => None,
+};
+
+pub WindowDef: WindowDefinition = {
+    "define" "window" <id:Ident> "(" <attrs:AttrList> ")" <param:WindowParamOpt> => {
+        let mut d = WindowDefinition::new(id);
+        for (n, t) in attrs {
+            d.stream_definition.abstract_definition.attribute_list.push(Attribute::new(n, t));
+        }
+        if let Some(w) = param { d = d.window(w); }
         d
     }
 };

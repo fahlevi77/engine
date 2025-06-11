@@ -6,6 +6,7 @@ pub use self::siddhi_compiler::{
     parse,
     parse_stream_definition,
     parse_table_definition,
+    parse_window_definition,
     parse_aggregation_definition,
     parse_partition,
     parse_query,

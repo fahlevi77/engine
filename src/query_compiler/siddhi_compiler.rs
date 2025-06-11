@@ -2,7 +2,7 @@
 // Ensure these paths are correct based on query_api module structure and re-exports.
 use crate::query_api::{
     SiddhiApp,
-    definition::{StreamDefinition, TableDefinition, AggregationDefinition, FunctionDefinition, attribute::Type as AttributeType},
+    definition::{StreamDefinition, TableDefinition, WindowDefinition, AggregationDefinition, FunctionDefinition, attribute::Type as AttributeType},
     execution::{
         Partition,
         query::{Query, OnDemandQuery, StoreQuery, input::InputStream, output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction}, selection::Selector},
@@ -90,6 +90,9 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
         } else if lower.starts_with("define table") {
             let def = parse_table_definition(stmt)?;
             app.add_table_definition(def);
+        } else if lower.starts_with("define window") {
+            let def = parse_window_definition(stmt)?;
+            app.add_window_definition(def);
         } else if lower.starts_with("from") {
             let q = parse_query(stmt)?;
             app.add_execution_element(ExecutionElement::Query(q));
@@ -109,6 +112,13 @@ pub fn parse_stream_definition(stream_def_string: &str) -> Result<StreamDefiniti
 pub fn parse_table_definition(table_def_string: &str) -> Result<TableDefinition, String> {
     let s = update_variables(table_def_string)?;
     grammar::TableDefParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
+}
+
+pub fn parse_window_definition(window_def_string: &str) -> Result<WindowDefinition, String> {
+    let s = update_variables(window_def_string)?;
+    grammar::WindowDefParser::new()
         .parse(&s)
         .map_err(|e| format!("{:?}", e))
 }
