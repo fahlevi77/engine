@@ -42,6 +42,8 @@ fn test_parse_expression_multi_stream_variable() {
         siddhi_query_context: make_query_ctx("Q1"),
         stream_meta_map: map,
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "A".to_string(),
         query_name: "Q1",
     };
@@ -61,6 +63,8 @@ fn test_compare_type_coercion_int_double() {
         siddhi_query_context: make_query_ctx("Q2"),
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: "Q2",
     };
@@ -88,6 +92,8 @@ fn test_variable_not_found_error() {
         siddhi_query_context: make_query_ctx("Q3"),
         stream_meta_map: map,
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "A".to_string(),
         query_name: "Q3",
     };
@@ -96,4 +102,92 @@ fn test_variable_not_found_error() {
     let expr = Expression::Variable(var_b);
     let err = parse_expression(&expr, &ctx).unwrap_err();
     assert!(err.contains("Q3"));
+}
+
+#[test]
+fn test_table_variable_resolution() {
+    use siddhi_rust::query_api::definition::TableDefinition;
+    let table = TableDefinition::new("T".to_string())
+        .attribute("val".to_string(), AttrType::INT);
+    let stream_equiv = Arc::new(StreamDefinition::new("T".to_string()).attribute("val".to_string(), AttrType::INT));
+    let meta = Arc::new(MetaStreamEvent::new_for_single_input(stream_equiv));
+    let mut table_map = HashMap::new();
+    table_map.insert("T".to_string(), Arc::clone(&meta));
+
+    let ctx = ExpressionParserContext {
+        siddhi_app_context: make_app_ctx(),
+        siddhi_query_context: make_query_ctx("Q4"),
+        stream_meta_map: HashMap::new(),
+        table_meta_map: table_map,
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
+        default_source: "T".to_string(),
+        query_name: "Q4",
+    };
+
+    let var = Variable::new("val".to_string()).of_stream("T".to_string());
+    let expr = Expression::Variable(var);
+    let exec = parse_expression(&expr, &ctx).unwrap();
+    assert_eq!(exec.get_return_type(), AttrType::INT);
+}
+
+#[test]
+fn test_custom_udf_plus_one() {
+    use siddhi_rust::core::siddhi_manager::SiddhiManager;
+    use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
+    use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+    use siddhi_rust::core::event::value::AttributeValue;
+    #[derive(Debug, Default)]
+    struct PlusOneFn { arg: Option<Box<dyn ExpressionExecutor>> }
+
+    impl Clone for PlusOneFn {
+        fn clone(&self) -> Self { Self { arg: None } }
+    }
+
+    impl ExpressionExecutor for PlusOneFn {
+        fn execute(&self, event: Option<&dyn siddhi_rust::core::event::complex_event::ComplexEvent>) -> Option<AttributeValue> {
+            let v = self.arg.as_ref()?.execute(event)?;
+            match v { AttributeValue::Int(i) => Some(AttributeValue::Int(i+1)), _ => None }
+        }
+        fn get_return_type(&self) -> AttrType { AttrType::INT }
+        fn clone_executor(&self, _ctx:&Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> { Box::new(self.clone()) }
+    }
+
+    impl ScalarFunctionExecutor for PlusOneFn {
+        fn init(&mut self, args:&Vec<Box<dyn ExpressionExecutor>>, _ctx:&Arc<SiddhiAppContext>) -> Result<(), String> {
+            if args.len()!=1 { return Err("plusOne expects one argument".to_string()); }
+            self.arg = Some(args[0].clone_executor(_ctx));
+            Ok(())
+        }
+        fn destroy(&mut self) {}
+        fn get_name(&self) -> String { "plusOne".to_string() }
+        fn clone_scalar_function(&self) -> Box<dyn ScalarFunctionExecutor> { Box::new(self.clone()) }
+    }
+
+    let manager = SiddhiManager::new();
+    manager.add_scalar_function_factory("plusOne".to_string(), Box::new(PlusOneFn::default()));
+
+    let app_ctx = Arc::new(SiddhiAppContext::new(
+        manager.siddhi_context(),
+        "app".to_string(),
+        Arc::new(SiddhiApp::new("app".to_string())),
+        String::new(),
+    ));
+    let q_ctx = Arc::new(SiddhiQueryContext::new(Arc::clone(&app_ctx), "Q5".to_string(), None));
+
+    let ctx = ExpressionParserContext {
+        siddhi_app_context: app_ctx,
+        siddhi_query_context: q_ctx,
+        stream_meta_map: HashMap::new(),
+        table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
+        default_source: "dummy".to_string(),
+        query_name: "Q5",
+    };
+
+    let expr = Expression::function_no_ns("plusOne".to_string(), vec![Expression::value_int(4)]);
+    let exec = parse_expression(&expr, &ctx).unwrap();
+    let res = exec.execute(None);
+    assert_eq!(res, Some(AttributeValue::Int(5)));
 }

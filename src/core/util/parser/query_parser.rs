@@ -92,6 +92,8 @@ impl QueryParser {
                     siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
+                    window_meta_map: HashMap::new(),
+                    state_meta_map: HashMap::new(),
                     default_source: input_stream_id.clone(),
                     query_name: &query_name,
                 };
@@ -154,6 +156,8 @@ impl QueryParser {
                         siddhi_query_context: Arc::clone(&siddhi_query_context),
                         stream_meta_map: stream_meta_map.clone(),
                         table_meta_map: table_meta_map.clone(),
+                        window_meta_map: HashMap::new(),
+                        state_meta_map: HashMap::new(),
                         default_source: left_id.clone(),
                         query_name: &query_name,
                     })?)
@@ -187,6 +191,8 @@ impl QueryParser {
                     siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
+                    window_meta_map: HashMap::new(),
+                    state_meta_map: HashMap::new(),
                     default_source: left_id.clone(),
                     query_name: &query_name,
                 };
@@ -256,6 +262,8 @@ impl QueryParser {
                     siddhi_query_context: Arc::clone(&siddhi_query_context),
                     stream_meta_map,
                     table_meta_map,
+                    window_meta_map: HashMap::new(),
+                    state_meta_map: HashMap::new(),
                     default_source: first_id.clone(),
                     query_name: &query_name,
                 }

@@ -28,6 +28,8 @@ fn empty_ctx(query: &str) -> ExpressionParserContext {
         siddhi_query_context: make_query_ctx(query),
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: query,
     }

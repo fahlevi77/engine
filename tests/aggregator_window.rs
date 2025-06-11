@@ -28,6 +28,8 @@ fn make_ctx(name: &str) -> ExpressionParserContext<'static> {
         siddhi_query_context: q_ctx,
         stream_meta_map: stream_map,
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "s".to_string(),
         query_name: qn,
     }

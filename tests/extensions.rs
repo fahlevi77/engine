@@ -67,7 +67,7 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name:&str) -> ExpressionParser
     let meta = siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent::new_for_single_input(Arc::clone(&stream_def));
     let mut smap = HashMap::new();
     smap.insert("s".to_string(), Arc::new(meta));
-    ExpressionParserContext{ siddhi_app_context: app_ctx, siddhi_query_context: q_ctx, stream_meta_map: smap, table_meta_map: HashMap::new(), default_source: "s".to_string(), query_name: Box::leak(name.to_string().into_boxed_str()) }
+    ExpressionParserContext{ siddhi_app_context: app_ctx, siddhi_query_context: q_ctx, stream_meta_map: smap, table_meta_map: HashMap::new(), window_meta_map: HashMap::new(), state_meta_map: HashMap::new(), default_source: "s".to_string(), query_name: Box::leak(name.to_string().into_boxed_str()) }
 }
 
 #[test]

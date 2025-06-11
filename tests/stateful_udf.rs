@@ -91,6 +91,8 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
         siddhi_query_context: query_ctx,
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
         default_source: "default".to_string(),
         query_name: "q",
     }

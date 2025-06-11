@@ -15,12 +15,15 @@ use crate::core::executor::{
     math::*,
     condition::*,
     function::*,
+    EventVariableFunctionExecutor,
+    MultiValueVariableFunctionExecutor,
 };
 use crate::core::event::value::AttributeValue as CoreAttributeValue;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::query::selector::attribute::aggregator::*;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::event::state::meta_state_event::MetaStateEvent;
 use crate::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
 use crate::core::query::processor::ProcessingMode;
 
@@ -104,6 +107,8 @@ pub struct ExpressionParserContext<'a> {
     pub siddhi_query_context: Arc<SiddhiQueryContext>,
     pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub table_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
+    pub window_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
+    pub state_meta_map: HashMap<String, Arc<MetaStateEvent>>,
     pub default_source: String,
     pub query_name: &'a str,
 }
@@ -123,16 +128,43 @@ pub fn parse_expression<'a>( // Added lifetime 'a
         }
         ApiExpression::Variable(api_var) => {
             let attribute_name = &api_var.attribute_name;
-            let stream_id = api_var.stream_id.as_deref().unwrap_or(&context.default_source);
+            let stream_id = api_var
+                .stream_id
+                .as_deref()
+                .unwrap_or(&context.default_source);
+
+            let mut found: Option<(usize, ApiAttributeType)> = None;
             if let Some(meta) = context.stream_meta_map.get(stream_id) {
-                if let Some((index, attr_type)) = meta.find_attribute_info(attribute_name) {
-                    return Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())));
+                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
+                    found = Some((*idx, t.clone()));
                 }
             } else if let Some(meta) = context.table_meta_map.get(stream_id) {
-                if let Some((index, attr_type)) = meta.find_attribute_info(attribute_name) {
-                    return Ok(Box::new(VariableExpressionExecutor::new(*index, attr_type.clone(), attribute_name.to_string())));
+                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
+                    found = Some((*idx, t.clone()));
+                }
+            } else if let Some(meta) = context.window_meta_map.get(stream_id) {
+                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
+                    found = Some((*idx, t.clone()));
+                }
+            } else if let Some(state_meta) = context.state_meta_map.get(stream_id) {
+                for opt_meta in &state_meta.meta_stream_events {
+                    if let Some(m) = opt_meta {
+                        if let Some((idx, t)) = m.find_attribute_info(attribute_name) {
+                            found = Some((*idx, t.clone()));
+                            break;
+                        }
+                    }
                 }
             }
+
+            if let Some((index, attr_type)) = found {
+                return Ok(Box::new(VariableExpressionExecutor::new(
+                    index,
+                    attr_type,
+                    attribute_name.to_string(),
+                )));
+            }
+
             let loc = api_var
                 .siddhi_element
                 .query_context_start_index
@@ -304,6 +336,20 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 (None | Some(""), "uuid") => {
                     if !arg_execs.is_empty() { return Err(format!("uuid() function takes no arguments at {} in query '{}'", loc, context.query_name)); }
                     Ok(Box::new(UuidFunctionExecutor::new()))
+                }
+                (None | Some(""), "event") => {
+                    if arg_execs.len() == 1 {
+                        Ok(Box::new(EventVariableFunctionExecutor::new(0, 0)))
+                    } else {
+                        Err(format!("event expects 1 argument, found {}", arg_execs.len()))
+                    }
+                }
+                (None | Some(""), "allEvents") => {
+                    if arg_execs.len() == 1 {
+                        Ok(Box::new(MultiValueVariableFunctionExecutor::new(0, [0,0])))
+                    } else {
+                        Err(format!("allEvents expects 1 argument, found {}", arg_execs.len()))
+                    }
                 }
                 (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
