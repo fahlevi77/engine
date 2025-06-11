@@ -10,6 +10,7 @@ use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::execution::query::{Query};
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
+use crate::query_api::execution::query::input::{InputStream, SingleInputStream, JoinType};
 use crate::query_api::expression::{Expression, variable::Variable};
 use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
@@ -87,9 +88,68 @@ pub AggDef: AggregationDefinition = {
     }
 };
 
+InputStreamRule: InputStream = {
+    <id:Ident> => InputStream::stream(id),
+    <left:Ident> "join" <right:Ident> "on" <cond:Expression> => {
+        InputStream::join_stream(
+            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            JoinType::Join,
+            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            Some(cond),
+            None,
+            None,
+            None,
+        )
+    },
+    <left:Ident> "inner" "join" <right:Ident> "on" <cond:Expression> => {
+        InputStream::join_stream(
+            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            JoinType::InnerJoin,
+            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            Some(cond),
+            None,
+            None,
+            None,
+        )
+    },
+    <left:Ident> "left" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+        InputStream::join_stream(
+            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            JoinType::LeftOuterJoin,
+            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            Some(cond),
+            None,
+            None,
+            None,
+        )
+    },
+    <left:Ident> "right" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+        InputStream::join_stream(
+            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            JoinType::RightOuterJoin,
+            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            Some(cond),
+            None,
+            None,
+            None,
+        )
+    },
+    <left:Ident> "full" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+        InputStream::join_stream(
+            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            JoinType::FullOuterJoin,
+            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            Some(cond),
+            None,
+            None,
+            None,
+        )
+    },
+};
+
 pub QueryStmt: Query = {
-    "from" <in_id:Ident> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
-        let input = crate::query_api::execution::query::input::InputStream::stream(in_id);
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
+        let in_stream = istream;
         let mut selector = Selector::new();
         for (expr, alias) in sel {
             match alias {
@@ -102,7 +162,7 @@ pub QueryStmt: Query = {
         }
         let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
         let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
-        Query::query().from(input).select(selector).out_stream(output_stream)
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
     }
 };
 

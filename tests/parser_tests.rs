@@ -1,6 +1,7 @@
 use siddhi_rust::query_compiler::{parse_stream_definition, parse_table_definition, parse_window_definition, parse_query};
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
+use siddhi_rust::query_api::execution::query::input::{InputStream, JoinType};
 
 #[test]
 fn test_parse_stream_definition() {
@@ -44,4 +45,29 @@ fn test_parse_window_definition() {
     let handler = def.window_handler.expect("window handler");
     assert_eq!(handler.name, "length");
     assert_eq!(handler.parameters.len(), 1);
+}
+
+#[test]
+fn test_parse_join_query() {
+    let q = parse_query("from Left join Right on cond select a, b insert into Out").unwrap();
+    match q.get_input_stream().unwrap() {
+        InputStream::Join(j) => {
+            assert_eq!(j.left_input_stream.get_stream_id_str(), "Left");
+            assert_eq!(j.right_input_stream.get_stream_id_str(), "Right");
+            assert_eq!(j.join_type, JoinType::Join);
+        }
+        _ => panic!("expected join"),
+    }
+    assert_eq!(q.get_selector().selection_list.len(), 2);
+}
+
+#[test]
+fn test_parse_left_outer_join_query() {
+    let q = parse_query("from L left outer join R on cond select x, y insert into O").unwrap();
+    match q.get_input_stream().unwrap() {
+        InputStream::Join(j) => {
+            assert_eq!(j.join_type, JoinType::LeftOuterJoin);
+        }
+        _ => panic!("expected join"),
+    }
 }
