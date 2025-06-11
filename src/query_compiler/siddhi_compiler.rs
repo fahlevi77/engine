@@ -71,16 +71,31 @@ fn parse_attribute_type(t: &str) -> Result<AttributeType, String> {
 pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
     let s = update_variables(siddhi_app_string)?;
 
-    let name_re = Regex::new(r#"@App:name\(['"]([^'"]+)['"]\)"#).map_err(|e| e.to_string())?;
-    let app_name = name_re
-        .captures(&s)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().to_string())
+    let mut annotations = Vec::new();
+    let mut lines_without_ann = Vec::new();
+    for line in s.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('@') {
+            if let Ok(ann) = grammar::AnnotationStmtParser::new().parse(trimmed) {
+                annotations.push(ann);
+                continue;
+            }
+        }
+        lines_without_ann.push(line);
+    }
+    let s_no_ann = lines_without_ann.join("\n");
+
+    let app_name = annotations
+        .iter()
+        .find(|a| a.name.eq_ignore_ascii_case("app"))
+        .and_then(|a| a.elements.iter().find(|e| e.key.eq_ignore_ascii_case("name")))
+        .map(|e| e.value.clone())
         .unwrap_or_else(|| "SiddhiApp".to_string());
 
     let mut app = SiddhiApp::new(app_name);
+    for ann in &annotations { app.add_annotation(ann.clone()); }
 
-    for part in s.split(';') {
+    for part in s_no_ann.split(';') {
         let stmt = part.trim();
         if stmt.is_empty() { continue; }
         let lower = stmt.to_lowercase();

@@ -13,6 +13,22 @@ use crate::query_api::execution::query::output::output_stream::{OutputStream, Ou
 use crate::query_api::expression::{Expression, variable::Variable};
 use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
+use crate::query_api::annotation::Annotation;
+
+pub AnnotationStmt: Annotation = {
+    "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
+        Annotation::new(name).element(Some(key), val)
+    }
+};
+
+Annotations: Vec<Annotation> = {
+    <first:AnnotationStmt> <rest:AnnotationStmt*> => {
+        let mut v = vec![first];
+        for a in rest { v.push(a); }
+        v
+    },
+    => Vec::new(),
+};
 
 
 pub StreamDef: StreamDefinition = {
