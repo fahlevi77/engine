@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
+use crate::core::stream::output::stream_callback::StreamCallback;
+
 use crate::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext};
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::query::processor::Processor;
@@ -34,6 +36,7 @@ pub trait SourceFactory: Debug + Send + Sync {
 impl Clone for Box<dyn SourceFactory> { fn clone(&self) -> Self { self.clone_box() } }
 
 pub trait SinkFactory: Debug + Send + Sync {
+    fn create(&self) -> Box<dyn StreamCallback>;
     fn clone_box(&self) -> Box<dyn SinkFactory>;
 }
 impl Clone for Box<dyn SinkFactory> { fn clone(&self) -> Self { self.clone_box() } }
@@ -63,3 +66,20 @@ pub trait TableFactory: Debug + Send + Sync {
     fn clone_box(&self) -> Box<dyn TableFactory>;
 }
 impl Clone for Box<dyn TableFactory> { fn clone(&self) -> Self { self.clone_box() } }
+
+#[derive(Debug, Clone)]
+pub struct ExampleSourceFactory;
+
+impl SourceFactory for ExampleSourceFactory {
+    fn clone_box(&self) -> Box<dyn SourceFactory> { Box::new(self.clone()) }
+}
+
+#[derive(Debug, Clone)]
+pub struct LogSinkFactory;
+
+impl SinkFactory for LogSinkFactory {
+    fn create(&self) -> Box<dyn StreamCallback> {
+        Box::new(crate::core::stream::output::LogSink)
+    }
+    fn clone_box(&self) -> Box<dyn SinkFactory> { Box::new(self.clone()) }
+}

@@ -7,11 +7,19 @@ use siddhi_rust::core::event::complex_event::ComplexEvent;
 use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use siddhi_rust::query_api::execution::query::input::handler::WindowHandler;
 use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::query_api::definition::{StreamDefinition, attribute::Type as AttrType};
-use siddhi_rust::core::util::parser::{ExpressionParserContext, parse_expression};
+use siddhi_rust::query_api::definition::{StreamDefinition, TableDefinition, attribute::Type as AttrType};
+use siddhi_rust::query_api::annotation::Annotation;
+use siddhi_rust::core::util::parser::{ExpressionParserContext, parse_expression, QueryParser, SiddhiAppParser};
+use siddhi_rust::query_api::execution::query::{Query};
+use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use siddhi_rust::query_api::execution::query::selection::Selector;
+use siddhi_rust::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
+use siddhi_rust::core::stream::stream_junction::StreamJunction;
 use siddhi_rust::query_api::expression::Expression;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug)]
 struct DummyWindowProcessor { meta: CommonProcessorMeta }
@@ -70,6 +78,23 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name:&str) -> ExpressionParser
     ExpressionParserContext{ siddhi_app_context: app_ctx, siddhi_query_context: q_ctx, stream_meta_map: smap, table_meta_map: HashMap::new(), window_meta_map: HashMap::new(), state_meta_map: HashMap::new(), default_source: "s".to_string(), query_name: Box::leak(name.to_string().into_boxed_str()) }
 }
 
+fn setup_query_env(manager: &SiddhiManager) -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJunction>>>) {
+    let ctx = manager.siddhi_context();
+    let app = Arc::new(SiddhiApp::new("A".to_string()));
+    let app_ctx = Arc::new(SiddhiAppContext::new(ctx, "A".to_string(), Arc::clone(&app), String::new()));
+
+    let in_def = Arc::new(StreamDefinition::new("Input".to_string()).attribute("v".to_string(), AttrType::INT));
+    let out_def = Arc::new(StreamDefinition::new("Out".to_string()).attribute("v".to_string(), AttrType::INT));
+
+    let in_j = Arc::new(Mutex::new(StreamJunction::new("Input".to_string(), Arc::clone(&in_def), Arc::clone(&app_ctx), 1024, false, None)));
+    let out_j = Arc::new(Mutex::new(StreamJunction::new("Out".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false, None)));
+
+    let mut map = HashMap::new();
+    map.insert("Input".to_string(), in_j);
+    map.insert("Out".to_string(), out_j);
+    (app_ctx, map)
+}
+
 #[test]
 fn test_register_window_factory() {
     let manager = SiddhiManager::new();
@@ -90,4 +115,59 @@ fn test_register_attribute_aggregator_factory() {
     let expr = Expression::function_no_ns("constAgg".to_string(), vec![]);
     let exec = parse_expression(&expr, &ctx).unwrap();
     assert_eq!(exec.execute(None), Some(AttributeValue::Int(42)));
+}
+
+#[test]
+fn test_query_parser_uses_custom_window_factory() {
+    let manager = SiddhiManager::new();
+    manager.add_window_factory("dummyWin".to_string(), Box::new(DummyWindowFactory));
+
+    let (app_ctx, junctions) = setup_query_env(&manager);
+
+    let si = SingleInputStream::new_basic("Input".to_string(), false, false, None, Vec::new())
+        .window(None, "dummyWin".to_string(), vec![]);
+    let input = InputStream::Single(si);
+    let selector = Selector::new();
+    let insert_action = InsertIntoStreamAction { target_id: "Out".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
+    let query = Query::query().from(input).select(selector).out_stream(out_stream);
+
+    let runtime = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new()).unwrap();
+    let head = runtime.processor_chain_head.expect("head");
+    let dbg = format!("{:?}", head.lock().unwrap());
+    assert!(dbg.contains("DummyWindowProcessor"));
+}
+
+#[test]
+fn test_table_factory_invoked() {
+    static CREATED: AtomicUsize = AtomicUsize::new(0);
+
+    #[derive(Debug, Clone)]
+    struct RecordingFactory;
+    impl siddhi_rust::core::extension::TableFactory for RecordingFactory {
+        fn create(&self, _n: String, _p: HashMap<String, String>, _c: Arc<siddhi_rust::core::config::siddhi_context::SiddhiContext>) -> Result<Arc<dyn siddhi_rust::core::table::Table>, String> {
+            CREATED.fetch_add(1, Ordering::SeqCst);
+            Ok(Arc::new(siddhi_rust::core::table::InMemoryTable::new()))
+        }
+        fn clone_box(&self) -> Box<dyn siddhi_rust::core::extension::TableFactory> { Box::new(self.clone()) }
+    }
+
+    let manager = SiddhiManager::new();
+    manager.add_table_factory("rec".to_string(), Box::new(RecordingFactory));
+
+    let ctx = manager.siddhi_context();
+    let app = Arc::new(SiddhiApp::new("TApp".to_string()));
+    let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&ctx), "TApp".to_string(), Arc::clone(&app), String::new()));
+
+    let table_def = TableDefinition::id("T1".to_string())
+        .attribute("v".to_string(), AttrType::INT)
+        .annotation(Annotation::new("store".to_string()).element(Some("type".to_string()), "rec".to_string()));
+
+    let mut app_obj = SiddhiApp::new("TApp".to_string());
+    app_obj.table_definition_map.insert("T1".to_string(), Arc::new(table_def));
+
+    let _ = SiddhiAppParser::parse_siddhi_app_runtime_builder(&app_obj, Arc::clone(&app_ctx)).unwrap();
+
+    assert_eq!(CREATED.load(Ordering::SeqCst), 1);
+    assert!(app_ctx.get_siddhi_context().get_table("T1").is_some());
 }
