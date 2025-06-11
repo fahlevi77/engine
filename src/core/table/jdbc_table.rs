@@ -3,6 +3,7 @@ use crate::core::event::value::AttributeValue;
 use crate::core::config::siddhi_context::SiddhiContext;
 use rusqlite::{Connection, params_from_iter};
 use rusqlite::types::{Value, ValueRef};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -111,5 +112,26 @@ impl Table for JdbcTable {
             self.data_source_name.clone(),
             Arc::clone(&self.siddhi_context),
         ).unwrap())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct JdbcTableFactory;
+
+impl crate::core::extension::TableFactory for JdbcTableFactory {
+    fn create(
+        &self,
+        table_name: String,
+        mut properties: std::collections::HashMap<String, String>,
+        ctx: Arc<SiddhiContext>,
+    ) -> Result<Arc<dyn Table>, String> {
+        let ds = properties
+            .remove("data_source")
+            .ok_or_else(|| "data_source property required".to_string())?;
+        Ok(Arc::new(JdbcTable::new(table_name, ds, ctx)?))
+    }
+
+    fn clone_box(&self) -> Box<dyn crate::core::extension::TableFactory> {
+        Box::new(self.clone())
     }
 }

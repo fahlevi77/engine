@@ -4,6 +4,10 @@ use std::sync::RwLock;
 mod jdbc_table;
 pub use jdbc_table::JdbcTable;
 use std::fmt::Debug;
+use std::collections::HashMap;
+use crate::core::config::siddhi_context::SiddhiContext;
+use std::sync::Arc;
+use crate::core::extension::TableFactory;
 
 /// Trait representing a table that can store rows of `AttributeValue`s.
 pub trait Table: Debug + Send + Sync {
@@ -86,5 +90,23 @@ impl Table for InMemoryTable {
     fn clone_table(&self) -> Box<dyn Table> {
         let rows = self.rows.read().unwrap().clone();
         Box::new(InMemoryTable { rows: RwLock::new(rows) })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InMemoryTableFactory;
+
+impl TableFactory for InMemoryTableFactory {
+    fn create(
+        &self,
+        _name: String,
+        _properties: HashMap<String, String>,
+        _ctx: Arc<SiddhiContext>,
+    ) -> Result<Arc<dyn Table>, String> {
+        Ok(Arc::new(InMemoryTable::new()))
+    }
+
+    fn clone_box(&self) -> Box<dyn TableFactory> {
+        Box::new(self.clone())
     }
 }

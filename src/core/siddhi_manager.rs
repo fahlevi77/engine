@@ -151,6 +151,10 @@ impl SiddhiManager {
         self.siddhi_context.add_sink_mapper_factory(name, factory);
     }
 
+    pub fn add_table_factory(&self, name: String, factory: Box<dyn crate::core::extension::TableFactory>) {
+        self.siddhi_context.add_table_factory(name, factory);
+    }
+
     // Specific method for adding data sources
     pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
         self.siddhi_context.add_data_source(name, data_source);

@@ -52,3 +52,14 @@ pub trait SinkMapperFactory: Debug + Send + Sync {
     fn clone_box(&self) -> Box<dyn SinkMapperFactory>;
 }
 impl Clone for Box<dyn SinkMapperFactory> { fn clone(&self) -> Self { self.clone_box() } }
+
+pub trait TableFactory: Debug + Send + Sync {
+    fn create(
+        &self,
+        table_name: String,
+        properties: std::collections::HashMap<String, String>,
+        ctx: Arc<crate::core::config::siddhi_context::SiddhiContext>,
+    ) -> Result<Arc<dyn crate::core::table::Table>, String>;
+    fn clone_box(&self) -> Box<dyn TableFactory>;
+}
+impl Clone for Box<dyn TableFactory> { fn clone(&self) -> Self { self.clone_box() } }

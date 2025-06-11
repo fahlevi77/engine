@@ -103,20 +103,46 @@ impl SiddhiAppParser {
         // TableDefinitions
         for (table_id, table_def) in &api_siddhi_app.table_definition_map {
             builder.add_table_definition(Arc::clone(table_def));
-            let table: Arc<dyn crate::core::table::Table> = if let Some(store_ann) = table_def.abstract_definition.annotations.iter().find(|a| a.name == "store") {
-                if let Some(ds_el) = store_ann.elements.iter().find(|e| e.key == "data_source") {
-                    Arc::new(crate::core::table::JdbcTable::new(
-                        table_id.clone(),
-                        ds_el.value.clone(),
-                        siddhi_app_context.get_siddhi_context(),
-                    )?)
+
+            let table: Arc<dyn crate::core::table::Table> = if let Some(store_ann) = table_def
+                .abstract_definition
+                .annotations
+                .iter()
+                .find(|a| a.name == "store")
+            {
+                let mut props = HashMap::new();
+                for el in &store_ann.elements {
+                    props.insert(el.key.clone(), el.value.clone());
+                }
+                if let Some(t_type) = props.get("type") {
+                    if let Some(factory) = siddhi_app_context
+                        .get_siddhi_context()
+                        .get_table_factory(t_type)
+                    {
+                        factory.create(table_id.clone(), props.clone(), siddhi_app_context.get_siddhi_context())?
+                    } else if t_type == "jdbc" {
+                        let ds = props
+                            .get("data_source")
+                            .cloned()
+                            .unwrap_or_default();
+                        Arc::new(crate::core::table::JdbcTable::new(
+                            table_id.clone(),
+                            ds,
+                            siddhi_app_context.get_siddhi_context(),
+                        )?)
+                    } else {
+                        Arc::new(crate::core::table::InMemoryTable::new())
+                    }
                 } else {
                     Arc::new(crate::core::table::InMemoryTable::new())
                 }
             } else {
                 Arc::new(crate::core::table::InMemoryTable::new())
             };
-            siddhi_app_context.get_siddhi_context().add_table(table_id.clone(), table);
+
+            siddhi_app_context
+                .get_siddhi_context()
+                .add_table(table_id.clone(), table);
         }
 
         // WindowDefinitions, AggregationDefinitions

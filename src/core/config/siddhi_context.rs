@@ -26,7 +26,9 @@ pub type IncrementalPersistenceStorePlaceholder = String; // Simplified
 
 use crate::core::exception::error_store::ErrorStore;
 
-use crate::core::persistence::data_source::DataSource; // Using actual DataSource trait
+use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::query_api::siddhi_app::SiddhiApp;
 // pub trait ConfigManager {} // Example
 // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
 pub type ConfigManagerPlaceholder = String; // Simplified
@@ -94,6 +96,10 @@ pub struct SiddhiContext {
     source_mapper_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SourceMapperFactory>>>>,
     /// Sink mapper factories
     sink_mapper_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SinkMapperFactory>>>>,
+    /// Table factories for creating table implementations
+    table_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::TableFactory>>>>,
+    /// Configurations for data sources keyed by name
+    data_source_configs: Arc<RwLock<HashMap<String, DataSourceConfig>>>,
     /// Stores registered data sources. Key: data source name.
     data_sources: Arc<RwLock<HashMap<String, Arc<dyn DataSource>>>>,
     /// Registered tables available for queries.
@@ -115,6 +121,8 @@ impl SiddhiContext {
             store_factories: Arc::new(RwLock::new(HashMap::new())),
             source_mapper_factories: Arc::new(RwLock::new(HashMap::new())),
             sink_mapper_factories: Arc::new(RwLock::new(HashMap::new())),
+            table_factories: Arc::new(RwLock::new(HashMap::new())),
+            data_source_configs: Arc::new(RwLock::new(HashMap::new())),
             data_sources: Arc::new(RwLock::new(HashMap::new())),
             tables: Arc::new(RwLock::new(HashMap::new())),
             siddhi_extensions: HashMap::new(),
@@ -179,8 +187,38 @@ impl SiddhiContext {
         self.data_sources.read().unwrap().get(name).cloned()
     }
 
-    pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
+    pub fn add_data_source(&self, name: String, mut data_source: Arc<dyn DataSource>) {
+        if let Some(cfg) = self
+            .data_source_configs
+            .read()
+            .unwrap()
+            .get(&name)
+            .cloned()
+        {
+            let dummy_ctx = Arc::new(SiddhiAppContext::new(
+                Arc::new(self.clone()),
+                "__ds_init__".to_string(),
+                Arc::new(crate::query_api::siddhi_app::SiddhiApp::default()),
+                String::new(),
+            ));
+
+            if let Some(ds_mut) = Arc::get_mut(&mut data_source) {
+                let _ = ds_mut.init(&dummy_ctx, &name, cfg);
+            } else {
+                let mut ds_box = data_source.clone_data_source();
+                let _ = ds_box.init(&dummy_ctx, &name, cfg.clone());
+                data_source = Arc::from(ds_box);
+            }
+        }
         self.data_sources.write().unwrap().insert(name, data_source);
+    }
+
+    pub fn set_data_source_config(&self, name: String, config: DataSourceConfig) {
+        self.data_source_configs.write().unwrap().insert(name, config);
+    }
+
+    pub fn get_data_source_config(&self, name: &str) -> Option<DataSourceConfig> {
+        self.data_source_configs.read().unwrap().get(name).cloned()
     }
 
     pub fn add_table(&self, name: String, table: Arc<dyn Table>) {
@@ -308,6 +346,14 @@ impl SiddhiContext {
     pub fn add_sink_mapper_factory(&self, name: String, factory: Box<dyn crate::core::extension::SinkMapperFactory>) {
         self.sink_mapper_factories.write().unwrap().insert(name, factory);
     }
+
+    pub fn add_table_factory(&self, name: String, factory: Box<dyn crate::core::extension::TableFactory>) {
+        self.table_factories.write().unwrap().insert(name, factory);
+    }
+
+    pub fn get_table_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::TableFactory>> {
+        self.table_factories.read().unwrap().get(name).cloned()
+    }
 }
 
 impl Default for SiddhiContext {
@@ -330,6 +376,8 @@ impl Clone for SiddhiContext {
             store_factories: Arc::clone(&self.store_factories),
             source_mapper_factories: Arc::clone(&self.source_mapper_factories),
             sink_mapper_factories: Arc::clone(&self.sink_mapper_factories),
+            table_factories: Arc::clone(&self.table_factories),
+            data_source_configs: Arc::clone(&self.data_source_configs),
             data_sources: Arc::clone(&self.data_sources),
             tables: Arc::clone(&self.tables),
             siddhi_extensions: self.siddhi_extensions.clone(),

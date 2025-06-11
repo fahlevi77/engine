@@ -45,7 +45,7 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Patterns & Sequences**: No pattern or sequence processors implemented.
     *   **Aggregations**: Basic attribute aggregator executors (sum, avg, count, distinctCount, min/max and forever variants) are implemented for use in queries.
 *   **State Management & Persistence**:
-    *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks.
+    *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks. Custom table implementations can be provided via `TableFactory` instances registered with the `SiddhiManager`.
     *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.
 *   **Runtime & Orchestration**:
     *   `SiddhiAppParser` & `QueryParser`: Can only handle very simple queries (single stream, optional filter, simple select, insert into). Cannot parse partitions, windows, joins, patterns, sequences, tables, aggregations.
@@ -55,7 +55,7 @@ This port is **far from feature-complete** with the Java version. Users should b
 *   **Extensions Framework**:
     *   `ScalarFunctionExecutor` allows registering stateful user-defined functions.
     *   Placeholders for other extension types (Window, Sink, Source, Store, Mapper, AttributeAggregator, Script) are largely missing.
-*   **DataSources**: `DataSource` trait is a placeholder. No actual implementations or integration with table stores.
+*   **DataSources**: `DataSource` trait is a placeholder. No actual implementations or integration with table stores. `SiddhiContext::add_data_source` now looks for a matching configuration and calls `init` on the `DataSource` with it when registering using a temporary `SiddhiAppContext` (`dummy_ctx`).
 *   **Concurrency**: While `Arc<Mutex<T>>` is used in places, detailed analysis and implementation of Siddhi's concurrency model (thread pools for async junctions, partitioned execution) are pending.
 
 ## Testing Status
@@ -80,6 +80,8 @@ let ctx = manager.siddhi_context();
 let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
 table.insert(&[AttributeValue::Int(1)]);
 ctx.add_table("MyTable".to_string(), table);
+// custom tables can be registered via factories
+// manager.add_table_factory("jdbc".to_string(), Box::new(MyJdbcTableFactory));
 ```
 
 User-defined scalar functions implement `ScalarFunctionExecutor` and are registered with the manager:
