@@ -14,6 +14,7 @@ use crate::query_api::execution::query::input::{
     InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
 };
 use crate::query_api::expression::{Expression, variable::Variable};
+use crate::query_api::expression::condition::compare::Operator as CompareOperator;
 use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 use crate::query_api::annotation::Annotation;
@@ -250,9 +251,50 @@ Type: AttributeType = {
     "object" => AttributeType::OBJECT,
 };
 
-pub Expression: Expression = {
+pub Expression: Expression = { <e:OrExpr> => e };
+
+OrExpr: Expression = {
+    <l:OrExpr> "or" <r:AndExpr> => Expression::or(l, r),
+    <e:AndExpr> => e,
+};
+
+AndExpr: Expression = {
+    <l:AndExpr> "and" <r:NotExpr> => Expression::and(l, r),
+    <e:NotExpr> => e,
+};
+
+NotExpr: Expression = {
+    "not" <e:NotExpr> => Expression::not(e),
+    <e:CompareExpr> => e,
+};
+
+CompareExpr: Expression = {
+    <l:AddExpr> ">=" <r:AddExpr> => Expression::compare(l, CompareOperator::GreaterThanEqual, r),
+    <l:AddExpr> "<=" <r:AddExpr> => Expression::compare(l, CompareOperator::LessThanEqual, r),
+    <l:AddExpr> ">" <r:AddExpr> => Expression::compare(l, CompareOperator::GreaterThan, r),
+    <l:AddExpr> "<" <r:AddExpr> => Expression::compare(l, CompareOperator::LessThan, r),
+    <l:AddExpr> "==" <r:AddExpr> => Expression::compare(l, CompareOperator::Equal, r),
+    <l:AddExpr> "!=" <r:AddExpr> => Expression::compare(l, CompareOperator::NotEqual, r),
+    <e:AddExpr> => e,
+};
+
+AddExpr: Expression = {
+    <l:AddExpr> "+" <r:MulExpr> => Expression::add(l, r),
+    <l:AddExpr> "-" <r:MulExpr> => Expression::subtract(l, r),
+    <e:MulExpr> => e,
+};
+
+MulExpr: Expression = {
+    <l:MulExpr> "*" <r:PrimaryExpr> => Expression::multiply(l, r),
+    <l:MulExpr> "/" <r:PrimaryExpr> => Expression::divide(l, r),
+    <e:PrimaryExpr> => e,
+};
+
+PrimaryExpr: Expression = {
+    "(" <e:Expression> ")" => e,
     <s:STRING> => Expression::value_string(s),
     <n:NUMBER> => Expression::value_long(n),
+    "-" <n:NUMBER> => Expression::value_long(-n),
     <id:Ident> "(" <args:ExprList> ")" => Expression::function_no_ns(id, args),
     <id:Ident> => Expression::variable(id),
 };
