@@ -13,10 +13,7 @@ portion required for the current prototype is implemented.
   position within a `StateEvent`.
 - `StateEventFactory` – helper for constructing `StateEvent` instances based on
   meta information.
-
-## Missing Parts / TODO
-
-The original Java package contains additional helpers such as
-`StateEventCloner` and a set of *populator* utilities used by the pattern and
-partition runtime.  These have not yet been ported.  A future milestone should
-add them when those engine features are implemented.
+- `StateEventCloner` – shallow cloning utility for `StateEvent` used by stateful
+  processors.
+- *Populator* utilities (`StateEventPopulator`, etc.) – used to copy attributes
+  between events when constructing `StateEvent` instances.
