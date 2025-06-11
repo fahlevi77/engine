@@ -92,6 +92,14 @@ pub AggDef: AggregationDefinition = {
 };
 
 InputStreamRule: InputStream = {
+    <id:Ident> "[" <cond:Expression> "]" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
+        InputStream::Single(si)
+    },
+    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+        InputStream::Single(si)
+    },
     <id:Ident> => InputStream::stream(id),
     <left:Ident> "join" <right:Ident> "on" <cond:Expression> => {
         InputStream::join_stream(
@@ -167,8 +175,24 @@ Unit: StateElement = {
 };
 
 BasicUnit: StateElement = {
+    <alias:Ident> "=" <id:Ident> "[" <cond:Expression> "]" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond).as_ref(alias);
+        State::stream_element(si)
+    },
+    <alias:Ident> "=" <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
+        State::stream_element(si)
+    },
     <alias:Ident> "=" <id:Ident> => {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).as_ref(alias);
+        State::stream_element(si)
+    },
+    <id:Ident> "[" <cond:Expression> "]" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
+        State::stream_element(si)
+    },
+    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
         State::stream_element(si)
     },
     <id:Ident> => {
@@ -295,6 +319,7 @@ PrimaryExpr: Expression = {
     <s:STRING> => Expression::value_string(s),
     <n:NUMBER> => Expression::value_long(n),
     "-" <n:NUMBER> => Expression::value_long(-n),
+    <sid:Ident> "." <id:Ident> => Expression::Variable(Variable::new(id).of_stream(sid)),
     <id:Ident> "(" <args:ExprList> ")" => Expression::function_no_ns(id, args),
     <id:Ident> => Expression::variable(id),
 };
