@@ -16,13 +16,7 @@ pub type ExtensionClassPlaceholder = String; // Simplified: Class name as String
 // pub type DataSourceType = Arc<dyn DataSource + Send + Sync>; // Example
 pub type DataSourcePlaceholder = String; // Simplified
 
-// pub trait PersistenceStore {} // Example
-// pub type PersistenceStoreType = Arc<dyn PersistenceStore + Send + Sync>;
-pub type PersistenceStorePlaceholder = String; // Simplified
-
-// pub trait IncrementalPersistenceStore {} // Example
-// pub type IncrementalPersistenceStoreType = Arc<dyn IncrementalPersistenceStore + Send + Sync>;
-pub type IncrementalPersistenceStorePlaceholder = String; // Simplified
+use crate::core::persistence::{PersistenceStore, IncrementalPersistenceStore};
 
 use crate::core::exception::error_store::ErrorStore;
 
@@ -61,7 +55,7 @@ use std::sync::RwLock; // Added for scalar_function_factories and attributes, da
 use crate::core::table::Table;
 
 /// Shared context for all Siddhi Apps in a SiddhiManager instance.
-#[derive(Debug)] // Default will be custom, Clone removed due to Arc<RwLock<...>> direct Clone
+// Custom Debug is implemented to avoid requiring Debug on trait objects.
 pub struct SiddhiContext {
     pub statistics_configuration: StatisticsConfiguration,
     attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>,
@@ -69,8 +63,8 @@ pub struct SiddhiContext {
     // --- Placeholders mirroring Java fields ---
     siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
     deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
-    persistence_store: Option<PersistenceStorePlaceholder>,
-    incremental_persistence_store: Option<IncrementalPersistenceStorePlaceholder>,
+    persistence_store: Arc<RwLock<Option<Arc<dyn PersistenceStore>>>>,
+    incremental_persistence_store: Arc<RwLock<Option<Arc<dyn IncrementalPersistenceStore>>>>,
     error_store: Option<Arc<dyn ErrorStore>>, 
     extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
     config_manager: ConfigManagerPlaceholder,
@@ -127,8 +121,8 @@ impl SiddhiContext {
             tables: Arc::new(RwLock::new(HashMap::new())),
             siddhi_extensions: HashMap::new(),
             deprecated_siddhi_extensions: HashMap::new(),
-            persistence_store: None,
-            incremental_persistence_store: None,
+            persistence_store: Arc::new(RwLock::new(None)),
+            incremental_persistence_store: Arc::new(RwLock::new(None)),
             error_store: None,
             extension_holder_map: HashMap::new(),
             config_manager: "InMemoryConfigManager_Placeholder".to_string(),
@@ -147,30 +141,29 @@ impl SiddhiContext {
         &self.siddhi_extensions
     }
 
-    pub fn get_persistence_store(&self) -> Option<&String> {
-        self.persistence_store.as_ref()
-        // self.persistence_store.as_ref()
+    pub fn get_persistence_store(&self) -> Option<Arc<dyn PersistenceStore>> {
+        self.persistence_store.read().unwrap().clone()
     }
 
-    pub fn set_persistence_store(&mut self, persistence_store: String) {
+    pub fn set_persistence_store(&self, persistence_store: Arc<dyn PersistenceStore>) {
         // Mirroring Java logic: only one persistence store allowed
-        if self.incremental_persistence_store.is_some() {
+        if self.incremental_persistence_store.read().unwrap().is_some() {
             // In a full implementation this would return an error type
             panic!("Only one type of persistence store can exist. Incremental persistence store already registered!");
         }
-        self.persistence_store = Some(persistence_store);
+        *self.persistence_store.write().unwrap() = Some(persistence_store);
         // self.persistence_store = Some(persistence_store);
     }
 
-    pub fn get_incremental_persistence_store(&self) -> Option<&String> {
-        self.incremental_persistence_store.as_ref()
+    pub fn get_incremental_persistence_store(&self) -> Option<Arc<dyn IncrementalPersistenceStore>> {
+        self.incremental_persistence_store.read().unwrap().clone()
     }
 
-    pub fn set_incremental_persistence_store(&mut self, store: String) {
-        if self.persistence_store.is_some() {
+    pub fn set_incremental_persistence_store(&self, store: Arc<dyn IncrementalPersistenceStore>) {
+        if self.persistence_store.read().unwrap().is_some() {
             panic!("Only one type of persistence store can exist. Persistence store already registered!");
         }
-        self.incremental_persistence_store = Some(store);
+        *self.incremental_persistence_store.write().unwrap() = Some(store);
     }
 
     pub fn get_error_store(&self) -> Option<Arc<dyn ErrorStore>> {
@@ -393,5 +386,13 @@ impl Clone for SiddhiContext {
             default_disrupter_exception_handler: self.default_disrupter_exception_handler.clone(),
             dummy_field_siddhi_context_extensions: self.dummy_field_siddhi_context_extensions.clone(),
         }
+    }
+}
+
+impl std::fmt::Debug for SiddhiContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SiddhiContext")
+            .field("statistics_configuration", &self.statistics_configuration)
+            .finish()
     }
 }

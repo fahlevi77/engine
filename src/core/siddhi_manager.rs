@@ -10,7 +10,8 @@ use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app;
 use crate::core::executor::ScalarFunctionExecutor; // Added for UDFs
 use crate::core::DataSource; // Added for data sources
 // Placeholder for actual persistence store trait/type
-use crate::core::config::siddhi_context::{PersistenceStorePlaceholder, ConfigManagerPlaceholder, ExtensionClassPlaceholder, DataSourcePlaceholder};
+use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder, DataSourcePlaceholder};
+use crate::core::persistence::{PersistenceStore, IncrementalPersistenceStore};
 
 
 use std::collections::HashMap;
@@ -164,10 +165,8 @@ impl SiddhiManager {
     // pub fn set_data_source(&self, name: &str, ds_placeholder: DataSourcePlaceholder) -> Result<(), String> { ... }
 
 
-    pub fn set_persistence_store(&self, _ps_placeholder: PersistenceStorePlaceholder) -> Result<(), String> {
-        // self.siddhi_context.set_persistence_store(ps_placeholder);
-        println!("[SiddhiManager] set_persistence_store called (Placeholder)");
-        Ok(())
+    pub fn set_persistence_store(&self, store: Arc<dyn PersistenceStore>) {
+        self.siddhi_context.set_persistence_store(store);
     }
 
     pub fn set_config_manager(&self, _cm_placeholder: ConfigManagerPlaceholder) -> Result<(), String> {

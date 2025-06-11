@@ -62,7 +62,11 @@ impl SiddhiAppRuntime {
             Arc::clone(&api_siddhi_app),
             String::new(),
         );
-        let snapshot_service = Arc::new(SnapshotService::new(app_name.clone()));
+        let mut ss = SnapshotService::new(app_name.clone());
+        if let Some(store) = ctx.siddhi_context.get_persistence_store() {
+            ss.persistence_store = Some(store);
+        }
+        let snapshot_service = Arc::new(ss);
         ctx.set_snapshot_service(Arc::clone(&snapshot_service));
         let siddhi_app_context = Arc::new(ctx);
 
