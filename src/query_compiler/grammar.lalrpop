@@ -10,7 +10,9 @@ use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::execution::query::{Query};
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
-use crate::query_api::execution::query::input::{InputStream, SingleInputStream, JoinType};
+use crate::query_api::execution::query::input::{
+    InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
+};
 use crate::query_api::expression::{Expression, variable::Variable};
 use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
@@ -144,6 +146,33 @@ InputStreamRule: InputStream = {
             None,
             None,
         )
+    },
+
+    <start:Unit> "->" <next:Unit> <rest:("->" Unit)*> => {
+        let mut st = State::next(start, next);
+        for (_, u) in rest { st = State::next(st, u); }
+        InputStream::pattern_stream(st, None)
+    },
+    <start:Unit> "," <next:Unit> <rest:("," Unit)*> => {
+        let mut st = State::next(start, next);
+        for (_, u) in rest { st = State::next(st, u); }
+        InputStream::sequence_stream(st, None)
+    },
+};
+
+Unit: StateElement = {
+    "every" <u:BasicUnit> => State::every(u),
+    <u:BasicUnit> => u,
+};
+
+BasicUnit: StateElement = {
+    <alias:Ident> "=" <id:Ident> => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).as_ref(alias);
+        State::stream_element(si)
+    },
+    <id:Ident> => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new());
+        State::stream_element(si)
     },
 };
 

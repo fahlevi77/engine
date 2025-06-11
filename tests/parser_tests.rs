@@ -1,7 +1,7 @@
 use siddhi_rust::query_compiler::{parse_stream_definition, parse_table_definition, parse_window_definition, parse_query};
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
-use siddhi_rust::query_api::execution::query::input::{InputStream, JoinType};
+use siddhi_rust::query_api::execution::query::input::{InputStream, JoinType, StateInputStreamType};
 
 #[test]
 fn test_parse_stream_definition() {
@@ -69,5 +69,29 @@ fn test_parse_left_outer_join_query() {
             assert_eq!(j.join_type, JoinType::LeftOuterJoin);
         }
         _ => panic!("expected join"),
+    }
+}
+
+#[test]
+fn test_parse_pattern_query() {
+    let q = parse_query("from every e1=Stream1 -> e2=Stream2 select e1,e2 insert into Out").unwrap();
+    match q.get_input_stream().unwrap() {
+        InputStream::State(st) => {
+            assert_eq!(st.state_type, StateInputStreamType::Pattern);
+            assert_eq!(st.get_all_stream_ids(), vec!["Stream1", "Stream2"]);
+        }
+        _ => panic!("expected pattern state"),
+    }
+}
+
+#[test]
+fn test_parse_sequence_query() {
+    let q = parse_query("from every s1=StreamA, s2=StreamB select s1,s2 insert into O").unwrap();
+    match q.get_input_stream().unwrap() {
+        InputStream::State(st) => {
+            assert_eq!(st.state_type, StateInputStreamType::Sequence);
+            assert_eq!(st.get_all_stream_ids(), vec!["StreamA", "StreamB"]);
+        }
+        _ => panic!("expected sequence state"),
     }
 }
