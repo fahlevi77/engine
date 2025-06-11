@@ -1,5 +1,8 @@
 use crate::core::event::value::AttributeValue;
 use std::sync::RwLock;
+
+mod jdbc_table;
+pub use jdbc_table::JdbcTable;
 use std::fmt::Debug;
 
 /// Trait representing a table that can store rows of `AttributeValue`s.

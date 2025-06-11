@@ -100,7 +100,26 @@ impl SiddhiAppParser {
             builder.add_stream_junction(stream_id.clone(), stream_junction);
         }
 
-        // TableDefinitions, WindowDefinitions, AggregationDefinitions
+        // TableDefinitions
+        for (table_id, table_def) in &api_siddhi_app.table_definition_map {
+            builder.add_table_definition(Arc::clone(table_def));
+            let table: Arc<dyn crate::core::table::Table> = if let Some(store_ann) = table_def.abstract_definition.annotations.iter().find(|a| a.name == "store") {
+                if let Some(ds_el) = store_ann.elements.iter().find(|e| e.key == "data_source") {
+                    Arc::new(crate::core::table::JdbcTable::new(
+                        table_id.clone(),
+                        ds_el.value.clone(),
+                        siddhi_app_context.get_siddhi_context(),
+                    )?)
+                } else {
+                    Arc::new(crate::core::table::InMemoryTable::new())
+                }
+            } else {
+                Arc::new(crate::core::table::InMemoryTable::new())
+            };
+            siddhi_app_context.get_siddhi_context().add_table(table_id.clone(), table);
+        }
+
+        // WindowDefinitions, AggregationDefinitions
         for (window_id, window_def) in &api_siddhi_app.window_definition_map {
             builder.add_window_definition(Arc::clone(window_def));
             builder.add_window(
