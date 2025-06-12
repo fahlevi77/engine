@@ -9,6 +9,11 @@ use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use std::sync::Arc;
 use std::collections::HashMap;
+use siddhi_rust::core::util::parser::QueryParser;
+use siddhi_rust::query_api::execution::query::Query;
+use siddhi_rust::query_api::execution::query::input::stream::{InputStream, SingleInputStream, JoinType};
+use siddhi_rust::query_api::execution::query::input::state::{State, StateElement};
+use siddhi_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
 
 fn make_app_ctx() -> Arc<SiddhiAppContext> {
     Arc::new(SiddhiAppContext::new(
@@ -190,4 +195,138 @@ fn test_custom_udf_plus_one() {
     let exec = parse_expression(&expr, &ctx).unwrap();
     let res = exec.execute(None);
     assert_eq!(res, Some(AttributeValue::Int(5)));
+}
+
+#[test]
+fn test_join_query_parsing() {
+    let left_def = Arc::new(StreamDefinition::new("S1".to_string()).attribute("val".to_string(), AttrType::INT));
+    let right_def = Arc::new(StreamDefinition::new("S2".to_string()).attribute("val".to_string(), AttrType::INT));
+
+    let left_si = SingleInputStream::new_basic("S1".to_string(), false, false, None, Vec::new());
+    let right_si = SingleInputStream::new_basic("S2".to_string(), false, false, None, Vec::new());
+    let cond_expr = Expression::compare(
+        Expression::Variable(Variable::new("val".to_string()).of_stream("S1".to_string())),
+        CompareOp::Equal,
+        Expression::Variable(Variable::new("val".to_string()).of_stream("S2".to_string())),
+    );
+    let input = InputStream::join_stream(left_si, JoinType::InnerJoin, right_si, Some(cond_expr.clone()), None, None, None);
+    let mut selector = siddhi_rust::query_api::execution::query::selection::Selector::new();
+    let insert_action = siddhi_rust::query_api::execution::query::output::output_stream::InsertIntoStreamAction { target_id: "Out".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let out_stream = siddhi_rust::query_api::execution::query::output::output_stream::OutputStream::new(siddhi_rust::query_api::execution::query::output::output_stream::OutputStreamAction::InsertInto(insert_action), None);
+    let query = Query::query().from(input).select(selector).out_stream(out_stream);
+
+    let app_ctx = make_app_ctx();
+    let mut junctions = HashMap::new();
+    junctions.insert("S1".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S1".to_string(), Arc::clone(&left_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("S2".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S2".to_string(), Arc::clone(&right_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("Out".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
+
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    assert!(res.is_ok());
+
+    // Also ensure expression parsing works standalone
+    let mut left_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&left_def));
+    let mut right_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&right_def));
+    right_meta.apply_attribute_offset(1);
+    let mut map = HashMap::new();
+    map.insert("S1".to_string(), Arc::new(left_meta));
+    map.insert("S2".to_string(), Arc::new(right_meta));
+    let ctx = ExpressionParserContext {
+        siddhi_app_context: Arc::clone(&app_ctx),
+        siddhi_query_context: make_query_ctx("J"),
+        stream_meta_map: map,
+        table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
+        default_source: "S1".to_string(),
+        query_name: "J",
+    };
+    let exec = parse_expression(&cond_expr, &ctx).unwrap();
+    assert_eq!(exec.get_return_type(), AttrType::BOOL);
+}
+
+#[test]
+fn test_pattern_query_parsing() {
+    let a_def = Arc::new(StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT));
+    let b_def = Arc::new(StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT));
+    let a_si = SingleInputStream::new_basic("A".to_string(), false, false, None, Vec::new());
+    let b_si = SingleInputStream::new_basic("B".to_string(), false, false, None, Vec::new());
+    let sse1 = State::stream(a_si);
+    let sse2 = State::stream(b_si);
+    let next = State::next(StateElement::Stream(sse1), StateElement::Stream(sse2));
+    let state_stream = StateInputStream::sequence_stream(next, None);
+    let input = InputStream::State(Box::new(state_stream));
+    let mut selector = siddhi_rust::query_api::execution::query::selection::Selector::new();
+    let insert_action = siddhi_rust::query_api::execution::query::output::output_stream::InsertIntoStreamAction { target_id: "Out".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let out_stream = siddhi_rust::query_api::execution::query::output::output_stream::OutputStream::new(siddhi_rust::query_api::execution::query::output::output_stream::OutputStreamAction::InsertInto(insert_action), None);
+    let query = Query::query().from(input).select(selector).out_stream(out_stream);
+
+    let app_ctx = make_app_ctx();
+    let mut junctions = HashMap::new();
+    junctions.insert("A".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("A".to_string(), Arc::clone(&a_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("B".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("B".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("Out".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
+
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_table_in_expression_query() {
+    use siddhi_rust::query_api::definition::TableDefinition;
+    use siddhi_rust::core::table::{InMemoryTable, Table};
+
+    let s_def = Arc::new(StreamDefinition::new("S".to_string()).attribute("val".to_string(), AttrType::INT));
+    let t_def = Arc::new(TableDefinition::new("T".to_string()).attribute("val".to_string(), AttrType::INT));
+    let s_si = SingleInputStream::new_basic("S".to_string(), false, false, None, Vec::new());
+    let filter = Expression::in_op(Expression::Variable(Variable::new("val".to_string()).of_stream("S".to_string())), "T".to_string());
+    let filtered = s_si.filter(filter);
+    let input = InputStream::Single(filtered);
+    let selector = siddhi_rust::query_api::execution::query::selection::Selector::new();
+    let insert_action = siddhi_rust::query_api::execution::query::output::output_stream::InsertIntoStreamAction { target_id: "Out".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let out_stream = siddhi_rust::query_api::execution::query::output::output_stream::OutputStream::new(siddhi_rust::query_api::execution::query::output::output_stream::OutputStreamAction::InsertInto(insert_action), None);
+    let query = Query::query().from(input).select(selector).out_stream(out_stream);
+
+    let app_ctx = make_app_ctx();
+    let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
+    app_ctx.get_siddhi_context().add_table("T".to_string(), table);
+    let mut junctions = HashMap::new();
+    junctions.insert("S".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S".to_string(), Arc::clone(&s_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("Out".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
+    let mut table_defs = HashMap::new();
+    table_defs.insert("T".to_string(), t_def);
+
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs);
+    assert!(res.is_ok());
+}
+#[test]
+fn test_join_query_parsing_from_string() {
+    use siddhi_rust::query_compiler::{parse_query, parse_stream_definition};
+    use std::sync::Mutex;
+    let s1_def = Arc::new(parse_stream_definition("define stream S1 (val int)").unwrap());
+    let s2_def = Arc::new(parse_stream_definition("define stream S2 (val int)").unwrap());
+    let query = parse_query("from S1 join S2 on S1.val == S2.val select S1.val, S2.val insert into Out").unwrap();
+    let app_ctx = make_app_ctx();
+    let mut junctions = HashMap::new();
+    junctions.insert("S1".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S1".to_string(), Arc::clone(&s1_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("S2".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S2".to_string(), Arc::clone(&s2_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("Out".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_pattern_query_parsing_from_string() {
+    use siddhi_rust::query_compiler::{parse_query, parse_stream_definition};
+    use std::sync::Mutex;
+    let a_def = Arc::new(parse_stream_definition("define stream A (val int)").unwrap());
+    let b_def = Arc::new(parse_stream_definition("define stream B (val int)").unwrap());
+    let query = parse_query("from A -> B select A.val, B.val insert into Out").unwrap();
+    let app_ctx = make_app_ctx();
+    let mut junctions = HashMap::new();
+    junctions.insert("A".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("A".to_string(), Arc::clone(&a_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("B".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("B".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false, None))));
+    junctions.insert("Out".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    assert!(res.is_ok());
 }

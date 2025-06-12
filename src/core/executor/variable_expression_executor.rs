@@ -1,31 +1,35 @@
 // siddhi_rust/src/core/executor/variable_expression_executor.rs
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::event::complex_event::ComplexEvent; // Trait
+use crate::core::event::complex_event::ComplexEvent;
+use crate::core::event::state::state_event::StateEvent;
+use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-// Removed QueryApiVariable, SiddhiAppContext, VariablePosition, EventDataArrayType from direct use here
-// as the parser will now do the resolution and provide a direct index.
+use crate::core::util::siddhi_constants::{
+    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN, STREAM_ATTRIBUTE_TYPE_INDEX,
+    STREAM_ATTRIBUTE_INDEX_IN_TYPE,
+};
+use crate::query_api::definition::attribute::Type as ApiAttributeType;
 
 /// Executor that retrieves a variable's value from an event. Current impl is simplified.
 #[derive(Debug, Clone)]
 pub struct VariableExpressionExecutor {
-    // Index of the attribute in the event's primary data array.
-    // This simplification assumes a single data array per ComplexEvent relevant for this VEE.
-    // The actual array (output_data, before_window_data, etc.) and stream (for StateEvent)
-    // must be determined by the parser when creating this index.
-    pub attribute_index_in_data: usize,
+    /// Siddhi position array for locating the attribute within a `ComplexEvent`.
+    ///
+    /// `position[STREAM_EVENT_CHAIN_INDEX]`  - index of the stream event in a `StateEvent` chain.
+    /// `position[STREAM_EVENT_INDEX_IN_CHAIN]` - index within the chain if the stream has multiple
+    ///   events (not commonly used in this simplified implementation).
+    /// `position[STREAM_ATTRIBUTE_TYPE_INDEX]` - which data section to access (before window,
+    ///   output, etc.).
+    /// `position[STREAM_ATTRIBUTE_INDEX_IN_TYPE]` - attribute index within the selected section.
+    pub position: [i32; 4],
     pub return_type: ApiAttributeType,
-    pub attribute_name_for_debug: String, // For easier debugging
+    pub attribute_name_for_debug: String,
 }
 
 impl VariableExpressionExecutor {
-    pub fn new(
-        attribute_index_in_data: usize,
-        return_type: ApiAttributeType,
-        attribute_name_for_debug: String,
-    ) -> Self {
+    pub fn new(position: [i32; 4], return_type: ApiAttributeType, attribute_name_for_debug: String) -> Self {
         Self {
-            attribute_index_in_data,
+            position,
             return_type,
             attribute_name_for_debug,
         }
@@ -36,45 +40,21 @@ impl ExpressionExecutor for VariableExpressionExecutor {
     fn execute(&self, event_opt: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
         let complex_event = event_opt?;
 
-        // Simplified logic: Assumes the ComplexEvent's `get_output_data()` is the relevant array.
-        // This is a major simplification and will need to be made more sophisticated to handle:
-        // - Different event types (StreamEvent vs StateEvent)
-        // - Different data arrays within an event (beforeWindowData, onAfterWindowData, outputData for StreamEvent)
-        // - Correct indexing into StateEvent's StreamEvent array.
-        // - Accessing attributes from event tables or stores (AttributeDynamicResolveType).
-        // The `ExpressionParser` would need to create different kinds of VEEs or pass more detailed
-        // position information for this `execute` method to be truly general.
-        // For now, this matches the prompt's simplified VEE.
-        // MODIFICATION: Prioritize before_window_data for StreamEvents
-        if let Some(stream_event) = complex_event.as_any().downcast_ref::<crate::core::event::stream::stream_event::StreamEvent>() {
-            // For StreamEvent, try to access before_window_data first.
-            // This is typical for filters or expressions operating on incoming data.
-            if self.attribute_index_in_data < stream_event.before_window_data.len() {
-                return stream_event.before_window_data.get(self.attribute_index_in_data).cloned();
-            }
-            // Fallback for StreamEvent or if index is out of bounds for before_window_data:
-            // This could be an else if to check on_after_window_data or output_data based on context.
-            // For now, if not in before_window_data, try output_data (as original logic)
-            // This part needs to be very clear based on where the VEE is used (filter vs. projection)
-            // For the test_simple_filter_projection_query, filter variables are from input,
-            // projection variables are also from input (relative to SelectProcessor).
-            // So, `before_window_data` is likely the primary source for StreamEvents.
-            // If it's a projection operating *after* some processing has put data into output_data,
-            // then output_data would be the source.
-            // Let's assume for now that if it's a StreamEvent, we expect it in before_window_data
-            // for this VEE. If not found, it's an error or unexpected state for this VEE's role.
-            // So, removing the fallback to output_data for StreamEvent to make its role clearer.
-            // If specific VEEs need to access output_data of a StreamEvent, they might need a different setup.
-            return None; // Not found in before_window_data or index out of bounds
-        } else {
-            // For other ComplexEvent types (e.g. StateEvent, or if downcast fails),
-            // fall back to original output_data logic.
-            // This part also needs careful consideration for StateEvents.
-            if let Some(output_data) = complex_event.get_output_data() {
-                return output_data.get(self.attribute_index_in_data).cloned();
-            }
+        if let Some(stream_event) = complex_event.as_any().downcast_ref::<StreamEvent>() {
+            return stream_event
+                .get_attribute_by_position(&self.position)
+                .cloned();
         }
-        None
+
+        if let Some(state_event) = complex_event.as_any().downcast_ref::<StateEvent>() {
+            return state_event.get_attribute(&self.position).cloned();
+        }
+
+        // Fallback to whatever data the ComplexEvent exposes via `get_output_data`.
+        complex_event
+            .get_output_data()
+            .and_then(|d| d.get(self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] as usize))
+            .cloned()
     }
 
     fn get_return_type(&self) -> ApiAttributeType {
@@ -94,6 +74,10 @@ mod tests {
     use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
     use crate::core::event::stream::stream_event::StreamEvent; // Using StreamEvent as a concrete ComplexEvent
     use crate::core::event::value::AttributeValue;
+    use crate::core::util::siddhi_constants::{
+        BEFORE_WINDOW_DATA_INDEX, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
+        STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
+    };
     // ApiAttributeType is imported in the outer scope
     use std::sync::Arc;
     use crate::core::config::siddhi_app_context::SiddhiAppContext;
@@ -118,9 +102,9 @@ mod tests {
     #[test]
     fn test_variable_access_from_before_window_data_string() { // Renamed and adapted
         let exec = VariableExpressionExecutor::new(
-            0, // attribute_index_in_data (refers to index in before_window_data)
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
             ApiAttributeType::STRING,
-            "test_attr".to_string()
+            "test_attr".to_string(),
         );
         let event_data = vec![AttributeValue::String("val1".to_string())];
         // Use the new helper that populates before_window_data
@@ -133,9 +117,9 @@ mod tests {
     #[test]
     fn test_variable_access_from_before_window_data_int_out_of_bounds() { // Renamed and adapted
         let exec = VariableExpressionExecutor::new(
-            1, // attribute_index_in_data (out of bounds for event below)
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 1],
             ApiAttributeType::INT,
-            "test_attr_int".to_string()
+            "test_attr_int".to_string(),
         );
         let event_data = vec![AttributeValue::Int(123)]; // Only one element at index 0
         // Use the new helper that populates before_window_data
@@ -194,7 +178,9 @@ mod tests {
         }
 
         let exec = VariableExpressionExecutor::new(
-            0, ApiAttributeType::STRING, "fallback_attr".to_string()
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
+            ApiAttributeType::STRING,
+            "fallback_attr".to_string(),
         );
         let mock_event_data = vec![AttributeValue::String("fallback_val".to_string())];
         let mock_event = MockComplexEvent {
@@ -210,7 +196,9 @@ mod tests {
     #[test]
     fn test_variable_access_no_event() {
         let exec = VariableExpressionExecutor::new(
-            0, ApiAttributeType::STRING, "test_attr".to_string()
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
+            ApiAttributeType::STRING,
+            "test_attr".to_string(),
         );
         let result = exec.execute(None);
         assert_eq!(result, None);
@@ -219,7 +207,9 @@ mod tests {
      #[test]
     fn test_variable_clone() { // This test needs to be re-evaluated based on new execute logic
         let exec = VariableExpressionExecutor::new(
-            0, ApiAttributeType::STRING, "test_attr_clone".to_string()
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
+            ApiAttributeType::STRING,
+            "test_attr_clone".to_string(),
         );
         let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
         let cloned_exec = exec.clone_executor(&app_ctx_placeholder);

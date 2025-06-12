@@ -26,6 +26,7 @@ use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
 use crate::core::event::state::meta_state_event::MetaStateEvent;
 use crate::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
 use crate::core::query::processor::ProcessingMode;
+use crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX;
 
 
 use std::sync::Arc;
@@ -133,33 +134,33 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 .as_deref()
                 .unwrap_or(&context.default_source);
 
-            let mut found: Option<(usize, ApiAttributeType)> = None;
+            let mut found: Option<([i32; 4], ApiAttributeType)> = None;
             if let Some(meta) = context.stream_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((*idx, t.clone()));
+                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
                 }
             } else if let Some(meta) = context.table_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((*idx, t.clone()));
+                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
                 }
             } else if let Some(meta) = context.window_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((*idx, t.clone()));
+                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
                 }
             } else if let Some(state_meta) = context.state_meta_map.get(stream_id) {
-                for opt_meta in &state_meta.meta_stream_events {
+                for (pos, opt_meta) in state_meta.meta_stream_events.iter().enumerate() {
                     if let Some(m) = opt_meta {
                         if let Some((idx, t)) = m.find_attribute_info(attribute_name) {
-                            found = Some((*idx, t.clone()));
+                            found = Some(([pos as i32, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
                             break;
                         }
                     }
                 }
             }
 
-            if let Some((index, attr_type)) = found {
+            if let Some((position, attr_type)) = found {
                 return Ok(Box::new(VariableExpressionExecutor::new(
-                    index,
+                    position,
                     attr_type,
                     attribute_name.to_string(),
                 )));
