@@ -15,6 +15,14 @@ use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use siddhi_rust::core::query::processor::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
+use siddhi_rust::core::event::state::{MetaStateEvent, StateEvent};
+use siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
+use siddhi_rust::core::event::stream::stream_event::StreamEvent;
+use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use siddhi_rust::core::query::processor::{Processor, ProcessingMode};
+use siddhi_rust::core::event::complex_event::ComplexEvent;
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 
 fn setup_context() -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJunction>>>) {
     let siddhi_context = Arc::new(SiddhiContext::new());
@@ -138,4 +146,110 @@ fn test_left_outer_join_runtime() {
 
     let out = collected.lock().unwrap().clone();
     assert_eq!(out, vec![vec![AttributeValue::Int(2), AttributeValue::Null]]);
+}
+
+#[derive(Debug)]
+struct CollectStateEvents {
+    events: Arc<Mutex<Vec<(Option<i32>, Option<i32>)>>>,
+}
+
+impl Processor for CollectStateEvents {
+    fn process(&self, chunk: Option<Box<dyn ComplexEvent>>) {
+        let mut cur = chunk;
+        while let Some(mut ce) = cur {
+            cur = ce.set_next(None);
+            if let Some(se) = ce.as_any().downcast_ref::<StateEvent>() {
+                let l = se
+                    .get_stream_event(0)
+                    .and_then(|e| match e.before_window_data.get(0) {
+                        Some(AttributeValue::Int(v)) => Some(*v),
+                        _ => None,
+                    });
+                let r = se
+                    .get_stream_event(1)
+                    .and_then(|e| match e.before_window_data.get(0) {
+                        Some(AttributeValue::Int(v)) => Some(*v),
+                        _ => None,
+                    });
+                self.events.lock().unwrap().push((l, r));
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> { None }
+    fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
+    fn clone_processor(&self, _ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(CollectStateEvents { events: Arc::clone(&self.events) })
+    }
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> { Arc::new(SiddhiAppContext::new(Arc::new(SiddhiContext::new()), "T".to_string(), Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("T".to_string())), String::new())) }
+    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
+    fn is_stateful(&self) -> bool { false }
+}
+
+fn setup_state_join(join_type: JoinType) -> (Arc<Mutex<JoinProcessorSide>>, Arc<Mutex<JoinProcessorSide>>, Arc<Mutex<Vec<(Option<i32>, Option<i32>)>>>) {
+    let siddhi_context = Arc::new(SiddhiContext::new());
+    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("App".to_string()));
+    let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&siddhi_context), "App".to_string(), Arc::clone(&app), String::new()));
+    let query_ctx = Arc::new(siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(Arc::clone(&app_ctx), "q".to_string(), None));
+
+    let left_def = Arc::new(StreamDefinition::new("Left".to_string()).attribute("id".to_string(), AttrType::INT));
+    let right_def = Arc::new(StreamDefinition::new("Right".to_string()).attribute("id".to_string(), AttrType::INT));
+
+    let left_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&left_def));
+    let mut right_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&right_def));
+    right_meta.apply_attribute_offset(left_def.abstract_definition.attribute_list.len());
+
+    let mut mse = MetaStateEvent::new(2);
+    mse.meta_stream_events[0] = Some(left_meta);
+    mse.meta_stream_events[1] = Some(right_meta);
+
+    let mut stream_meta = HashMap::new();
+    stream_meta.insert("Left".to_string(), Arc::new(mse.get_meta_stream_event(0).unwrap().clone()));
+    stream_meta.insert("Right".to_string(), Arc::new(mse.get_meta_stream_event(1).unwrap().clone()));
+
+    let ctx = ExpressionParserContext {
+        siddhi_app_context: Arc::clone(&app_ctx),
+        siddhi_query_context: Arc::clone(&query_ctx),
+        stream_meta_map: stream_meta,
+        table_meta_map: HashMap::new(),
+        window_meta_map: HashMap::new(),
+        state_meta_map: HashMap::new(),
+        default_source: "Left".to_string(),
+        query_name: "q",
+    };
+
+    let cond_exec = None;
+
+    let join = Arc::new(Mutex::new(JoinProcessor::new(join_type, cond_exec, mse, Arc::clone(&app_ctx), Arc::clone(&query_ctx))));
+    let left = JoinProcessor::create_side_processor(&join, JoinSide::Left);
+    let right = JoinProcessor::create_side_processor(&join, JoinSide::Right);
+
+    let collected = Arc::new(Mutex::new(Vec::new()));
+    let collector = Arc::new(Mutex::new(CollectStateEvents { events: Arc::clone(&collected) }));
+    left.lock().unwrap().set_next_processor(Some(collector));
+
+    (left, right, collected)
+}
+
+#[test]
+fn test_state_join_inner() {
+    let (left, right, out) = setup_state_join(JoinType::InnerJoin);
+    let mut le = StreamEvent::new(0, 1, 0, 0);
+    le.before_window_data[0] = AttributeValue::Int(1);
+    left.lock().unwrap().process(Some(Box::new(le)));
+    let mut re = StreamEvent::new(0, 1, 0, 0);
+    re.before_window_data[0] = AttributeValue::Int(1);
+    right.lock().unwrap().process(Some(Box::new(re)));
+    let res = out.lock().unwrap().clone();
+    assert_eq!(res, vec![(Some(1), Some(1))]);
+}
+
+#[test]
+fn test_state_join_left_outer() {
+    let (left, _right, out) = setup_state_join(JoinType::LeftOuterJoin);
+    let mut le = StreamEvent::new(0, 1, 0, 0);
+    le.before_window_data[0] = AttributeValue::Int(2);
+    left.lock().unwrap().process(Some(Box::new(le)));
+    let res = out.lock().unwrap().clone();
+    assert_eq!(res, vec![(Some(2), None)]);
 }
