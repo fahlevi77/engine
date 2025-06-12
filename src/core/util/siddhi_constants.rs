@@ -22,6 +22,9 @@ pub const LAST: i32 = -2;
 pub const ANY: i32 = -1;
 pub const UNKNOWN_STATE: i32 = -1;
 
+/// Delimiter used when constructing compound keys (e.g., for group-by).
+pub const KEY_DELIMITER: &str = ":-:";
+
 // When additional constants become necessary they should be added here to keep
 // the mapping with the Java implementation explicit.
 

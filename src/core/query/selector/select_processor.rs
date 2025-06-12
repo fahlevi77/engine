@@ -12,9 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
 use std::collections::VecDeque; // Using VecDeque for efficient chunk building
 
-// Placeholders (assuming they are defined elsewhere or will be)
-#[derive(Debug, Clone, Default)] pub struct GroupByKeyGeneratorPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct OrderByEventComparatorPlaceholder {}
+use super::{GroupByKeyGenerator, OrderByEventComparator};
 // OutputRateLimiter is the actual next processor for QuerySelector in Java
 #[derive(Debug)] pub struct OutputRateLimiterPlaceholder { pub next_processor: Option<Arc<Mutex<dyn Processor>>>, pub siddhi_app_context: Arc<SiddhiAppContext> }
 impl OutputRateLimiterPlaceholder {
@@ -45,9 +43,9 @@ pub struct SelectProcessor {
     pub output_stream_definition: Arc<ApiStreamDefinition>,
     having_condition_executor: Option<Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>>, // Changed placeholder
     is_group_by: bool,
-    group_by_key_generator: Option<GroupByKeyGeneratorPlaceholder>,
+    group_by_key_generator: Option<GroupByKeyGenerator>,
     is_order_by: bool,
-    order_by_event_comparator: Option<OrderByEventComparatorPlaceholder>,
+    order_by_event_comparator: Option<OrderByEventComparator>,
     batching_enabled: bool,
     limit: Option<u64>,
     offset: Option<u64>,
@@ -63,8 +61,8 @@ impl SelectProcessor {
         output_attribute_processors: Vec<OutputAttributeProcessor>,
         output_stream_definition: Arc<ApiStreamDefinition>,
         having_executor: Option<Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>>,
-        group_by_key_generator: Option<GroupByKeyGeneratorPlaceholder>,
-        order_by_comparator: Option<OrderByEventComparatorPlaceholder>,
+        group_by_key_generator: Option<GroupByKeyGenerator>,
+        order_by_comparator: Option<OrderByEventComparator>,
         batching_enabled: Option<bool>,
     ) -> Self {
         let query_name = siddhi_query_context.name.clone();
@@ -93,80 +91,105 @@ impl SelectProcessor {
 
 impl Processor for SelectProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
-        // Simplified process: iterate, transform, collect, then link and pass.
-        // Does not handle batching, groupby, aggregation, having (fully), orderby, limit, offset.
         let mut input_event_opt = complex_event_chunk;
-        let mut processed_events: Vec<Box<dyn ComplexEvent>> = Vec::new();
+        let mut collected: Vec<Box<dyn ComplexEvent>> = Vec::new();
+        let mut group_map: std::collections::HashMap<String, Box<dyn ComplexEvent>> = std::collections::HashMap::new();
 
-        while let Some(mut current_event_box) = input_event_opt {
-            let next_event_in_original_chunk = current_event_box.set_next(None); // Detach
+        while let Some(mut event_box) = input_event_opt {
+            let next = event_box.set_next(None);
+            let etype = event_box.get_event_type();
 
-            let event_type = current_event_box.get_event_type();
-
-            // Filter by event type (CURRENT/EXPIRED flags)
-            let should_process_type = match event_type {
-                ComplexEventType::Current if self.current_on => true,
-                ComplexEventType::Expired if self.expired_on => true,
-                ComplexEventType::Reset => true, // Resets often pass through for aggregators
+            let allowed = match etype {
+                ComplexEventType::Current => self.current_on,
+                ComplexEventType::Expired => self.expired_on,
+                ComplexEventType::Reset => true,
                 _ => false,
             };
-
-            if !should_process_type && event_type != ComplexEventType::Reset {
-                input_event_opt = next_event_in_original_chunk;
+            if !allowed && etype != ComplexEventType::Reset {
+                input_event_opt = next;
                 continue;
             }
 
-            // TODO: StateEventPopulater logic if applicable (skipped for now)
-
-            // Apply attribute processors to generate output data
-            let mut new_output_data = Vec::with_capacity(self.output_attribute_processors.len());
+            let mut out = Vec::with_capacity(self.output_attribute_processors.len());
             for oap in &self.output_attribute_processors {
-                new_output_data.push(oap.process(Some(current_event_box.as_ref())));
+                out.push(oap.process(Some(event_box.as_ref())));
+            }
+            event_box.set_output_data(Some(out));
+            if etype != ComplexEventType::Reset {
+                event_box.set_event_type(etype);
             }
 
-            // Set the new output data on the event
-            current_event_box.set_output_data(Some(new_output_data));
-            // Preserve original event type unless it is a RESET
-            if event_type != ComplexEventType::Reset {
-                 current_event_box.set_event_type(event_type);
-            }
-            // Timestamp usually remains the same or is explicitly set by a projection.
-
-            // Apply HAVING condition if present
             if let Some(ref having_exec) = self.having_condition_executor {
-                let passes_having = match having_exec.execute(Some(current_event_box.as_ref())) {
+                let pass = match having_exec.execute(Some(event_box.as_ref())) {
                     Some(AttributeValue::Bool(true)) => true,
-                    Some(AttributeValue::Bool(false)) | Some(AttributeValue::Null) | None => false,
                     _ => false,
                 };
-                if !passes_having {
-                    input_event_opt = next_event_in_original_chunk;
+                if !pass {
+                    input_event_opt = next;
                     continue;
                 }
             }
 
-            processed_events.push(current_event_box);
-            input_event_opt = next_event_in_original_chunk;
+            if self.is_group_by {
+                let key = self
+                    .group_by_key_generator
+                    .as_ref()
+                    .and_then(|g| g.construct_event_key(event_box.as_ref()))
+                    .unwrap_or_else(|| "".to_string());
+                group_map.insert(key, event_box);
+            } else {
+                collected.push(event_box);
+            }
+
+            input_event_opt = next;
         }
 
-        // Reconstruct linked list from Vec (maintaining order)
-        let mut new_chunk_head: Option<Box<dyn ComplexEvent>> = None;
-        let mut tail_next_ref: &mut Option<Box<dyn ComplexEvent>> = &mut new_chunk_head;
-        for event_box in processed_events {
-            *tail_next_ref = Some(event_box);
-            if let Some(ref mut current_tail) = *tail_next_ref {
-                tail_next_ref = current_tail.mut_next_ref_option();
+        if self.is_group_by {
+            for (_, ev) in group_map.into_iter() {
+                collected.push(ev);
             }
         }
 
-        if new_chunk_head.is_some() {
-            if let Some(ref next_proc) = self.meta.next_processor {
-                next_proc.lock().unwrap().process(new_chunk_head);
+        if self.is_order_by {
+            if let Some(ref cmp) = self.order_by_event_comparator {
+                collected.sort_by(|a, b| cmp.compare(a.as_ref(), b.as_ref()));
             }
-        } else { // Pass on empty chunk if nothing resulted but there's a next processor
-             if let Some(ref next_proc) = self.meta.next_processor {
-                next_proc.lock().unwrap().process(None);
+        }
+
+        // Apply offset and limit
+        let mut final_events = Vec::new();
+        let mut seen = 0u64;
+        let offset = self.offset.unwrap_or(0);
+        let mut remaining = self.limit.unwrap_or(u64::MAX);
+
+        for ev in collected.into_iter() {
+            let etype = ev.get_event_type();
+            let countable = matches!(etype, ComplexEventType::Current | ComplexEventType::Expired);
+            if countable {
+                if seen < offset {
+                    seen += 1;
+                    continue;
+                }
+                if remaining == 0 {
+                    break;
+                }
+                remaining -= 1;
             }
+            final_events.push(ev);
+        }
+
+        // Re-link chain
+        let mut head: Option<Box<dyn ComplexEvent>> = None;
+        let mut tail_ref = &mut head;
+        for mut ev in final_events {
+            *tail_ref = Some(ev);
+            if let Some(ref mut t) = *tail_ref {
+                tail_ref = t.mut_next_ref_option();
+            }
+        }
+
+        if let Some(ref next_proc) = self.meta.next_processor {
+            next_proc.lock().unwrap().process(head);
         }
     }
 

@@ -80,3 +80,18 @@ impl AttributeValue {
     // pub fn as_i32(&self) -> Option<i32> { ... }
     // ... and so on for other types
 }
+
+impl fmt::Display for AttributeValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AttributeValue::String(s) => write!(f, "{}", s),
+            AttributeValue::Int(i) => write!(f, "{}", i),
+            AttributeValue::Long(l) => write!(f, "{}", l),
+            AttributeValue::Float(v) => write!(f, "{}", v),
+            AttributeValue::Double(v) => write!(f, "{}", v),
+            AttributeValue::Bool(b) => write!(f, "{}", b),
+            AttributeValue::Object(_) => write!(f, "<object>"),
+            AttributeValue::Null => write!(f, "null"),
+        }
+    }
+}

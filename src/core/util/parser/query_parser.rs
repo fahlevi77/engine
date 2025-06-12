@@ -19,6 +19,7 @@ use crate::core::query::processor::stream::filter::FilterProcessor;
 use crate::core::query::processor::stream::window::create_window_processor;
 use crate::core::query::selector::select_processor::SelectProcessor;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
+use crate::core::query::selector::{GroupByKeyGenerator, OrderByEventComparator};
 use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
 use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
@@ -309,14 +310,46 @@ impl QueryParser {
         }
         let select_output_stream_def = Arc::new(temp_def);
 
+        let having_executor = if let Some(expr) = &api_selector.having_expression {
+            Some(parse_expression(expr, &expr_parser_context)? )
+        } else { None };
+
+        let mut group_execs = Vec::new();
+        for var in &api_selector.group_by_list {
+            let expr = ApiExpression::Variable(var.clone());
+            group_execs.push(parse_expression(&expr, &expr_parser_context)?);
+        }
+        let group_by_key_generator = if group_execs.is_empty() {
+            None
+        } else {
+            Some(GroupByKeyGenerator::new(group_execs))
+        };
+
+        let mut order_execs = Vec::new();
+        let mut order_flags = Vec::new();
+        for ob in &api_selector.order_by_list {
+            let expr = ApiExpression::Variable(ob.get_variable().clone());
+            order_execs.push(parse_expression(&expr, &expr_parser_context)?);
+            order_flags.push(*ob.get_order() == crate::query_api::execution::query::selection::order_by_attribute::Order::Asc);
+        }
+        let order_by_comparator = if order_execs.is_empty() {
+            None
+        } else {
+            Some(OrderByEventComparator::new(order_execs, order_flags))
+        };
+
         let select_processor = Arc::new(Mutex::new(SelectProcessor::new(
-            api_selector, // Pass the API selector for limit/offset etc.
-            true, true, // current_on, expired_on defaults for now
+            api_selector,
+            true,
+            true,
             Arc::clone(siddhi_app_context),
             Arc::clone(&siddhi_query_context),
             oaps,
             select_output_stream_def,
-            None, None, None, None, // Placeholders for having, groupby, orderby, batching
+            having_executor,
+            group_by_key_generator,
+            order_by_comparator,
+            None,
         )));
         link_processor(select_processor);
 
