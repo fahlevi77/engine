@@ -89,7 +89,7 @@ fn test_runtime_persist_restore() {
 
     let rev = runtime.persist().unwrap();
     handler.lock().unwrap().send_event_with_timestamp(2, vec![AttributeValue::Int(3)]).unwrap();
-    assert_eq!(*count.lock().unwrap(), 3);
+    assert_eq!(*count.lock().unwrap(), 4);
 
     runtime.restore_revision(&rev).unwrap();
     let restored = svc.snapshot();
@@ -97,5 +97,5 @@ fn test_runtime_persist_restore() {
     *count.lock().unwrap() = restored_val;
 
     handler.lock().unwrap().send_event_with_timestamp(3, vec![AttributeValue::Int(4)]).unwrap();
-    assert_eq!(*count.lock().unwrap(), 3);
+    assert_eq!(*count.lock().unwrap(), 4);
 }

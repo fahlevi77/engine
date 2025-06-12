@@ -7,6 +7,7 @@ use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expre
 use std::sync::{Arc, Mutex};
 use crate::core::util::scheduler::{Scheduler, Schedulable};
 use crate::core::event::stream::stream_event::StreamEvent;
+use std::collections::VecDeque;
 use crate::core::event::complex_event::ComplexEventType;
 
 pub trait WindowProcessor: Processor {}
@@ -15,11 +16,12 @@ pub trait WindowProcessor: Processor {}
 pub struct LengthWindowProcessor {
     meta: CommonProcessorMeta,
     pub length: usize,
+    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
 }
 
 impl LengthWindowProcessor {
     pub fn new(length: usize, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
-        Self { meta: CommonProcessorMeta::new(app_ctx, query_ctx), length }
+        Self { meta: CommonProcessorMeta::new(app_ctx, query_ctx), length, buffer: Arc::new(Mutex::new(VecDeque::new())) }
     }
 
     pub fn from_handler(
@@ -49,7 +51,36 @@ impl LengthWindowProcessor {
 impl Processor for LengthWindowProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         if let Some(ref next) = self.meta.next_processor {
-            next.lock().unwrap().process(complex_event_chunk);
+            if let Some(ref chunk) = complex_event_chunk {
+                let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+                while let Some(ev) = current_opt {
+                    if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                        let mut expired: Option<Box<dyn ComplexEvent>> = None;
+                        {
+                            let mut buf = self.buffer.lock().unwrap();
+                            if buf.len() >= self.length {
+                                if let Some(old) = buf.pop_front() {
+                                    let mut ex = old.as_ref().clone_without_next();
+                                    ex.set_event_type(ComplexEventType::Expired);
+                                    ex.set_timestamp(se.timestamp);
+                                    expired = Some(Box::new(ex));
+                                }
+                            }
+                            buf.push_back(Arc::new(se.clone_without_next()));
+                        }
+                        if let Some(mut ex) = expired {
+                            let tail = ex.mut_next_ref_option();
+                            *tail = Some(Box::new(se.clone_without_next()));
+                            next.lock().unwrap().process(Some(ex));
+                        } else {
+                            next.lock().unwrap().process(Some(Box::new(se.clone_without_next())));
+                        }
+                    }
+                    current_opt = ev.get_next();
+                }
+            } else {
+                next.lock().unwrap().process(None);
+            }
         }
     }
 
@@ -81,12 +112,18 @@ pub struct TimeWindowProcessor {
     meta: CommonProcessorMeta,
     pub duration_ms: i64,
     scheduler: Option<Arc<Scheduler>>,
+    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
 }
 
 impl TimeWindowProcessor {
     pub fn new(duration_ms: i64, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
         let scheduler = app_ctx.get_scheduler();
-        Self { meta: CommonProcessorMeta::new(app_ctx, query_ctx), duration_ms, scheduler }
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            duration_ms,
+            scheduler,
+            buffer: Arc::new(Mutex::new(VecDeque::new())),
+        }
     }
 
     pub fn from_handler(
@@ -113,17 +150,28 @@ impl TimeWindowProcessor {
 
 #[derive(Debug)]
 struct ExpireTask {
-    event: StreamEvent,
+    event: Arc<StreamEvent>,
+    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
     next: Option<Arc<Mutex<dyn Processor>>>,
 }
 
 impl Schedulable for ExpireTask {
     fn on_time(&self, timestamp: i64) {
-        let mut ev = self.event.clone_without_next();
-        ev.set_event_type(ComplexEventType::Expired);
-        ev.set_timestamp(timestamp);
-        if let Some(ref next) = self.next {
-            next.lock().unwrap().process(Some(Box::new(ev)));
+        let ev_arc = {
+            let mut buf = self.buffer.lock().unwrap();
+            if let Some(pos) = buf.iter().position(|e| Arc::ptr_eq(e, &self.event)) {
+                buf.remove(pos)
+            } else {
+                None
+            }
+        };
+        if let Some(ev_arc) = ev_arc {
+            let mut ev = ev_arc.as_ref().clone_without_next();
+            ev.set_event_type(ComplexEventType::Expired);
+            ev.set_timestamp(timestamp);
+            if let Some(ref next) = self.next {
+                next.lock().unwrap().process(Some(Box::new(ev)));
+            }
         }
     }
 }
@@ -136,7 +184,16 @@ impl Processor for TimeWindowProcessor {
                     let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
                     while let Some(ev) = current_opt {
                         if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
-                            let task = ExpireTask { event: se.clone_without_next(), next: Some(Arc::clone(next)) };
+                            let arc = Arc::new(se.clone_without_next());
+                            {
+                                let mut buf = self.buffer.lock().unwrap();
+                                buf.push_back(Arc::clone(&arc));
+                            }
+                            let task = ExpireTask {
+                                event: Arc::clone(&arc),
+                                buffer: Arc::clone(&self.buffer),
+                                next: Some(Arc::clone(next)),
+                            };
                             scheduler.notify_at(se.timestamp + self.duration_ms, Arc::new(task));
                         }
                         current_opt = ev.get_next();
