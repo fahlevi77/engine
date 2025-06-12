@@ -126,9 +126,9 @@ impl Processor for SelectProcessor {
 
             // Set the new output data on the event
             current_event_box.set_output_data(Some(new_output_data));
-            // Ensure event type is CURRENT after projection, unless it was a RESET
+            // Preserve original event type unless it is a RESET
             if event_type != ComplexEventType::Reset {
-                 current_event_box.set_event_type(ComplexEventType::Current);
+                 current_event_box.set_event_type(event_type);
             }
             // Timestamp usually remains the same or is explicitly set by a projection.
 

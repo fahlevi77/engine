@@ -29,7 +29,7 @@ pub struct SiddhiAppRuntime {
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub input_manager: Arc<InputManager>,
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
-    pub scheduler: Option<crate::core::util::Scheduler>,
+    pub scheduler: Option<Arc<crate::core::util::Scheduler>>,
     pub aggregation_map: HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
     // TODO: Add other runtime component maps (tables, windows, partitions, triggers)
     // These would be moved from SiddhiAppRuntimeBuilder during the build() process.
@@ -62,6 +62,12 @@ impl SiddhiAppRuntime {
             Arc::clone(&api_siddhi_app),
             String::new(),
         );
+        let scheduler = if let Some(exec) = ctx.get_scheduled_executor_service() {
+            Arc::new(crate::core::util::Scheduler::new(Arc::clone(&exec.executor)))
+        } else {
+            Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default())))
+        };
+        ctx.set_scheduler(Arc::clone(&scheduler));
         let mut ss = SnapshotService::new(app_name.clone());
         if let Some(store) = ctx.siddhi_context.get_persistence_store() {
             ss.persistence_store = Some(store);

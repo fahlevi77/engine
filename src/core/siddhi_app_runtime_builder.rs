@@ -101,15 +101,10 @@ impl SiddhiAppRuntimeBuilder {
             self.stream_junction_map.clone(),
         );
 
-        let scheduler = if let Some(exec) = self
+        let scheduler = self
             .siddhi_app_context
-            .get_scheduled_executor_service()
-        {
-            Some(crate::core::util::Scheduler::new(Arc::clone(&exec.executor)))
-        } else {
-            let exec = Arc::new(crate::core::util::ExecutorService::default());
-            Some(crate::core::util::Scheduler::new(exec))
-        };
+            .get_scheduler()
+            .unwrap_or_else(|| Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default()))));
 
         let mut aggregation_map = HashMap::new();
         for (id, _def) in &self.aggregation_definition_map {
@@ -124,7 +119,7 @@ impl SiddhiAppRuntimeBuilder {
             stream_junction_map: self.stream_junction_map,
             input_manager: Arc::new(input_manager),
             query_runtimes: self.query_runtimes,
-            scheduler,
+            scheduler: Some(scheduler),
             aggregation_map,
             // Initialize other runtime fields (tables, windows, partitions, triggers)
             // These would typically be moved from the builder to the runtime instance.

@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use super::siddhi_context::SiddhiContext;
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::id_generator::IdGenerator;
+use crate::core::util::Scheduler;
 use std::thread_local;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
@@ -58,6 +59,7 @@ pub struct SiddhiAppContext {
     // Threading and scheduling (using placeholders)
     pub executor_service: Option<Arc<ExecutorService>>, // General purpose thread pool for the Siddhi App.
     pub scheduled_executor_service: Option<Arc<crate::core::util::ScheduledExecutorService>>, // Thread pool for scheduled tasks.
+    pub scheduler: Option<Arc<Scheduler>>, // Exposed scheduler for timers
 
     // External references and lifecycle management (using placeholders)
     // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
@@ -138,6 +140,7 @@ impl SiddhiAppContext {
             statistics_manager: None, // Initialized later in Java
             executor_service: None,
             scheduled_executor_service: None,
+            scheduler: None,
             // external_referenced_holders: Vec::new(),
             // trigger_holders: Vec::new(),
             snapshot_service: None,
@@ -247,6 +250,14 @@ impl SiddhiAppContext {
 
     pub fn set_scheduled_executor_service(&mut self, service: Arc<crate::core::util::ScheduledExecutorService>) {
         self.scheduled_executor_service = Some(service);
+    }
+
+    pub fn get_scheduler(&self) -> Option<Arc<Scheduler>> {
+        self.scheduler.as_ref().cloned()
+    }
+
+    pub fn set_scheduler(&mut self, scheduler: Arc<Scheduler>) {
+        self.scheduler = Some(scheduler);
     }
 
     pub fn get_timestamp_generator(&self) -> &TimestampGeneratorPlaceholder {
