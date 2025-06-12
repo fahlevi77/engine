@@ -201,35 +201,82 @@ impl QueryParser {
             }
             ApiInputStream::State(state_stream) => {
                 use crate::query_api::execution::query::input::state::state_element::StateElement;
-                use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
+                use crate::query_api::execution::query::input::state::logical_state_element::Type as ApiLogicalType;
+                use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide, LogicalProcessor, LogicalType};
 
-                // Only support simple Next(Stream, Stream)
-                let (first_id, second_id) = if let StateElement::Next(next_elem) = state_stream.state_element.as_ref() {
-                    if let (StateElement::Stream(s1), StateElement::Stream(s2)) = (&*next_elem.state_element, &*next_elem.next_state_element) {
-                        (s1.get_single_input_stream().get_stream_id_str().to_string(),
-                         s2.get_single_input_stream().get_stream_id_str().to_string())
-                    } else {
-                        return Err(format!("Query '{}': Only simple two-stream Next patterns supported", query_name));
+                fn extract_stream_state<'a>(se: &'a StateElement) -> Option<&'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement> {
+                    match se {
+                        StateElement::Stream(s) => Some(s),
+                        StateElement::Every(ev) => extract_stream_state(&ev.state_element),
+                        _ => None,
                     }
-                } else {
-                    return Err(format!("Query '{}': Only Next pattern supported", query_name));
+                }
+
+                enum StateRuntimeKind {
+                    Sequence { first_id: String, second_id: String, seq_type: SequenceType },
+                    Logical { first_id: String, second_id: String, logical_type: LogicalType },
+                }
+
+                let runtime_kind = match state_stream.state_element.as_ref() {
+                    StateElement::Next(next_elem) => {
+                        let s1 = extract_stream_state(&next_elem.state_element).ok_or_else(||
+                            format!("Query '{}': Unsupported Next pattern structure", query_name))?;
+                        let s2 = extract_stream_state(&next_elem.next_state_element).ok_or_else(||
+                            format!("Query '{}': Unsupported Next pattern structure", query_name))?;
+                        let seq_type = match state_stream.state_type {
+                            crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
+                            crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
+                        };
+                        StateRuntimeKind::Sequence {
+                            first_id: s1.get_single_input_stream().get_stream_id_str().to_string(),
+                            second_id: s2.get_single_input_stream().get_stream_id_str().to_string(),
+                            seq_type,
+                        }
+                    }
+                    StateElement::Logical(log_elem) => {
+                        let s1 = extract_stream_state(&log_elem.stream_state_element_1).ok_or_else(||
+                            format!("Query '{}': Unsupported Logical pattern structure", query_name))?;
+                        let s2 = extract_stream_state(&log_elem.stream_state_element_2).ok_or_else(||
+                            format!("Query '{}': Unsupported Logical pattern structure", query_name))?;
+                        let logical_type = match log_elem.logical_type {
+                            ApiLogicalType::And => LogicalType::And,
+                            ApiLogicalType::Or => LogicalType::Or,
+                        };
+                        StateRuntimeKind::Logical {
+                            first_id: s1.get_single_input_stream().get_stream_id_str().to_string(),
+                            second_id: s2.get_single_input_stream().get_stream_id_str().to_string(),
+                            logical_type,
+                        }
+                    }
+                    _ => {
+                        return Err(format!("Query '{}': Unsupported state element", query_name));
+                    }
                 };
 
-                let first_junction = stream_junction_map.get(&first_id).ok_or_else(|| format!("Input stream '{}' not found", first_id))?.clone();
-                let second_junction = stream_junction_map.get(&second_id).ok_or_else(|| format!("Input stream '{}' not found", second_id))?.clone();
+                let (first_junction, second_junction, first_len, second_len, mut stream_meta_map, first_id_clone, second_id_clone) = {
+                    let fid_str = match &runtime_kind {
+                        StateRuntimeKind::Sequence{first_id, ..} | StateRuntimeKind::Logical{first_id, ..} => first_id
+                    };
+                    let sid_str = match &runtime_kind {
+                        StateRuntimeKind::Sequence{second_id, ..} | StateRuntimeKind::Logical{second_id, ..} => second_id
+                    };
 
-                let first_def = first_junction.lock().unwrap().get_stream_definition();
-                let second_def = second_junction.lock().unwrap().get_stream_definition();
-                let first_len = first_def.abstract_definition.attribute_list.len();
-                let second_len = second_def.abstract_definition.attribute_list.len();
+                    let first_junction = stream_junction_map.get(fid_str).ok_or_else(|| format!("Input stream '{}' not found", fid_str))?.clone();
+                    let second_junction = stream_junction_map.get(sid_str).ok_or_else(|| format!("Input stream '{}' not found", sid_str))?.clone();
 
-                let mut first_meta = MetaStreamEvent::new_for_single_input(first_def);
-                let mut second_meta = MetaStreamEvent::new_for_single_input(second_def);
-                second_meta.apply_attribute_offset(first_len);
+                    let first_def = first_junction.lock().unwrap().get_stream_definition();
+                    let second_def = second_junction.lock().unwrap().get_stream_definition();
+                    let first_len = first_def.abstract_definition.attribute_list.len();
+                    let second_len = second_def.abstract_definition.attribute_list.len();
 
-                let mut stream_meta_map = HashMap::new();
-                stream_meta_map.insert(first_id.clone(), Arc::new(first_meta));
-                stream_meta_map.insert(second_id.clone(), Arc::new(second_meta));
+                    let mut first_meta = MetaStreamEvent::new_for_single_input(first_def);
+                    let mut second_meta = MetaStreamEvent::new_for_single_input(second_def);
+                    second_meta.apply_attribute_offset(first_len);
+                    let mut stream_meta_map = HashMap::new();
+                    stream_meta_map.insert(fid_str.clone(), Arc::new(first_meta));
+                    stream_meta_map.insert(sid_str.clone(), Arc::new(second_meta));
+                    (first_junction, second_junction, first_len, second_len, stream_meta_map, fid_str.clone(), sid_str.clone())
+                };
 
                 let mut table_meta_map = HashMap::new();
                 for (table_id, table_def) in table_def_map {
@@ -238,36 +285,64 @@ impl QueryParser {
                     table_meta_map.insert(table_id.clone(), Arc::new(meta));
                 }
 
-                let seq_type = match state_stream.state_type {
-                    crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
-                    crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
-                };
+                match runtime_kind {
+                    StateRuntimeKind::Sequence { first_id: fid, second_id: sid, seq_type } => {
+                        let seq_proc = Arc::new(Mutex::new(SequenceProcessor::new(
+                            seq_type,
+                            first_len,
+                            second_len,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        )));
+                        let first_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::First);
+                        let second_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::Second);
 
-                let seq_proc = Arc::new(Mutex::new(SequenceProcessor::new(
-                    seq_type,
-                    first_len,
-                    second_len,
-                    Arc::clone(siddhi_app_context),
-                    Arc::clone(&siddhi_query_context),
-                )));
-                let first_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::First);
-                let second_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::Second);
+                        first_junction.lock().unwrap().subscribe(first_side.clone());
+                        second_junction.lock().unwrap().subscribe(second_side.clone());
 
-                first_junction.lock().unwrap().subscribe(first_side.clone());
-                second_junction.lock().unwrap().subscribe(second_side.clone());
+                        link_processor(first_side.clone());
 
-                link_processor(first_side.clone());
+                        ExpressionParserContext {
+                            siddhi_app_context: Arc::clone(siddhi_app_context),
+                            siddhi_query_context: Arc::clone(&siddhi_query_context),
+                            stream_meta_map,
+                            table_meta_map,
+                            window_meta_map: HashMap::new(),
+                            state_meta_map: HashMap::new(),
+                            default_source: first_id_clone.clone(),
+                            query_name: &query_name,
+                        }
+                    }
+                    StateRuntimeKind::Logical { first_id: fid, second_id: sid, logical_type } => {
+                        let log_proc = Arc::new(Mutex::new(LogicalProcessor::new(
+                            logical_type,
+                            first_len,
+                            second_len,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        )));
+                        let first_side = LogicalProcessor::create_side_processor(&log_proc, SequenceSide::First);
+                        let second_side = LogicalProcessor::create_side_processor(&log_proc, SequenceSide::Second);
 
-                ExpressionParserContext {
-                    siddhi_app_context: Arc::clone(siddhi_app_context),
-                    siddhi_query_context: Arc::clone(&siddhi_query_context),
-                    stream_meta_map,
-                    table_meta_map,
-                    window_meta_map: HashMap::new(),
-                    state_meta_map: HashMap::new(),
-                    default_source: first_id.clone(),
-                    query_name: &query_name,
+                        first_junction.lock().unwrap().subscribe(first_side.clone());
+                        second_junction.lock().unwrap().subscribe(second_side.clone());
+
+                        link_processor(first_side.clone());
+
+                        ExpressionParserContext {
+                            siddhi_app_context: Arc::clone(siddhi_app_context),
+                            siddhi_query_context: Arc::clone(&siddhi_query_context),
+                            stream_meta_map,
+                            table_meta_map,
+                            window_meta_map: HashMap::new(),
+                            state_meta_map: HashMap::new(),
+                            default_source: first_id_clone.clone(),
+                            query_name: &query_name,
+                        }
+                    }
                 }
+
+                // unreachable
             }
             _ => {
                 return Err(format!("Query '{}': Unsupported input stream type", query_name));
