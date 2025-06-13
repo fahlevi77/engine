@@ -284,7 +284,10 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 .query_context_start_index
                 .map(|(l, c)| format!("line {}, column {}", l, c))
                 .unwrap_or_else(|| "unknown location".to_string());
-            Ok(Box::new(CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())))
+            Ok(Box::new(
+                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?
+            ))
         }
         ApiExpression::IsNull(api_op) => {
             if let Some(inner_expr) = &api_op.expression {
