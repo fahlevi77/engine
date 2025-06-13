@@ -295,6 +295,7 @@ impl SiddhiContext {
         };
         use crate::core::table::InMemoryTableFactory;
         use crate::core::extension::{LogSinkFactory, TimerSourceFactory};
+        use crate::core::executor::function::builtin_wrapper::register_builtin_scalar_functions;
 
         self.add_window_factory("length".to_string(), Box::new(LengthWindowFactory));
         self.add_window_factory("time".to_string(), Box::new(TimeWindowFactory));
@@ -311,6 +312,8 @@ impl SiddhiContext {
         self.add_table_factory("inMemory".to_string(), Box::new(InMemoryTableFactory));
         self.add_source_factory("timer".to_string(), Box::new(TimerSourceFactory));
         self.add_sink_factory("log".to_string(), Box::new(LogSinkFactory));
+
+        register_builtin_scalar_functions(self);
     }
 
     // --- Extension Factory Methods ---

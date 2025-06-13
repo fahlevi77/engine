@@ -324,23 +324,8 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 api_func.function_name.clone()
             };
 
-            // Try built-in common functions first
+            // Handle special variable functions not implemented via factories
             match (api_func.extension_namespace.as_deref(), api_func.function_name.as_str()) {
-                (None | Some(""), "coalesce") => Ok(Box::new(CoalesceFunctionExecutor::new(arg_execs).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), "ifThenElse") => {
-                    if arg_execs.len() == 3 {
-                        let else_e = arg_execs.remove(2);
-                        let then_e = arg_execs.remove(1);
-                        let cond_e = arg_execs.remove(0);
-                        Ok(Box::new(IfThenElseFunctionExecutor::new(cond_e, then_e, else_e).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("ifThenElse expects 3 arguments, found {}", arg_execs.len()))
-                    }
-                }
-                (None | Some(""), "uuid") => {
-                    if !arg_execs.is_empty() { return Err(format!("uuid() function takes no arguments at {} in query '{}'", loc, context.query_name)); }
-                    Ok(Box::new(UuidFunctionExecutor::new()))
-                }
                 (None | Some(""), "event") => {
                     if arg_execs.len() == 1 {
                         Ok(Box::new(EventVariableFunctionExecutor::new(0, 0)))
@@ -361,53 +346,6 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
                 (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), "cast") => {
-                    if arg_execs.len() == 2 {
-                        let type_exec = arg_execs.remove(1);
-                        let val_exec = arg_execs.remove(0);
-                        Ok(Box::new(CastFunctionExecutor::new(val_exec, type_exec).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("cast expects 2 arguments, found {}", arg_execs.len()))
-                    }
-                }
-                (None | Some(""), "concat") => Ok(Box::new(ConcatFunctionExecutor::new(arg_execs).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), "length") => {
-                    if arg_execs.len() == 1 {
-                        Ok(Box::new(LengthFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("length expects 1 argument, found {}", arg_execs.len()))
-                    }
-                }
-                (None | Some(""), "currentTimestamp") => {
-                    if !arg_execs.is_empty() {
-                        Err(format!("currentTimestamp() takes no arguments, found {}", arg_execs.len()))
-                    } else {
-                        Ok(Box::new(CurrentTimestampFunctionExecutor::default()))
-                    }
-                }
-                (None | Some(""), "formatDate") => {
-                    if arg_execs.len() == 2 {
-                        let pattern_exec = arg_execs.remove(1);
-                        let ts_exec = arg_execs.remove(0);
-                        Ok(Box::new(FormatDateFunctionExecutor::new(ts_exec, pattern_exec).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("formatDate expects 2 arguments, found {}", arg_execs.len()))
-                    }
-                }
-                (None | Some(""), "round") => {
-                    if arg_execs.len() == 1 {
-                        Ok(Box::new(RoundFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("round expects 1 argument, found {}", arg_execs.len()))
-                    }
-                }
-                (None | Some(""), "sqrt") => {
-                    if arg_execs.len() == 1 {
-                        Ok(Box::new(SqrtFunctionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?))
-                    } else {
-                        Err(format!("sqrt expects 1 argument, found {}", arg_execs.len()))
-                    }
-                }
                 (None | Some(""), "sum") => {
                     let mut exec = SumAttributeAggregatorExecutor::default();
                     exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
