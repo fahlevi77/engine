@@ -198,7 +198,10 @@ impl SiddhiAppParser {
             }
         }
 
-        // TODO: Initialize Windows after all tables/windows are defined (as in Java)
+        // Initialize Windows after tables and streams are ready
+        for (_id, win_rt) in &builder.window_map {
+            win_rt.lock().unwrap().initialize();
+        }
 
         // 2. Parse Execution Elements (Queries, Partitions)
         for exec_element in &api_siddhi_app.execution_element_list {

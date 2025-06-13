@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 pub struct WindowRuntime {
     pub definition: Arc<WindowDefinition>,
     pub processor: Option<Arc<Mutex<dyn Processor>>>,
+    initialized: bool,
 }
 
 impl WindowRuntime {
@@ -16,11 +17,24 @@ impl WindowRuntime {
         Self {
             definition,
             processor: None,
+            initialized: false,
         }
     }
 
     pub fn set_processor(&mut self, processor: Arc<Mutex<dyn Processor>>) {
         self.processor = Some(processor);
+    }
+
+    /// Perform one-time initialization for the window processor if present.
+    pub fn initialize(&mut self) {
+        if self.initialized {
+            return;
+        }
+        if let Some(proc) = &self.processor {
+            // Placeholder for processor-specific initialization logic.
+            let _guard = proc.lock().unwrap();
+        }
+        self.initialized = true;
     }
 }
 
