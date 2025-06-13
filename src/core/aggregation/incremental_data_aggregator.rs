@@ -1,8 +1,16 @@
+use crate::core::event::value::AttributeValue;
+use super::aggregation_runtime::AggregationRuntime;
+use crate::query_api::aggregation::time_period::Duration as TimeDuration;
+
 #[derive(Debug, Default)]
 pub struct IncrementalDataAggregator;
 
 impl IncrementalDataAggregator {
     pub fn new() -> Self {
         Self {}
+    }
+
+    pub fn aggregate(runtime: &AggregationRuntime, duration: TimeDuration) -> Vec<Vec<AttributeValue>> {
+        runtime.query_all(duration)
     }
 }

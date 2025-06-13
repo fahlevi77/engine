@@ -12,6 +12,30 @@ pub enum Duration {
     Years,
 }
 
+impl Duration {
+    pub fn to_millis(self) -> u64 {
+        match self {
+            Duration::Seconds => 1000,
+            Duration::Minutes => 60_000,
+            Duration::Hours => 3_600_000,
+            Duration::Days => 86_400_000,
+            Duration::Months => 2_592_000_000,
+            Duration::Years => 31_536_000_000,
+        }
+    }
+
+    pub fn next(self) -> Option<Duration> {
+        match self {
+            Duration::Seconds => Some(Duration::Minutes),
+            Duration::Minutes => Some(Duration::Hours),
+            Duration::Hours => Some(Duration::Days),
+            Duration::Days => Some(Duration::Months),
+            Duration::Months => Some(Duration::Years),
+            Duration::Years => None,
+        }
+    }
+}
+
 impl Default for Duration {
     fn default() -> Self { Duration::Seconds }
 }

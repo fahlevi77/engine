@@ -48,6 +48,10 @@ impl InMemoryTable {
     pub fn new() -> Self {
         Self { rows: RwLock::new(Vec::new()) }
     }
+
+    pub fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
+        self.rows.read().unwrap().clone()
+    }
 }
 
 impl Table for InMemoryTable {

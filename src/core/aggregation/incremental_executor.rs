@@ -1,17 +1,19 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 
 use super::base_incremental_value_store::BaseIncrementalValueStore;
+use crate::core::table::{InMemoryTable, Table};
 
 pub struct IncrementalExecutor {
     pub duration: TimeDuration,
     pub base_store: Arc<BaseIncrementalValueStore>,
     pub next: Option<Arc<IncrementalExecutor>>, // simplified chain
     pub group_by_fn: Box<dyn Fn(&StreamEvent) -> String + Send + Sync>,
+    pub bucket_start: Mutex<i64>,
+    pub table: Arc<InMemoryTable>,
 }
 
 impl std::fmt::Debug for IncrementalExecutor {
@@ -27,23 +29,54 @@ impl IncrementalExecutor {
         duration: TimeDuration,
         executors: Vec<Box<dyn ExpressionExecutor>>,
         group_by_fn: Box<dyn Fn(&StreamEvent) -> String + Send + Sync>,
+        table: Arc<InMemoryTable>,
     ) -> Self {
         Self {
             duration,
             base_store: Arc::new(BaseIncrementalValueStore::new(executors)),
             next: None,
             group_by_fn,
+            bucket_start: Mutex::new(-1),
+            table,
+        }
+    }
+
+    fn bucket_ms(&self) -> i64 {
+        self.duration.to_millis() as i64
+    }
+
+    fn flush(&self, bucket_start: i64) {
+        let (_timestamp, groups) = self.base_store.drain_grouped_values();
+        for (_k, values) in groups.into_iter() {
+            println!("flush {:?} -> {:?}", self.duration, values);
+            let mut ev = StreamEvent::new(bucket_start, 0, 0, values.len());
+            ev.output_data = Some(values.clone());
+            self.table.insert(&values);
+            if let Some(ref next) = self.next {
+                next.execute(&ev);
+            }
+        }
+        // reset aggregators for next bucket
+        use crate::core::event::complex_event::{ComplexEventType, ComplexEvent};
+        for exec in &self.base_store.expression_executors {
+            let mut r = StreamEvent::new(bucket_start,0,0,0);
+            r.set_event_type(ComplexEventType::Reset);
+            exec.execute(Some(&r));
         }
     }
 
     pub fn execute(&self, event: &StreamEvent) {
+        let mut start = self.bucket_start.lock().unwrap();
+        if *start == -1 {
+            *start = event.timestamp - (event.timestamp % self.bucket_ms());
+        }
+        while event.timestamp >= *start + self.bucket_ms() {
+            let b_start = *start;
+            *start += self.bucket_ms();
+            self.flush(b_start);
+        }
+
         let key = (self.group_by_fn)(event);
         self.base_store.process(&key, event);
-        if let Some(ref next) = self.next {
-            for (_, ev) in self.base_store.get_grouped_events().into_iter() {
-                next.execute(&ev);
-            }
-            self.base_store.clear();
-        }
     }
 }
