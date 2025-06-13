@@ -73,9 +73,10 @@ impl SiddhiManager {
         // SiddhiAppRuntime::new now handles creation of SiddhiAppContext and parsing
         let runtime = Arc::new(SiddhiAppRuntime::new(
             Arc::clone(&api_siddhi_app),
-            Arc::clone(&self.siddhi_context)
-            // siddhi_app_str_opt no longer passed here
+            Arc::clone(&self.siddhi_context),
+            siddhi_app_str_opt.clone(),
         )?);
+        runtime.start();
 
         self.siddhi_app_runtime_map.lock().expect("Mutex poisoned").insert(app_name.clone(), Arc::clone(&runtime)); // Use app_name for map key
         Ok(runtime)
@@ -186,7 +187,7 @@ impl SiddhiManager {
         let temp_runtime = SiddhiAppRuntime::new(
             Arc::clone(api_siddhi_app),
             Arc::clone(&self.siddhi_context)
-            // siddhi_app_str_opt no longer passed here
+            ,siddhi_app_str_opt
         )?;
         temp_runtime.start(); // This would internally build the plan, run initializations
         temp_runtime.shutdown(); // Clean up

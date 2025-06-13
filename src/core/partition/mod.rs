@@ -22,6 +22,12 @@ impl PartitionRuntime {
             println!("Starting query runtime {} in partition", qr.get_query_id());
         }
     }
+
+    pub fn shutdown(&self) {
+        for qr in &self.query_runtimes {
+            println!("Stopping query runtime {} in partition", qr.get_query_id());
+        }
+    }
 }
 
 pub mod parser;

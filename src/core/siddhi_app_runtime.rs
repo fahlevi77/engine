@@ -46,7 +46,8 @@ impl SiddhiAppRuntime {
     pub fn new(
         api_siddhi_app: Arc<ApiSiddhiApp>,
         // SiddhiContext is needed to initialize SiddhiAppContext if not already done
-        siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>
+        siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>,
+        siddhi_app_string: Option<String>,
     ) -> Result<Self, String> {
 
         // 1. Create SiddhiAppContext using @app level annotations when present
@@ -85,7 +86,7 @@ impl SiddhiAppRuntime {
             siddhi_context,
             name.clone(),
             Arc::clone(&api_siddhi_app),
-            String::new(),
+            siddhi_app_string.unwrap_or_default(),
         );
         ctx.set_playback(is_playback);
         ctx.set_enforce_order(enforce_order);
@@ -152,6 +153,17 @@ impl SiddhiAppRuntime {
     }
 
     pub fn shutdown(&self) {
+        if let Some(scheduler) = &self.scheduler {
+            scheduler.shutdown();
+        }
+        for pr in &self.partition_runtimes {
+            pr.shutdown();
+        }
+        if let Some(service) = self.siddhi_app_context.get_snapshot_service() {
+            if let Some(store) = &service.persistence_store {
+                store.clear_all_revisions(&self.name);
+            }
+        }
         println!("SiddhiAppRuntime '{}' shutdown", self.name);
     }
 

@@ -57,7 +57,7 @@ fn test_sequence_runtime_processing() {
     app.execution_element_list.push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context).expect("runtime");
+    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime.add_callback("OutStream", Box::new(CollectCallback::new(Arc::clone(&collected)))).unwrap();
     runtime.start();
@@ -115,7 +115,7 @@ fn test_every_sequence() {
     app.execution_element_list.push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context).expect("runtime");
+    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime.add_callback("OutStream", Box::new(CollectCallback::new(Arc::clone(&collected)))).unwrap();
     runtime.start();
@@ -173,7 +173,7 @@ fn test_logical_and_pattern() {
     app.execution_element_list.push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context).expect("runtime");
+    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime.add_callback("OutStream", Box::new(CollectCallback::new(Arc::clone(&collected)))).unwrap();
     runtime.start();

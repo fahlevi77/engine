@@ -60,4 +60,8 @@ impl Scheduler {
         });
         Ok(())
     }
+
+    pub fn shutdown(&self) {
+        self.executor.wait_all();
+    }
 }

@@ -134,7 +134,7 @@ mod tests {
         // c. Create SiddhiAppRuntime
         // SiddhiAppRuntime::new now takes Arc<ApiSiddhiApp> and Arc<SiddhiContext>
         println!("Test: Creating SiddhiAppRuntime...");
-        let runtime = SiddhiAppRuntime::new(runnable_api_app, siddhi_context)
+        let runtime = SiddhiAppRuntime::new(runnable_api_app, siddhi_context, None)
             .expect("Test: Failed to create SiddhiAppRuntime");
         println!("Test: SiddhiAppRuntime created successfully.");
 
