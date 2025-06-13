@@ -10,6 +10,7 @@ pub mod scheduler; // new scheduler module
 pub mod scheduled_executor_service;
 pub mod serialization;
 pub mod event_serde;
+pub mod thread_barrier;
 // Potentially other existing util submodules:
 // pub mod cache;
 // pub mod collection;
@@ -35,3 +36,4 @@ pub use self::scheduler::{Scheduler, Schedulable};
 pub use self::scheduled_executor_service::ScheduledExecutorService;
 pub use self::serialization::{to_bytes, from_bytes};
 pub use self::event_serde::{event_to_bytes, event_from_bytes};
+pub use self::thread_barrier::ThreadBarrier;

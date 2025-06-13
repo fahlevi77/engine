@@ -167,6 +167,16 @@ impl StreamJunction {
         Publisher::new(Arc::new(self.clone()))
     }
 
+    /// Return the total number of events seen if metrics are enabled.
+    pub fn total_events(&self) -> Option<u64> {
+        self.throughput_tracker.as_ref().map(|t| t.total_events())
+    }
+
+    /// Average latency in nanoseconds if metrics are enabled.
+    pub fn average_latency_ns(&self) -> Option<u64> {
+        self.latency_tracker.as_ref().and_then(|l| l.average_latency_ns())
+    }
+
     fn async_event_loop(
         receiver: CrossbeamReceiver<Box<dyn ComplexEvent>>, 
         subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>,

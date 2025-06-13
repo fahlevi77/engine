@@ -5,7 +5,8 @@ use super::input_distributor::InputDistributor;
 use super::input_entry_valve::InputEntryValve;
 use super::input_handler::{InputHandler, InputProcessor};
 use super::table_input_handler::TableInputHandler;
-use crate::core::config::siddhi_app_context::{SiddhiAppContext, ThreadBarrierPlaceholder};
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::util::thread_barrier::ThreadBarrier;
 use crate::core::stream::stream_junction::{StreamJunction, Publisher};
 
 #[derive(Debug)]
@@ -26,9 +27,11 @@ impl InputManager {
     ) -> Self {
         let distributor: Arc<Mutex<InputDistributor>> = Arc::new(Mutex::new(InputDistributor::default()));
         let distributor_for_valve: Arc<Mutex<dyn InputProcessor>> = distributor.clone();
-        let barrier_val = siddhi_app_context.thread_barrier.clone().unwrap_or_default();
-        let barrier = Arc::new(barrier_val);
-        let entry_valve: Arc<Mutex<dyn InputProcessor>> = Arc::new(Mutex::new(InputEntryValve::new(barrier, distributor_for_valve)));
+        let barrier = siddhi_app_context
+            .get_thread_barrier()
+            .unwrap_or_else(|| Arc::new(ThreadBarrier::new()));
+        let entry_valve: Arc<Mutex<dyn InputProcessor>> =
+            Arc::new(Mutex::new(InputEntryValve::new(barrier, distributor_for_valve)));
         Self {
             siddhi_app_context,
             input_handlers: Mutex::new(HashMap::new()),

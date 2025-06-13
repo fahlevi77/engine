@@ -11,7 +11,6 @@ use std::thread_local;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
 // use super::snapshot_service::SnapshotService; // TODO: Define later
-// use super::thread_barrier::ThreadBarrier; // TODO: Define later
 // use super::id_generator::IdGenerator; // TODO: Define later
 // use crate::core::function::Script; // TODO: Define later
 // use crate::core::trigger::Trigger; // TODO: Define later
@@ -24,7 +23,7 @@ use std::thread_local;
 #[derive(Debug, Clone, Default)] pub struct StatisticsManagerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TimestampGeneratorPlaceholder {}
 use crate::core::persistence::SnapshotService;
-#[derive(Debug, Clone, Default)] pub struct ThreadBarrierPlaceholder {}
+use crate::core::util::thread_barrier::ThreadBarrier;
 #[derive(Debug, Clone, Default)] pub struct ScriptPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerPlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct ExternalReferencedHolderPlaceholder {}
@@ -66,7 +65,7 @@ pub struct SiddhiAppContext {
     // pub trigger_holders: Vec<TriggerPlaceholder>, // Holds trigger runtime instances.
 
     pub snapshot_service: Option<Arc<SnapshotService>>, // Manages state snapshotting and persistence.
-    pub thread_barrier: Option<ThreadBarrierPlaceholder>,     // Used for coordinating threads, e.g., in playback. Option because it's set.
+    pub thread_barrier: Option<Arc<ThreadBarrier>>, // Coordinates threads when ordering is enforced.
     pub timestamp_generator: TimestampGeneratorPlaceholder,   // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
     pub id_generator: Option<IdGenerator>,         // Generates unique IDs for runtime elements. Option because it's set.
 
@@ -228,11 +227,11 @@ impl SiddhiAppContext {
         self.snapshot_service = Some(service);
     }
 
-    pub fn get_thread_barrier(&self) -> Option<&ThreadBarrierPlaceholder> {
-        self.thread_barrier.as_ref()
+    pub fn get_thread_barrier(&self) -> Option<Arc<ThreadBarrier>> {
+        self.thread_barrier.as_ref().cloned()
     }
 
-    pub fn set_thread_barrier(&mut self, barrier: ThreadBarrierPlaceholder) {
+    pub fn set_thread_barrier(&mut self, barrier: Arc<ThreadBarrier>) {
         self.thread_barrier = Some(barrier);
     }
 

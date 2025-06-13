@@ -25,5 +25,5 @@ thread barriers are represented by placeholders.
   improved executor service when a junction is marked asynchronous.
 * Basic metrics tracking and fault stream/error store routing are now
   implemented.
-* A real `ThreadBarrier` implementation is needed for accurate entry valve
-  behaviour.
+* `ThreadBarrier` now coordinates event flow in `InputEntryValve` to maintain
+  ordering when required.
