@@ -5,6 +5,7 @@ use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
 use crate::core::window::WindowRuntime;
 use crate::core::aggregation::AggregationRuntime;
+use crate::core::partition::PartitionRuntime;
 use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition; // Added this import
 
@@ -14,7 +15,6 @@ use std::sync::{Arc, Mutex};
 // Placeholders for runtime components until they are defined
 #[derive(Debug, Clone, Default)] pub struct TableRuntimePlaceholder {}
 #[derive(Debug, Clone, Default)] pub struct TriggerRuntimePlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct PartitionRuntimePlaceholder {}
 
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ pub struct SiddhiAppRuntimeBuilder {
     pub aggregation_map: HashMap<String, Arc<Mutex<AggregationRuntime>>>,
 
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
-    pub partition_runtimes: Vec<Arc<PartitionRuntimePlaceholder>>,
+    pub partition_runtimes: Vec<Arc<PartitionRuntime>>,
     pub trigger_runtimes: Vec<Arc<TriggerRuntimePlaceholder>>,
 }
 
@@ -85,7 +85,7 @@ impl SiddhiAppRuntimeBuilder {
     pub fn add_query_runtime(&mut self, query_runtime: Arc<QueryRuntime>) {
         self.query_runtimes.push(query_runtime);
     }
-    pub fn add_partition_runtime(&mut self, partition_runtime: Arc<PartitionRuntimePlaceholder>) {
+    pub fn add_partition_runtime(&mut self, partition_runtime: Arc<PartitionRuntime>) {
         self.partition_runtimes.push(partition_runtime);
     }
     pub fn add_trigger_runtime(&mut self, trigger_runtime: Arc<TriggerRuntimePlaceholder>) {

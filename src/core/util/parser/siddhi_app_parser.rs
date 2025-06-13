@@ -13,6 +13,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::window::WindowRuntime;
+use crate::core::aggregation::AggregationRuntime;
 use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
@@ -72,22 +73,63 @@ impl SiddhiAppParser {
 
         let mut builder = SiddhiAppRuntimeBuilder::new(siddhi_app_context.clone());
 
-        // TODO: Parse siddhi_app_context from @app:name, @app:async, @app:statistics, @app:playback etc.
-        // This is partially done in Java SiddhiAppParser constructor.
-        // For now, assuming SiddhiAppContext is pre-configured and passed in.
+        // Parse @app level annotations to configure defaults
+        let mut default_stream_async = false;
+        for ann in &api_siddhi_app.annotations {
+            if ann.name.eq_ignore_ascii_case("app") {
+                for el in &ann.elements {
+                    match el.key.to_lowercase().as_str() {
+                        "async" => {
+                            default_stream_async = el.value.eq_ignore_ascii_case("true");
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
 
         // 1. Define Stream Definitions and create StreamJunctions
         for (stream_id, stream_def_arc) in &api_siddhi_app.stream_definition_map {
-            // TODO: Check for @OnError(action='STREAM') to create fault streams
-            // Example from Java:
-            // Annotation onErrorAnnotation = AnnotationHelper.getAnnotation(SiddhiConstants.ANNOTATION_ON_ERROR, stream_def.getAnnotations());
-            // if (onErrorAnnotation != null) { ... createFaultStreamDefinition ... builder.defineStream(faultStreamDef); ... }
-
             builder.add_stream_definition(Arc::clone(stream_def_arc));
 
-            // TODO: Determine buffer size and async from stream_def annotations
-            let buffer_size = siddhi_app_context.buffer_size as usize; // Default from context or stream annotation
-            let is_async = false; // TODO: Read from @async annotation on stream_def
+            let mut buffer_size = siddhi_app_context.buffer_size as usize;
+            let mut is_async = default_stream_async;
+            let mut create_fault_stream = false;
+
+            for ann in &stream_def_arc.abstract_definition.annotations {
+                match ann.name.to_lowercase().as_str() {
+                    "buffersize" | "buffer.size" => {
+                        if let Some(el) = ann.elements.first() {
+                            if let Ok(sz) = el.value.parse::<usize>() {
+                                buffer_size = sz;
+                            }
+                        }
+                    }
+                    "async" => {
+                        is_async = true;
+                    }
+                    "onerror" => {
+                        if ann
+                            .elements
+                            .iter()
+                            .find(|e| e.key.eq_ignore_ascii_case("action") && e.value.eq_ignore_ascii_case("stream"))
+                            .is_some()
+                        {
+                            create_fault_stream = true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            if create_fault_stream {
+                let mut fault_def = ApiStreamDefinition::new(format!("{}{}", crate::query_api::constants::FAULT_STREAM_FLAG, stream_id));
+                for attr in &stream_def_arc.abstract_definition.attribute_list {
+                    fault_def.abstract_definition.attribute_list.push(attr.clone());
+                }
+                fault_def.abstract_definition.attribute_list.push(ApiAttribute::new("_error".to_string(), crate::query_api::definition::attribute::Type::OBJECT));
+                builder.add_stream_definition(Arc::new(fault_def));
+            }
 
             let stream_junction = Arc::new(Mutex::new(StreamJunction::new(
                 stream_id.clone(),
@@ -108,7 +150,7 @@ impl SiddhiAppParser {
                 .abstract_definition
                 .annotations
                 .iter()
-                .find(|a| a.name == "store")
+                .find(|a| a.name.eq_ignore_ascii_case("store"))
             {
                 let mut props = HashMap::new();
                 for el in &store_ann.elements {
@@ -143,14 +185,28 @@ impl SiddhiAppParser {
             siddhi_app_context
                 .get_siddhi_context()
                 .add_table(table_id.clone(), table);
+
+            builder.add_table(table_id.clone(), Arc::new(Mutex::new(crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder::default())));
         }
 
-        // WindowDefinitions, AggregationDefinitions
+        // WindowDefinitions
         for (window_id, window_def) in &api_siddhi_app.window_definition_map {
             builder.add_window_definition(Arc::clone(window_def));
             builder.add_window(
                 window_id.clone(),
                 Arc::new(Mutex::new(WindowRuntime::new(Arc::clone(window_def)))),
+            );
+        }
+
+        // AggregationDefinitions
+        for (agg_id, agg_def) in &api_siddhi_app.aggregation_definition_map {
+            builder.add_aggregation_definition(Arc::clone(agg_def));
+            builder.add_aggregation_runtime(
+                agg_id.clone(),
+                Arc::new(Mutex::new(crate::core::aggregation::AggregationRuntime::new(
+                    agg_id.clone(),
+                    HashMap::new(),
+                ))),
             );
         }
 
@@ -171,10 +227,13 @@ impl SiddhiAppParser {
                     builder.add_query_runtime(Arc::new(query_runtime));
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);
                 }
-                ApiExecutionElement::Partition(_api_partition) => {
-                    // TODO: Call PartitionParser::parse(...)
-                    // This will create PartitionRuntimeImpl, which internally creates more QueryRuntimes.
-                    return Err("Partition parsing not yet implemented".to_string());
+                ApiExecutionElement::Partition(api_partition) => {
+                    let part_rt = super::partition_parser::PartitionParser::parse(
+                        &mut builder,
+                        api_partition,
+                        &siddhi_app_context,
+                    )?;
+                    builder.add_partition_runtime(Arc::new(part_rt));
                 }
             }
         }

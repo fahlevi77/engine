@@ -15,6 +15,7 @@ use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
 use crate::core::query::processor::Processor; // Trait for CallbackProcessor
 use crate::core::persistence::SnapshotService;
+use uuid::Uuid;
 
 use std::collections::HashMap;
 
@@ -46,29 +47,56 @@ impl SiddhiAppRuntime {
         siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>
     ) -> Result<Self, String> {
 
-        // 1. Create SiddhiAppContext (mimicking part of SiddhiAppParser.parse)
-        // In a full setup, SiddhiAppParser.parse would create this context first.
-        // For now, assuming a basic AppContext can be created here for the builder.
-        let app_name = api_siddhi_app.annotations.iter()
-            .find(|ann| ann.name == "info") // Assuming query_api::Annotation
-            .and_then(|ann| ann.elements.iter().find(|el| el.key == "name"))
-            .map(|el| el.value.clone())
-            .unwrap_or_else(|| format!("siddhi_app_{}", uuid::Uuid::new_v4().hyphenated()));
+        // 1. Create SiddhiAppContext using @app level annotations when present
+        let mut name = api_siddhi_app.name.clone();
+        let mut is_playback = false;
+        let mut enforce_order = false;
+        let mut root_metrics = crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF;
+        let mut buffer_size = 0i32;
+        let mut transport_creation = false;
 
-        // TODO: Populate SiddhiAppContext more fully from @app annotations and SiddhiContext
+        if let Some(app_ann) = api_siddhi_app.annotations.iter().find(|a| a.name.eq_ignore_ascii_case("app")) {
+            for el in &app_ann.elements {
+                match el.key.to_lowercase().as_str() {
+                    "name" => name = el.value.clone(),
+                    "playback" => is_playback = el.value.eq_ignore_ascii_case("true"),
+                    "enforce.order" | "enforceorder" => enforce_order = el.value.eq_ignore_ascii_case("true"),
+                    "statistics" | "stats" => {
+                        root_metrics = match el.value.to_lowercase().as_str() {
+                            "true" | "basic" => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC,
+                            "detail" | "detailed" => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::DETAIL,
+                            _ => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
+                        }
+                    }
+                    "buffer.size" | "buffersize" => {
+                        if let Ok(sz) = el.value.parse::<i32>() { buffer_size = sz; }
+                    }
+                    "transport.channel.creation" => {
+                        transport_creation = el.value.eq_ignore_ascii_case("true");
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         let mut ctx = SiddhiAppContext::new(
             siddhi_context,
-            app_name.clone(),
+            name.clone(),
             Arc::clone(&api_siddhi_app),
             String::new(),
         );
+        ctx.set_playback(is_playback);
+        ctx.set_enforce_order(enforce_order);
+        ctx.set_root_metrics_level(root_metrics);
+        if buffer_size > 0 { ctx.set_buffer_size(buffer_size); }
+        ctx.set_transport_channel_creation_enabled(transport_creation);
         let scheduler = if let Some(exec) = ctx.get_scheduled_executor_service() {
             Arc::new(crate::core::util::Scheduler::new(Arc::clone(&exec.executor)))
         } else {
             Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default())))
         };
         ctx.set_scheduler(Arc::clone(&scheduler));
-        let mut ss = SnapshotService::new(app_name.clone());
+        let mut ss = SnapshotService::new(name.clone());
         if let Some(store) = ctx.siddhi_context.get_persistence_store() {
             ss.persistence_store = Some(store);
         }
@@ -92,7 +120,7 @@ impl SiddhiAppRuntime {
             .ok_or_else(|| format!("StreamJunction '{}' not found to add callback", stream_id))?
             .clone();
 
-        let query_name_for_callback = format!("callback_processor_{}_{}", stream_id, uuid::Uuid::new_v4().hyphenated());
+        let query_name_for_callback = format!("callback_processor_{}_{}", stream_id, Uuid::new_v4().hyphenated());
         let query_context_for_callback = Arc::new(
            SiddhiQueryContext::new(
                Arc::clone(&self.siddhi_app_context),
