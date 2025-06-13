@@ -171,21 +171,18 @@ pub fn parse_time_constant(time_const_string: &str) -> Result<ExpressionConstant
 }
 
 pub fn parse_on_demand_query(query_string: &str) -> Result<OnDemandQuery, String> {
-    let _ = update_variables(query_string)?;
-    Err("OnDemandQuery parsing not implemented".to_string())
+    let s = update_variables(query_string)?;
+    grammar::OnDemandQueryStmtParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 // parseStoreQuery in Java calls parseOnDemandQuery.
 pub fn parse_store_query(store_query_string: &str) -> Result<StoreQuery, String> {
-    match parse_on_demand_query(store_query_string) {
-        Ok(on_demand_query) => {
-            // If OnDemandQuery parsing itself is deferred, this will also be deferred.
-            // Assuming StoreQuery::new exists and takes OnDemandQuery.
-            Ok(StoreQuery::new(on_demand_query))
-        }
-        Err(e) => Err(e), // Propagate error from parse_on_demand_query
-    }
-    // Additional variants of StoreQuery parsing are not implemented.
+    let s = update_variables(store_query_string)?;
+    grammar::StoreQueryStmtParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 pub fn parse_expression(expr_string: &str) -> Result<Expression, String> {

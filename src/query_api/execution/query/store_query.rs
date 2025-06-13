@@ -1,5 +1,8 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 use super::on_demand_query::{OnDemandQuery, OnDemandQueryType}; // Import Rust OnDemandQuery
+use crate::query_api::execution::query::input::InputStore;
+use crate::query_api::execution::query::selection::Selector;
+use super::{OutputStream};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum StoreQueryType {
@@ -69,6 +72,37 @@ impl StoreQuery {
         self.on_demand_query = self.on_demand_query.set_type(odq_type);
         self.on_demand_query.siddhi_element = current_siddhi_element; // Ensure inner query shares context
         self
+    }
+
+    pub fn from(mut self, input_store: InputStore) -> Self {
+        self.on_demand_query = self.on_demand_query.from(input_store);
+        self
+    }
+
+    pub fn select(mut self, selector: Selector) -> Self {
+        self.on_demand_query = self.on_demand_query.select(selector);
+        self
+    }
+
+    pub fn out_stream(mut self, output_stream: OutputStream) -> Self {
+        self.on_demand_query = self.on_demand_query.out_stream(output_stream);
+        self
+    }
+
+    pub fn get_input_store(&self) -> Option<&InputStore> {
+        self.on_demand_query.get_input_store()
+    }
+
+    pub fn get_selector(&self) -> &Selector {
+        self.on_demand_query.get_selector()
+    }
+
+    pub fn get_output_stream(&self) -> &OutputStream {
+        self.on_demand_query.get_output_stream()
+    }
+
+    pub fn get_on_demand_query(&self) -> &OnDemandQuery {
+        &self.on_demand_query
     }
 }
 

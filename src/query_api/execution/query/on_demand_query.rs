@@ -4,6 +4,11 @@ use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::execution::query::selection::Selector;
 use super::{OutputStream, OutputEventType}; // Use parent module's re-exports
 use crate::query_api::execution::query::input::InputStore;
+use crate::query_api::expression::Expression;
+use crate::query_api::execution::query::output::output_stream::{
+    OutputStreamAction, DeleteStreamAction, UpdateStreamAction, UpdateOrInsertStreamAction,
+};
+use crate::query_api::execution::query::output::stream::UpdateSet;
 
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
@@ -69,6 +74,46 @@ impl OnDemandQuery {
     pub fn set_type(mut self, query_type: OnDemandQueryType) -> Self {
         self.on_demand_query_type = Some(query_type);
         self
+    }
+
+    pub fn delete_by(mut self, output_table_id: String, on_deleting_expression: Expression) -> Self {
+        let action = DeleteStreamAction { target_id: output_table_id, on_delete_expression: on_deleting_expression };
+        self.output_stream = OutputStream::new(OutputStreamAction::Delete(action), Some(OutputEventType::CurrentEvents));
+        self
+    }
+
+    pub fn update_by(mut self, output_table_id: String, on_update_expression: Expression) -> Self {
+        let action = UpdateStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: None };
+        self.output_stream = OutputStream::new(OutputStreamAction::Update(action), Some(OutputEventType::CurrentEvents));
+        self
+    }
+
+    pub fn update_by_with_set(mut self, output_table_id: String, update_set_attributes: UpdateSet, on_update_expression: Expression) -> Self {
+        let action = UpdateStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: Some(update_set_attributes) };
+        self.output_stream = OutputStream::new(OutputStreamAction::Update(action), Some(OutputEventType::CurrentEvents));
+        self
+    }
+
+    pub fn update_or_insert_by(mut self, output_table_id: String, update_set_attributes: UpdateSet, on_update_expression: Expression) -> Self {
+        let action = UpdateOrInsertStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: Some(update_set_attributes) };
+        self.output_stream = OutputStream::new(OutputStreamAction::UpdateOrInsert(action), Some(OutputEventType::CurrentEvents));
+        self
+    }
+
+    pub fn get_input_store(&self) -> Option<&InputStore> {
+        self.input_store.as_ref()
+    }
+
+    pub fn get_selector(&self) -> &Selector {
+        &self.selector
+    }
+
+    pub fn get_output_stream(&self) -> &OutputStream {
+        &self.output_stream
+    }
+
+    pub fn get_type(&self) -> Option<OnDemandQueryType> {
+        self.on_demand_query_type
     }
 }
 

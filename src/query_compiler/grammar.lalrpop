@@ -7,7 +7,7 @@ use crate::query_api::definition::{StreamDefinition, TableDefinition, Aggregatio
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::definition::attribute::Attribute;
 use crate::query_api::execution::query::input::handler::WindowHandler;
-use crate::query_api::execution::query::{Query};
+use crate::query_api::execution::query::{Query, OnDemandQuery, StoreQuery, OnDemandQueryType};
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::output::output_stream::{
     OutputStream,
@@ -19,6 +19,8 @@ use crate::query_api::execution::query::output::output_stream::{
 use crate::query_api::execution::query::input::{
     InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
 };
+use crate::query_api::execution::query::input::store::{InputStore, Store, ConditionInputStore, AggregationInputStore};
+use crate::query_api::aggregation::Within;
 use crate::query_api::expression::{Expression, variable::Variable};
 use crate::query_api::expression::condition::compare::Operator as CompareOperator;
 use crate::query_api::aggregation::TimePeriod;
@@ -28,8 +30,29 @@ use crate::query_api::annotation::Annotation;
 pub AnnotationStmt: Annotation = {
     "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
         Annotation::new(name).element(Some(key), val)
+    } 
+};
+
+pub OnDemandQueryStmt: OnDemandQuery = {
+    "from" <st:InputStoreRule> "select" <sel:SelectList> => {
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        OnDemandQuery::query()
+            .from(st)
+            .select(selector)
+            .set_type(OnDemandQueryType::Find)
     }
 };
+
+pub StoreQueryStmt: StoreQuery = { <q:OnDemandQueryStmt> => StoreQuery::new(q) };
 
 Annotations: Vec<Annotation> = {
     <first:AnnotationStmt> <rest:AnnotationStmt*> => {
@@ -173,6 +196,19 @@ InputStreamRule: InputStream = {
         for (_, u) in rest { st = State::next(st, u); }
         InputStream::sequence_stream(st, None)
     },
+};
+
+InputStoreRule: InputStore = {
+    <id:Ident> "on" <cond:Expression> "within" <within_expr:Expression> "per" <per_expr:Expression> => {
+        let store = Store::new_with_id(id);
+        let within = Within::new_with_pattern(within_expr);
+        InputStore::Aggregation(Box::new(AggregationInputStore::new_with_condition(store, cond, within, per_expr)))
+    },
+    <id:Ident> "on" <cond:Expression> => {
+        let store = Store::new_with_id(id);
+        InputStore::Condition(Box::new(ConditionInputStore::new(store, cond)))
+    },
+    <id:Ident> => InputStore::Store(Store::new_with_id(id)),
 };
 
 Unit: StateElement = {
