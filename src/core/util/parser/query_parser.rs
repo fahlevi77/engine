@@ -455,7 +455,41 @@ impl QueryParser {
                     ));
                 }
             }
-            _ => return Err(format!("Query '{}': Only INSERT INTO output supported for now.", query_name)),
+            crate::query_api::execution::query::output::output_stream::OutputStreamAction::Update(update_action) => {
+                if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&update_action.target_id) {
+                    let update_processor = Arc::new(Mutex::new(
+                        crate::core::query::output::UpdateTableProcessor::new(
+                            table,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        ),
+                    ));
+                    link_processor(update_processor);
+                } else {
+                    return Err(format!(
+                        "Update target '{}' not found for query '{}'",
+                        update_action.target_id, query_name
+                    ));
+                }
+            }
+            crate::query_api::execution::query::output::output_stream::OutputStreamAction::Delete(delete_action) => {
+                if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&delete_action.target_id) {
+                    let delete_processor = Arc::new(Mutex::new(
+                        crate::core::query::output::DeleteTableProcessor::new(
+                            table,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        ),
+                    ));
+                    link_processor(delete_processor);
+                } else {
+                    return Err(format!(
+                        "Delete target '{}' not found for query '{}'",
+                        delete_action.target_id, query_name
+                    ));
+                }
+            }
+            _ => return Err(format!("Query '{}': Only INSERT INTO, UPDATE, DELETE outputs supported for now.", query_name)),
         }
 
         // 7. Create QueryRuntime

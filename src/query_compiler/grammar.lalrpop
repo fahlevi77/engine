@@ -9,7 +9,13 @@ use crate::query_api::definition::attribute::Attribute;
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::execution::query::{Query};
 use crate::query_api::execution::query::selection::Selector;
-use crate::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
+use crate::query_api::execution::query::output::output_stream::{
+    OutputStream,
+    OutputStreamAction,
+    InsertIntoStreamAction,
+    UpdateStreamAction,
+    DeleteStreamAction,
+};
 use crate::query_api::execution::query::input::{
     InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
 };
@@ -202,6 +208,23 @@ BasicUnit: StateElement = {
 };
 
 pub QueryStmt: Query = {
+    // INSERT INTO <stream/table>
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> "insert" "into" "table" <out_id:Ident> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
+        let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
     "from" <istream:InputStreamRule> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
@@ -216,6 +239,40 @@ pub QueryStmt: Query = {
         }
         let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
         let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
+    // UPDATE TABLE
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> "update" "table" <t_id:Ident> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        let update_action = UpdateStreamAction { target_id: t_id, on_update_expression: Expression::value_bool(true), update_set_clause: None };
+        let output_stream = OutputStream::new(OutputStreamAction::Update(update_action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
+    // DELETE FROM TABLE
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> "delete" "table" <t_id:Ident> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        let delete_action = DeleteStreamAction { target_id: t_id, on_delete_expression: Expression::value_bool(true) };
+        let output_stream = OutputStream::new(OutputStreamAction::Delete(delete_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     }
 };
