@@ -95,21 +95,35 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
     let mut app = SiddhiApp::new(app_name);
     for ann in &annotations { app.add_annotation(ann.clone()); }
 
-    for part in s_no_ann.split(';') {
-        let stmt = part.trim();
+    let mut parts = s_no_ann.split(';').peekable();
+    while let Some(part) = parts.next() {
+        let mut stmt = part.trim().to_string();
         if stmt.is_empty() { continue; }
-        let lower = stmt.to_lowercase();
-        if lower.starts_with("define stream") {
-            let def = parse_stream_definition(stmt)?;
+        let mut lower = stmt.to_lowercase();
+
+        if lower.starts_with("partition") {
+            while !lower.trim_end().ends_with("end") {
+                if let Some(next_part) = parts.next() {
+                    stmt.push(';');
+                    stmt.push_str(next_part);
+                    lower = stmt.to_lowercase();
+                } else {
+                    break;
+                }
+            }
+            let p = parse_partition(&stmt)?;
+            app.add_execution_element(ExecutionElement::Partition(p));
+        } else if lower.starts_with("define stream") {
+            let def = parse_stream_definition(&stmt)?;
             app.add_stream_definition(def);
         } else if lower.starts_with("define table") {
-            let def = parse_table_definition(stmt)?;
+            let def = parse_table_definition(&stmt)?;
             app.add_table_definition(def);
         } else if lower.starts_with("define window") {
-            let def = parse_window_definition(stmt)?;
+            let def = parse_window_definition(&stmt)?;
             app.add_window_definition(def);
         } else if lower.starts_with("from") {
-            let q = parse_query(stmt)?;
+            let q = parse_query(&stmt)?;
             app.add_execution_element(ExecutionElement::Query(q));
         }
     }
@@ -146,8 +160,10 @@ pub fn parse_aggregation_definition(agg_def_string: &str) -> Result<AggregationD
 }
 
 pub fn parse_partition(partition_string: &str) -> Result<Partition, String> {
-    let _ = update_variables(partition_string)?;
-    Err("Partition parsing not implemented".to_string())
+    let s = update_variables(partition_string)?;
+    grammar::PartitionStmtParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 pub fn parse_query(query_string: &str) -> Result<Query, String> {

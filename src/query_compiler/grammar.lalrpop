@@ -26,6 +26,10 @@ use crate::query_api::expression::condition::compare::Operator as CompareOperato
 use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 use crate::query_api::annotation::Annotation;
+use crate::query_api::execution::{
+    Partition, PartitionType, RangePartitionProperty, RangePartitionType,
+    ValuePartitionType,
+};
 
 pub AnnotationStmt: Annotation = {
     "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
@@ -312,6 +316,39 @@ pub QueryStmt: Query = {
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     }
 };
+
+
+pub PartitionStmt: Partition = {
+    "partition" "with" "(" <first:PartitionWithStream> <rest:("," PartitionWithStream)*> ")" "begin" <qs:QueryList> "end" => {
+        let mut p = Partition::partition().with_partition_type(first);
+        for (_, pt) in rest { p = p.with_partition_type(pt); }
+        for q in qs { p = p.add_query(q); }
+        p
+    }
+};
+
+QueryList: Vec<Query> = {
+    <first:QueryStmt> <rest:(";" QueryStmt)*> ";"? => {
+        let mut v = vec![first];
+        for (_, q) in rest { v.push(q); }
+        v
+    }
+};
+
+PartitionWithStream: PartitionType = {
+    <expr:Expression> "of" <sid:Ident> => PartitionType::new_value(ValuePartitionType::new(sid, expr)),
+    <cr:ConditionRanges> "of" <sid:Ident> => PartitionType::new_range(RangePartitionType::new(sid, cr)),
+};
+
+ConditionRanges: Vec<RangePartitionProperty> = {
+    <first:ConditionRange> <rest:("or" ConditionRange)*> => {
+        let mut v = vec![first];
+        for (_, c) in rest { v.push(c); }
+        v
+    }
+};
+
+ConditionRange: RangePartitionProperty = { <expr:Expression> "as" <key:STRING> => RangePartitionProperty::new(key, expr) };
 
 
 SelectList: Vec<(Expression, Option<String>)> = {
