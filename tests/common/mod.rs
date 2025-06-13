@@ -63,6 +63,17 @@ impl AppRunner {
         }
     }
 
+    /// Send an event with an explicit timestamp.
+    pub fn send_with_ts(&self, stream_id: &str, ts: i64, data: Vec<AttributeValue>) {
+        if let Some(handler) = self.runtime.get_input_handler(stream_id) {
+            handler
+                .lock()
+                .unwrap()
+                .send_event_with_timestamp(ts, data)
+                .unwrap();
+        }
+    }
+
     pub fn send_batch(&self, stream_id: &str, batch: Vec<Vec<AttributeValue>>) {
         if let Some(handler) = self.runtime.get_input_handler(stream_id) {
             let events: Vec<Event> = batch
@@ -80,5 +91,18 @@ impl AppRunner {
     pub fn shutdown(self) -> Vec<Vec<AttributeValue>> {
         self.runtime.shutdown();
         self.collected.lock().unwrap().clone()
+    }
+
+    /// Retrieve all aggregated rows for the given aggregation id and duration.
+    pub fn get_aggregation_data(
+        &self,
+        agg_id: &str,
+        dur: siddhi_rust::query_api::aggregation::time_period::Duration,
+    ) -> Vec<Vec<AttributeValue>> {
+        if let Some(rt) = self.runtime.aggregation_map.get(agg_id) {
+            rt.lock().unwrap().query_all(dur)
+        } else {
+            Vec::new()
+        }
     }
 }

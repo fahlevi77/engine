@@ -1,0 +1,52 @@
+#[path = "common/mod.rs"]
+mod common;
+use common::AppRunner;
+use siddhi_rust::core::event::value::AttributeValue;
+use std::thread::sleep;
+use std::time::Duration;
+
+#[test]
+fn filter_projection_simple() {
+    let app = "\
+        define stream In (a int);\n\
+        define stream Out (a int);\n\
+        from In[a > 10] select a insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(5)]);
+    runner.send("In", vec![AttributeValue::Int(15)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![vec![AttributeValue::Int(15)]]);
+}
+
+#[test]
+fn length_window_basic() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#length(2) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(1)]);
+    runner.send("In", vec![AttributeValue::Int(2)]);
+    runner.send("In", vec![AttributeValue::Int(3)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![
+        vec![AttributeValue::Int(1)],
+        vec![AttributeValue::Int(2)],
+        vec![AttributeValue::Int(1)],
+        vec![AttributeValue::Int(3)],
+    ]);
+}
+
+#[test]
+fn time_window_expiry() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#time(100) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(5)]);
+    sleep(Duration::from_millis(150));
+    let out = runner.shutdown();
+    assert!(out.len() >= 2);
+    assert_eq!(out[0], vec![AttributeValue::Int(5)]);
+}
