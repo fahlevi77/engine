@@ -17,49 +17,10 @@ use crate::core::aggregation::AggregationRuntime;
 use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
-// use super::partition_parser::PartitionParser; // To be created
+use crate::core::partition::parser::PartitionParser;
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
 use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
 use super::query_parser::QueryParser; // Use the real QueryParser implementation
-
-// Placeholder for QueryParser and PartitionParser logic
-// In a full system, these would be in their own modules.
-mod query_parser_placeholder {
-    use super::*;
-    use crate::query_api::execution::query::Query as ApiQuery;
-    use crate::core::query::query_runtime::QueryRuntime;
-    pub struct QueryParser;
-    impl QueryParser {
-        pub fn parse_query(
-            _api_query: &ApiQuery,
-            _siddhi_app_context: &Arc<SiddhiAppContext>,
-            _stream_junction_map: &mut HashMap<String, Arc<Mutex<StreamJunction>>>,
-            // _table_map: &HashMap<String, Arc<Mutex<crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder>>>,
-        ) -> Result<QueryRuntime, String> {
-            // Simplified: create a dummy QueryRuntime
-            let query_name = _api_query.get_query_name_placeholder().unwrap_or_else(|| "unknown_query".to_string());
-            let input_stream_id = _api_query.get_input_stream_id_placeholder().unwrap_or_else(|| "unknown_input".to_string());
-
-            let _input_junction = _stream_junction_map.get(&input_stream_id)
-                .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?.clone();
-
-            let query_ctx = Arc::new(SiddhiQueryContext::new(
-                Arc::clone(_siddhi_app_context),
-                query_name.clone(),
-                None,
-            ));
-            Ok(QueryRuntime::new_with_context(query_name, Arc::new(_api_query.clone()), query_ctx))
-        }
-    }
-    // Placeholder getters on query_api::Query
-    impl ApiQuery {
-        fn get_query_name_placeholder(&self) -> Option<String> { Some("query1".to_string())} // Placeholder
-        fn get_input_stream_id_placeholder(&self) -> Option<String> {
-            self.input_stream.as_ref().map(|is| is.get_all_stream_ids().join(",")) // Simplified
-        }
-    }
-}
-
 
 pub struct SiddhiAppParser;
 
@@ -228,7 +189,7 @@ impl SiddhiAppParser {
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);
                 }
                 ApiExecutionElement::Partition(api_partition) => {
-                    let part_rt = super::partition_parser::PartitionParser::parse(
+                    let part_rt = PartitionParser::parse(
                         &mut builder,
                         api_partition,
                         &siddhi_app_context,

@@ -10,6 +10,7 @@ use crate::core::stream::input::input_handler::InputHandler;
 use std::sync::{Arc, Mutex};
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use crate::core::query::query_runtime::QueryRuntime;
+use crate::core::partition::PartitionRuntime;
 use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
@@ -30,6 +31,7 @@ pub struct SiddhiAppRuntime {
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub input_manager: Arc<InputManager>,
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
+    pub partition_runtimes: Vec<Arc<PartitionRuntime>>,
     pub scheduler: Option<Arc<crate::core::util::Scheduler>>,
     pub aggregation_map: HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
     // TODO: Add other runtime component maps (tables, windows, partitions, triggers)
@@ -142,6 +144,9 @@ impl SiddhiAppRuntime {
         if let Some(scheduler) = &self.scheduler {
             // placeholder: scheduler is kept alive by self
             println!("Scheduler initialized for SiddhiAppRuntime '{}'", self.name);
+        }
+        for pr in &self.partition_runtimes {
+            pr.start();
         }
         println!("SiddhiAppRuntime '{}' started", self.name);
     }

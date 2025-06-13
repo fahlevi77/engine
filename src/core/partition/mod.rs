@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::core::query::query_runtime::QueryRuntime;
+use crate::core::query::query_runtime::{QueryRuntime, QueryRuntimeTrait};
 
 /// Runtime representation of a Partition.
 #[derive(Debug, Default)]
@@ -16,4 +16,13 @@ impl PartitionRuntime {
     pub fn add_query_runtime(&mut self, qr: Arc<QueryRuntime>) {
         self.query_runtimes.push(qr);
     }
+
+    pub fn start(&self) {
+        for qr in &self.query_runtimes {
+            println!("Starting query runtime {} in partition", qr.get_query_id());
+        }
+    }
 }
+
+pub mod parser;
+pub use parser::PartitionParser;

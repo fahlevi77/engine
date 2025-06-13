@@ -1,15 +1,10 @@
-// siddhi_rust/src/core/util/parser/partition_parser.rs
-// Simplified PartitionParser placeholder
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::query_api::execution::partition::Partition as ApiPartition;
-use crate::query_api::execution::ExecutionElement;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::partition::PartitionRuntime;
-use crate::core::stream::stream_junction::StreamJunction;
-use super::query_parser::QueryParser;
+use crate::core::util::parser::QueryParser;
 
 pub struct PartitionParser;
 

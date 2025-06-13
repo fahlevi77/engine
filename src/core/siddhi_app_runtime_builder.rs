@@ -119,6 +119,7 @@ impl SiddhiAppRuntimeBuilder {
             stream_junction_map: self.stream_junction_map,
             input_manager: Arc::new(input_manager),
             query_runtimes: self.query_runtimes,
+            partition_runtimes: self.partition_runtimes,
             scheduler: Some(scheduler),
             aggregation_map,
             // Initialize other runtime fields (tables, windows, partitions, triggers)
