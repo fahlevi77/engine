@@ -207,16 +207,4 @@ impl ComplexEvent for StreamEvent {
     fn as_any(&self) -> &dyn Any { self }
     fn as_any_mut(&mut self) -> &mut dyn Any { self }
 
-    // fn clone_complex_event(&self) -> Box<dyn ComplexEvent> {
-    //     // This requires StreamEvent's `next: Option<Box<dyn ComplexEvent>>` to be handled.
-    //     // If `next` is part of the clone, it implies a deep clone of the chain, which is complex.
-    //     // If `next` is None in the clone, then it's simpler:
-    //     // Box::new(StreamEvent { next: None, ..self.clone() })
-    //     // For now, deferring full clone_complex_event implementation.
-    //     Box::new(self.clone()) // This works if Box<dyn ComplexEvent> is not part of clone or handled by its own clone.
-    //                           // Current StreamEvent::clone() will clone the Box<dyn ComplexEvent> if that Box is Clone.
-    //                           // Box<dyn Trait> is not Clone by default.
-    //                           // This needs a `clone_box` method on the trait.
-    //     unimplemented!("StreamEvent::clone_complex_event requires clone_box on ComplexEvent trait")
-    // }
 }

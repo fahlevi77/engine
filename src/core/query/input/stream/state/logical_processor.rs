@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
-use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::event::stream::{stream_event::StreamEvent, stream_event_cloner::StreamEventCloner};
 use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use super::sequence_processor::SequenceSide;
@@ -23,6 +23,8 @@ pub struct LogicalProcessor {
     pub first_attr_count: usize,
     pub second_attr_count: usize,
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
+    first_cloner: Option<StreamEventCloner>,
+    second_cloner: Option<StreamEventCloner>,
 }
 
 impl LogicalProcessor {
@@ -41,6 +43,8 @@ impl LogicalProcessor {
             first_attr_count,
             second_attr_count,
             next_processor: None,
+            first_cloner: None,
+            second_cloner: None,
         }
     }
 
@@ -105,7 +109,21 @@ impl LogicalProcessor {
         while let Some(mut ce) = chunk {
             chunk = ce.set_next(None);
             if let Some(se) = ce.as_any().downcast_ref::<StreamEvent>() {
-                let se_clone = se.clone_without_next();
+                let cloner = match side {
+                    SequenceSide::First => {
+                        if self.first_cloner.is_none() {
+                            self.first_cloner = Some(StreamEventCloner::from_event(se));
+                        }
+                        self.first_cloner.as_ref().unwrap()
+                    }
+                    SequenceSide::Second => {
+                        if self.second_cloner.is_none() {
+                            self.second_cloner = Some(StreamEventCloner::from_event(se));
+                        }
+                        self.second_cloner.as_ref().unwrap()
+                    }
+                };
+                let se_clone = cloner.copy_stream_event(se);
                 match side {
                     SequenceSide::First => {
                         self.first_buffer.push(se_clone);
