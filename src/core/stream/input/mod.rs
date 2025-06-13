@@ -5,7 +5,7 @@ pub mod input_manager;
 pub mod input_distributor;
 pub mod input_entry_valve;
 pub mod table_input_handler;
-// pub mod source; // For sub-package source/
+pub mod source; // For sub-package source/
 
 pub use self::input_handler::InputHandler;
 pub use self::input_manager::InputManager;

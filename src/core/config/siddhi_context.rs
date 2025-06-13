@@ -294,7 +294,7 @@ impl SiddhiContext {
             MinForeverAttributeAggregatorFactory, MaxForeverAttributeAggregatorFactory,
         };
         use crate::core::table::InMemoryTableFactory;
-        use crate::core::extension::{LogSinkFactory, ExampleSourceFactory};
+        use crate::core::extension::{LogSinkFactory, TimerSourceFactory};
 
         self.add_window_factory("length".to_string(), Box::new(LengthWindowFactory));
         self.add_window_factory("time".to_string(), Box::new(TimeWindowFactory));
@@ -309,7 +309,7 @@ impl SiddhiContext {
         self.add_attribute_aggregator_factory("maxForever".to_string(), Box::new(MaxForeverAttributeAggregatorFactory));
 
         self.add_table_factory("inMemory".to_string(), Box::new(InMemoryTableFactory));
-        self.add_source_factory("example".to_string(), Box::new(ExampleSourceFactory));
+        self.add_source_factory("timer".to_string(), Box::new(TimerSourceFactory));
         self.add_sink_factory("log".to_string(), Box::new(LogSinkFactory));
     }
 

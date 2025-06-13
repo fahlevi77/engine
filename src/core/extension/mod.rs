@@ -31,12 +31,13 @@ impl Clone for Box<dyn AttributeAggregatorFactory> {
 }
 
 pub trait SourceFactory: Debug + Send + Sync {
+    fn create(&self) -> Box<dyn crate::core::stream::input::source::Source>;
     fn clone_box(&self) -> Box<dyn SourceFactory>;
 }
 impl Clone for Box<dyn SourceFactory> { fn clone(&self) -> Self { self.clone_box() } }
 
 pub trait SinkFactory: Debug + Send + Sync {
-    fn create(&self) -> Box<dyn StreamCallback>;
+    fn create(&self) -> Box<dyn crate::core::stream::output::sink::Sink>;
     fn clone_box(&self) -> Box<dyn SinkFactory>;
 }
 impl Clone for Box<dyn SinkFactory> { fn clone(&self) -> Self { self.clone_box() } }
@@ -68,9 +69,12 @@ pub trait TableFactory: Debug + Send + Sync {
 impl Clone for Box<dyn TableFactory> { fn clone(&self) -> Self { self.clone_box() } }
 
 #[derive(Debug, Clone)]
-pub struct ExampleSourceFactory;
+pub struct TimerSourceFactory;
 
-impl SourceFactory for ExampleSourceFactory {
+impl SourceFactory for TimerSourceFactory {
+    fn create(&self) -> Box<dyn crate::core::stream::input::source::Source> {
+        Box::new(crate::core::stream::input::source::timer_source::TimerSource::new(1000))
+    }
     fn clone_box(&self) -> Box<dyn SourceFactory> { Box::new(self.clone()) }
 }
 
@@ -78,8 +82,8 @@ impl SourceFactory for ExampleSourceFactory {
 pub struct LogSinkFactory;
 
 impl SinkFactory for LogSinkFactory {
-    fn create(&self) -> Box<dyn StreamCallback> {
-        Box::new(crate::core::stream::output::LogSink)
+    fn create(&self) -> Box<dyn crate::core::stream::output::sink::Sink> {
+        Box::new(crate::core::stream::output::sink::LogSink::new())
     }
     fn clone_box(&self) -> Box<dyn SinkFactory> { Box::new(self.clone()) }
 }

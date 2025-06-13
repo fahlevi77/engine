@@ -3,7 +3,6 @@ pub mod input;
 pub mod output;
 
 pub use self::stream_junction::{StreamJunction, OnErrorAction, Receiver as StreamJunctionReceiver, Publisher};
-pub use self::input::InputHandler; // Re-exporting key types from submodules
-pub use self::input::InputManager;
-// pub use self::input::InputProcessor; // Trait, might be re-exported if used externally
-pub use self::output::StreamCallback;
+pub use self::input::{InputHandler, InputManager};
+pub use self::output::{StreamCallback, Sink, LogSink};
+pub use self::input::source::{Source, timer_source::TimerSource};
