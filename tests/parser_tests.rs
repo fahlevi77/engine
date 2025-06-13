@@ -138,3 +138,35 @@ fn test_udf_in_query() {
     let out = collected.lock().unwrap().clone();
     assert_eq!(out, vec![vec![AttributeValue::Int(5)]]);
 }
+
+#[test]
+fn test_parse_function_definition() {
+    use siddhi_rust::query_compiler::parse_function_definition;
+    use siddhi_rust::query_api::definition::attribute::Type;
+    let def = parse_function_definition("define function foo [rust] return int 'body'").unwrap();
+    assert_eq!(def.id, "foo");
+    assert_eq!(def.language, "rust");
+    assert_eq!(def.return_type, Type::INT);
+}
+
+#[test]
+fn test_query_with_group_by() {
+    use siddhi_rust::query_compiler::parse;
+    use siddhi_rust::query_api::execution::ExecutionElement;
+    use siddhi_rust::query_api::execution::query::selection::order_by_attribute::Order;
+
+    let app = "\
+        define stream In (a int, b int);\n\
+        define stream Out (s long);\n\
+        from In select sum(a) as s group by b having sum(a) > 0 order by b desc limit 5 offset 1 insert into Out;\n";
+    let sa = parse(app).unwrap();
+    match &sa.get_execution_elements()[0] {
+        ExecutionElement::Query(q) => {
+            assert_eq!(q.selector.group_by_list.len(), 1);
+            assert!(matches!(q.selector.order_by_list[0].get_order(), Order::Desc));
+            assert!(q.selector.limit.is_some());
+            assert!(q.selector.offset.is_some());
+        }
+        _ => panic!("expected query"),
+    }
+}

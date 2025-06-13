@@ -122,6 +122,12 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
         } else if lower.starts_with("define window") {
             let def = parse_window_definition(&stmt)?;
             app.add_window_definition(def);
+        } else if lower.starts_with("define function") {
+            let def = parse_function_definition(&stmt)?;
+            app.add_function_definition(def);
+        } else if lower.starts_with("define aggregation") {
+            let def = parse_aggregation_definition(&stmt)?;
+            app.add_aggregation_definition(def);
         } else if lower.starts_with("from") {
             let q = parse_query(&stmt)?;
             app.add_execution_element(ExecutionElement::Query(q));
@@ -174,8 +180,10 @@ pub fn parse_query(query_string: &str) -> Result<Query, String> {
 }
 
 pub fn parse_function_definition(func_def_string: &str) -> Result<FunctionDefinition, String> {
-    let _ = update_variables(func_def_string)?;
-    Err("Function definition parsing not implemented".to_string())
+    let s = update_variables(func_def_string)?;
+    grammar::FunctionDefParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 // Renamed from parseTimeConstantDefinition to align with type name

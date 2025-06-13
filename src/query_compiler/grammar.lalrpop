@@ -3,12 +3,14 @@
 
 grammar;
 
-use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition, WindowDefinition};
+use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition, WindowDefinition, FunctionDefinition};
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::definition::attribute::Attribute;
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::execution::query::{Query, OnDemandQuery, StoreQuery, OnDemandQueryType};
 use crate::query_api::execution::query::selection::Selector;
+use crate::query_api::execution::query::selection::order_by_attribute::{OrderByAttribute, Order as OrderByOrder};
+use crate::query_api::expression::constant::Constant;
 use crate::query_api::execution::query::output::output_stream::{
     OutputStream,
     OutputStreamAction,
@@ -38,7 +40,7 @@ pub AnnotationStmt: Annotation = {
 };
 
 pub OnDemandQueryStmt: OnDemandQuery = {
-    "from" <st:InputStoreRule> "select" <sel:SelectList> => {
+    "from" <st:InputStoreRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> => {
         let mut selector = Selector::new();
         for (expr, alias) in sel {
             match alias {
@@ -49,6 +51,11 @@ pub OnDemandQueryStmt: OnDemandQuery = {
                 },
             }
         }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
         OnDemandQuery::query()
             .from(st)
             .select(selector)
@@ -101,6 +108,12 @@ pub WindowDef: WindowDefinition = {
         }
         if let Some(w) = param { d = d.window(w); }
         d
+    }
+};
+
+pub FunctionDef: FunctionDefinition = {
+    "define" "function" <id:Ident> "[" <lang:Ident> "]" "return" <ty:Type> <body:STRING> => {
+        FunctionDefinition::new(id, lang, body, ty)
     }
 };
 
@@ -249,7 +262,7 @@ BasicUnit: StateElement = {
 
 pub QueryStmt: Query = {
     // INSERT INTO <stream/table>
-    "from" <istream:InputStreamRule> "select" <sel:SelectList> "insert" "into" "table" <out_id:Ident> => {
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "insert" "into" "table" <out_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
         for (expr, alias) in sel {
@@ -261,11 +274,16 @@ pub QueryStmt: Query = {
                 },
             }
         }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
         let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
         let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     },
-    "from" <istream:InputStreamRule> "select" <sel:SelectList> "insert" "into" <out_id:Ident> => {
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "insert" "into" <out_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
         for (expr, alias) in sel {
@@ -277,12 +295,17 @@ pub QueryStmt: Query = {
                 },
             }
         }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
         let insert_action = InsertIntoStreamAction { target_id: out_id, is_inner_stream: false, is_fault_stream: false };
         let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     },
     // UPDATE TABLE
-    "from" <istream:InputStreamRule> "select" <sel:SelectList> "update" "table" <t_id:Ident> => {
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "update" "table" <t_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
         for (expr, alias) in sel {
@@ -294,12 +317,17 @@ pub QueryStmt: Query = {
                 },
             }
         }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
         let update_action = UpdateStreamAction { target_id: t_id, on_update_expression: Expression::value_bool(true), update_set_clause: None };
         let output_stream = OutputStream::new(OutputStreamAction::Update(update_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     },
     // DELETE FROM TABLE
-    "from" <istream:InputStreamRule> "select" <sel:SelectList> "delete" "table" <t_id:Ident> => {
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "delete" "table" <t_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
         for (expr, alias) in sel {
@@ -311,6 +339,11 @@ pub QueryStmt: Query = {
                 },
             }
         }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
         let delete_action = DeleteStreamAction { target_id: t_id, on_delete_expression: Expression::value_bool(true) };
         let output_stream = OutputStream::new(OutputStreamAction::Delete(delete_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
@@ -363,6 +396,64 @@ SelectList: Vec<(Expression, Option<String>)> = {
 SelectItem: (Expression, Option<String>) = {
     <e:Expression> "as" <a:Ident> => (e, Some(a)),
     <e:Expression> => (e, None),
+};
+
+GroupByClause: Vec<Variable> = {
+    "group" "by" <first:Ident> <rest:("," Ident)*> => {
+        let mut v = vec![Variable::new(first)];
+        for (_, id) in rest { v.push(Variable::new(id)); }
+        v
+    }
+};
+
+GroupByOpt: Vec<Variable> = {
+    <g:GroupByClause> => g,
+    => Vec::new(),
+};
+
+HavingOpt: Option<Expression> = {
+    "having" <e:Expression> => Some(e),
+    => None,
+};
+
+OrderItem: OrderByAttribute = {
+    <id:Ident> <o:OrderOpt> => {
+        let var = Variable::new(id);
+        match o {
+            Some(OrderByOrder::Desc) => OrderByAttribute::new(var, OrderByOrder::Desc),
+            Some(OrderByOrder::Asc) => OrderByAttribute::new(var, OrderByOrder::Asc),
+            None => OrderByAttribute::new_default_order(var),
+        }
+    }
+};
+
+OrderOpt: Option<OrderByOrder> = {
+    "desc" => Some(OrderByOrder::Desc),
+    "asc" => Some(OrderByOrder::Asc),
+    => None,
+};
+
+OrderByClause: Vec<OrderByAttribute> = {
+    "order" "by" <first:OrderItem> <rest:("," OrderItem)*> => {
+        let mut v = vec![first];
+        for (_, it) in rest { v.push(it); }
+        v
+    }
+};
+
+OrderByOpt: Vec<OrderByAttribute> = {
+    <o:OrderByClause> => o,
+    => Vec::new(),
+};
+
+LimitOpt: Option<Constant> = {
+    "limit" <n:NUMBER> => Some(Constant::long(n)),
+    => None,
+};
+
+OffsetOpt: Option<Constant> = {
+    "offset" <n:NUMBER> => Some(Constant::long(n)),
+    => None,
 };
 
 AttrList: Vec<(String, AttributeType)> = {
