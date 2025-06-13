@@ -12,7 +12,8 @@ use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::partition::PartitionRuntime;
 use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
-use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
+use crate::core::siddhi_app_runtime_builder::{SiddhiAppRuntimeBuilder, TableRuntimePlaceholder};
+use crate::core::window::WindowRuntime;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
 use crate::core::query::processor::Processor; // Trait for CallbackProcessor
 use crate::core::persistence::SnapshotService;
@@ -33,11 +34,10 @@ pub struct SiddhiAppRuntime {
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
     pub partition_runtimes: Vec<Arc<PartitionRuntime>>,
     pub scheduler: Option<Arc<crate::core::util::Scheduler>>,
+    pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
+    pub window_map: HashMap<String, Arc<Mutex<WindowRuntime>>>,
     pub aggregation_map: HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
-    // TODO: Add other runtime component maps (tables, windows, partitions, triggers)
-    // These would be moved from SiddhiAppRuntimeBuilder during the build() process.
-    // For now, using a placeholder to acknowledge they would exist.
-    pub _placeholder_table_map: HashMap<String, String>, // Example placeholder
+    // TODO: Add other runtime component maps (partitions, triggers)
 }
 
 impl SiddhiAppRuntime {

@@ -106,12 +106,6 @@ impl SiddhiAppRuntimeBuilder {
             .get_scheduler()
             .unwrap_or_else(|| Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default()))));
 
-        let mut aggregation_map = HashMap::new();
-        for (id, _def) in &self.aggregation_definition_map {
-            let runtime = AggregationRuntime::new(id.clone(), HashMap::new());
-            aggregation_map.insert(id.clone(), Arc::new(Mutex::new(runtime)));
-        }
-
         Ok(SiddhiAppRuntime {
             name: self.siddhi_app_context.name.clone(),
             siddhi_app: api_siddhi_app, // The original parsed API definition
@@ -121,16 +115,13 @@ impl SiddhiAppRuntimeBuilder {
             query_runtimes: self.query_runtimes,
             partition_runtimes: self.partition_runtimes,
             scheduler: Some(scheduler),
-            aggregation_map,
+            table_map: self.table_map,
+            window_map: self.window_map,
+            aggregation_map: self.aggregation_map,
             // Initialize other runtime fields (tables, windows, partitions, triggers)
             // These would typically be moved from the builder to the runtime instance.
-            // For now, they are not fields on SiddhiAppRuntime placeholder.
-            // tables: self.table_map,
-            // windows: self.window_map,
-            // aggregations: self.aggregation_map,
             // partitions: self.partition_runtimes,
             // triggers: self.trigger_runtimes,
-            _placeholder_table_map: HashMap::new(), // Placeholder field on SiddhiAppRuntime
         })
     }
 }
