@@ -87,11 +87,12 @@ fn test_runtime_persist_restore() {
     handler.lock().unwrap().send_event_with_timestamp(1, vec![AttributeValue::Int(2)]).unwrap();
     assert_eq!(*count.lock().unwrap(), 2);
 
-    let rev = runtime.persist().unwrap();
+    let key = manager.get_siddhi_app_runtimes_keys()[0].clone();
+    let rev = manager.persist_app(&key).unwrap();
     handler.lock().unwrap().send_event_with_timestamp(2, vec![AttributeValue::Int(3)]).unwrap();
     assert_eq!(*count.lock().unwrap(), 4);
 
-    runtime.restore_revision(&rev).unwrap();
+    manager.restore_app_revision(&key, &rev).unwrap();
     let restored = svc.snapshot();
     let restored_val = u32::from_be_bytes([restored[0], restored[1], restored[2], restored[3]]);
     *count.lock().unwrap() = restored_val;

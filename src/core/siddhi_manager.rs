@@ -194,18 +194,52 @@ impl SiddhiManager {
     }
 
     // --- Persistence ---
+    pub fn persist_app(&self, app_name: &str) -> Result<String, String> {
+        let map = self.siddhi_app_runtime_map.lock().expect("Mutex poisoned");
+        let rt = map
+            .get(app_name)
+            .ok_or_else(|| format!("SiddhiApp '{}' not found", app_name))?;
+        rt.persist()
+    }
+
+    pub fn restore_app_revision(
+        &self,
+        app_name: &str,
+        revision: &str,
+    ) -> Result<(), String> {
+        let map = self.siddhi_app_runtime_map.lock().expect("Mutex poisoned");
+        let rt = map
+            .get(app_name)
+            .ok_or_else(|| format!("SiddhiApp '{}' not found", app_name))?;
+        rt.restore_revision(revision)
+    }
+
     pub fn persist_all(&self) {
-        for runtime in self.siddhi_app_runtime_map.lock().expect("Mutex poisoned").values() {
-            // runtime.persist(); // SiddhiAppRuntime needs persist() method
+        for runtime in self
+            .siddhi_app_runtime_map
+            .lock()
+            .expect("Mutex poisoned")
+            .values()
+        {
+            let _ = runtime.persist();
         }
-        println!("[SiddhiManager] persist_all called (Placeholder)");
     }
 
     pub fn restore_all_last_state(&self) {
-        for runtime in self.siddhi_app_runtime_map.lock().expect("Mutex poisoned").values() {
-            // runtime.restore_last_revision(); // SiddhiAppRuntime needs this
+        for runtime in self
+            .siddhi_app_runtime_map
+            .lock()
+            .expect("Mutex poisoned")
+            .values()
+        {
+            if let Some(service) = runtime.siddhi_app_context.get_snapshot_service() {
+                if let Some(store) = &service.persistence_store {
+                    if let Some(last) = store.get_last_revision(&runtime.name) {
+                        let _ = runtime.restore_revision(&last);
+                    }
+                }
+            }
         }
-        println!("[SiddhiManager] restore_all_last_state called (Placeholder)");
     }
 }
 
