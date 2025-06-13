@@ -132,7 +132,7 @@ fn test_query_parser_uses_custom_window_factory() {
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
     let query = Query::query().from(input).select(selector).out_stream(out_stream);
 
-    let runtime = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new()).unwrap();
+    let runtime = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new(), &HashMap::new()).unwrap();
     let head = runtime.processor_chain_head.expect("head");
     let dbg = format!("{:?}", head.lock().unwrap());
     assert!(dbg.contains("DummyWindowProcessor"));

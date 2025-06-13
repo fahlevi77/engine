@@ -149,11 +149,11 @@ fn test_query_parser_with_table_actions() {
     table_defs.insert("T".to_string(), t_def);
 
     let q1 = parse_query("from S select val insert into table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q1, &app_ctx, &junctions, &table_defs).is_ok());
+    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q1, &app_ctx, &junctions, &table_defs, &HashMap::new()).is_ok());
 
     let q2 = parse_query("from S select val update table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q2, &app_ctx, &junctions, &table_defs).is_ok());
+    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q2, &app_ctx, &junctions, &table_defs, &HashMap::new()).is_ok());
 
     let q3 = parse_query("from S select val delete table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q3, &app_ctx, &junctions, &table_defs).is_ok());
+    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(&q3, &app_ctx, &junctions, &table_defs, &HashMap::new()).is_ok());
 }

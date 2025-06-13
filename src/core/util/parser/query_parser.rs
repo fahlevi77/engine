@@ -23,6 +23,7 @@ use crate::core::query::selector::{GroupByKeyGenerator, OrderByEventComparator};
 use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
 use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
+use crate::core::query::output::insert_into_aggregation_processor::InsertIntoAggregationProcessor;
 use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
 use std::collections::HashMap;
@@ -37,6 +38,7 @@ impl QueryParser {
         siddhi_app_context: &Arc<SiddhiAppContext>,
         stream_junction_map: &HashMap<String, Arc<Mutex<StreamJunction>>>,
         table_def_map: &HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
+        aggregation_map: &HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
     ) -> Result<QueryRuntime, String> {
 
         // 1. Determine Query Name (from @info(name='foo') or generate)
@@ -443,6 +445,15 @@ impl QueryParser {
                     let insert_processor = Arc::new(Mutex::new(
                         crate::core::query::output::InsertIntoTableProcessor::new(
                             table,
+                            Arc::clone(siddhi_app_context),
+                            Arc::clone(&siddhi_query_context),
+                        ),
+                    ));
+                    link_processor(insert_processor);
+                } else if let Some(agg) = aggregation_map.get(&insert_action.target_id) {
+                    let insert_processor = Arc::new(Mutex::new(
+                        crate::core::query::output::InsertIntoAggregationProcessor::new(
+                            Arc::clone(agg),
                             Arc::clone(siddhi_app_context),
                             Arc::clone(&siddhi_query_context),
                         ),

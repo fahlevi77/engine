@@ -221,7 +221,7 @@ fn test_join_query_parsing() {
     junctions.insert("S2".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S2".to_string(), Arc::clone(&right_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("Out".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new(), &HashMap::new());
     assert!(res.is_ok());
 
     // Also ensure expression parsing works standalone
@@ -267,7 +267,7 @@ fn test_pattern_query_parsing() {
     junctions.insert("B".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("B".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("Out".to_string(), Arc::new(std::sync::Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new(), &HashMap::new());
     assert!(res.is_ok());
 }
 
@@ -296,7 +296,7 @@ fn test_table_in_expression_query() {
     let mut table_defs = HashMap::new();
     table_defs.insert("T".to_string(), t_def);
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs);
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs, &HashMap::new());
     assert!(res.is_ok());
 }
 #[test]
@@ -311,7 +311,7 @@ fn test_join_query_parsing_from_string() {
     junctions.insert("S1".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S1".to_string(), Arc::clone(&s1_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("S2".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("S2".to_string(), Arc::clone(&s2_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("Out".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new(), &HashMap::new());
     assert!(res.is_ok());
 }
 
@@ -327,6 +327,6 @@ fn test_pattern_query_parsing_from_string() {
     junctions.insert("A".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("A".to_string(), Arc::clone(&a_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("B".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("B".to_string(), Arc::clone(&b_def), Arc::clone(&app_ctx), 1024, false, None))));
     junctions.insert("Out".to_string(), Arc::new(Mutex::new(siddhi_rust::core::stream::stream_junction::StreamJunction::new("Out".to_string(), Arc::new(StreamDefinition::new("Out".to_string())), Arc::clone(&app_ctx), 1024, false, None))));
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new());
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &HashMap::new(), &HashMap::new());
     assert!(res.is_ok());
 }

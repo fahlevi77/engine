@@ -61,6 +61,6 @@ fn build_sequence_query() -> Query {
 fn test_sequence_query_parse() {
     let (app_ctx, mut junctions) = setup_context();
     let q = build_sequence_query();
-    let res = QueryParser::parse_query(&q, &app_ctx, &mut junctions, &HashMap::new());
+    let res = QueryParser::parse_query(&q, &app_ctx, &mut junctions, &HashMap::new(), &HashMap::new());
     assert!(res.is_ok());
 }

@@ -13,7 +13,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::window::WindowRuntime;
-use crate::core::aggregation::AggregationRuntime;
+use crate::core::aggregation::{AggregationRuntime, AggregationInputProcessor};
 use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
@@ -153,22 +153,49 @@ impl SiddhiAppParser {
         // WindowDefinitions
         for (window_id, window_def) in &api_siddhi_app.window_definition_map {
             builder.add_window_definition(Arc::clone(window_def));
-            builder.add_window(
-                window_id.clone(),
-                Arc::new(Mutex::new(WindowRuntime::new(Arc::clone(window_def)))),
-            );
+            let mut runtime = WindowRuntime::new(Arc::clone(window_def));
+            if let Some(handler) = &window_def.window_handler {
+                let qctx = Arc::new(SiddhiQueryContext::new(
+                    Arc::clone(&siddhi_app_context),
+                    format!("__window_{}", window_id),
+                    None,
+                ));
+                if let Ok(proc) = crate::core::query::processor::stream::window::create_window_processor(
+                    handler,
+                    Arc::clone(&siddhi_app_context),
+                    Arc::clone(&qctx),
+                ) {
+                    runtime.set_processor(proc);
+                }
+            }
+            builder.add_window(window_id.clone(), Arc::new(Mutex::new(runtime)));
         }
 
         // AggregationDefinitions
         for (agg_id, agg_def) in &api_siddhi_app.aggregation_definition_map {
             builder.add_aggregation_definition(Arc::clone(agg_def));
-            builder.add_aggregation_runtime(
+            let runtime = Arc::new(Mutex::new(crate::core::aggregation::AggregationRuntime::new(
                 agg_id.clone(),
-                Arc::new(Mutex::new(crate::core::aggregation::AggregationRuntime::new(
-                    agg_id.clone(),
-                    HashMap::new(),
-                ))),
-            );
+                HashMap::new(),
+            )));
+            builder.add_aggregation_runtime(agg_id.clone(), Arc::clone(&runtime));
+
+            if let Some(stream) = &agg_def.basic_single_input_stream {
+                let input_id = stream.get_stream_id_str().to_string();
+                if let Some(junction) = builder.stream_junction_map.get(&input_id) {
+                    let qctx = Arc::new(SiddhiQueryContext::new(
+                        Arc::clone(&siddhi_app_context),
+                        format!("__aggregation_{}", agg_id),
+                        None,
+                    ));
+                    let proc = Arc::new(Mutex::new(crate::core::aggregation::AggregationInputProcessor::new(
+                        Arc::clone(&runtime),
+                        Arc::clone(&siddhi_app_context),
+                        Arc::clone(&qctx),
+                    )));
+                    junction.lock().unwrap().subscribe(proc);
+                }
+            }
         }
 
         // TODO: Initialize Windows after all tables/windows are defined (as in Java)
@@ -184,6 +211,7 @@ impl SiddhiAppParser {
                         &siddhi_app_context,
                         &builder.stream_junction_map,
                         &builder.table_definition_map,
+                        &builder.aggregation_map,
                     )?;
                     builder.add_query_runtime(Arc::new(query_runtime));
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);

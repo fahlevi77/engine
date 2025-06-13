@@ -21,6 +21,7 @@ impl PartitionParser {
                 siddhi_app_context,
                 &builder.stream_junction_map,
                 &builder.table_definition_map,
+                &builder.aggregation_map,
             )?;
             let qr_arc = Arc::new(qr);
             builder.add_query_runtime(Arc::clone(&qr_arc));
