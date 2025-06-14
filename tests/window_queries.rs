@@ -220,3 +220,74 @@ fn test_time_window_runtime() {
     assert_eq!(out[0].data, vec![AttributeValue::Int(5)]);
     assert!(out.iter().any(|e| e.is_expired));
 }
+
+#[test]
+fn test_length_batch_window_runtime() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#lengthBatch(2) select v insert into Out;\n";
+    let manager = SiddhiManager::new();
+    let api = parse(app).expect("parse");
+    let runtime = manager
+        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .expect("runtime");
+    let collected = Arc::new(Mutex::new(Vec::new()));
+    runtime
+        .add_callback(
+            "Out",
+            Box::new(CollectEvents {
+                events: Arc::clone(&collected),
+            }),
+        )
+        .unwrap();
+    runtime.start();
+    let handler = runtime.get_input_handler("In").unwrap();
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(1)]).unwrap();
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(2)]).unwrap();
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(3)]).unwrap();
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(4)]).unwrap();
+    std::thread::sleep(Duration::from_millis(50));
+    runtime.shutdown();
+    let out = collected.lock().unwrap().clone();
+    assert!(out.len() >= 6);
+    assert_eq!(out[0].data, vec![AttributeValue::Int(1)]);
+    assert_eq!(out[1].data, vec![AttributeValue::Int(2)]);
+    assert!(out[2].is_expired);
+    assert!(out[3].is_expired);
+    assert_eq!(out[4].data, vec![AttributeValue::Int(3)]);
+    assert_eq!(out[5].data, vec![AttributeValue::Int(4)]);
+}
+
+#[test]
+fn test_time_batch_window_runtime() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#timeBatch(100) select v insert into Out;\n";
+    let manager = SiddhiManager::new();
+    let api = parse(app).expect("parse");
+    let runtime = manager
+        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .expect("runtime");
+    let collected = Arc::new(Mutex::new(Vec::new()));
+    runtime
+        .add_callback(
+            "Out",
+            Box::new(CollectEvents {
+                events: Arc::clone(&collected),
+            }),
+        )
+        .unwrap();
+    runtime.start();
+    let handler = runtime.get_input_handler("In").unwrap();
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(1)]).unwrap();
+    std::thread::sleep(Duration::from_millis(120));
+    handler.lock().unwrap().send_data(vec![AttributeValue::Int(2)]).unwrap();
+    std::thread::sleep(Duration::from_millis(120));
+    runtime.shutdown();
+    let out = collected.lock().unwrap().clone();
+    assert!(out.len() >= 3);
+    assert_eq!(out[0].data, vec![AttributeValue::Int(1)]);
+    assert!(out.iter().any(|e| e.is_expired));
+}

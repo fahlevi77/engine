@@ -198,6 +198,64 @@ impl Schedulable for ExpireTask {
     }
 }
 
+#[derive(Clone)]
+struct BatchFlushTask {
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+    next: Option<Arc<Mutex<dyn Processor>>>,
+    duration_ms: i64,
+    scheduler: Arc<Scheduler>,
+    start_time: Arc<Mutex<Option<i64>>>,
+}
+
+impl Schedulable for BatchFlushTask {
+    fn on_time(&self, timestamp: i64) {
+        let expired_batch: Vec<StreamEvent> = {
+            let mut ex = self.expired.lock().unwrap();
+            std::mem::take(&mut *ex)
+        };
+        let current_batch: Vec<StreamEvent> = {
+            let mut buf = self.buffer.lock().unwrap();
+            std::mem::take(&mut *buf)
+        };
+
+        if expired_batch.is_empty() && current_batch.is_empty() {
+            *self.start_time.lock().unwrap() = Some(timestamp);
+            self.scheduler.notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
+            return;
+        }
+
+        let mut head: Option<Box<dyn ComplexEvent>> = None;
+        let mut tail = &mut head;
+
+        for mut e in expired_batch {
+            e.set_event_type(ComplexEventType::Expired);
+            e.set_timestamp(timestamp);
+            *tail = Some(Box::new(e.clone_without_next()));
+            tail = tail.as_mut().unwrap().mut_next_ref_option();
+        }
+
+        for e in &current_batch {
+            *tail = Some(Box::new(e.clone_without_next()));
+            tail = tail.as_mut().unwrap().mut_next_ref_option();
+        }
+
+        {
+            let mut ex = self.expired.lock().unwrap();
+            ex.extend(current_batch);
+        }
+
+        if let Some(chain) = head {
+            if let Some(ref next) = self.next {
+                next.lock().unwrap().process(Some(chain));
+            }
+        }
+
+        *self.start_time.lock().unwrap() = Some(timestamp);
+        self.scheduler.notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
+    }
+}
+
 impl Processor for TimeWindowProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         if let Some(ref next) = self.meta.next_processor {
@@ -275,6 +333,12 @@ pub fn create_window_processor(
             "time" => Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
                 handler, app_ctx, query_ctx,
             )?))),
+            "lengthBatch" => Ok(Arc::new(Mutex::new(LengthBatchWindowProcessor::from_handler(
+                handler, app_ctx, query_ctx,
+            )?))),
+            "timeBatch" => Ok(Arc::new(Mutex::new(TimeBatchWindowProcessor::from_handler(
+                handler, app_ctx, query_ctx,
+            )?))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
     }
@@ -311,6 +375,351 @@ impl WindowProcessorFactory for TimeWindowFactory {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
+            handler, app_ctx, query_ctx,
+        )?)))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+// ---- LengthBatchWindowProcessor ----
+
+#[derive(Debug)]
+pub struct LengthBatchWindowProcessor {
+    meta: CommonProcessorMeta,
+    pub length: usize,
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+}
+
+impl LengthBatchWindowProcessor {
+    pub fn new(
+        length: usize,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            length,
+            buffer: Arc::new(Mutex::new(Vec::new())),
+            expired: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn from_handler(
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        let expr = handler
+            .get_parameters()
+            .first()
+            .ok_or("LengthBatch window requires a parameter")?;
+        if let Expression::Constant(c) = expr {
+            let len = match &c.value {
+                ConstantValueWithFloat::Int(i) => *i as usize,
+                ConstantValueWithFloat::Long(l) => *l as usize,
+                _ => {
+                    return Err("LengthBatch window size must be int or long".to_string())
+                }
+            };
+            Ok(Self::new(len, app_ctx, query_ctx))
+        } else {
+            Err("LengthBatch window size must be constant".to_string())
+        }
+    }
+
+    fn flush(&self, timestamp: i64) {
+        if let Some(ref next) = self.meta.next_processor {
+            let expired_batch: Vec<StreamEvent> = {
+                let mut ex = self.expired.lock().unwrap();
+                std::mem::take(&mut *ex)
+            };
+            let current_batch: Vec<StreamEvent> = {
+                let mut buf = self.buffer.lock().unwrap();
+                std::mem::take(&mut *buf)
+            };
+
+            if expired_batch.is_empty() && current_batch.is_empty() {
+                return;
+            }
+
+            let mut head: Option<Box<dyn ComplexEvent>> = None;
+            let mut tail = &mut head;
+
+            for mut e in expired_batch {
+                e.set_event_type(ComplexEventType::Expired);
+                e.set_timestamp(timestamp);
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            for e in &current_batch {
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            {
+                let mut ex = self.expired.lock().unwrap();
+                ex.extend(current_batch);
+            }
+
+            if let Some(chain) = head {
+                next.lock().unwrap().process(Some(chain));
+            }
+        }
+    }
+}
+
+impl Processor for LengthBatchWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(chunk) = complex_event_chunk {
+            let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+            let mut last_ts = 0i64;
+            while let Some(ev) = current_opt {
+                if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                    last_ts = se.timestamp;
+                    if self.buffer.lock().unwrap().len() >= self.length {
+                        self.flush(last_ts);
+                    }
+                }
+                current_opt = ev.get_next();
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.length,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::BATCH
+    }
+
+    fn is_stateful(&self) -> bool {
+        true
+    }
+}
+
+impl WindowProcessor for LengthBatchWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct LengthBatchWindowFactory;
+
+impl WindowProcessorFactory for LengthBatchWindowFactory {
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(LengthBatchWindowProcessor::from_handler(
+            handler, app_ctx, query_ctx,
+        )?)))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+// ---- TimeBatchWindowProcessor ----
+
+#[derive(Debug)]
+pub struct TimeBatchWindowProcessor {
+    meta: CommonProcessorMeta,
+    pub duration_ms: i64,
+    scheduler: Option<Arc<Scheduler>>,
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+    start_time: Arc<Mutex<Option<i64>>>,
+}
+
+impl TimeBatchWindowProcessor {
+    pub fn new(
+        duration_ms: i64,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        let scheduler = app_ctx.get_scheduler();
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            duration_ms,
+            scheduler,
+            buffer: Arc::new(Mutex::new(Vec::new())),
+            expired: Arc::new(Mutex::new(Vec::new())),
+            start_time: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    pub fn from_handler(
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        let expr = handler
+            .get_parameters()
+            .first()
+            .ok_or("TimeBatch window requires a parameter")?;
+        if let Expression::Constant(c) = expr {
+            let dur = match &c.value {
+                ConstantValueWithFloat::Time(t) => *t,
+                ConstantValueWithFloat::Long(l) => *l,
+                _ => return Err("TimeBatch window duration must be time constant".to_string()),
+            };
+            Ok(Self::new(dur, app_ctx, query_ctx))
+        } else {
+            Err("TimeBatch window duration must be constant".to_string())
+        }
+    }
+
+    fn flush(&self, timestamp: i64) {
+        if let Some(ref next) = self.meta.next_processor {
+            let expired_batch: Vec<StreamEvent> = {
+                let mut ex = self.expired.lock().unwrap();
+                std::mem::take(&mut *ex)
+            };
+            let current_batch: Vec<StreamEvent> = {
+                let mut buf = self.buffer.lock().unwrap();
+                std::mem::take(&mut *buf)
+            };
+
+            if expired_batch.is_empty() && current_batch.is_empty() {
+                return;
+            }
+
+            let mut head: Option<Box<dyn ComplexEvent>> = None;
+            let mut tail = &mut head;
+
+            for mut e in expired_batch {
+                e.set_event_type(ComplexEventType::Expired);
+                e.set_timestamp(timestamp);
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            for e in &current_batch {
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            {
+                let mut ex = self.expired.lock().unwrap();
+                ex.extend(current_batch);
+            }
+
+            if let Some(chain) = head {
+                next.lock().unwrap().process(Some(chain));
+            }
+        }
+        *self.start_time.lock().unwrap() = Some(timestamp);
+        if let Some(ref scheduler) = self.scheduler {
+            let task = BatchFlushTask {
+                buffer: Arc::clone(&self.buffer),
+                expired: Arc::clone(&self.expired),
+                next: self.meta.next_processor.as_ref().map(Arc::clone),
+                duration_ms: self.duration_ms,
+                scheduler: Arc::clone(scheduler),
+                start_time: Arc::clone(&self.start_time),
+            };
+            scheduler.notify_at(timestamp + self.duration_ms, Arc::new(task));
+        }
+    }
+}
+
+impl Processor for TimeBatchWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(chunk) = complex_event_chunk {
+            let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+            while let Some(ev) = current_opt {
+                if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                    let mut start = self.start_time.lock().unwrap();
+                    if start.is_none() {
+                        *start = Some(se.timestamp);
+                        if let Some(ref scheduler) = self.scheduler {
+                            let task = BatchFlushTask {
+                                buffer: Arc::clone(&self.buffer),
+                                expired: Arc::clone(&self.expired),
+                                next: self.meta.next_processor.as_ref().map(Arc::clone),
+                                duration_ms: self.duration_ms,
+                                scheduler: Arc::clone(scheduler),
+                                start_time: Arc::clone(&self.start_time),
+                            };
+                            scheduler.notify_at(se.timestamp + self.duration_ms, Arc::new(task));
+                        }
+                    } else if se.timestamp - start.unwrap() >= self.duration_ms {
+                        let ts = se.timestamp;
+                        drop(start);
+                        self.flush(ts);
+                    }
+                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                }
+                current_opt = ev.get_next();
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.duration_ms,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::BATCH
+    }
+
+    fn is_stateful(&self) -> bool {
+        true
+    }
+}
+
+impl WindowProcessor for TimeBatchWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct TimeBatchWindowFactory;
+
+impl WindowProcessorFactory for TimeBatchWindowFactory {
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(TimeBatchWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,
         )?)))
     }

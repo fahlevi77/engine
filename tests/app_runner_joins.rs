@@ -53,3 +53,25 @@ fn join_with_condition_gt() {
         vec![vec![AttributeValue::Int(3), AttributeValue::Int(1)]]
     );
 }
+
+#[test]
+fn join_complex_condition() {
+    let app = "\
+        define stream L (id int);\n\
+        define stream R (id int);\n\
+        define stream Out (l int, r int);\n\
+        from L join R on (L.id > R.id and R.id > 0) or L.id == 10 select L.id as l, R.id as r insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("L", vec![AttributeValue::Int(1)]);
+    runner.send("R", vec![AttributeValue::Int(1)]);
+    runner.send("L", vec![AttributeValue::Int(10)]);
+    runner.send("R", vec![AttributeValue::Int(2)]);
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(10), AttributeValue::Int(1)],
+            vec![AttributeValue::Int(10), AttributeValue::Int(2)],
+        ]
+    );
+}
