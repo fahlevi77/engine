@@ -2,8 +2,13 @@
 // Ensure these paths are correct based on query_api module structure and re-exports.
 use crate::query_api::{
     definition::{
-        attribute::Type as AttributeType, AggregationDefinition, FunctionDefinition,
-        StreamDefinition, TableDefinition, WindowDefinition,
+        attribute::Type as AttributeType,
+        AggregationDefinition,
+        FunctionDefinition,
+        StreamDefinition,
+        TableDefinition,
+        TriggerDefinition,
+        WindowDefinition,
     },
     execution::{
         query::{
@@ -141,6 +146,9 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
         } else if lower.starts_with("define function") {
             let def = parse_function_definition(&stmt)?;
             app.add_function_definition(def);
+        } else if lower.starts_with("define trigger") {
+            let def = parse_trigger_definition(&stmt)?;
+            app.add_trigger_definition(def);
         } else if lower.starts_with("define aggregation") {
             let def = parse_aggregation_definition(&stmt)?;
             app.add_aggregation_definition(def);
@@ -198,6 +206,13 @@ pub fn parse_query(query_string: &str) -> Result<Query, String> {
 pub fn parse_function_definition(func_def_string: &str) -> Result<FunctionDefinition, String> {
     let s = update_variables(func_def_string)?;
     grammar::FunctionDefParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
+}
+
+pub fn parse_trigger_definition(trig_def_string: &str) -> Result<TriggerDefinition, String> {
+    let s = update_variables(trig_def_string)?;
+    grammar::TriggerDefParser::new()
         .parse(&s)
         .map_err(|e| format!("{:?}", e))
 }

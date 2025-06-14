@@ -3,7 +3,14 @@
 
 grammar;
 
-use crate::query_api::definition::{StreamDefinition, TableDefinition, AggregationDefinition, WindowDefinition, FunctionDefinition};
+use crate::query_api::definition::{
+    StreamDefinition,
+    TableDefinition,
+    AggregationDefinition,
+    WindowDefinition,
+    FunctionDefinition,
+    TriggerDefinition,
+};
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::definition::attribute::Attribute;
 use crate::query_api::execution::query::input::handler::WindowHandler;
@@ -115,6 +122,15 @@ pub WindowDef: WindowDefinition = {
 pub FunctionDef: FunctionDefinition = {
     "define" "function" <id:Ident> "[" <lang:Ident> "]" "return" <ty:Type> <body:STRING> => {
         FunctionDefinition::new(id, lang, body, ty)
+    }
+};
+
+pub TriggerDef: TriggerDefinition = {
+    "define" "trigger" <id:Ident> "at" "every" <dur:TimeConstant> => {
+        TriggerDefinition::id(id).at_every_time_constant(dur).unwrap()
+    },
+    "define" "trigger" <id:Ident> "at" <expr:STRING> => {
+        TriggerDefinition::id(id).at(expr)
     }
 };
 

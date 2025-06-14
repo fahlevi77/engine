@@ -43,3 +43,21 @@ fn cron_trigger_emits() {
     let out = runner.shutdown();
     assert!(out.len() >= 2);
 }
+
+#[test]
+fn parse_periodic_trigger_emits() {
+    let app = "define trigger PT at every 50 ms;";
+    let runner = AppRunner::new(app, "PT");
+    sleep(Duration::from_millis(130));
+    let out = runner.shutdown();
+    assert!(out.len() >= 2);
+}
+
+#[test]
+fn parse_cron_trigger_emits() {
+    let app = "define trigger CronStr at '*/1 * * * * *';";
+    let runner = AppRunner::new(app, "CronStr");
+    sleep(Duration::from_millis(2200));
+    let out = runner.shutdown();
+    assert!(out.len() >= 2);
+}
