@@ -1,5 +1,6 @@
 use siddhi_rust::query_compiler::parse;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::persistence::PersistenceStore;
 use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
 use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
@@ -53,6 +54,21 @@ impl AppRunner {
         Self { runtime, collected }
     }
 
+    pub fn new_with_store(app_string: &str, out_stream: &str, store: Arc<dyn PersistenceStore>) -> Self {
+        let manager = SiddhiManager::new();
+        manager.set_persistence_store(store);
+        let app = parse(app_string).expect("parse");
+        let runtime = manager
+            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .expect("runtime");
+        let collected = Arc::new(Mutex::new(Vec::new()));
+        runtime
+            .add_callback(out_stream, Box::new(CollectCallback { events: Arc::clone(&collected) }))
+            .expect("add cb");
+        runtime.start();
+        Self { runtime, collected }
+    }
+
     pub fn send(&self, stream_id: &str, data: Vec<AttributeValue>) {
         if let Some(handler) = self.runtime.get_input_handler(stream_id) {
             handler
@@ -91,6 +107,15 @@ impl AppRunner {
     pub fn shutdown(self) -> Vec<Vec<AttributeValue>> {
         self.runtime.shutdown();
         self.collected.lock().unwrap().clone()
+    }
+
+
+    pub fn persist(&self) -> String {
+        self.runtime.persist().expect("persist")
+    }
+
+    pub fn restore_revision(&self, rev: &str) {
+        self.runtime.restore_revision(rev).expect("restore")
     }
 
     /// Retrieve all aggregated rows for the given aggregation id and duration.
