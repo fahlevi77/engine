@@ -31,3 +31,15 @@ fn periodic_trigger_emits() {
     let out = runner.shutdown();
     assert!(out.len() >= 2);
 }
+
+#[test]
+fn cron_trigger_emits() {
+    let mut app = SiddhiApp::new("T3".to_string());
+    app.add_trigger_definition(
+        TriggerDefinition::id("CronStream".to_string()).at("*/1 * * * * *".to_string()),
+    );
+    let runner = AppRunner::new_from_api(app, "CronStream");
+    sleep(Duration::from_millis(2200));
+    let out = runner.shutdown();
+    assert!(out.len() >= 2);
+}
