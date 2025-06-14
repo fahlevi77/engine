@@ -38,6 +38,33 @@ fn length_window_basic() {
 }
 
 #[test]
+fn length_window_batch() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#length(2) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send_batch(
+        "In",
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(3)],
+        ],
+    );
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(3)],
+        ]
+    );
+}
+
+#[test]
 fn time_window_expiry() {
     let app = "\
         define stream In (v int);\n\
