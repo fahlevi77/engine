@@ -1,9 +1,9 @@
 // siddhi_rust/src/core/executor/math/mod_expression_executor.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
+use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum // Use CoerceNumeric from common.rs
 
 #[derive(Debug)]
 pub struct ModExpressionExecutor {
@@ -13,25 +13,45 @@ pub struct ModExpressionExecutor {
 }
 
 impl ModExpressionExecutor {
-    pub fn new(left: Box<dyn ExpressionExecutor>, right: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
+    pub fn new(
+        left: Box<dyn ExpressionExecutor>,
+        right: Box<dyn ExpressionExecutor>,
+    ) -> Result<Self, String> {
         let left_type = left.get_return_type();
         let right_type = right.get_return_type();
 
         // Type promotion for modulo: result type is usually the type of the dividend after promoting both to a common numeric type.
         // Siddhi's typed ModExpressionExecutors (Int, Long, Float, Double) imply the result type matches this promoted type.
         let return_type = match (left_type, right_type) {
-            (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) |
-            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) |
-            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
-                return Err(format!("Modulo not supported for input types {:?} and {:?}", left_type, right_type));
+            (ApiAttributeType::STRING, _)
+            | (_, ApiAttributeType::STRING)
+            | (ApiAttributeType::BOOL, _)
+            | (_, ApiAttributeType::BOOL)
+            | (ApiAttributeType::OBJECT, _)
+            | (_, ApiAttributeType::OBJECT) => {
+                return Err(format!(
+                    "Modulo not supported for input types {:?} and {:?}",
+                    left_type, right_type
+                ));
             }
-            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => {
+                ApiAttributeType::DOUBLE
+            }
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
             (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT, // Base case
-            _ => return Err(format!("Modulo not supported for incompatible types: {:?} and {:?}", left_type, right_type)),
+            _ => {
+                return Err(format!(
+                    "Modulo not supported for incompatible types: {:?} and {:?}",
+                    left_type, right_type
+                ))
+            }
         };
-        Ok(Self { left_executor: left, right_executor: right, return_type })
+        Ok(Self {
+            left_executor: left,
+            right_executor: right,
+            return_type,
+        })
     }
 }
 
@@ -42,7 +62,9 @@ impl ExpressionExecutor for ModExpressionExecutor {
 
         match (left_val_opt, right_val_opt) {
             (Some(left_val), Some(right_val)) => {
-                if matches!(left_val, AttributeValue::Null) || matches!(right_val, AttributeValue::Null) {
+                if matches!(left_val, AttributeValue::Null)
+                    || matches!(right_val, AttributeValue::Null)
+                {
                     return Some(AttributeValue::Null);
                 }
 
@@ -57,25 +79,33 @@ impl ExpressionExecutor for ModExpressionExecutor {
                     ApiAttributeType::INT => {
                         let l = left_val.to_i32_or_err_str("Mod")?;
                         let r = right_val.to_i32_or_err_str("Mod")?;
-                        if r == 0 { return Some(AttributeValue::Null); } // Explicit check for integer 0
+                        if r == 0 {
+                            return Some(AttributeValue::Null);
+                        } // Explicit check for integer 0
                         Some(AttributeValue::Int(l % r))
                     }
                     ApiAttributeType::LONG => {
                         let l = left_val.to_i64_or_err_str("Mod")?;
                         let r = right_val.to_i64_or_err_str("Mod")?;
-                        if r == 0 { return Some(AttributeValue::Null); }
+                        if r == 0 {
+                            return Some(AttributeValue::Null);
+                        }
                         Some(AttributeValue::Long(l % r))
                     }
                     ApiAttributeType::FLOAT => {
                         let l = left_val.to_f32_or_err_str("Mod")?;
                         let r = right_val.to_f32_or_err_str("Mod")?;
-                        if r == 0.0 { return Some(AttributeValue::Null); }
+                        if r == 0.0 {
+                            return Some(AttributeValue::Null);
+                        }
                         Some(AttributeValue::Float(l % r))
                     }
                     ApiAttributeType::DOUBLE => {
                         let l = left_val.to_f64_or_err_str("Mod")?;
                         let r = right_val.to_f64_or_err_str("Mod")?;
-                        if r == 0.0 { return Some(AttributeValue::Null); }
+                        if r == 0.0 {
+                            return Some(AttributeValue::Null);
+                        }
                         Some(AttributeValue::Double(l % r))
                     }
                     _ => None,
@@ -84,8 +114,15 @@ impl ExpressionExecutor for ModExpressionExecutor {
             _ => None,
         }
     }
-    fn get_return_type(&self) -> ApiAttributeType { self.return_type }
-    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn get_return_type(&self) -> ApiAttributeType {
+        self.return_type
+    }
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
         Box::new(ModExpressionExecutor {
             left_executor: self.left_executor.clone_executor(siddhi_app_context),
             right_executor: self.right_executor.clone_executor(siddhi_app_context),

@@ -1,14 +1,16 @@
-use crate::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext};
+use crate::core::config::{
+    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+};
 use crate::core::event::complex_event::ComplexEvent;
-use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use crate::query_api::execution::query::input::handler::WindowHandler;
-use crate::core::extension::WindowProcessorFactory;
-use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expression};
-use std::sync::{Arc, Mutex};
-use crate::core::util::scheduler::{Scheduler, Schedulable};
-use crate::core::event::stream::stream_event::StreamEvent;
-use std::collections::VecDeque;
 use crate::core::event::complex_event::ComplexEventType;
+use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::extension::WindowProcessorFactory;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
+use crate::core::util::scheduler::{Schedulable, Scheduler};
+use crate::query_api::execution::query::input::handler::WindowHandler;
+use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expression};
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 
 pub trait WindowProcessor: Processor {}
 
@@ -20,8 +22,16 @@ pub struct LengthWindowProcessor {
 }
 
 impl LengthWindowProcessor {
-    pub fn new(length: usize, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
-        Self { meta: CommonProcessorMeta::new(app_ctx, query_ctx), length, buffer: Arc::new(Mutex::new(VecDeque::new())) }
+    pub fn new(
+        length: usize,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            length,
+            buffer: Arc::new(Mutex::new(VecDeque::new())),
+        }
     }
 
     pub fn from_handler(
@@ -37,9 +47,7 @@ impl LengthWindowProcessor {
             let len = match &c.value {
                 ConstantValueWithFloat::Int(i) => *i as usize,
                 ConstantValueWithFloat::Long(l) => *l as usize,
-                _ => {
-                    return Err("Length window size must be int or long".to_string())
-                }
+                _ => return Err("Length window size must be int or long".to_string()),
             };
             Ok(Self::new(len, app_ctx, query_ctx))
         } else {
@@ -73,7 +81,9 @@ impl Processor for LengthWindowProcessor {
                             *tail = Some(Box::new(se.clone_without_next()));
                             next.lock().unwrap().process(Some(ex));
                         } else {
-                            next.lock().unwrap().process(Some(Box::new(se.clone_without_next())));
+                            next.lock()
+                                .unwrap()
+                                .process(Some(Box::new(se.clone_without_next())));
                         }
                     }
                     current_opt = ev.get_next();
@@ -93,16 +103,24 @@ impl Processor for LengthWindowProcessor {
     }
 
     fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        Box::new(Self::new(self.length, Arc::clone(&self.meta.siddhi_app_context), Arc::clone(query_ctx)))
+        Box::new(Self::new(
+            self.length,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(query_ctx),
+        ))
     }
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
 
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::SLIDE }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::SLIDE
+    }
 
-    fn is_stateful(&self) -> bool { true }
+    fn is_stateful(&self) -> bool {
+        true
+    }
 }
 
 impl WindowProcessor for LengthWindowProcessor {}
@@ -116,7 +134,11 @@ pub struct TimeWindowProcessor {
 }
 
 impl TimeWindowProcessor {
-    pub fn new(duration_ms: i64, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
+    pub fn new(
+        duration_ms: i64,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -213,16 +235,24 @@ impl Processor for TimeWindowProcessor {
     }
 
     fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        Box::new(Self::new(self.duration_ms, Arc::clone(&self.meta.siddhi_app_context), Arc::clone(query_ctx)))
+        Box::new(Self::new(
+            self.duration_ms,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(query_ctx),
+        ))
     }
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
 
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::SLIDE }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::SLIDE
+    }
 
-    fn is_stateful(&self) -> bool { true }
+    fn is_stateful(&self) -> bool {
+        true
+    }
 }
 
 impl WindowProcessor for TimeWindowProcessor {}
@@ -240,14 +270,10 @@ pub fn create_window_processor(
     } else {
         match handler.name.as_str() {
             "length" => Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
-                handler,
-                app_ctx,
-                query_ctx,
+                handler, app_ctx, query_ctx,
             )?))),
             "time" => Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
-                handler,
-                app_ctx,
-                query_ctx,
+                handler, app_ctx, query_ctx,
             )?))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
@@ -265,9 +291,7 @@ impl WindowProcessorFactory for LengthWindowFactory {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
-            handler,
-            app_ctx,
-            query_ctx,
+            handler, app_ctx, query_ctx,
         )?)))
     }
 
@@ -287,9 +311,7 @@ impl WindowProcessorFactory for TimeWindowFactory {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
-            handler,
-            app_ctx,
-            query_ctx,
+            handler, app_ctx, query_ctx,
         )?)))
     }
 
@@ -297,4 +319,3 @@ impl WindowProcessorFactory for TimeWindowFactory {
         Box::new(Self {})
     }
 }
-

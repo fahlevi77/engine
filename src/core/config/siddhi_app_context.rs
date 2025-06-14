@@ -1,12 +1,12 @@
 // Corresponds to io.siddhi.core.config.SiddhiAppContext
-use std::sync::Arc;
-use std::collections::HashMap; // For scriptFunctionMap
-use crate::query_api::SiddhiApp; // From query_api
-use std::cell::RefCell;
 use super::siddhi_context::SiddhiContext;
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::id_generator::IdGenerator;
 use crate::core::util::Scheduler;
+use crate::query_api::SiddhiApp; // From query_api
+use std::cell::RefCell;
+use std::collections::HashMap; // For scriptFunctionMap
+use std::sync::Arc;
 use std::thread_local;
 // use super::statistics_manager::StatisticsManager; // TODO: Define later
 // use super::timestamp_generator::TimestampGenerator; // TODO: Define later
@@ -20,27 +20,38 @@ use std::thread_local;
 // use java::beans::ExceptionListener; // This is a Java type
 
 // Placeholders for complex Java/Siddhi types not yet ported/defined
-#[derive(Debug, Clone, Default)] pub struct StatisticsManagerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct TimestampGeneratorPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct StatisticsManagerPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct TimestampGeneratorPlaceholder {}
 use crate::core::persistence::SnapshotService;
 use crate::core::util::thread_barrier::ThreadBarrier;
-#[derive(Debug, Clone, Default)] pub struct ScriptPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct TriggerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct ExternalReferencedHolderPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct SchedulerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct DisruptorExceptionHandlerPlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct ExceptionListenerPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct ScriptPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct TriggerPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct ExternalReferencedHolderPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct SchedulerPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct DisruptorExceptionHandlerPlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct ExceptionListenerPlaceholder {}
 
 thread_local! {
     static GROUP_BY_KEY: RefCell<Option<String>> = RefCell::new(None);
     static PARTITION_KEY: RefCell<Option<String>> = RefCell::new(None);
 }
 
-
 // Placeholder for stats Level enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum MetricsLevelPlaceholder { #[default] OFF, BASIC, DETAIL }
-
+pub enum MetricsLevelPlaceholder {
+    #[default]
+    OFF,
+    BASIC,
+    DETAIL,
+}
 
 /// Context specific to a single Siddhi Application instance.
 #[derive(Debug, Clone)] // Default is tricky due to Arc<SiddhiApp> and Arc<SiddhiContext>
@@ -63,18 +74,16 @@ pub struct SiddhiAppContext {
     // External references and lifecycle management (using placeholders)
     // pub external_referenced_holders: Vec<ExternalReferencedHolderPlaceholder>, // Manages external resources that need lifecycle management.
     // pub trigger_holders: Vec<TriggerPlaceholder>, // Holds trigger runtime instances.
-
     pub snapshot_service: Option<Arc<SnapshotService>>, // Manages state snapshotting and persistence.
     pub thread_barrier: Option<Arc<ThreadBarrier>>, // Coordinates threads when ordering is enforced.
-    pub timestamp_generator: TimestampGeneratorPlaceholder,   // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
-    pub id_generator: Option<IdGenerator>,         // Generates unique IDs for runtime elements. Option because it's set.
+    pub timestamp_generator: TimestampGeneratorPlaceholder, // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
+    pub id_generator: Option<IdGenerator>, // Generates unique IDs for runtime elements. Option because it's set.
 
     // pub script_function_map: HashMap<String, ScriptPlaceholder>, // Holds script function implementations.
 
     // Exception handling (using placeholders)
     // pub disruptor_exception_handler: Option<DisruptorExceptionHandlerPlaceholder>, // Handles exceptions from async event processing.
     // pub runtime_exception_listener: Option<ExceptionListenerPlaceholder>, // Listener for runtime exceptions.
-
     pub buffer_size: i32, // Default buffer size for event channels.
     // pub included_metrics: Option<Vec<String>>, // Specific metrics to include if statistics are enabled.
     pub transport_channel_creation_enabled: bool, // Whether transport channels (for sources/sinks) should be created.
@@ -85,7 +94,6 @@ pub struct SiddhiAppContext {
     _triggers_placeholder: Vec<String>,
     _scripts_placeholder: HashMap<String, String>,
     _schedulers_placeholder: Vec<String>,
-
 }
 
 impl SiddhiAppContext {
@@ -125,7 +133,7 @@ impl SiddhiAppContext {
         siddhi_context: Arc<SiddhiContext>,
         name: String,
         siddhi_app_definition: Arc<SiddhiApp>, // Renamed from siddhi_app to avoid confusion with field
-        siddhi_app_string: String
+        siddhi_app_string: String,
     ) -> Self {
         // Default values from Java SiddhiAppContext() constructor and field initializers
         Self {
@@ -145,7 +153,7 @@ impl SiddhiAppContext {
             snapshot_service: None,
             thread_barrier: None,
             timestamp_generator: TimestampGeneratorPlaceholder::default(), // Java new-s one if null
-            id_generator: None, // Set later
+            id_generator: None,                                            // Set later
             // script_function_map: HashMap::new(),
             // disruptor_exception_handler: None, // Uses siddhiContext's default if not set
             // runtime_exception_listener: None,
@@ -243,11 +251,16 @@ impl SiddhiAppContext {
         self.executor_service = Some(service);
     }
 
-    pub fn get_scheduled_executor_service(&self) -> Option<Arc<crate::core::util::ScheduledExecutorService>> {
+    pub fn get_scheduled_executor_service(
+        &self,
+    ) -> Option<Arc<crate::core::util::ScheduledExecutorService>> {
         self.scheduled_executor_service.as_ref().cloned()
     }
 
-    pub fn set_scheduled_executor_service(&mut self, service: Arc<crate::core::util::ScheduledExecutorService>) {
+    pub fn set_scheduled_executor_service(
+        &mut self,
+        service: Arc<crate::core::util::ScheduledExecutorService>,
+    ) {
         self.scheduled_executor_service = Some(service);
     }
 

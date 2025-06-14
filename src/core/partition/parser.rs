@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use crate::query_api::execution::partition::Partition as ApiPartition;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::partition::PartitionRuntime;
+use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::util::parser::QueryParser;
+use crate::query_api::execution::partition::Partition as ApiPartition;
 
 pub struct PartitionParser;
 

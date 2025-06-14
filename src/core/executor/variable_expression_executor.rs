@@ -1,12 +1,12 @@
 // siddhi_rust/src/core/executor/variable_expression_executor.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::state::state_event::StateEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::siddhi_constants::{
-    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN, STREAM_ATTRIBUTE_TYPE_INDEX,
-    STREAM_ATTRIBUTE_INDEX_IN_TYPE,
+    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_EVENT_CHAIN_INDEX,
+    STREAM_EVENT_INDEX_IN_CHAIN,
 };
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 
@@ -27,7 +27,11 @@ pub struct VariableExpressionExecutor {
 }
 
 impl VariableExpressionExecutor {
-    pub fn new(position: [i32; 4], return_type: ApiAttributeType, attribute_name_for_debug: String) -> Self {
+    pub fn new(
+        position: [i32; 4],
+        return_type: ApiAttributeType,
+        attribute_name_for_debug: String,
+    ) -> Self {
         Self {
             position,
             return_type,
@@ -61,11 +65,16 @@ impl ExpressionExecutor for VariableExpressionExecutor {
         self.return_type
     }
 
-     fn clone_executor(&self, _siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-         // If siddhi_app_context was stored on self, it would be cloned:
-         // siddhi_app_context: self.siddhi_app_context.as_ref().map(Arc::clone),
-         Box::new(self.clone())
-     }
+    fn clone_executor(
+        &self,
+        _siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
+        // If siddhi_app_context was stored on self, it would be cloned:
+        // siddhi_app_context: self.siddhi_app_context.as_ref().map(Arc::clone),
+        Box::new(self.clone())
+    }
 }
 
 #[cfg(test)]
@@ -75,32 +84,35 @@ mod tests {
     use crate::core::event::stream::stream_event::StreamEvent; // Using StreamEvent as a concrete ComplexEvent
     use crate::core::event::value::AttributeValue;
     use crate::core::util::siddhi_constants::{
-        BEFORE_WINDOW_DATA_INDEX, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
-        STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
+        BEFORE_WINDOW_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+        STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
     };
     // ApiAttributeType is imported in the outer scope
-    use std::sync::Arc;
     use crate::core::config::siddhi_app_context::SiddhiAppContext;
-
+    use std::sync::Arc;
 
     // Mock ComplexEvent or use StreamEvent for testing
     // This StreamEvent has its output_data set for testing VEE.
-    fn create_test_stream_event_with_output_data(output_data_vec: Vec<AttributeValue>) -> StreamEvent {
+    fn create_test_stream_event_with_output_data(
+        output_data_vec: Vec<AttributeValue>,
+    ) -> StreamEvent {
         let mut se = StreamEvent::new(0, 0, 0, output_data_vec.len()); // ts, before, onafter, output_len
         se.output_data = Some(output_data_vec);
         se
     }
 
     // New helper for testing VEE with before_window_data
-    fn create_test_stream_event_with_before_window_data(data_array: Vec<AttributeValue>) -> StreamEvent {
+    fn create_test_stream_event_with_before_window_data(
+        data_array: Vec<AttributeValue>,
+    ) -> StreamEvent {
         let mut se = StreamEvent::new(0, data_array.len(), 0, 0); // timestamp, before_len, on_after_len, output_len
         se.before_window_data = data_array;
         se
     }
 
-
     #[test]
-    fn test_variable_access_from_before_window_data_string() { // Renamed and adapted
+    fn test_variable_access_from_before_window_data_string() {
+        // Renamed and adapted
         let exec = VariableExpressionExecutor::new(
             [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
             ApiAttributeType::STRING,
@@ -115,14 +127,15 @@ mod tests {
     }
 
     #[test]
-    fn test_variable_access_from_before_window_data_int_out_of_bounds() { // Renamed and adapted
+    fn test_variable_access_from_before_window_data_int_out_of_bounds() {
+        // Renamed and adapted
         let exec = VariableExpressionExecutor::new(
             [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 1],
             ApiAttributeType::INT,
             "test_attr_int".to_string(),
         );
         let event_data = vec![AttributeValue::Int(123)]; // Only one element at index 0
-        // Use the new helper that populates before_window_data
+                                                         // Use the new helper that populates before_window_data
         let test_event = create_test_stream_event_with_before_window_data(event_data);
 
         let result = exec.execute(Some(&test_event as &dyn ComplexEvent));
@@ -153,7 +166,10 @@ mod tests {
             fn get_next(&self) -> Option<&dyn ComplexEvent> {
                 self.next.as_deref()
             }
-            fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>> {
+            fn set_next(
+                &mut self,
+                next_event: Option<Box<dyn ComplexEvent>>,
+            ) -> Option<Box<dyn ComplexEvent>> {
                 std::mem::replace(&mut self.next, next_event)
             }
             fn mut_next_ref_option(&mut self) -> &mut Option<Box<dyn ComplexEvent>> {
@@ -167,14 +183,24 @@ mod tests {
                 self.output_data = data;
             }
 
-            fn get_timestamp(&self) -> i64 { 0 }
+            fn get_timestamp(&self) -> i64 {
+                0
+            }
             fn set_timestamp(&mut self, _timestamp: i64) {}
 
-            fn get_event_type(&self) -> ComplexEventType { self.event_type }
-            fn set_event_type(&mut self, event_type: ComplexEventType) { self.event_type = event_type; }
+            fn get_event_type(&self) -> ComplexEventType {
+                self.event_type
+            }
+            fn set_event_type(&mut self, event_type: ComplexEventType) {
+                self.event_type = event_type;
+            }
 
-            fn as_any(&self) -> &dyn std::any::Any { self }
-            fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+                self
+            }
         }
 
         let exec = VariableExpressionExecutor::new(
@@ -190,7 +216,10 @@ mod tests {
         };
 
         let result = exec.execute(Some(&mock_event as &dyn ComplexEvent));
-        assert_eq!(result, Some(AttributeValue::String("fallback_val".to_string())));
+        assert_eq!(
+            result,
+            Some(AttributeValue::String("fallback_val".to_string()))
+        );
     }
 
     #[test]
@@ -204,8 +233,9 @@ mod tests {
         assert_eq!(result, None);
     }
 
-     #[test]
-    fn test_variable_clone() { // This test needs to be re-evaluated based on new execute logic
+    #[test]
+    fn test_variable_clone() {
+        // This test needs to be re-evaluated based on new execute logic
         let exec = VariableExpressionExecutor::new(
             [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
             ApiAttributeType::STRING,
@@ -220,6 +250,9 @@ mod tests {
         let event_data_before = vec![AttributeValue::String("clone_val_before".to_string())];
         let test_event_before = create_test_stream_event_with_before_window_data(event_data_before);
         let result_before = cloned_exec.execute(Some(&test_event_before as &dyn ComplexEvent));
-        assert_eq!(result_before, Some(AttributeValue::String("clone_val_before".to_string())));
+        assert_eq!(
+            result_before,
+            Some(AttributeValue::String("clone_val_before".to_string()))
+        );
     }
 }

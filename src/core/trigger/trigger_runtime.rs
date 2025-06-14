@@ -1,26 +1,30 @@
 // siddhi_rust/src/core/trigger/trigger_runtime.rs
 
-use crate::query_api::definition::TriggerDefinition;
-use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::event::event::Event;
 use crate::core::event::value::AttributeValue;
-use crate::core::util::scheduler::{Scheduler, Schedulable};
+use crate::core::stream::stream_junction::StreamJunction;
+use crate::core::util::scheduler::{Schedulable, Scheduler};
+use crate::query_api::definition::TriggerDefinition;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct TriggerRuntime {
     pub definition: Arc<TriggerDefinition>,
-    pub stream_junction: Arc<Mutex<StreamJunction>>, 
+    pub stream_junction: Arc<Mutex<StreamJunction>>,
     scheduler: Arc<Scheduler>,
 }
 
 impl TriggerRuntime {
     pub fn new(
         definition: Arc<TriggerDefinition>,
-        stream_junction: Arc<Mutex<StreamJunction>>, 
+        stream_junction: Arc<Mutex<StreamJunction>>,
         scheduler: Arc<Scheduler>,
     ) -> Self {
-        Self { definition, stream_junction, scheduler }
+        Self {
+            definition,
+            stream_junction,
+            scheduler,
+        }
     }
 
     pub fn start(&self) {
@@ -33,7 +37,10 @@ impl TriggerRuntime {
             if at.trim().eq_ignore_ascii_case("start") {
                 // Emit immediately
                 let now = chrono::Utc::now().timestamp_millis();
-                TriggerTask { junction: Arc::clone(&self.stream_junction) }.on_time(now);
+                TriggerTask {
+                    junction: Arc::clone(&self.stream_junction),
+                }
+                .on_time(now);
             } else {
                 let _ = self.scheduler.schedule_cron(at, task, None);
             }
@@ -45,7 +52,7 @@ impl TriggerRuntime {
 
 #[derive(Debug)]
 struct TriggerTask {
-    junction: Arc<Mutex<StreamJunction>>, 
+    junction: Arc<Mutex<StreamJunction>>,
 }
 
 impl Schedulable for TriggerTask {

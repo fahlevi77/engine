@@ -1,18 +1,18 @@
 // siddhi_rust/src/core/executor/condition/is_null_expression_executor.rs
 // Corresponds to io.siddhi.core.executor.condition.IsNullConditionExpressionExecutor
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
+use std::sync::Arc; // For SiddhiAppContext in clone_executor // For clone_executor
 
 #[derive(Debug)]
 pub struct IsNullExpressionExecutor {
     // In Java, IsNullConditionExpressionExecutor takes one ExpressionExecutor.
     // IsNullStreamConditionExpressionExecutor is different (takes streamId, etc.)
     // This struct is for the attribute version.
-    executor: Box<dyn ExpressionExecutor>
+    executor: Box<dyn ExpressionExecutor>,
 }
 
 impl IsNullExpressionExecutor {
@@ -37,9 +37,12 @@ impl ExpressionExecutor for IsNullExpressionExecutor {
         ApiAttributeType::BOOL
     }
 
-    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &Arc<SiddhiAppContext>,
+    ) -> Box<dyn ExpressionExecutor> {
         Box::new(IsNullExpressionExecutor::new(
-            self.executor.clone_executor(siddhi_app_context)
+            self.executor.clone_executor(siddhi_app_context),
         )) // new doesn't return Result, so no unwrap needed
     }
 }

@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use chrono::Utc;
+use std::sync::{Arc, Mutex};
 
 use super::persistence_store::PersistenceStore;
 
@@ -21,7 +21,11 @@ impl std::fmt::Debug for SnapshotService {
 
 impl SnapshotService {
     pub fn new(siddhi_app_id: String) -> Self {
-        Self { state: Mutex::new(Vec::new()), persistence_store: None, siddhi_app_id }
+        Self {
+            state: Mutex::new(Vec::new()),
+            persistence_store: None,
+            siddhi_app_id,
+        }
     }
 
     /// Replace the current internal state.
@@ -37,7 +41,10 @@ impl SnapshotService {
     /// Persist the current state via the configured store.
     pub fn persist(&self) -> Result<String, String> {
         let data = self.snapshot();
-        let store = self.persistence_store.as_ref().ok_or("No persistence store")?;
+        let store = self
+            .persistence_store
+            .as_ref()
+            .ok_or("No persistence store")?;
         let revision = Utc::now().timestamp_millis().to_string();
         store.save(&self.siddhi_app_id, &revision, &data);
         Ok(revision)
@@ -45,7 +52,10 @@ impl SnapshotService {
 
     /// Load the given revision from the store and set as current state.
     pub fn restore_revision(&self, revision: &str) -> Result<(), String> {
-        let store = self.persistence_store.as_ref().ok_or("No persistence store")?;
+        let store = self
+            .persistence_store
+            .as_ref()
+            .ok_or("No persistence store")?;
         if let Some(data) = store.load(&self.siddhi_app_id, revision) {
             self.set_state(data);
             Ok(())

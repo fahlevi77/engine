@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.StreamDefinition
+use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
-use crate::query_api::definition::attribute::{Attribute, Type as AttributeType};
-use crate::query_api::annotation::Annotation; // Assuming Annotation is defined
+use crate::query_api::definition::attribute::{Attribute, Type as AttributeType}; // Assuming Annotation is defined
 
 /// Defines a stream with a unique ID and a list of attributes.
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
@@ -29,7 +29,9 @@ impl StreamDefinition {
         // TODO: Implement checkAttribute logic from AbstractDefinition or call a method on it.
         // For now, directly adding. Consider potential duplicates.
         // This logic should ideally be on AbstractDefinition itself.
-        self.abstract_definition.attribute_list.push(Attribute::new(attribute_name, attribute_type));
+        self.abstract_definition
+            .attribute_list
+            .push(Attribute::new(attribute_name, attribute_type));
         self
     }
 
@@ -93,7 +95,13 @@ mod tests {
         assert_eq!(attributes[1].get_type(), &AttributeType::INT);
 
         // Also check default SiddhiElement from composed AbstractDefinition
-        assert_eq!(stream_def.abstract_definition.siddhi_element.query_context_start_index, None);
+        assert_eq!(
+            stream_def
+                .abstract_definition
+                .siddhi_element
+                .query_context_start_index,
+            None
+        );
     }
 
     #[test]
@@ -106,8 +114,8 @@ mod tests {
     fn test_stream_definition_annotations() {
         use crate::query_api::annotation::Annotation; // Assuming Annotation is defined
         let annotation = Annotation::new("TestAnnotation".to_string());
-        let stream_def = StreamDefinition::new("AnnotatedStream".to_string())
-            .annotation(annotation.clone()); // Assuming Annotation has clone
+        let stream_def =
+            StreamDefinition::new("AnnotatedStream".to_string()).annotation(annotation.clone()); // Assuming Annotation has clone
 
         assert_eq!(stream_def.abstract_definition.annotations.len(), 1);
         if let Some(ann) = stream_def.abstract_definition.annotations.first() {

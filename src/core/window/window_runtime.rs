@@ -37,4 +37,3 @@ impl WindowRuntime {
         self.initialized = true;
     }
 }
-

@@ -1,13 +1,16 @@
-use std::sync::{Arc, Mutex};
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode};
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::execution::query::input::stream::join_input_stream::Type as JoinType;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy)]
-pub enum JoinSide { Left, Right }
+pub enum JoinSide {
+    Left,
+    Right,
+}
 
 #[derive(Debug)]
 pub struct JoinProcessor {
@@ -42,7 +45,11 @@ impl JoinProcessor {
         }
     }
 
-    fn build_joined_event(&self, left: Option<&StreamEvent>, right: Option<&StreamEvent>) -> StreamEvent {
+    fn build_joined_event(
+        &self,
+        left: Option<&StreamEvent>,
+        right: Option<&StreamEvent>,
+    ) -> StreamEvent {
         let mut event = StreamEvent::new(
             left.or(right).map(|e| e.timestamp).unwrap_or(0),
             self.left_attr_count + self.right_attr_count,
@@ -81,7 +88,9 @@ impl JoinProcessor {
                         for r in &self.right_buffer {
                             let mut joined = self.build_joined_event(Some(&se_clone), Some(r));
                             if let Some(ref cond) = self.condition_executor {
-                                if let Some(AttributeValue::Bool(true)) = cond.execute(Some(&joined)) {
+                                if let Some(AttributeValue::Bool(true)) =
+                                    cond.execute(Some(&joined))
+                                {
                                     matched = true;
                                     self.forward(joined);
                                 }
@@ -90,7 +99,12 @@ impl JoinProcessor {
                                 self.forward(joined);
                             }
                         }
-                        if !matched && matches!(self.join_type, JoinType::LeftOuterJoin | JoinType::FullOuterJoin) {
+                        if !matched
+                            && matches!(
+                                self.join_type,
+                                JoinType::LeftOuterJoin | JoinType::FullOuterJoin
+                            )
+                        {
                             let joined = self.build_joined_event(Some(&se_clone), None);
                             self.forward(joined);
                         }
@@ -101,7 +115,9 @@ impl JoinProcessor {
                         for l in &self.left_buffer {
                             let mut joined = self.build_joined_event(Some(l), Some(&se_clone));
                             if let Some(ref cond) = self.condition_executor {
-                                if let Some(AttributeValue::Bool(true)) = cond.execute(Some(&joined)) {
+                                if let Some(AttributeValue::Bool(true)) =
+                                    cond.execute(Some(&joined))
+                                {
                                     matched = true;
                                     self.forward(joined);
                                 }
@@ -110,7 +126,12 @@ impl JoinProcessor {
                                 self.forward(joined);
                             }
                         }
-                        if !matched && matches!(self.join_type, JoinType::RightOuterJoin | JoinType::FullOuterJoin) {
+                        if !matched
+                            && matches!(
+                                self.join_type,
+                                JoinType::RightOuterJoin | JoinType::FullOuterJoin
+                            )
+                        {
                             let joined = self.build_joined_event(None, Some(&se_clone));
                             self.forward(joined);
                         }
@@ -121,7 +142,10 @@ impl JoinProcessor {
         }
     }
 
-    pub fn create_side_processor(self_arc: &Arc<Mutex<Self>>, side: JoinSide) -> Arc<Mutex<JoinProcessorSide>> {
+    pub fn create_side_processor(
+        self_arc: &Arc<Mutex<Self>>,
+        side: JoinSide,
+    ) -> Arc<Mutex<JoinProcessorSide>> {
         Arc::new(Mutex::new(JoinProcessorSide {
             parent: Arc::clone(self_arc),
             side,
@@ -148,18 +172,27 @@ impl Processor for JoinProcessorSide {
         self.parent.lock().unwrap().next_processor = next;
     }
 
-    fn clone_processor(&self, _ctx: &Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(
+        &self,
+        _ctx: &Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
         Box::new(JoinProcessorSide {
             parent: Arc::clone(&self.parent),
             side: self.side,
         })
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<crate::core::config::siddhi_app_context::SiddhiAppContext> {
+    fn get_siddhi_app_context(
+        &self,
+    ) -> Arc<crate::core::config::siddhi_app_context::SiddhiAppContext> {
         self.parent.lock().unwrap().meta.siddhi_app_context.clone()
     }
 
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
 
-    fn is_stateful(&self) -> bool { true }
+    fn is_stateful(&self) -> bool {
+        true
+    }
 }

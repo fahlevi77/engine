@@ -9,7 +9,6 @@ use super::logical_state_element::LogicalStateElement;
 use super::next_state_element::NextStateElement;
 use super::stream_state_element::StreamStateElement;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum StateElement {
     Stream(StreamStateElement),

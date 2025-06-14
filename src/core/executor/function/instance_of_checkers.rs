@@ -1,15 +1,16 @@
 // siddhi_rust/src/core/executor/function/instance_of_checkers.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 
 // Macro to define InstanceOf*FunctionExecutor structs and their impls
 macro_rules! define_instance_of_executor {
-    ($struct_name:ident, $variant_name:ident) => { // Changed to take variant identifier
+    ($struct_name:ident, $variant_name:ident) => {
+        // Changed to take variant identifier
         #[derive(Debug)] // Clone not straightforward due to Box<dyn ExpressionExecutor>
         pub struct $struct_name {
-            executor: Box<dyn ExpressionExecutor>
+            executor: Box<dyn ExpressionExecutor>,
         }
 
         impl $struct_name {
@@ -28,7 +29,7 @@ macro_rules! define_instance_of_executor {
                 match self.executor.execute(event) {
                     Some(AttributeValue::$variant_name(_)) => Some(AttributeValue::Bool(true)), // Construct pattern here
                     Some(AttributeValue::Null) => Some(AttributeValue::Bool(false)), // null is not an instance of any specific type
-                    Some(_) => Some(AttributeValue::Bool(false)), // Other type
+                    Some(_) => Some(AttributeValue::Bool(false)),                    // Other type
                     None => Some(AttributeValue::Bool(false)), // No value from executor, not an instance
                 }
             }
@@ -37,8 +38,14 @@ macro_rules! define_instance_of_executor {
                 ApiAttributeType::BOOL
             }
 
-            fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-                Box::new(Self { // Using Self works within macro
+            fn clone_executor(
+                &self,
+                siddhi_app_context: &std::sync::Arc<
+                    crate::core::config::siddhi_app_context::SiddhiAppContext,
+                >,
+            ) -> Box<dyn ExpressionExecutor> {
+                Box::new(Self {
+                    // Using Self works within macro
                     executor: self.executor.clone_executor(siddhi_app_context),
                 })
             }

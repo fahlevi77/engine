@@ -1,10 +1,9 @@
-use crate::query_api::siddhi_element::SiddhiElement;
+use super::order_by_attribute::{Order as OrderByOrder, OrderByAttribute};
 use super::output_attribute::OutputAttribute;
-use super::order_by_attribute::{OrderByAttribute, Order as OrderByOrder};
-use crate::query_api::expression::Variable;
-use crate::query_api::expression::Expression;
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
-
+use crate::query_api::expression::Expression;
+use crate::query_api::expression::Variable;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 /// Handles the SELECT part of a query, including projections, group by, etc.
 #[derive(Clone, Debug, PartialEq)] // Default is implemented manually
@@ -41,13 +40,15 @@ impl Selector {
     // Builder methods
     pub fn select(mut self, rename: String, expression: Expression) -> Self {
         // TODO: Add checkSelection logic from Java (duplicate rename check)
-        self.selection_list.push(OutputAttribute::new(Some(rename), expression)); // rename is Option<String>
+        self.selection_list
+            .push(OutputAttribute::new(Some(rename), expression)); // rename is Option<String>
         self
     }
 
     pub fn select_variable(mut self, variable: Variable) -> Self {
         // TODO: Add checkSelection logic
-        self.selection_list.push(OutputAttribute::new_from_variable(variable));
+        self.selection_list
+            .push(OutputAttribute::new_from_variable(variable));
         self
     }
 
@@ -73,12 +74,14 @@ impl Selector {
     }
 
     pub fn order_by(mut self, variable: Variable) -> Self {
-        self.order_by_list.push(OrderByAttribute::new_default_order(variable));
+        self.order_by_list
+            .push(OrderByAttribute::new_default_order(variable));
         self
     }
 
     pub fn order_by_with_order(mut self, variable: Variable, order: OrderByOrder) -> Self {
-        self.order_by_list.push(OrderByAttribute::new(variable, order));
+        self.order_by_list
+            .push(OrderByAttribute::new(variable, order));
         self
     }
 
@@ -144,11 +147,13 @@ impl Default for Selector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
-    use crate::query_api::expression::Expression;
-    use crate::query_api::expression::variable::Variable;
+    use crate::query_api::execution::query::selection::order_by_attribute::{
+        Order as OrderByOrder, OrderByAttribute,
+    };
     use crate::query_api::execution::query::selection::output_attribute::OutputAttribute;
-    use crate::query_api::execution::query::selection::order_by_attribute::{OrderByAttribute, Order as OrderByOrder};
+    use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
+    use crate::query_api::expression::variable::Variable;
+    use crate::query_api::expression::Expression;
 
     #[test]
     fn test_selector_new() {
@@ -167,7 +172,10 @@ mod tests {
         let expr = Expression::Constant(Constant::string("val".to_string()));
         let s = Selector::selector().select("renamed".to_string(), expr.clone());
         assert_eq!(s.get_selection_list().len(), 1);
-        assert_eq!(s.get_selection_list()[0].get_rename().as_ref().unwrap(), "renamed");
+        assert_eq!(
+            s.get_selection_list()[0].get_rename().as_ref().unwrap(),
+            "renamed"
+        );
         assert_eq!(s.get_selection_list()[0].get_expression(), &expr);
     }
 
@@ -179,7 +187,10 @@ mod tests {
         // OutputAttribute::new_from_variable creates an expression from the variable
         // and uses variable name as rename if not specified.
         // Let's assume OutputAttribute has get_rename() and get_expression()
-        assert_eq!(s.get_selection_list()[0].get_rename().as_ref().unwrap(), "attr1");
+        assert_eq!(
+            s.get_selection_list()[0].get_rename().as_ref().unwrap(),
+            "attr1"
+        );
         match s.get_selection_list()[0].get_expression() {
             Expression::Variable(ref v) => assert_eq!(v, &var),
             _ => panic!("Expected Expression::Variable"),
@@ -188,8 +199,14 @@ mod tests {
 
     #[test]
     fn test_selector_add_selection_list() {
-        let oa1 = OutputAttribute::new(Some("r1".to_string()), Expression::Constant(Constant::int(1)));
-        let oa2 = OutputAttribute::new(Some("r2".to_string()), Expression::Constant(Constant::int(2)));
+        let oa1 = OutputAttribute::new(
+            Some("r1".to_string()),
+            Expression::Constant(Constant::int(1)),
+        );
+        let oa2 = OutputAttribute::new(
+            Some("r2".to_string()),
+            Expression::Constant(Constant::int(2)),
+        );
         let s = Selector::selector().add_selection_list(vec![oa1.clone(), oa2.clone()]);
         assert_eq!(s.get_selection_list().len(), 2);
         assert_eq!(s.get_selection_list()[0], oa1);
@@ -252,28 +269,40 @@ mod tests {
         assert_eq!(s_ok.get_limit().unwrap(), &limit_const_int);
 
         let limit_const_long = Constant::long(100);
-        let s_ok_long = Selector::selector().limit(limit_const_long.clone()).unwrap();
+        let s_ok_long = Selector::selector()
+            .limit(limit_const_long.clone())
+            .unwrap();
         assert_eq!(s_ok_long.get_limit().unwrap(), &limit_const_long);
 
         let limit_const_str = Constant::string("invalid".to_string());
         let s_err = Selector::selector().limit(limit_const_str);
         assert!(s_err.is_err());
-        assert_eq!(s_err.unwrap_err(), "'limit' only supports int or long constants");
+        assert_eq!(
+            s_err.unwrap_err(),
+            "'limit' only supports int or long constants"
+        );
     }
 
     #[test]
     fn test_selector_offset() {
         let offset_const_int = Constant::int(5);
-        let s_ok = Selector::selector().offset(offset_const_int.clone()).unwrap();
+        let s_ok = Selector::selector()
+            .offset(offset_const_int.clone())
+            .unwrap();
         assert_eq!(s_ok.get_offset().unwrap(), &offset_const_int);
 
         let offset_const_long = Constant::long(50);
-        let s_ok_long = Selector::selector().offset(offset_const_long.clone()).unwrap();
+        let s_ok_long = Selector::selector()
+            .offset(offset_const_long.clone())
+            .unwrap();
         assert_eq!(s_ok_long.get_offset().unwrap(), &offset_const_long);
 
         let offset_const_float = Constant::float(5.5);
         let s_err = Selector::selector().offset(offset_const_float);
         assert!(s_err.is_err());
-        assert_eq!(s_err.unwrap_err(), "'offset' only supports int or long constants");
+        assert_eq!(
+            s_err.unwrap_err(),
+            "'offset' only supports int or long constants"
+        );
     }
 }

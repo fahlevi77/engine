@@ -1,12 +1,20 @@
-use siddhi_rust::core::persistence::{InMemoryPersistenceStore, SnapshotService, PersistenceStore};
-use siddhi_rust::core::event::{Event, value::AttributeValue};
-use siddhi_rust::core::util::{event_to_bytes, event_from_bytes};
-use std::sync::{Arc, Mutex};
+use siddhi_rust::core::event::{value::AttributeValue, Event};
+use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore, SnapshotService};
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
-use siddhi_rust::query_api::definition::{StreamDefinition, attribute::Type as AttrType};
-use siddhi_rust::query_api::execution::{ExecutionElement, query::{Query, input::stream::{InputStream, single_input_stream::SingleInputStream}, selection::Selector, output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction}}};
 use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::core::util::{event_from_bytes, event_to_bytes};
+use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use siddhi_rust::query_api::execution::{
+    query::{
+        input::stream::{single_input_stream::SingleInputStream, InputStream},
+        output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction},
+        selection::Selector,
+        Query,
+    },
+    ExecutionElement,
+};
+use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn test_event_serialization_roundtrip() {
@@ -38,10 +46,9 @@ fn test_snapshot_service_persist_restore() {
     assert_eq!(store.get_last_revision("app1").unwrap(), rev);
 }
 
-
 #[derive(Debug)]
 struct CountingCallback {
-    count: Arc<Mutex<u32>>, 
+    count: Arc<Mutex<u32>>,
     service: Arc<SnapshotService>,
 }
 
@@ -61,35 +68,73 @@ fn test_runtime_persist_restore() {
     manager.set_persistence_store(store_arc);
 
     let mut app = SiddhiApp::new("PersistApp".to_string());
-    let in_def = StreamDefinition::new("InStream".to_string()).attribute("v".to_string(), AttrType::INT);
-    let out_def = StreamDefinition::new("OutStream".to_string()).attribute("v".to_string(), AttrType::INT);
-    app.stream_definition_map.insert("InStream".to_string(), Arc::new(in_def));
-    app.stream_definition_map.insert("OutStream".to_string(), Arc::new(out_def));
+    let in_def =
+        StreamDefinition::new("InStream".to_string()).attribute("v".to_string(), AttrType::INT);
+    let out_def =
+        StreamDefinition::new("OutStream".to_string()).attribute("v".to_string(), AttrType::INT);
+    app.stream_definition_map
+        .insert("InStream".to_string(), Arc::new(in_def));
+    app.stream_definition_map
+        .insert("OutStream".to_string(), Arc::new(out_def));
 
     let si = SingleInputStream::new_basic("InStream".to_string(), false, false, None, Vec::new())
-        .window(None, "length".to_string(), vec![siddhi_rust::query_api::expression::Expression::value_int(2)]);
+        .window(
+            None,
+            "length".to_string(),
+            vec![siddhi_rust::query_api::expression::Expression::value_int(2)],
+        );
     let input = InputStream::Single(si);
     let selector = Selector::new();
-    let insert = InsertIntoStreamAction { target_id: "OutStream".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let insert = InsertIntoStreamAction {
+        target_id: "OutStream".to_string(),
+        is_inner_stream: false,
+        is_fault_stream: false,
+    };
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert), None);
-    let query = Query::query().from(input).select(selector).out_stream(out_stream);
-    app.execution_element_list.push(ExecutionElement::Query(query));
+    let query = Query::query()
+        .from(input)
+        .select(selector)
+        .out_stream(out_stream);
+    app.execution_element_list
+        .push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = manager.create_siddhi_app_runtime_from_api(Arc::clone(&app), None).unwrap();
+    let runtime = manager
+        .create_siddhi_app_runtime_from_api(Arc::clone(&app), None)
+        .unwrap();
     let svc = runtime.siddhi_app_context.get_snapshot_service().unwrap();
     let count = Arc::new(Mutex::new(0u32));
-    runtime.add_callback("OutStream", Box::new(CountingCallback { count: Arc::clone(&count), service: Arc::clone(&svc) })).unwrap();
+    runtime
+        .add_callback(
+            "OutStream",
+            Box::new(CountingCallback {
+                count: Arc::clone(&count),
+                service: Arc::clone(&svc),
+            }),
+        )
+        .unwrap();
     runtime.start();
 
     let handler = runtime.get_input_handler("InStream").unwrap();
-    handler.lock().unwrap().send_event_with_timestamp(0, vec![AttributeValue::Int(1)]).unwrap();
-    handler.lock().unwrap().send_event_with_timestamp(1, vec![AttributeValue::Int(2)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_event_with_timestamp(0, vec![AttributeValue::Int(1)])
+        .unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_event_with_timestamp(1, vec![AttributeValue::Int(2)])
+        .unwrap();
     assert_eq!(*count.lock().unwrap(), 2);
 
     let key = manager.get_siddhi_app_runtimes_keys()[0].clone();
     let rev = manager.persist_app(&key).unwrap();
-    handler.lock().unwrap().send_event_with_timestamp(2, vec![AttributeValue::Int(3)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_event_with_timestamp(2, vec![AttributeValue::Int(3)])
+        .unwrap();
     assert_eq!(*count.lock().unwrap(), 4);
 
     manager.restore_app_revision(&key, &rev).unwrap();
@@ -97,6 +142,10 @@ fn test_runtime_persist_restore() {
     let restored_val = u32::from_be_bytes([restored[0], restored[1], restored[2], restored[3]]);
     *count.lock().unwrap() = restored_val;
 
-    handler.lock().unwrap().send_event_with_timestamp(3, vec![AttributeValue::Int(4)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_event_with_timestamp(3, vec![AttributeValue::Int(4)])
+        .unwrap();
     assert_eq!(*count.lock().unwrap(), 4);
 }

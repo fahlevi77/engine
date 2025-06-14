@@ -10,7 +10,10 @@ pub struct MetaStateEventAttribute {
 
 impl MetaStateEventAttribute {
     pub fn new(attribute: QueryApiAttribute, position: Vec<i32>) -> Self {
-        Self { attribute, position }
+        Self {
+            attribute,
+            position,
+        }
     }
 
     pub fn get_attribute(&self) -> &QueryApiAttribute {
@@ -21,4 +24,3 @@ impl MetaStateEventAttribute {
         &self.position
     }
 }
-

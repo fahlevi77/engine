@@ -1,11 +1,13 @@
 use std::sync::{Arc, Mutex};
 
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode};
-use crate::core::event::complex_event::ComplexEvent;
-use crate::core::event::stream::{stream_event::StreamEvent, stream_event_cloner::StreamEventCloner};
-use crate::core::event::value::AttributeValue;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::event::complex_event::ComplexEvent;
+use crate::core::event::stream::{
+    stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
+};
+use crate::core::event::value::AttributeValue;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SequenceType {
@@ -123,7 +125,10 @@ impl SequenceProcessor {
         }
     }
 
-    pub fn create_side_processor(self_arc: &Arc<Mutex<Self>>, side: SequenceSide) -> Arc<Mutex<SequenceProcessorSide>> {
+    pub fn create_side_processor(
+        self_arc: &Arc<Mutex<Self>>,
+        side: SequenceSide,
+    ) -> Arc<Mutex<SequenceProcessorSide>> {
         Arc::new(Mutex::new(SequenceProcessorSide {
             parent: Arc::clone(self_arc),
             side,
@@ -166,7 +171,10 @@ impl Processor for SequenceProcessorSide {
             Arc::clone(ctx),
         );
         let arc = Arc::new(Mutex::new(cloned));
-        let side = SequenceProcessorSide { parent: arc, side: self.side };
+        let side = SequenceProcessorSide {
+            parent: arc,
+            side: self.side,
+        };
         Box::new(side)
     }
 
@@ -174,7 +182,11 @@ impl Processor for SequenceProcessorSide {
         self.parent.lock().unwrap().meta.siddhi_app_context.clone()
     }
 
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
 
-    fn is_stateful(&self) -> bool { true }
+    fn is_stateful(&self) -> bool {
+        true
+    }
 }

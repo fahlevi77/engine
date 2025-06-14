@@ -1,11 +1,11 @@
 // siddhi_rust/src/query_api/siddhi_app.rs
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::{
-    StreamDefinition, TableDefinition, WindowDefinition, TriggerDefinition,
-    AggregationDefinition, FunctionDefinition
+    AggregationDefinition, FunctionDefinition, StreamDefinition, TableDefinition,
+    TriggerDefinition, WindowDefinition,
 };
 use crate::query_api::execution::ExecutionElement; // This should be the enum
-use crate::query_api::annotation::Annotation;
+use crate::query_api::siddhi_element::SiddhiElement;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Default)] // Added Debug, Clone, Default
 pub struct SiddhiApp {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement (as per current design)
-    pub name: String, // Name for the Siddhi Application, from @info(name='...')
+    pub name: String,                  // Name for the Siddhi Application, from @info(name='...')
 
     pub stream_definition_map: HashMap<String, Arc<StreamDefinition>>,
     pub table_definition_map: HashMap<String, Arc<TableDefinition>>,
@@ -45,22 +45,28 @@ impl SiddhiApp {
 
     // --- Add definition methods ---
     pub fn add_stream_definition(&mut self, stream_def: StreamDefinition) {
-        self.stream_definition_map.insert(stream_def.get_id().to_string(), Arc::new(stream_def));
+        self.stream_definition_map
+            .insert(stream_def.get_id().to_string(), Arc::new(stream_def));
     }
     pub fn add_table_definition(&mut self, table_def: TableDefinition) {
-        self.table_definition_map.insert(table_def.get_id().to_string(), Arc::new(table_def));
+        self.table_definition_map
+            .insert(table_def.get_id().to_string(), Arc::new(table_def));
     }
     pub fn add_window_definition(&mut self, window_def: WindowDefinition) {
-        self.window_definition_map.insert(window_def.get_id().to_string(), Arc::new(window_def));
+        self.window_definition_map
+            .insert(window_def.get_id().to_string(), Arc::new(window_def));
     }
     pub fn add_trigger_definition(&mut self, trigger_def: TriggerDefinition) {
-        self.trigger_definition_map.insert(trigger_def.id.clone(), Arc::new(trigger_def));
+        self.trigger_definition_map
+            .insert(trigger_def.id.clone(), Arc::new(trigger_def));
     }
     pub fn add_aggregation_definition(&mut self, agg_def: AggregationDefinition) {
-        self.aggregation_definition_map.insert(agg_def.get_id().to_string(), Arc::new(agg_def));
+        self.aggregation_definition_map
+            .insert(agg_def.get_id().to_string(), Arc::new(agg_def));
     }
     pub fn add_function_definition(&mut self, func_def: FunctionDefinition) {
-        self.function_definition_map.insert(func_def.id.clone(), Arc::new(func_def));
+        self.function_definition_map
+            .insert(func_def.id.clone(), Arc::new(func_def));
     }
 
     // --- Get definition methods ---

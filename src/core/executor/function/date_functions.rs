@@ -1,11 +1,11 @@
 // siddhi_rust/src/core/executor/function/date_functions.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use std::sync::Arc;
 use chrono::{NaiveDateTime, Utc};
+use std::sync::Arc;
 
 #[derive(Debug, Default, Clone)]
 pub struct CurrentTimestampFunctionExecutor;
@@ -43,7 +43,10 @@ impl FormatDateFunctionExecutor {
             Some(AttributeValue::String(s)) => s,
             _ => return Err("formatDate pattern must be constant string".to_string()),
         };
-        Ok(Self { timestamp_executor, pattern })
+        Ok(Self {
+            timestamp_executor,
+            pattern,
+        })
     }
 }
 
@@ -56,7 +59,7 @@ impl ExpressionExecutor for FormatDateFunctionExecutor {
             AttributeValue::Null => return Some(AttributeValue::Null),
             _ => return None,
         };
-        let ndt = NaiveDateTime::from_timestamp_millis(ts)?;
+        let ndt = chrono::DateTime::<Utc>::from_timestamp_millis(ts)?.naive_utc();
         let formatted = ndt.format(&self.pattern).to_string();
         Some(AttributeValue::String(formatted))
     }

@@ -1,8 +1,8 @@
 // siddhi_rust/src/core/executor/function/if_then_else_function_executor.rs
 // Corresponds to io.siddhi.core.executor.function.IfThenElseFunctionExecutor
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 
 #[derive(Debug)]
@@ -17,7 +17,7 @@ impl IfThenElseFunctionExecutor {
     pub fn new(
         cond_exec: Box<dyn ExpressionExecutor>,
         then_exec: Box<dyn ExpressionExecutor>,
-        else_exec: Box<dyn ExpressionExecutor>
+        else_exec: Box<dyn ExpressionExecutor>,
     ) -> Result<Self, String> {
         if cond_exec.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
@@ -77,11 +77,21 @@ impl ExpressionExecutor for IfThenElseFunctionExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-        Box::new(IfThenElseFunctionExecutor::new(
-            self.condition_executor.clone_executor(siddhi_app_context),
-            self.then_expression_executor.clone_executor(siddhi_app_context),
-            self.else_expression_executor.clone_executor(siddhi_app_context)
-        ).expect("Cloning IfThenElseFunctionExecutor failed")) // unwrap() is risky if new can fail for other reasons
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
+        Box::new(
+            IfThenElseFunctionExecutor::new(
+                self.condition_executor.clone_executor(siddhi_app_context),
+                self.then_expression_executor
+                    .clone_executor(siddhi_app_context),
+                self.else_expression_executor
+                    .clone_executor(siddhi_app_context),
+            )
+            .expect("Cloning IfThenElseFunctionExecutor failed"),
+        ) // unwrap() is risky if new can fail for other reasons
     }
 }

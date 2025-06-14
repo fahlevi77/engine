@@ -1,9 +1,9 @@
 // siddhi_rust/src/core/executor/math/subtract.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
+use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum // Use CoerceNumeric from common.rs
 
 #[derive(Debug)]
 pub struct SubtractExpressionExecutor {
@@ -13,23 +13,43 @@ pub struct SubtractExpressionExecutor {
 }
 
 impl SubtractExpressionExecutor {
-    pub fn new(left: Box<dyn ExpressionExecutor>, right: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
+    pub fn new(
+        left: Box<dyn ExpressionExecutor>,
+        right: Box<dyn ExpressionExecutor>,
+    ) -> Result<Self, String> {
         let left_type = left.get_return_type();
         let right_type = right.get_return_type();
 
         let return_type = match (left_type, right_type) {
-            (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) |
-            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) |
-            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
-                return Err(format!("Subtraction not supported for input types {:?} and {:?}", left_type, right_type));
+            (ApiAttributeType::STRING, _)
+            | (_, ApiAttributeType::STRING)
+            | (ApiAttributeType::BOOL, _)
+            | (_, ApiAttributeType::BOOL)
+            | (ApiAttributeType::OBJECT, _)
+            | (_, ApiAttributeType::OBJECT) => {
+                return Err(format!(
+                    "Subtraction not supported for input types {:?} and {:?}",
+                    left_type, right_type
+                ));
             }
-            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => {
+                ApiAttributeType::DOUBLE
+            }
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
             (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT,
-            _ => return Err(format!("Subtraction not supported for incompatible types: {:?} and {:?}", left_type, right_type)),
+            _ => {
+                return Err(format!(
+                    "Subtraction not supported for incompatible types: {:?} and {:?}",
+                    left_type, right_type
+                ))
+            }
         };
-        Ok(Self { left_executor: left, right_executor: right, return_type })
+        Ok(Self {
+            left_executor: left,
+            right_executor: right,
+            return_type,
+        })
     }
 }
 
@@ -40,7 +60,9 @@ impl ExpressionExecutor for SubtractExpressionExecutor {
 
         match (left_val_opt, right_val_opt) {
             (Some(left_val), Some(right_val)) => {
-                if matches!(left_val, AttributeValue::Null) || matches!(right_val, AttributeValue::Null) {
+                if matches!(left_val, AttributeValue::Null)
+                    || matches!(right_val, AttributeValue::Null)
+                {
                     return Some(AttributeValue::Null);
                 }
                 match self.return_type {
@@ -70,12 +92,19 @@ impl ExpressionExecutor for SubtractExpressionExecutor {
             _ => None,
         }
     }
-    fn get_return_type(&self) -> ApiAttributeType { self.return_type }
-     fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-         Box::new(SubtractExpressionExecutor {
-             left_executor: self.left_executor.clone_executor(siddhi_app_context),
-             right_executor: self.right_executor.clone_executor(siddhi_app_context),
-             return_type: self.return_type,
-         })
-     }
+    fn get_return_type(&self) -> ApiAttributeType {
+        self.return_type
+    }
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
+        Box::new(SubtractExpressionExecutor {
+            left_executor: self.left_executor.clone_executor(siddhi_app_context),
+            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            return_type: self.return_type,
+        })
+    }
 }

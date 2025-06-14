@@ -20,7 +20,10 @@ fn incremental_sum_seconds() {
     let data = runner.get_aggregation_data("Agg", Duration::Seconds);
     let _ = runner.shutdown();
     // Aggregation tables are not yet fully implemented; ensure runtime does not panic.
-    assert!(data.is_empty() || data == vec![vec![AttributeValue::Long(2)], vec![AttributeValue::Long(2)]]);
+    assert!(
+        data.is_empty()
+            || data == vec![vec![AttributeValue::Long(2)], vec![AttributeValue::Long(2)]]
+    );
 }
 
 #[test]

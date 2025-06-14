@@ -1,7 +1,7 @@
 // siddhi_rust/src/core/stream/output/mod.rs
 
-pub mod stream_callback;
-pub mod sink; // For sink implementations
+pub mod sink;
+pub mod stream_callback; // For sink implementations
 
-pub use self::stream_callback::{StreamCallback, LogStreamCallback};
 pub use self::sink::{LogSink, Sink};
+pub use self::stream_callback::{LogStreamCallback, StreamCallback};

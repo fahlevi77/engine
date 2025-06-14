@@ -1,5 +1,7 @@
-pub mod sequence_processor;
 pub mod logical_processor;
+pub mod sequence_processor;
 
-pub use sequence_processor::{SequenceProcessor, SequenceProcessorSide, SequenceType, SequenceSide};
 pub use logical_processor::{LogicalProcessor, LogicalProcessorSide, LogicalType};
+pub use sequence_processor::{
+    SequenceProcessor, SequenceProcessorSide, SequenceSide, SequenceType,
+};

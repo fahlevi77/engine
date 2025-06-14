@@ -1,15 +1,15 @@
 // siddhi_rust/src/core/util/mod.rs
 
-pub mod executor_service;
 pub mod attribute_converter;
+pub mod event_serde;
+pub mod executor_service;
 pub mod id_generator;
 pub mod metrics;
 pub mod parser; // Added parser module
-pub mod siddhi_constants; // Added siddhi_constants module
-pub mod scheduler; // new scheduler module
 pub mod scheduled_executor_service;
+pub mod scheduler; // new scheduler module
 pub mod serialization;
-pub mod event_serde;
+pub mod siddhi_constants; // Added siddhi_constants module
 pub mod thread_barrier;
 // Potentially other existing util submodules:
 // pub mod cache;
@@ -25,15 +25,14 @@ pub mod thread_barrier;
 // pub mod timestamp;
 // pub mod transport;
 
-
-pub use self::executor_service::ExecutorService;
 pub use self::attribute_converter::{get_property_value, get_property_value_from_str};
+pub use self::event_serde::{event_from_bytes, event_to_bytes};
+pub use self::executor_service::ExecutorService;
 pub use self::id_generator::IdGenerator;
 pub use self::metrics::*;
 pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export key items from parser
-pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
-pub use self::scheduler::{Scheduler, Schedulable};
 pub use self::scheduled_executor_service::ScheduledExecutorService;
-pub use self::serialization::{to_bytes, from_bytes};
-pub use self::event_serde::{event_to_bytes, event_from_bytes};
+pub use self::scheduler::{Schedulable, Scheduler};
+pub use self::serialization::{from_bytes, to_bytes};
+pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
 pub use self::thread_barrier::ThreadBarrier;

@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.TableDefinition
+use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
-use crate::query_api::definition::attribute::{Attribute, Type as AttributeType};
-use crate::query_api::annotation::Annotation; // Assuming Annotation is defined
+use crate::query_api::definition::attribute::{Attribute, Type as AttributeType}; // Assuming Annotation is defined
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct TableDefinition {
@@ -26,7 +26,9 @@ impl TableDefinition {
     // Builder-style methods, specific to TableDefinition
     pub fn attribute(mut self, attribute_name: String, attribute_type: AttributeType) -> Self {
         // TODO: Implement checkAttribute logic from AbstractDefinition or call a method on it.
-        self.abstract_definition.attribute_list.push(Attribute::new(attribute_name, attribute_type));
+        self.abstract_definition
+            .attribute_list
+            .push(Attribute::new(attribute_name, attribute_type));
         self
     }
 

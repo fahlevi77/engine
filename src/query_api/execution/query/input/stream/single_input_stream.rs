@@ -1,10 +1,11 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.stream.SingleInputStream
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression;
-use crate::query_api::execution::query::input::handler::{StreamHandler, Filter, StreamFunction, WindowHandler};
 use super::input_stream::InputStreamTrait;
-use crate::query_api::execution::query::Query; // For AnonymousInputStream part
-
+use crate::query_api::execution::query::input::handler::{
+    Filter, StreamFunction, StreamHandler, WindowHandler,
+};
+use crate::query_api::execution::query::Query;
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // For AnonymousInputStream part
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SingleInputStreamKind {
@@ -25,7 +26,8 @@ pub enum SingleInputStreamKind {
 }
 
 impl Default for SingleInputStreamKind {
-    fn default() -> Self { // Default to a basic, empty stream
+    fn default() -> Self {
+        // Default to a basic, empty stream
         SingleInputStreamKind::Basic {
             is_fault_stream: false,
             is_inner_stream: false,
@@ -57,7 +59,7 @@ impl SingleInputStream {
         is_inner: bool,
         is_fault: bool,
         stream_ref_id: Option<String>,
-        handlers: Vec<StreamHandler>
+        handlers: Vec<StreamHandler>,
     ) -> Self {
         Self::new(SingleInputStreamKind::Basic {
             is_fault_stream: is_fault,
@@ -75,20 +77,19 @@ impl SingleInputStream {
     pub(super) fn new_basic_from_ref_id(stream_ref_id: String, stream_id: String) -> Self {
         Self::new_basic(stream_id, false, false, Some(stream_ref_id), Vec::new())
     }
-     pub(super) fn new_basic_inner_from_id(stream_id: String) -> Self {
+    pub(super) fn new_basic_inner_from_id(stream_id: String) -> Self {
         Self::new_basic(stream_id, true, false, None, Vec::new())
     }
     // TODO: Add other specific factories: new_basic_inner_from_ref_id, new_basic_fault_from_id, etc.
-
 
     // Factory for Anonymous kind
     pub fn new_anonymous(
         query: Box<Query>,
         stream_id: String,
         stream_ref_id: Option<String>,
-        handlers: Vec<StreamHandler>
+        handlers: Vec<StreamHandler>,
     ) -> Self {
-         Self::new(SingleInputStreamKind::Anonymous {
+        Self::new(SingleInputStreamKind::Anonymous {
             query,
             stream_id,
             stream_reference_id: stream_ref_id,
@@ -102,7 +103,6 @@ impl SingleInputStream {
         Self::new_anonymous(Box::new(query), stream_id, None, Vec::new())
     }
 
-
     // Accessors and builder methods
     pub fn get_stream_id_str(&self) -> &str {
         match &self.kind {
@@ -113,45 +113,82 @@ impl SingleInputStream {
 
     pub fn get_stream_reference_id_str(&self) -> Option<&str> {
         match &self.kind {
-            SingleInputStreamKind::Basic { stream_reference_id, .. } => stream_reference_id.as_deref(),
-            SingleInputStreamKind::Anonymous { stream_reference_id, .. } => stream_reference_id.as_deref(),
+            SingleInputStreamKind::Basic {
+                stream_reference_id,
+                ..
+            } => stream_reference_id.as_deref(),
+            SingleInputStreamKind::Anonymous {
+                stream_reference_id,
+                ..
+            } => stream_reference_id.as_deref(),
         }
     }
     // ... other getters for is_fault_stream, is_inner_stream, stream_reference_id ...
 
     pub fn get_stream_handlers(&self) -> &Vec<StreamHandler> {
         match &self.kind {
-            SingleInputStreamKind::Basic { stream_handlers, .. } => stream_handlers,
-            SingleInputStreamKind::Anonymous { stream_handlers, .. } => stream_handlers,
+            SingleInputStreamKind::Basic {
+                stream_handlers, ..
+            } => stream_handlers,
+            SingleInputStreamKind::Anonymous {
+                stream_handlers, ..
+            } => stream_handlers,
         }
     }
 
     pub fn get_stream_handlers_mut(&mut self) -> &mut Vec<StreamHandler> {
         match &mut self.kind {
-            SingleInputStreamKind::Basic { stream_handlers, .. } => stream_handlers,
-            SingleInputStreamKind::Anonymous { stream_handlers, .. } => stream_handlers,
+            SingleInputStreamKind::Basic {
+                stream_handlers, ..
+            } => stream_handlers,
+            SingleInputStreamKind::Anonymous {
+                stream_handlers, ..
+            } => stream_handlers,
         }
     }
 
     pub fn filter(mut self, filter_expression: Expression) -> Self {
-        self.get_stream_handlers_mut().push(StreamHandler::Filter(Filter::new(filter_expression)));
+        self.get_stream_handlers_mut()
+            .push(StreamHandler::Filter(Filter::new(filter_expression)));
         self
     }
 
-    pub fn function(mut self, namespace: Option<String>, name: String, params: Vec<Expression>) -> Self {
-        self.get_stream_handlers_mut().push(StreamHandler::Function(StreamFunction::new(name, namespace, params)));
+    pub fn function(
+        mut self,
+        namespace: Option<String>,
+        name: String,
+        params: Vec<Expression>,
+    ) -> Self {
+        self.get_stream_handlers_mut()
+            .push(StreamHandler::Function(StreamFunction::new(
+                name, namespace, params,
+            )));
         self
     }
 
-    pub fn window(mut self, namespace: Option<String>, name: String, params: Vec<Expression>) -> Self {
-        self.get_stream_handlers_mut().push(StreamHandler::Window(Box::new(WindowHandler::new(name, namespace, params))));
+    pub fn window(
+        mut self,
+        namespace: Option<String>,
+        name: String,
+        params: Vec<Expression>,
+    ) -> Self {
+        self.get_stream_handlers_mut()
+            .push(StreamHandler::Window(Box::new(WindowHandler::new(
+                name, namespace, params,
+            ))));
         self
     }
 
     pub fn as_ref(mut self, stream_ref_id: String) -> Self {
         match &mut self.kind {
-            SingleInputStreamKind::Basic { stream_reference_id, .. } => *stream_reference_id = Some(stream_ref_id),
-            SingleInputStreamKind::Anonymous { stream_reference_id, .. } => *stream_reference_id = Some(stream_ref_id),
+            SingleInputStreamKind::Basic {
+                stream_reference_id,
+                ..
+            } => *stream_reference_id = Some(stream_ref_id),
+            SingleInputStreamKind::Anonymous {
+                stream_reference_id,
+                ..
+            } => *stream_reference_id = Some(stream_ref_id),
         }
         self
     }

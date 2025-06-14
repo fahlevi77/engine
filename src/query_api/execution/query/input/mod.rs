@@ -8,41 +8,41 @@ pub mod stream;
 // Re-export key elements from the stream module as it defines the main InputStream enum/struct
 pub use self::stream::{
     InputStream,
-    SingleInputStream,
+    JoinEventTrigger, // Enum from JoinInputStream
     JoinInputStream,
-    StateInputStream,
     // BasicSingleInputStream, // Removed
     // AnonymousInputStream, // Removed
     JoinType, // Enum from JoinInputStream
+    SingleInputStream,
+    StateInputStream,
     StateInputStreamType, // Enum from StateInputStream
-    JoinEventTrigger, // Enum from JoinInputStream
 };
 
 // Re-export key elements from handler module
 pub use self::handler::{
-    StreamHandler, // Enum or Trait
     Filter,
     StreamFunction,
+    StreamHandler, // Enum or Trait
     WindowHandler, // Use the already aliased WindowHandler from handler/mod.rs
 };
 
 // Re-export key elements from state module
 pub use self::state::{
-    StateElement, // Enum or Trait
-    StreamStateElement,
+    AbsentStreamStateElement,
+    CountStateElement,
+    EveryStateElement,
     LogicalStateElement,
     LogicalStateElementType, // Enum from LogicalStateElement
     NextStateElement,
-    EveryStateElement,
-    CountStateElement,
-    AbsentStreamStateElement,
-    State, // Utility struct with static methods
+    State,        // Utility struct with static methods
+    StateElement, // Enum or Trait
+    StreamStateElement,
 };
 
 // Re-export key elements from store module
 pub use self::store::{
+    AggregationInputStore,
+    ConditionInputStore,
     InputStore, // Trait
     Store,
-    ConditionInputStore,
-    AggregationInputStore,
 };

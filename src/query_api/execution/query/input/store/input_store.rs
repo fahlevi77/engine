@@ -5,12 +5,12 @@ use crate::query_api::siddhi_element::SiddhiElement;
 use super::store::Store;
 // ConditionInputStore and AggregationInputStore are not yet refactored in this pass.
 // Assuming they will be. For now, their direct usage might be problematic if their structure changed.
-use super::condition_input_store::ConditionInputStore;
 use super::aggregation_input_store::AggregationInputStore;
-
+use super::condition_input_store::ConditionInputStore;
 
 // Trait for common InputStore behavior
-pub trait InputStoreTrait { // Removed SiddhiElement supertrait
+pub trait InputStoreTrait {
+    // Removed SiddhiElement supertrait
     fn get_store_id(&self) -> &str;
     fn get_store_reference_id(&self) -> Option<&str>;
 }

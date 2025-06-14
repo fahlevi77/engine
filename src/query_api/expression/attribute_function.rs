@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.expression.AttributeFunction
 // This also implements Extension in Java, which means it has namespace and name.
-use crate::query_api::siddhi_element::SiddhiElement;
-use super::Expression; // Assuming expression.rs will define the Expression enum.
+use super::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // Assuming expression.rs will define the Expression enum.
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct AttributeFunction {

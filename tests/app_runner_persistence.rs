@@ -1,8 +1,8 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore};
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore};
 use std::sync::Arc;
 
 #[test]

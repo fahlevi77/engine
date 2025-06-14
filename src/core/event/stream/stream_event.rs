@@ -9,7 +9,6 @@ use crate::core::util::siddhi_constants::{
 use std::any::Any;
 use std::fmt::Debug;
 
-
 /// A concrete implementation of ComplexEvent for stream processing.
 #[derive(Debug, Default)]
 pub struct StreamEvent {
@@ -31,7 +30,10 @@ impl Clone for StreamEvent {
             event_type: self.event_type,
             before_window_data: self.before_window_data.clone(),
             on_after_window_data: self.on_after_window_data.clone(),
-            next: self.next.as_ref().map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
+            next: self
+                .next
+                .as_ref()
+                .map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
         }
     }
 }
@@ -44,14 +46,18 @@ impl StreamEvent {
         output_data_size: usize,
     ) -> Self {
         StreamEvent {
-           timestamp,
-           output_data: if output_data_size > 0 { Some(vec![AttributeValue::default(); output_data_size]) } else { None },
-           event_type: ComplexEventType::default(), // Defaults to Current
-           before_window_data: vec![AttributeValue::default(); before_window_data_size],
-           on_after_window_data: vec![AttributeValue::default(); on_after_window_data_size],
-           next: None,
-       }
-   }
+            timestamp,
+            output_data: if output_data_size > 0 {
+                Some(vec![AttributeValue::default(); output_data_size])
+            } else {
+                None
+            },
+            event_type: ComplexEventType::default(), // Defaults to Current
+            before_window_data: vec![AttributeValue::default(); before_window_data_size],
+            on_after_window_data: vec![AttributeValue::default(); on_after_window_data_size],
+            next: None,
+        }
+    }
     /// Retrieve an attribute using the Siddhi position array convention.
     /// Only `position[STREAM_ATTRIBUTE_TYPE_INDEX]` and
     /// `position[STREAM_ATTRIBUTE_INDEX_IN_TYPE]` are respected.
@@ -59,10 +65,7 @@ impl StreamEvent {
         let attr_index = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize;
         match position.get(STREAM_ATTRIBUTE_TYPE_INDEX).copied()? as usize {
             BEFORE_WINDOW_DATA_INDEX => self.before_window_data.get(attr_index),
-            OUTPUT_DATA_INDEX => self
-                .output_data
-                .as_ref()
-                .and_then(|v| v.get(attr_index)),
+            OUTPUT_DATA_INDEX => self.output_data.as_ref().and_then(|v| v.get(attr_index)),
             ON_AFTER_WINDOW_DATA_INDEX => self.on_after_window_data.get(attr_index),
             _ => None,
         }
@@ -77,7 +80,11 @@ impl StreamEvent {
         let attr_index = *position
             .get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)
             .ok_or("position array too short")? as usize;
-        match position.get(STREAM_ATTRIBUTE_TYPE_INDEX).copied().ok_or("position array too short")? as usize {
+        match position
+            .get(STREAM_ATTRIBUTE_TYPE_INDEX)
+            .copied()
+            .ok_or("position array too short")? as usize
+        {
             BEFORE_WINDOW_DATA_INDEX => {
                 if attr_index < self.before_window_data.len() {
                     self.before_window_data[attr_index] = value;
@@ -110,7 +117,11 @@ impl StreamEvent {
         }
     }
 
-    pub fn set_output_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+    pub fn set_output_data_at_idx(
+        &mut self,
+        value: AttributeValue,
+        index: usize,
+    ) -> Result<(), String> {
         match self.output_data {
             Some(ref mut vec) if index < vec.len() => {
                 vec[index] = value;
@@ -121,7 +132,11 @@ impl StreamEvent {
         }
     }
 
-    pub fn set_before_window_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+    pub fn set_before_window_data_at_idx(
+        &mut self,
+        value: AttributeValue,
+        index: usize,
+    ) -> Result<(), String> {
         if index < self.before_window_data.len() {
             self.before_window_data[index] = value;
             Ok(())
@@ -130,7 +145,11 @@ impl StreamEvent {
         }
     }
 
-    pub fn set_on_after_window_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+    pub fn set_on_after_window_data_at_idx(
+        &mut self,
+        value: AttributeValue,
+        index: usize,
+    ) -> Result<(), String> {
         if index < self.on_after_window_data.len() {
             self.on_after_window_data[index] = value;
             Ok(())
@@ -163,7 +182,10 @@ impl ComplexEvent for StreamEvent {
     fn get_next(&self) -> Option<&dyn ComplexEvent> {
         self.next.as_deref()
     }
-    fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>> {
+    fn set_next(
+        &mut self,
+        next_event: Option<Box<dyn ComplexEvent>>,
+    ) -> Option<Box<dyn ComplexEvent>> {
         // Return the old next, as per typical linked list operations or Java's setNext.
         // However, Java's ComplexEvent.setNext is void. For easier list manipulation in Rust,
         // returning the old value can be useful if taking ownership.
@@ -187,7 +209,6 @@ impl ComplexEvent for StreamEvent {
     //     self.output_data.as_mut()
     // }
 
-
     fn get_timestamp(&self) -> i64 {
         self.timestamp
     }
@@ -204,7 +225,10 @@ impl ComplexEvent for StreamEvent {
 
     // is_expired() and set_expired() use default trait methods from ComplexEvent.
 
-    fn as_any(&self) -> &dyn Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn Any { self }
-
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }

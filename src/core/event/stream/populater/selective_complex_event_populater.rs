@@ -1,6 +1,9 @@
 // siddhi_rust/src/core/event/stream/populater/selective_complex_event_populater.rs
 use super::{ComplexEventPopulater, StreamMappingElement};
-use crate::core::event::{complex_event::ComplexEvent, state::state_event::StateEvent, stream::stream_event::StreamEvent, value::AttributeValue};
+use crate::core::event::{
+    complex_event::ComplexEvent, state::state_event::StateEvent, stream::stream_event::StreamEvent,
+    value::AttributeValue,
+};
 use crate::core::util::siddhi_constants::*;
 
 #[derive(Debug, Clone)]
@@ -9,7 +12,9 @@ pub struct SelectiveComplexEventPopulater {
 }
 
 impl SelectiveComplexEventPopulater {
-    pub fn new(mappings: Vec<StreamMappingElement>) -> Self { Self { mappings } }
+    pub fn new(mappings: Vec<StreamMappingElement>) -> Self {
+        Self { mappings }
+    }
 
     fn populate_value(&self, ce: &mut dyn ComplexEvent, value: AttributeValue, pos: &[i32]) {
         if let Some(se) = ce.as_any_mut().downcast_mut::<StreamEvent>() {
@@ -21,7 +26,11 @@ impl SelectiveComplexEventPopulater {
 }
 
 impl ComplexEventPopulater for SelectiveComplexEventPopulater {
-    fn populate_complex_event(&self, complex_event: &mut dyn ComplexEvent, data: &[AttributeValue]) {
+    fn populate_complex_event(
+        &self,
+        complex_event: &mut dyn ComplexEvent,
+        data: &[AttributeValue],
+    ) {
         for mapping in &self.mappings {
             if let Some(ref pos) = mapping.to_position {
                 if let Some(val) = data.get(mapping.from_position).cloned() {

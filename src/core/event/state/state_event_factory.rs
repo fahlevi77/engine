@@ -1,7 +1,7 @@
 // siddhi_rust/src/core/event/state/state_event_factory.rs
 // Corresponds to io.siddhi.core.event.state.StateEventFactory
-use super::state_event::StateEvent;
 use super::meta_state_event::MetaStateEvent;
+use super::state_event::StateEvent;
 
 #[derive(Debug, Clone)]
 pub struct StateEventFactory {
@@ -11,7 +11,10 @@ pub struct StateEventFactory {
 
 impl StateEventFactory {
     pub fn new(event_size: usize, output_data_size: usize) -> Self {
-        Self { event_size, output_data_size }
+        Self {
+            event_size,
+            output_data_size,
+        }
     }
 
     pub fn new_from_meta(meta: &MetaStateEvent) -> Self {
@@ -25,4 +28,3 @@ impl StateEventFactory {
         StateEvent::new(self.event_size, self.output_data_size)
     }
 }
-

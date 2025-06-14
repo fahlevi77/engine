@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.expression.condition.Or
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Or {

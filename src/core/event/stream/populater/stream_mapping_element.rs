@@ -7,6 +7,9 @@ pub struct StreamMappingElement {
 
 impl StreamMappingElement {
     pub fn new(from_position: usize, to_position: Option<Vec<i32>>) -> Self {
-        Self { from_position, to_position }
+        Self {
+            from_position,
+            to_position,
+        }
     }
 }

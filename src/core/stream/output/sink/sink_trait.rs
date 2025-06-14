@@ -8,5 +8,7 @@ pub trait Sink: StreamCallback + Debug + Send + Sync {
 }
 
 impl Clone for Box<dyn Sink> {
-    fn clone(&self) -> Self { self.clone_box() }
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }

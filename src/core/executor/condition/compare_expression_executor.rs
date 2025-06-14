@@ -1,11 +1,10 @@
 // siddhi_rust/src/core/executor/condition/compare_expression_executor.rs
 // Corresponds to io.siddhi.core.executor.condition.compare.CompareConditionExpressionExecutor (abstract class)
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 use crate::query_api::expression::condition::CompareOperator as ConditionCompareOperator;
-
 
 #[derive(Debug)]
 pub struct CompareExpressionExecutor {
@@ -126,7 +125,10 @@ impl CompareExpressionExecutor {
         let cmp_type = match (left_type, right_type) {
             (STRING, STRING) => ComparisonType::String,
             (BOOL, BOOL) => {
-                if matches!(op, ConditionCompareOperator::Equal | ConditionCompareOperator::NotEqual) {
+                if matches!(
+                    op,
+                    ConditionCompareOperator::Equal | ConditionCompareOperator::NotEqual
+                ) {
                     ComparisonType::Bool
                 } else {
                     return Err("Only == and != supported for BOOL".to_string());
@@ -194,13 +196,25 @@ impl ExpressionExecutor for CompareExpressionExecutor {
                 compare_f64(l, r, self.operator)
             }
             ComparisonType::String => {
-                let l = match &left_val { AttributeValue::String(s) => s, _ => return None };
-                let r = match &right_val { AttributeValue::String(s) => s, _ => return None };
+                let l = match &left_val {
+                    AttributeValue::String(s) => s,
+                    _ => return None,
+                };
+                let r = match &right_val {
+                    AttributeValue::String(s) => s,
+                    _ => return None,
+                };
                 compare_ord(l, r, self.operator)
             }
             ComparisonType::Bool => {
-                let l = match &left_val { AttributeValue::Bool(b) => *b, _ => return None };
-                let r = match &right_val { AttributeValue::Bool(b) => *b, _ => return None };
+                let l = match &left_val {
+                    AttributeValue::Bool(b) => *b,
+                    _ => return None,
+                };
+                let r = match &right_val {
+                    AttributeValue::Bool(b) => *b,
+                    _ => return None,
+                };
                 compare_bool(l, r, self.operator)
             }
         };
@@ -212,7 +226,12 @@ impl ExpressionExecutor for CompareExpressionExecutor {
         ApiAttributeType::BOOL
     }
 
-    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
         Box::new(CompareExpressionExecutor {
             left_executor: self.left_executor.clone_executor(siddhi_app_context),
             right_executor: self.right_executor.clone_executor(siddhi_app_context),
@@ -225,19 +244,28 @@ impl ExpressionExecutor for CompareExpressionExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query_api::expression::condition::compare::Operator as ApiCompareOperator;
-    use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
     use crate::core::event::value::AttributeValue;
+    use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+    use crate::query_api::expression::condition::compare::Operator as ApiCompareOperator;
     // ApiAttributeType is imported in the outer scope
+    use crate::core::config::siddhi_app_context::SiddhiAppContext;
     use crate::core::executor::expression_executor::ExpressionExecutor;
     use std::sync::Arc;
-    use crate::core::config::siddhi_app_context::SiddhiAppContext;
 
     #[test]
-    fn test_compare_greater_than_int_true() { // Renamed as per subtask suggestion (though original would be fine too)
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan).unwrap();
+    fn test_compare_greater_than_int_true() {
+        // Renamed as per subtask suggestion (though original would be fine too)
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(20),
+            ApiAttributeType::INT,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(10),
+            ApiAttributeType::INT,
+        ));
+        let cmp_exec =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan)
+                .unwrap();
 
         let result = cmp_exec.execute(None);
         assert_eq!(result, Some(AttributeValue::Bool(true)));
@@ -246,9 +274,17 @@ mod tests {
 
     #[test]
     fn test_compare_less_than_int_false() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(10), ApiAttributeType::INT));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::LessThan).unwrap();
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(20),
+            ApiAttributeType::INT,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(10),
+            ApiAttributeType::INT,
+        ));
+        let cmp_exec =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::LessThan)
+                .unwrap();
 
         let result = cmp_exec.execute(None);
         assert_eq!(result, Some(AttributeValue::Bool(false)));
@@ -256,9 +292,17 @@ mod tests {
 
     #[test]
     fn test_compare_equal_float_true() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(10.5), ApiAttributeType::FLOAT));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(10.5), ApiAttributeType::FLOAT));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::Equal).unwrap();
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Float(10.5),
+            ApiAttributeType::FLOAT,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Float(10.5),
+            ApiAttributeType::FLOAT,
+        ));
+        let cmp_exec =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::Equal)
+                .unwrap();
 
         let result = cmp_exec.execute(None);
         assert_eq!(result, Some(AttributeValue::Bool(true)));
@@ -266,9 +310,17 @@ mod tests {
 
     #[test]
     fn test_compare_not_equal_string_true() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("hello".to_string()), ApiAttributeType::STRING));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("world".to_string()), ApiAttributeType::STRING));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::NotEqual).unwrap();
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::String("hello".to_string()),
+            ApiAttributeType::STRING,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::String("world".to_string()),
+            ApiAttributeType::STRING,
+        ));
+        let cmp_exec =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::NotEqual)
+                .unwrap();
 
         let result = cmp_exec.execute(None);
         assert_eq!(result, Some(AttributeValue::Bool(true)));
@@ -276,9 +328,17 @@ mod tests {
 
     #[test]
     fn test_compare_with_null_operand() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Null, ApiAttributeType::INT)); // Null operand
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan).unwrap();
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(20),
+            ApiAttributeType::INT,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Null,
+            ApiAttributeType::INT,
+        )); // Null operand
+        let cmp_exec =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan)
+                .unwrap();
 
         // Current logic: if either operand is Null, returns Bool(false)
         let result = cmp_exec.execute(None);
@@ -287,17 +347,35 @@ mod tests {
 
     #[test]
     fn test_compare_incompatible_types() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(20), ApiAttributeType::INT));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("text".to_string()), ApiAttributeType::STRING));
-        let res = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan);
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(20),
+            ApiAttributeType::INT,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::String("text".to_string()),
+            ApiAttributeType::STRING,
+        ));
+        let res =
+            CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThan);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_compare_clone() {
-        let left_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(100), ApiAttributeType::LONG));
-        let right_exec = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(50), ApiAttributeType::LONG));
-        let cmp_exec = CompareExpressionExecutor::new(left_exec, right_exec, ApiCompareOperator::GreaterThanEqual).unwrap();
+        let left_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Long(100),
+            ApiAttributeType::LONG,
+        ));
+        let right_exec = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Long(50),
+            ApiAttributeType::LONG,
+        ));
+        let cmp_exec = CompareExpressionExecutor::new(
+            left_exec,
+            right_exec,
+            ApiCompareOperator::GreaterThanEqual,
+        )
+        .unwrap();
 
         let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
         let cloned_exec = cmp_exec.clone_executor(&app_ctx_placeholder);
@@ -309,48 +387,90 @@ mod tests {
 
     #[test]
     fn test_operator_equal_int() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(5), ApiAttributeType::INT));
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(5),
+            ApiAttributeType::INT,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(5),
+            ApiAttributeType::INT,
+        ));
         let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::Equal).unwrap();
         assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 
     #[test]
     fn test_operator_not_equal_long() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(5), ApiAttributeType::LONG));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(10), ApiAttributeType::LONG));
-        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::NotEqual).unwrap();
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Long(5),
+            ApiAttributeType::LONG,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Long(10),
+            ApiAttributeType::LONG,
+        ));
+        let cmp =
+            CompareExpressionExecutor::new(left, right, ApiCompareOperator::NotEqual).unwrap();
         assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 
     #[test]
     fn test_operator_greater_than_cross() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Float(7.5), ApiAttributeType::FLOAT));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Int(7), ApiAttributeType::INT));
-        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThan).unwrap();
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Float(7.5),
+            ApiAttributeType::FLOAT,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Int(7),
+            ApiAttributeType::INT,
+        ));
+        let cmp =
+            CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThan).unwrap();
         assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 
     #[test]
     fn test_operator_greater_than_equal_cross() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Double(7.0), ApiAttributeType::DOUBLE));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Long(7), ApiAttributeType::LONG));
-        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThanEqual).unwrap();
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Double(7.0),
+            ApiAttributeType::DOUBLE,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Long(7),
+            ApiAttributeType::LONG,
+        ));
+        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::GreaterThanEqual)
+            .unwrap();
         assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 
     #[test]
     fn test_operator_less_than_string() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("apple".to_string()), ApiAttributeType::STRING));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::String("banana".to_string()), ApiAttributeType::STRING));
-        let cmp = CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThan).unwrap();
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::String("apple".to_string()),
+            ApiAttributeType::STRING,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::String("banana".to_string()),
+            ApiAttributeType::STRING,
+        ));
+        let cmp =
+            CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThan).unwrap();
         assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
     }
 
     #[test]
     fn test_operator_less_than_equal_bool() {
-        let left = Box::new(ConstantExpressionExecutor::new(AttributeValue::Bool(false), ApiAttributeType::BOOL));
-        let right = Box::new(ConstantExpressionExecutor::new(AttributeValue::Bool(true), ApiAttributeType::BOOL));
-        assert!(CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThanEqual).is_err());
+        let left = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Bool(false),
+            ApiAttributeType::BOOL,
+        ));
+        let right = Box::new(ConstantExpressionExecutor::new(
+            AttributeValue::Bool(true),
+            ApiAttributeType::BOOL,
+        ));
+        assert!(
+            CompareExpressionExecutor::new(left, right, ApiCompareOperator::LessThanEqual).is_err()
+        );
     }
 }

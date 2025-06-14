@@ -1,36 +1,35 @@
 // siddhi_rust/src/core/util/parser/expression_parser.rs
 
-use crate::query_api::{
-    expression::{
-        Expression as ApiExpression,
-        constant::ConstantValueWithFloat as ApiConstantValue
-    },
-    definition::attribute::Type as ApiAttributeType, // Import Type enum
-};
-use crate::core::event::complex_event::ComplexEvent; // Added this import
-use crate::core::executor::{
-    expression_executor::ExpressionExecutor,
-    constant_expression_executor::ConstantExpressionExecutor,
-    variable_expression_executor::{VariableExpressionExecutor /*, VariablePosition, EventDataArrayType */},
-    math::*,
-    condition::*,
-    function::*,
-    EventVariableFunctionExecutor,
-    MultiValueVariableFunctionExecutor,
-};
-use crate::core::event::value::AttributeValue as CoreAttributeValue;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::query::selector::attribute::aggregator::*;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
-use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::event::complex_event::ComplexEvent; // Added this import
 use crate::core::event::state::meta_state_event::MetaStateEvent;
+use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::event::value::AttributeValue as CoreAttributeValue;
 use crate::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+use crate::core::executor::{
+    condition::*,
+    constant_expression_executor::ConstantExpressionExecutor,
+    expression_executor::ExpressionExecutor,
+    function::*,
+    math::*,
+    variable_expression_executor::{
+        VariableExpressionExecutor, /*, VariablePosition, EventDataArrayType */
+    },
+    EventVariableFunctionExecutor, MultiValueVariableFunctionExecutor,
+};
 use crate::core::query::processor::ProcessingMode;
+use crate::core::query::selector::attribute::aggregator::*;
 use crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX;
+use crate::query_api::{
+    definition::attribute::Type as ApiAttributeType, // Import Type enum
+    expression::{
+        constant::ConstantValueWithFloat as ApiConstantValue, Expression as ApiExpression,
+    },
+};
 
-
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 // Wrapper executor for calling ScalarFunctionExecutor (UDFs and complex built-ins)
 #[derive(Debug)]
@@ -58,7 +57,8 @@ impl AttributeFunctionExpressionExecutor {
 }
 
 impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
-    fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<CoreAttributeValue> { // ComplexEvent should now be in scope
+    fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<CoreAttributeValue> {
+        // ComplexEvent should now be in scope
         // This simplified model assumes that the ScalarFunctionExecutor's `execute` method,
         // inherited from ExpressionExecutor, will correctly use its initialized state
         // (which might include information about its arguments derived from their executors during `init`)
@@ -74,18 +74,32 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-         let cloned_args = self.argument_executors.iter().map(|e| e.clone_executor(siddhi_app_context)).collect();
-         let cloned_scalar_fn = self.scalar_function_executor.clone_scalar_function();
-         // Re-initialize the cloned scalar function
-         match AttributeFunctionExpressionExecutor::new(cloned_scalar_fn, cloned_args, Arc::clone(siddhi_app_context)) {
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &Arc<SiddhiAppContext>,
+    ) -> Box<dyn ExpressionExecutor> {
+        let cloned_args = self
+            .argument_executors
+            .iter()
+            .map(|e| e.clone_executor(siddhi_app_context))
+            .collect();
+        let cloned_scalar_fn = self.scalar_function_executor.clone_scalar_function();
+        // Re-initialize the cloned scalar function
+        match AttributeFunctionExpressionExecutor::new(
+            cloned_scalar_fn,
+            cloned_args,
+            Arc::clone(siddhi_app_context),
+        ) {
             Ok(exec) => Box::new(exec),
             Err(e) => {
                 // If cloning fails log the error and fall back to a constant NULL executor
                 eprintln!("Failed to clone AttributeFunctionExpressionExecutor: {}", e);
-                Box::new(ConstantExpressionExecutor::new(CoreAttributeValue::Null, ApiAttributeType::OBJECT))
+                Box::new(ConstantExpressionExecutor::new(
+                    CoreAttributeValue::Null,
+                    ApiAttributeType::OBJECT,
+                ))
             }
-         }
+        }
     }
 }
 
@@ -94,7 +108,6 @@ impl Drop for AttributeFunctionExpressionExecutor {
         self.scalar_function_executor.destroy();
     }
 }
-
 
 // Simplified context for initial ExpressionParser focusing on single input stream scenarios.
 /// Context for `ExpressionParser`, providing necessary metadata for variable
@@ -114,18 +127,21 @@ pub struct ExpressionParserContext<'a> {
     pub query_name: &'a str,
 }
 
-
 /// Parses query_api::Expression into core::ExpressionExecutor instances.
 /// Current limitations: Variable resolution is simplified for single input streams.
 /// Does not handle full complexity of all expression types or contexts (e.g., aggregations within HAVING).
-pub fn parse_expression<'a>( // Added lifetime 'a
+pub fn parse_expression<'a>(
+    // Added lifetime 'a
     api_expr: &ApiExpression,
     context: &ExpressionParserContext<'a>, // Use context with lifetime
 ) -> Result<Box<dyn ExpressionExecutor>, String> {
     match api_expr {
         ApiExpression::Constant(api_const) => {
-            let (core_value, core_type) = convert_api_constant_to_core_attribute_value(&api_const.value);
-            Ok(Box::new(ConstantExpressionExecutor::new(core_value, core_type)))
+            let (core_value, core_type) =
+                convert_api_constant_to_core_attribute_value(&api_const.value);
+            Ok(Box::new(ConstantExpressionExecutor::new(
+                core_value, core_type,
+            )))
         }
         ApiExpression::Variable(api_var) => {
             let attribute_name = &api_var.attribute_name;
@@ -137,21 +153,54 @@ pub fn parse_expression<'a>( // Added lifetime 'a
             let mut found: Option<([i32; 4], ApiAttributeType)> = None;
             if let Some(meta) = context.stream_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
+                    found = Some((
+                        [
+                            0,
+                            api_var.stream_index.unwrap_or(0),
+                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                            *idx as i32,
+                        ],
+                        t.clone(),
+                    ));
                 }
             } else if let Some(meta) = context.table_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
+                    found = Some((
+                        [
+                            0,
+                            api_var.stream_index.unwrap_or(0),
+                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                            *idx as i32,
+                        ],
+                        t.clone(),
+                    ));
                 }
             } else if let Some(meta) = context.window_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some(([0, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
+                    found = Some((
+                        [
+                            0,
+                            api_var.stream_index.unwrap_or(0),
+                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                            *idx as i32,
+                        ],
+                        t.clone(),
+                    ));
                 }
             } else if let Some(state_meta) = context.state_meta_map.get(stream_id) {
                 for (pos, opt_meta) in state_meta.meta_stream_events.iter().enumerate() {
                     if let Some(m) = opt_meta {
                         if let Some((idx, t)) = m.find_attribute_info(attribute_name) {
-                            found = Some(([pos as i32, api_var.stream_index.unwrap_or(0), crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32, *idx as i32], t.clone()));
+                            found = Some((
+                                [
+                                    pos as i32,
+                                    api_var.stream_index.unwrap_or(0),
+                                    crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX
+                                        as i32,
+                                    *idx as i32,
+                                ],
+                                t.clone(),
+                            ));
                             break;
                         }
                     }
@@ -286,13 +335,13 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 .unwrap_or_else(|| "unknown location".to_string());
             Ok(Box::new(
                 CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())
-                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?
+                    .map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
             ))
         }
         ApiExpression::IsNull(api_op) => {
             if let Some(inner_expr) = &api_op.expression {
-                 let exec = parse_expression(inner_expr, context)?;
-                 Ok(Box::new(IsNullExpressionExecutor::new(exec)))
+                let exec = parse_expression(inner_expr, context)?;
+                Ok(Box::new(IsNullExpressionExecutor::new(exec)))
             } else {
                 Err("IsNull without an inner expression (IsNullStream) not yet fully supported here.".to_string())
             }
@@ -318,72 +367,160 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                 .unwrap_or_else(|| "unknown location".to_string());
 
             let function_lookup_name = if let Some(ns) = &api_func.extension_namespace {
-                if ns.is_empty() { api_func.function_name.clone() }
-                else { format!("{}:{}", ns, api_func.function_name) }
+                if ns.is_empty() {
+                    api_func.function_name.clone()
+                } else {
+                    format!("{}:{}", ns, api_func.function_name)
+                }
             } else {
                 api_func.function_name.clone()
             };
 
             // Handle special variable functions not implemented via factories
-            match (api_func.extension_namespace.as_deref(), api_func.function_name.as_str()) {
+            match (
+                api_func.extension_namespace.as_deref(),
+                api_func.function_name.as_str(),
+            ) {
                 (None | Some(""), "event") => {
                     if arg_execs.len() == 1 {
                         Ok(Box::new(EventVariableFunctionExecutor::new(0, 0)))
                     } else {
-                        Err(format!("event expects 1 argument, found {}", arg_execs.len()))
+                        Err(format!(
+                            "event expects 1 argument, found {}",
+                            arg_execs.len()
+                        ))
                     }
                 }
                 (None | Some(""), "allEvents") => {
                     if arg_execs.len() == 1 {
-                        Ok(Box::new(MultiValueVariableFunctionExecutor::new(0, [0,0])))
+                        Ok(Box::new(MultiValueVariableFunctionExecutor::new(0, [0, 0])))
                     } else {
-                        Err(format!("allEvents expects 1 argument, found {}", arg_execs.len()))
+                        Err(format!(
+                            "allEvents expects 1 argument, found {}",
+                            arg_execs.len()
+                        ))
                     }
                 }
-                (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), name) if name == "instanceOfInteger" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
-                (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => Ok(Box::new(InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?)),
+                (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
+                (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
+                (None | Some(""), name) if name == "instanceOfInteger" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
+                (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
+                (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
+                (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => {
+                    Ok(Box::new(
+                        InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| format!("{} at {} in query '{}'", e, loc, context.query_name),
+                        )?,
+                    ))
+                }
                 (None | Some(""), "sum") => {
                     let mut exec = SumAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "avg") => {
                     let mut exec = AvgAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "count") => {
                     let mut exec = CountAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "distinctCount") => {
                     let mut exec = DistinctCountAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "min") => {
                     let mut exec = MinAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "max") => {
                     let mut exec = MaxAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "minForever") => {
                     let mut exec = MinForeverAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "maxForever") => {
                     let mut exec = MaxForeverAttributeAggregatorExecutor::default();
-                    exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                    exec.init(
+                        arg_execs,
+                        ProcessingMode::BATCH,
+                        false,
+                        &context.siddhi_query_context,
+                    )?;
                     Ok(Box::new(exec))
                 }
                 _ => {
@@ -393,7 +530,12 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                         .get_attribute_aggregator_factory(&function_lookup_name)
                     {
                         let mut exec = factory.create();
-                        exec.init(arg_execs, ProcessingMode::BATCH, false, &context.siddhi_query_context)?;
+                        exec.init(
+                            arg_execs,
+                            ProcessingMode::BATCH,
+                            false,
+                            &context.siddhi_query_context,
+                        )?;
                         Ok(exec)
                     } else if let Some(scalar_fn_factory) = context
                         .siddhi_app_context
@@ -405,10 +547,16 @@ pub fn parse_expression<'a>( // Added lifetime 'a
                                 scalar_fn_factory.clone_scalar_function(),
                                 arg_execs,
                                 Arc::clone(&context.siddhi_app_context),
-                            ).map_err(|e| format!("{} at {} in query '{}'", e, loc, context.query_name))?,
+                            )
+                            .map_err(|e| {
+                                format!("{} at {} in query '{}'", e, loc, context.query_name)
+                            })?,
                         ))
                     } else {
-                        Err(format!("Unsupported or unknown function: {}", function_lookup_name))
+                        Err(format!(
+                            "Unsupported or unknown function: {}",
+                            function_lookup_name
+                        ))
                     }
                 }
             }
@@ -416,9 +564,15 @@ pub fn parse_expression<'a>( // Added lifetime 'a
     }
 }
 
-fn convert_api_constant_to_core_attribute_value(api_val: &ApiConstantValue) -> (CoreAttributeValue, ApiAttributeType) { // Changed to ApiAttributeType
+fn convert_api_constant_to_core_attribute_value(
+    api_val: &ApiConstantValue,
+) -> (CoreAttributeValue, ApiAttributeType) {
+    // Changed to ApiAttributeType
     match api_val {
-        ApiConstantValue::String(s) => (CoreAttributeValue::String(s.clone()), ApiAttributeType::STRING),
+        ApiConstantValue::String(s) => (
+            CoreAttributeValue::String(s.clone()),
+            ApiAttributeType::STRING,
+        ),
         ApiConstantValue::Int(i) => (CoreAttributeValue::Int(*i), ApiAttributeType::INT),
         ApiConstantValue::Long(l) => (CoreAttributeValue::Long(*l), ApiAttributeType::LONG),
         ApiConstantValue::Float(f) => (CoreAttributeValue::Float(*f), ApiAttributeType::FLOAT),

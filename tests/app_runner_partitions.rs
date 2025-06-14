@@ -12,15 +12,27 @@ fn partition_forward() {
             from InStream select volume as vol insert into OutStream; \n\
         end;\n";
     let runner = AppRunner::new(app, "OutStream");
-    runner.send("InStream", vec![AttributeValue::String("a".into()), AttributeValue::Int(1)]);
-    runner.send("InStream", vec![AttributeValue::String("b".into()), AttributeValue::Int(2)]);
-    runner.send("InStream", vec![AttributeValue::String("a".into()), AttributeValue::Int(3)]);
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("a".into()), AttributeValue::Int(1)],
+    );
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("b".into()), AttributeValue::Int(2)],
+    );
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("a".into()), AttributeValue::Int(3)],
+    );
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Int(1)],
-        vec![AttributeValue::Int(2)],
-        vec![AttributeValue::Int(3)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(3)],
+        ]
+    );
 }
 
 #[test]
@@ -32,15 +44,27 @@ fn partition_sum_by_symbol() {
             from InStream select sum(volume) as sumvol insert into OutStream; \n\
         end;\n";
     let runner = AppRunner::new(app, "OutStream");
-    runner.send("InStream", vec![AttributeValue::String("x".into()), AttributeValue::Int(1)]);
-    runner.send("InStream", vec![AttributeValue::String("x".into()), AttributeValue::Int(2)]);
-    runner.send("InStream", vec![AttributeValue::String("y".into()), AttributeValue::Int(3)]);
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("x".into()), AttributeValue::Int(1)],
+    );
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("x".into()), AttributeValue::Int(2)],
+    );
+    runner.send(
+        "InStream",
+        vec![AttributeValue::String("y".into()), AttributeValue::Int(3)],
+    );
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Long(1)],
-        vec![AttributeValue::Long(3)],
-        vec![AttributeValue::Long(6)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Long(1)],
+            vec![AttributeValue::Long(3)],
+            vec![AttributeValue::Long(6)],
+        ]
+    );
 }
 
 #[test]
@@ -53,10 +77,19 @@ fn partition_join_streams() {
             from A join B on A.symbol == B.symbol select A.v as a, B.v as b insert into Out;\n\
         end;\n";
     let runner = AppRunner::new(app, "Out");
-    runner.send("A", vec![AttributeValue::String("s".into()), AttributeValue::Int(1)]);
-    runner.send("B", vec![AttributeValue::String("s".into()), AttributeValue::Int(2)]);
+    runner.send(
+        "A",
+        vec![AttributeValue::String("s".into()), AttributeValue::Int(1)],
+    );
+    runner.send(
+        "B",
+        vec![AttributeValue::String("s".into()), AttributeValue::Int(2)],
+    );
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(2)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1), AttributeValue::Int(2)]]
+    );
 }
 
 #[test]
@@ -68,12 +101,21 @@ fn partition_with_window() {
             from In#length(1) select v insert into Out;\n\
         end;\n";
     let runner = AppRunner::new(app, "Out");
-    runner.send("In", vec![AttributeValue::String("p".into()), AttributeValue::Int(1)]);
-    runner.send("In", vec![AttributeValue::String("p".into()), AttributeValue::Int(2)]);
+    runner.send(
+        "In",
+        vec![AttributeValue::String("p".into()), AttributeValue::Int(1)],
+    );
+    runner.send(
+        "In",
+        vec![AttributeValue::String("p".into()), AttributeValue::Int(2)],
+    );
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Int(1)],
-        vec![AttributeValue::Int(1)],
-        vec![AttributeValue::Int(2)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+        ]
+    );
 }

@@ -1,5 +1,5 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Default is tricky due to required fields
 pub struct Within {

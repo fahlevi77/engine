@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.expression.condition.IsNull
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct IsNull {
@@ -33,7 +33,7 @@ impl IsNull {
         stream_id: String,
         stream_index: Option<i32>,
         is_inner_stream: bool,
-        is_fault_stream: bool
+        is_fault_stream: bool,
     ) -> Self {
         IsNull {
             siddhi_element: SiddhiElement::default(),

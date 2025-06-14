@@ -9,18 +9,24 @@ pub struct IdGenerator {
 
 impl Clone for IdGenerator {
     fn clone(&self) -> Self {
-        Self { counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)) }
+        Self {
+            counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)),
+        }
     }
 }
 
 impl Default for IdGenerator {
     fn default() -> Self {
-        Self { counter: AtomicU64::new(0) }
+        Self {
+            counter: AtomicU64::new(0),
+        }
     }
 }
 
 impl IdGenerator {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Returns a new monotonically increasing id as a String.
     pub fn create_new_id(&self) -> String {
@@ -40,4 +46,3 @@ mod tests {
         assert_eq!(gen.create_new_id(), "2");
     }
 }
-

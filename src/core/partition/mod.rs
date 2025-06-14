@@ -10,7 +10,9 @@ pub struct PartitionRuntime {
 
 impl PartitionRuntime {
     pub fn new() -> Self {
-        Self { query_runtimes: Vec::new() }
+        Self {
+            query_runtimes: Vec::new(),
+        }
     }
 
     pub fn add_query_runtime(&mut self, qr: Arc<QueryRuntime>) {

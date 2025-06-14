@@ -1,14 +1,14 @@
 // Corresponds to io.siddhi.core.config.SiddhiQueryContext
-use std::sync::Arc;
 use super::siddhi_app_context::SiddhiAppContext;
 use crate::core::util::id_generator::IdGenerator;
-use crate::query_api::execution::query::output::OutputEventType; // From query_api, as Java uses it.
-// use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
-// use crate::core::util::IdGenerator; // TODO: Define IdGenerator
+use crate::query_api::execution::query::output::OutputEventType;
+use std::sync::Arc; // From query_api, as Java uses it.
+                    // use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
+                    // use crate::core::util::IdGenerator; // TODO: Define IdGenerator
 
 // Placeholders
-#[derive(Debug, Clone, Default)] pub struct LatencyTrackerPlaceholder {}
-
+#[derive(Debug, Clone, Default)]
+pub struct LatencyTrackerPlaceholder {}
 
 #[derive(Debug, Clone)] // Default needs SiddhiAppContext and name
 pub struct SiddhiQueryContext {
@@ -17,17 +17,21 @@ pub struct SiddhiQueryContext {
     // Or, if SiddhiQueryContext has a lifetime tied to SiddhiAppContext, it could be a reference.
     // Arc is safer for now.
     pub siddhi_app_context: Arc<SiddhiAppContext>,
-    pub name: String, // Query name
-    pub partition_id: String, // Defaulted in Java if null
-    pub partitioned: bool, // Java default false
-    pub output_event_type: Option<OutputEventType>, // Java type, optional
+    pub name: String,                                       // Query name
+    pub partition_id: String,                               // Defaulted in Java if null
+    pub partitioned: bool,                                  // Java default false
+    pub output_event_type: Option<OutputEventType>,         // Java type, optional
     pub latency_tracker: Option<LatencyTrackerPlaceholder>, // transient in Java, Option in Rust
-    pub id_generator: IdGenerator, // new-ed in Java constructor
-    pub stateful: bool, // Java default false
+    pub id_generator: IdGenerator,                          // new-ed in Java constructor
+    pub stateful: bool,                                     // Java default false
 }
 
 impl SiddhiQueryContext {
-    pub fn new(siddhi_app_context: Arc<SiddhiAppContext>, query_name: String, partition_id: Option<String>) -> Self {
+    pub fn new(
+        siddhi_app_context: Arc<SiddhiAppContext>,
+        query_name: String,
+        partition_id: Option<String>,
+    ) -> Self {
         let default_partition_id = "DEFAULT_PARTITION_ID_PLACEHOLDER".to_string(); // TODO: Use SiddhiConstants
         Self {
             siddhi_app_context,

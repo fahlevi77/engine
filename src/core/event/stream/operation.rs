@@ -8,11 +8,20 @@ pub struct Operation {
 
 impl Operation {
     pub fn new(operation: Operator) -> Self {
-        Self { operation, parameters: None }
+        Self {
+            operation,
+            parameters: None,
+        }
     }
 
-    pub fn with_parameters(operation: Operator, parameters: Box<dyn std::any::Any + Send + Sync>) -> Self {
-        Self { operation, parameters: Some(parameters) }
+    pub fn with_parameters(
+        operation: Operator,
+        parameters: Box<dyn std::any::Any + Send + Sync>,
+    ) -> Self {
+        Self {
+            operation,
+            parameters: Some(parameters),
+        }
     }
 }
 

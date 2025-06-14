@@ -16,12 +16,12 @@ pub type ExtensionClassPlaceholder = String; // Simplified: Class name as String
 // pub type DataSourceType = Arc<dyn DataSource + Send + Sync>; // Example
 pub type DataSourcePlaceholder = String; // Simplified
 
-use crate::core::persistence::{PersistenceStore, IncrementalPersistenceStore};
+use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
 
 use crate::core::exception::error_store::ErrorStore;
 
-use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
 use crate::query_api::siddhi_app::SiddhiApp;
 // pub trait ConfigManager {} // Example
 // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
@@ -49,10 +49,9 @@ pub type AttributeValuePlaceholder = String;
 // Placeholder for Disruptor's ExceptionHandler<Object>
 pub type DisruptorExceptionHandlerPlaceholder = String;
 
-
 use crate::core::executor::function::ScalarFunctionExecutor; // Added
-use std::sync::RwLock; // Added for scalar_function_factories and attributes, data_sources
 use crate::core::table::Table;
+use std::sync::RwLock; // Added for scalar_function_factories and attributes, data_sources
 
 /// Shared context for all Siddhi Apps in a SiddhiManager instance.
 // Custom Debug is implemented to avoid requiring Debug on trait objects.
@@ -65,7 +64,7 @@ pub struct SiddhiContext {
     deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
     persistence_store: Arc<RwLock<Option<Arc<dyn PersistenceStore>>>>,
     incremental_persistence_store: Arc<RwLock<Option<Arc<dyn IncrementalPersistenceStore>>>>,
-    error_store: Option<Arc<dyn ErrorStore>>, 
+    error_store: Option<Arc<dyn ErrorStore>>,
     extension_holder_map: HashMap<String, AbstractExtensionHolderPlaceholder>,
     config_manager: ConfigManagerPlaceholder,
     sink_handler_manager: Option<SinkHandlerManagerPlaceholder>,
@@ -77,9 +76,11 @@ pub struct SiddhiContext {
     /// Stores factories for User-Defined Scalar Functions. Key: "namespace:name" or "name", Value: clonable factory instance.
     scalar_function_factories: Arc<RwLock<HashMap<String, Box<dyn ScalarFunctionExecutor>>>>,
     /// Window processor factories
-    window_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::WindowProcessorFactory>>>>,
+    window_factories:
+        Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::WindowProcessorFactory>>>>,
     /// Attribute aggregator factories
-    attribute_aggregator_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::AttributeAggregatorFactory>>>>,
+    attribute_aggregator_factories:
+        Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::AttributeAggregatorFactory>>>>,
     /// Source factories
     source_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SourceFactory>>>>,
     /// Sink factories
@@ -87,9 +88,11 @@ pub struct SiddhiContext {
     /// Store factories
     store_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::StoreFactory>>>>,
     /// Source mapper factories
-    source_mapper_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SourceMapperFactory>>>>,
+    source_mapper_factories:
+        Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SourceMapperFactory>>>>,
     /// Sink mapper factories
-    sink_mapper_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SinkMapperFactory>>>>,
+    sink_mapper_factories:
+        Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::SinkMapperFactory>>>>,
     /// Table factories for creating table implementations
     table_factories: Arc<RwLock<HashMap<String, Box<dyn crate::core::extension::TableFactory>>>>,
     /// Configurations for data sources keyed by name
@@ -155,7 +158,9 @@ impl SiddhiContext {
         // self.persistence_store = Some(persistence_store);
     }
 
-    pub fn get_incremental_persistence_store(&self) -> Option<Arc<dyn IncrementalPersistenceStore>> {
+    pub fn get_incremental_persistence_store(
+        &self,
+    ) -> Option<Arc<dyn IncrementalPersistenceStore>> {
         self.incremental_persistence_store.read().unwrap().clone()
     }
 
@@ -181,13 +186,7 @@ impl SiddhiContext {
     }
 
     pub fn add_data_source(&self, name: String, mut data_source: Arc<dyn DataSource>) {
-        if let Some(cfg) = self
-            .data_source_configs
-            .read()
-            .unwrap()
-            .get(&name)
-            .cloned()
-        {
+        if let Some(cfg) = self.data_source_configs.read().unwrap().get(&name).cloned() {
             let dummy_ctx = Arc::new(SiddhiAppContext::new(
                 Arc::new(self.clone()),
                 "__ds_init__".to_string(),
@@ -207,7 +206,10 @@ impl SiddhiContext {
     }
 
     pub fn set_data_source_config(&self, name: String, config: DataSourceConfig) {
-        self.data_source_configs.write().unwrap().insert(name, config);
+        self.data_source_configs
+            .write()
+            .unwrap()
+            .insert(name, config);
     }
 
     pub fn get_data_source_config(&self, name: &str) -> Option<DataSourceConfig> {
@@ -268,46 +270,91 @@ impl SiddhiContext {
         &self.default_disrupter_exception_handler
     }
 
-    pub fn get_attributes(&self) -> RwLockReadGuard<'_, HashMap<String, AttributeValuePlaceholder>> { // Return guard
+    pub fn get_attributes(
+        &self,
+    ) -> RwLockReadGuard<'_, HashMap<String, AttributeValuePlaceholder>> {
+        // Return guard
         self.attributes.read().unwrap()
     }
 
-    pub fn set_attribute(&self, key: String, value: AttributeValuePlaceholder) { // Takes &self due to RwLock
+    pub fn set_attribute(&self, key: String, value: AttributeValuePlaceholder) {
+        // Takes &self due to RwLock
         self.attributes.write().unwrap().insert(key, value);
     }
 
     // --- Scalar Function Methods ---
-    pub fn add_scalar_function_factory(&self, name: String, function_factory: Box<dyn ScalarFunctionExecutor>) {
-        self.scalar_function_factories.write().unwrap().insert(name, function_factory);
+    pub fn add_scalar_function_factory(
+        &self,
+        name: String,
+        function_factory: Box<dyn ScalarFunctionExecutor>,
+    ) {
+        self.scalar_function_factories
+            .write()
+            .unwrap()
+            .insert(name, function_factory);
     }
 
-    pub fn get_scalar_function_factory(&self, name: &str) -> Option<Box<dyn ScalarFunctionExecutor>> {
+    pub fn get_scalar_function_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn ScalarFunctionExecutor>> {
         // .clone() on Box<dyn ScalarFunctionExecutor> calls the trait's clone_scalar_function()
-        self.scalar_function_factories.read().unwrap().get(name).cloned()
+        self.scalar_function_factories
+            .read()
+            .unwrap()
+            .get(name)
+            .cloned()
     }
 
     fn register_default_extensions(&mut self) {
-        use crate::core::query::processor::stream::window::{LengthWindowFactory, TimeWindowFactory};
+        use crate::core::executor::function::builtin_wrapper::register_builtin_scalar_functions;
+        use crate::core::extension::{LogSinkFactory, TimerSourceFactory};
+        use crate::core::query::processor::stream::window::{
+            LengthWindowFactory, TimeWindowFactory,
+        };
         use crate::core::query::selector::attribute::aggregator::{
-            SumAttributeAggregatorFactory, AvgAttributeAggregatorFactory, CountAttributeAggregatorFactory,
-            DistinctCountAttributeAggregatorFactory, MinAttributeAggregatorFactory, MaxAttributeAggregatorFactory,
-            MinForeverAttributeAggregatorFactory, MaxForeverAttributeAggregatorFactory,
+            AvgAttributeAggregatorFactory, CountAttributeAggregatorFactory,
+            DistinctCountAttributeAggregatorFactory, MaxAttributeAggregatorFactory,
+            MaxForeverAttributeAggregatorFactory, MinAttributeAggregatorFactory,
+            MinForeverAttributeAggregatorFactory, SumAttributeAggregatorFactory,
         };
         use crate::core::table::InMemoryTableFactory;
-        use crate::core::extension::{LogSinkFactory, TimerSourceFactory};
-        use crate::core::executor::function::builtin_wrapper::register_builtin_scalar_functions;
 
         self.add_window_factory("length".to_string(), Box::new(LengthWindowFactory));
         self.add_window_factory("time".to_string(), Box::new(TimeWindowFactory));
 
-        self.add_attribute_aggregator_factory("sum".to_string(), Box::new(SumAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("avg".to_string(), Box::new(AvgAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("count".to_string(), Box::new(CountAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("distinctCount".to_string(), Box::new(DistinctCountAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("min".to_string(), Box::new(MinAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("max".to_string(), Box::new(MaxAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("minForever".to_string(), Box::new(MinForeverAttributeAggregatorFactory));
-        self.add_attribute_aggregator_factory("maxForever".to_string(), Box::new(MaxForeverAttributeAggregatorFactory));
+        self.add_attribute_aggregator_factory(
+            "sum".to_string(),
+            Box::new(SumAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "avg".to_string(),
+            Box::new(AvgAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "count".to_string(),
+            Box::new(CountAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "distinctCount".to_string(),
+            Box::new(DistinctCountAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "min".to_string(),
+            Box::new(MinAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "max".to_string(),
+            Box::new(MaxAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "minForever".to_string(),
+            Box::new(MinForeverAttributeAggregatorFactory),
+        );
+        self.add_attribute_aggregator_factory(
+            "maxForever".to_string(),
+            Box::new(MaxForeverAttributeAggregatorFactory),
+        );
 
         self.add_table_factory("inMemory".to_string(), Box::new(InMemoryTableFactory));
         self.add_source_factory("timer".to_string(), Box::new(TimerSourceFactory));
@@ -317,58 +364,135 @@ impl SiddhiContext {
     }
 
     // --- Extension Factory Methods ---
-    pub fn add_window_factory(&self, name: String, factory: Box<dyn crate::core::extension::WindowProcessorFactory>) {
+    pub fn add_window_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::WindowProcessorFactory>,
+    ) {
         self.window_factories.write().unwrap().insert(name, factory);
     }
 
-    pub fn get_window_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::WindowProcessorFactory>> {
+    pub fn get_window_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::WindowProcessorFactory>> {
         self.window_factories.read().unwrap().get(name).cloned()
     }
 
-    pub fn add_attribute_aggregator_factory(&self, name: String, factory: Box<dyn crate::core::extension::AttributeAggregatorFactory>) {
-        self.attribute_aggregator_factories.write().unwrap().insert(name, factory);
+    pub fn add_attribute_aggregator_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::AttributeAggregatorFactory>,
+    ) {
+        self.attribute_aggregator_factories
+            .write()
+            .unwrap()
+            .insert(name, factory);
     }
 
-    pub fn get_attribute_aggregator_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::AttributeAggregatorFactory>> {
-        self.attribute_aggregator_factories.read().unwrap().get(name).cloned()
+    pub fn get_attribute_aggregator_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::AttributeAggregatorFactory>> {
+        self.attribute_aggregator_factories
+            .read()
+            .unwrap()
+            .get(name)
+            .cloned()
     }
 
-    pub fn add_source_factory(&self, name: String, factory: Box<dyn crate::core::extension::SourceFactory>) {
+    pub fn add_source_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::SourceFactory>,
+    ) {
         self.source_factories.write().unwrap().insert(name, factory);
     }
-    pub fn get_source_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::SourceFactory>> {
+    pub fn get_source_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::SourceFactory>> {
         self.source_factories.read().unwrap().get(name).cloned()
     }
-    pub fn add_sink_factory(&self, name: String, factory: Box<dyn crate::core::extension::SinkFactory>) {
+    pub fn add_sink_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::SinkFactory>,
+    ) {
         self.sink_factories.write().unwrap().insert(name, factory);
     }
-    pub fn get_sink_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::SinkFactory>> {
+    pub fn get_sink_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::SinkFactory>> {
         self.sink_factories.read().unwrap().get(name).cloned()
     }
-    pub fn add_store_factory(&self, name: String, factory: Box<dyn crate::core::extension::StoreFactory>) {
+    pub fn add_store_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::StoreFactory>,
+    ) {
         self.store_factories.write().unwrap().insert(name, factory);
     }
-    pub fn get_store_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::StoreFactory>> {
+    pub fn get_store_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::StoreFactory>> {
         self.store_factories.read().unwrap().get(name).cloned()
     }
-    pub fn add_source_mapper_factory(&self, name: String, factory: Box<dyn crate::core::extension::SourceMapperFactory>) {
-        self.source_mapper_factories.write().unwrap().insert(name, factory);
+    pub fn add_source_mapper_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::SourceMapperFactory>,
+    ) {
+        self.source_mapper_factories
+            .write()
+            .unwrap()
+            .insert(name, factory);
     }
-    pub fn get_source_mapper_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::SourceMapperFactory>> {
-        self.source_mapper_factories.read().unwrap().get(name).cloned()
+    pub fn get_source_mapper_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::SourceMapperFactory>> {
+        self.source_mapper_factories
+            .read()
+            .unwrap()
+            .get(name)
+            .cloned()
     }
-    pub fn add_sink_mapper_factory(&self, name: String, factory: Box<dyn crate::core::extension::SinkMapperFactory>) {
-        self.sink_mapper_factories.write().unwrap().insert(name, factory);
+    pub fn add_sink_mapper_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::SinkMapperFactory>,
+    ) {
+        self.sink_mapper_factories
+            .write()
+            .unwrap()
+            .insert(name, factory);
     }
-    pub fn get_sink_mapper_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::SinkMapperFactory>> {
-        self.sink_mapper_factories.read().unwrap().get(name).cloned()
+    pub fn get_sink_mapper_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::SinkMapperFactory>> {
+        self.sink_mapper_factories
+            .read()
+            .unwrap()
+            .get(name)
+            .cloned()
     }
 
-    pub fn add_table_factory(&self, name: String, factory: Box<dyn crate::core::extension::TableFactory>) {
+    pub fn add_table_factory(
+        &self,
+        name: String,
+        factory: Box<dyn crate::core::extension::TableFactory>,
+    ) {
         self.table_factories.write().unwrap().insert(name, factory);
     }
 
-    pub fn get_table_factory(&self, name: &str) -> Option<Box<dyn crate::core::extension::TableFactory>> {
+    pub fn get_table_factory(
+        &self,
+        name: &str,
+    ) -> Option<Box<dyn crate::core::extension::TableFactory>> {
         self.table_factories.read().unwrap().get(name).cloned()
     }
 }
@@ -408,7 +532,9 @@ impl Clone for SiddhiContext {
             source_handler_manager: self.source_handler_manager.clone(),
             record_table_handler_manager: self.record_table_handler_manager.clone(),
             default_disrupter_exception_handler: self.default_disrupter_exception_handler.clone(),
-            dummy_field_siddhi_context_extensions: self.dummy_field_siddhi_context_extensions.clone(),
+            dummy_field_siddhi_context_extensions: self
+                .dummy_field_siddhi_context_extensions
+                .clone(),
         }
     }
 }

@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.handler.StreamFunction
 // Implements StreamHandler and Extension in Java.
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct StreamFunction {

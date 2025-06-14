@@ -4,7 +4,7 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType}; // Using ComplexEventType from complex_event module
 use crate::core::event::event::Event; // For converting back
 use crate::core::event::value::AttributeValue;
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode};
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use std::sync::{Arc, Mutex};
 
@@ -16,15 +16,15 @@ pub struct CallbackProcessor {
 
 impl CallbackProcessor {
     pub fn new(
-       callback: Arc<Mutex<Box<dyn StreamCallback>>>,
-       app_ctx: Arc<SiddhiAppContext>,
-       query_ctx: Arc<SiddhiQueryContext>,
-       // query_name: String, // query_name is in query_ctx
-   ) -> Self {
+        callback: Arc<Mutex<Box<dyn StreamCallback>>>,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+        // query_name: String, // query_name is in query_ctx
+    ) -> Self {
         // query_name for CommonProcessorMeta can be extracted from query_ctx
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
-            callback
+            callback,
         }
     }
 }
@@ -33,11 +33,13 @@ impl CallbackProcessor {
 // This is lossy if ComplexEvent has more structure than Event.
 // It primarily extracts output_data, timestamp, and type.
 fn complex_event_to_simple_event(ce_box: Box<dyn ComplexEvent>) -> Event {
-    let data = ce_box.get_output_data().map_or_else(Vec::new, |d| d.to_vec());
+    let data = ce_box
+        .get_output_data()
+        .map_or_else(Vec::new, |d| d.to_vec());
     Event {
         id: 0, // Siddhi core Event does not have an ID like query_api::Event.
-               // Or generate a new one if needed for callback context.
-               // For now, 0 as placeholder.
+        // Or generate a new one if needed for callback context.
+        // For now, 0 as placeholder.
         timestamp: ce_box.get_timestamp(),
         data,
         is_expired: ce_box.is_expired(),
@@ -59,20 +61,30 @@ impl Processor for CallbackProcessor {
         if !events_vec.is_empty() {
             // Lock the Mutex to call receive.
             // The receive method takes Vec<Event>, not &[Event].
-            self.callback.lock().expect("Callback Mutex poisoned").receive_events(&events_vec);
+            self.callback
+                .lock()
+                .expect("Callback Mutex poisoned")
+                .receive_events(&events_vec);
         }
     }
 
-    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> { None } // Terminal processor
-    fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) { /* no-op */ }
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        None
+    } // Terminal processor
+    fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {
+        /* no-op */
+    }
 
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
         Box::new(Self::new(
             Arc::clone(&self.callback),
             Arc::clone(&self.meta.siddhi_app_context),
             Arc::clone(siddhi_query_context), // Use the new query context for the clone
-            // self.meta.query_name.clone() // query_name is in siddhi_query_context
-       ))
+                                              // self.meta.query_name.clone() // query_name is in siddhi_query_context
+        ))
     }
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {

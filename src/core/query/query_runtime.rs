@@ -1,11 +1,11 @@
 // siddhi_rust/src/core/query/query_runtime.rs
 // Corresponds to io.siddhi.core.query.QueryRuntimeImpl
+use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::query::processor::Processor; // The Processor trait
 use crate::core::stream::stream_junction::StreamJunction; // For input stream junction
-use std::sync::{Arc, Mutex};
-use std::fmt::Debug;
 use crate::query_api::execution::query::Query as ApiQuery;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 pub trait QueryRuntimeTrait: Debug + Send + Sync {
     fn get_query_id(&self) -> &str;
@@ -34,7 +34,6 @@ pub struct QueryRuntime {
     // The first processor in this query's specific processing chain.
     // This could be a FilterProcessor, WindowProcessor, QuerySelector, etc.
     pub processor_chain_head: Option<Arc<Mutex<dyn Processor>>>,
-
     // Add other fields as per QueryRuntimeImpl:
     // pub siddhi_query_context: Arc<SiddhiQueryContext>,
     // pub query_selector: Option<Arc<Mutex<SelectProcessor>>>, // Or QuerySelector if that's the struct name
@@ -68,7 +67,6 @@ impl QueryRuntime {
             processor_chain_head: None,
         }
     }
-
 }
 
 impl QueryRuntimeTrait for QueryRuntime {
@@ -88,10 +86,10 @@ impl QueryRuntimeTrait for QueryRuntime {
     }
 }
 
-    // TODO: Implement methods from QueryRuntimeImpl if needed, e.g.,
-    // get_query_name(), get_input_handler() (if it has one directly),
-    // get_query_selector(), set_output_rate_limiter(), get_output_rate_limiter(),
-    // get_output_callback(), set_output_callback(), get_siddhi_query_context(),
-    // notify_updater(), get_snapshot(), restore_from_snapshot(),
-    // start(), stop().
-    // Many of these will involve interacting with the processor chain.
+// TODO: Implement methods from QueryRuntimeImpl if needed, e.g.,
+// get_query_name(), get_input_handler() (if it has one directly),
+// get_query_selector(), set_output_rate_limiter(), get_output_rate_limiter(),
+// get_output_callback(), set_output_callback(), get_siddhi_query_context(),
+// notify_updater(), get_snapshot(), restore_from_snapshot(),
+// start(), stop().
+// Many of these will involve interacting with the processor chain.

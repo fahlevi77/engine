@@ -1,7 +1,10 @@
 // siddhi_rust/src/core/event/stream/stream_event_cloner.rs
 // Utility for cloning StreamEvents similar to io.siddhi.core.event.stream.StreamEventCloner
 
-use super::{stream_event::StreamEvent, meta_stream_event::MetaStreamEvent, stream_event_factory::StreamEventFactory};
+use super::{
+    meta_stream_event::MetaStreamEvent, stream_event::StreamEvent,
+    stream_event_factory::StreamEventFactory,
+};
 
 #[derive(Debug, Clone)]
 pub struct StreamEventCloner {
@@ -63,4 +66,3 @@ impl StreamEventCloner {
         new_event
     }
 }
-

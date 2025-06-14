@@ -1,16 +1,16 @@
 // Corresponds to the package io.siddhi.query.api.expression.math
 
 pub mod add;
-pub mod subtract;
-pub mod multiply;
 pub mod divide;
-pub mod mod_op; // Renamed from mod to mod_op to avoid keyword clash
+pub mod mod_op;
+pub mod multiply;
+pub mod subtract; // Renamed from mod to mod_op to avoid keyword clash
 
 pub use self::add::Add;
-pub use self::subtract::Subtract;
-pub use self::multiply::Multiply;
 pub use self::divide::Divide;
 pub use self::mod_op::ModOp;
+pub use self::multiply::Multiply;
+pub use self::subtract::Subtract;
 
 // Comments from before are still relevant:
 // Each math operation struct (Add, Subtract, etc.) will contain:

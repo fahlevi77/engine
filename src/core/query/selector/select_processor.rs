@@ -1,36 +1,67 @@
 // siddhi_rust/src/core/query/selector/select_processor.rs
+use super::attribute::OutputAttributeProcessor;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode};
-use super::attribute::OutputAttributeProcessor;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 
-use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
 use std::fmt::Debug;
-use std::collections::VecDeque; // Using VecDeque for efficient chunk building
+use std::sync::{Arc, Mutex}; // Using VecDeque for efficient chunk building
 
 use super::{GroupByKeyGenerator, OrderByEventComparator};
 // OutputRateLimiter is the actual next processor for QuerySelector in Java
-#[derive(Debug)] pub struct OutputRateLimiterPlaceholder { pub next_processor: Option<Arc<Mutex<dyn Processor>>>, pub siddhi_app_context: Arc<SiddhiAppContext> }
+#[derive(Debug)]
+pub struct OutputRateLimiterPlaceholder {
+    pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
+    pub siddhi_app_context: Arc<SiddhiAppContext>,
+}
 impl OutputRateLimiterPlaceholder {
-    pub fn new(next_processor: Option<Arc<Mutex<dyn Processor>>>, siddhi_app_context: Arc<SiddhiAppContext>) -> Self { Self {next_processor, siddhi_app_context} }
+    pub fn new(
+        next_processor: Option<Arc<Mutex<dyn Processor>>>,
+        siddhi_app_context: Arc<SiddhiAppContext>,
+    ) -> Self {
+        Self {
+            next_processor,
+            siddhi_app_context,
+        }
+    }
     // TODO: Actual rate limiting logic would go into its process method
 }
 impl Processor for OutputRateLimiterPlaceholder {
-    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) { if let Some(ref next) = self.next_processor { next.lock().unwrap().process(complex_event_chunk); } }
-    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> { self.next_processor.as_ref().map(Arc::clone) }
-    fn set_next_processor(&mut self, next_processor: Option<Arc<Mutex<dyn Processor>>>) { self.next_processor = next_processor; }
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        Box::new(Self::new(self.next_processor.as_ref().map(Arc::clone), Arc::clone(&siddhi_query_context.siddhi_app_context)))
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(ref next) = self.next_processor {
+            next.lock().unwrap().process(complex_event_chunk);
+        }
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> { Arc::clone(&self.siddhi_app_context) }
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
-    fn is_stateful(&self) -> bool { true } // Rate limiting is often stateful
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.next_processor.as_ref().map(Arc::clone)
+    }
+    fn set_next_processor(&mut self, next_processor: Option<Arc<Mutex<dyn Processor>>>) {
+        self.next_processor = next_processor;
+    }
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.next_processor.as_ref().map(Arc::clone),
+            Arc::clone(&siddhi_query_context.siddhi_app_context),
+        ))
+    }
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.siddhi_app_context)
+    }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
+    fn is_stateful(&self) -> bool {
+        true
+    } // Rate limiting is often stateful
 }
-
 
 /// A stream processor that handles SELECT clause projections.
 #[derive(Debug)]
@@ -41,7 +72,8 @@ pub struct SelectProcessor {
     contains_aggregator: bool,
     output_attribute_processors: Vec<OutputAttributeProcessor>,
     pub output_stream_definition: Arc<ApiStreamDefinition>,
-    having_condition_executor: Option<Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>>, // Changed placeholder
+    having_condition_executor:
+        Option<Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>>, // Changed placeholder
     is_group_by: bool,
     group_by_key_generator: Option<GroupByKeyGenerator>,
     is_order_by: bool,
@@ -60,7 +92,9 @@ impl SelectProcessor {
         siddhi_query_context: Arc<SiddhiQueryContext>,
         output_attribute_processors: Vec<OutputAttributeProcessor>,
         output_stream_definition: Arc<ApiStreamDefinition>,
-        having_executor: Option<Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>>,
+        having_executor: Option<
+            Box<dyn crate::core::executor::expression_executor::ExpressionExecutor>,
+        >,
         group_by_key_generator: Option<GroupByKeyGenerator>,
         order_by_comparator: Option<OrderByEventComparator>,
         batching_enabled: Option<bool>,
@@ -83,8 +117,14 @@ impl SelectProcessor {
             is_order_by: order_by_comparator.is_some(),
             order_by_event_comparator: order_by_comparator, // Corrected field init
             batching_enabled: batching_enabled.unwrap_or(true),
-            limit: api_selector.limit.as_ref().and_then(|c| c.value.to_u64_for_limit_offset()),
-            offset: api_selector.offset.as_ref().and_then(|c| c.value.to_u64_for_limit_offset()),
+            limit: api_selector
+                .limit
+                .as_ref()
+                .and_then(|c| c.value.to_u64_for_limit_offset()),
+            offset: api_selector
+                .offset
+                .as_ref()
+                .and_then(|c| c.value.to_u64_for_limit_offset()),
         }
     }
 }
@@ -93,7 +133,8 @@ impl Processor for SelectProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         let mut input_event_opt = complex_event_chunk;
         let mut collected: Vec<Box<dyn ComplexEvent>> = Vec::new();
-        let mut group_map: std::collections::HashMap<String, Box<dyn ComplexEvent>> = std::collections::HashMap::new();
+        let mut group_map: std::collections::HashMap<String, Box<dyn ComplexEvent>> =
+            std::collections::HashMap::new();
 
         while let Some(mut event_box) = input_event_opt {
             let next = event_box.set_next(None);
@@ -201,15 +242,25 @@ impl Processor for SelectProcessor {
         self.meta.next_processor = next_processor;
     }
 
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        let cloned_oaps = self.output_attribute_processors.iter()
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
+        let cloned_oaps = self
+            .output_attribute_processors
+            .iter()
             .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
             .collect();
-        let cloned_having = self.having_condition_executor.as_ref()
+        let cloned_having = self
+            .having_condition_executor
+            .as_ref()
             .map(|exec| exec.clone_executor(&self.meta.siddhi_app_context));
 
         Box::new(SelectProcessor {
-            meta: CommonProcessorMeta::new(Arc::clone(&self.meta.siddhi_app_context), Arc::clone(siddhi_query_context)),
+            meta: CommonProcessorMeta::new(
+                Arc::clone(&self.meta.siddhi_app_context),
+                Arc::clone(siddhi_query_context),
+            ),
             current_on: self.current_on,
             expired_on: self.expired_on,
             contains_aggregator: self.contains_aggregator,

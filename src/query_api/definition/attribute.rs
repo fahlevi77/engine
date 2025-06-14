@@ -14,7 +14,9 @@ pub enum Type {
 }
 
 impl Default for Type {
-    fn default() -> Self { Type::OBJECT } // Default type as per From<SiddhiElement> impl
+    fn default() -> Self {
+        Type::OBJECT
+    } // Default type as per From<SiddhiElement> impl
 }
 
 /// Represents an attribute with a name and a type.
@@ -41,7 +43,8 @@ impl Attribute {
         &self.name
     }
 
-    pub fn get_type(&self) -> &Type { // Changed to return &Type to avoid clone if Type is not Copy
+    pub fn get_type(&self) -> &Type {
+        // Changed to return &Type to avoid clone if Type is not Copy
         &self.attribute_type
     }
 }
@@ -67,7 +70,7 @@ mod tests {
         let attr = Attribute::new("timestamp".to_string(), Type::LONG);
         assert_eq!(attr.get_name(), "timestamp");
         assert_eq!(attr.get_type(), &Type::LONG); // Compare with borrowed Type
-        // Check siddhi_element defaults
+                                                  // Check siddhi_element defaults
         assert_eq!(attr.siddhi_element.query_context_start_index, None);
         assert_eq!(attr.siddhi_element.query_context_end_index, None);
     }

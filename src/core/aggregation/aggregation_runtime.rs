@@ -11,12 +11,16 @@ use crate::core::table::{InMemoryTable, Table};
 pub struct AggregationRuntime {
     pub name: String,
     pub executors: HashMap<TimeDuration, Arc<IncrementalExecutor>>, // root executor by duration
-    pub tables: HashMap<TimeDuration, Arc<InMemoryTable>>, // aggregated data
+    pub tables: HashMap<TimeDuration, Arc<InMemoryTable>>,          // aggregated data
 }
 
 impl AggregationRuntime {
     pub fn new(name: String, executors: HashMap<TimeDuration, Arc<IncrementalExecutor>>) -> Self {
-        Self { name, executors, tables: HashMap::new() }
+        Self {
+            name,
+            executors,
+            tables: HashMap::new(),
+        }
     }
 
     pub fn process(&self, event: &StreamEvent) {
@@ -34,7 +38,10 @@ impl AggregationRuntime {
         self.tables.get(&dur).cloned()
     }
 
-    pub fn query_all(&self, dur: TimeDuration) -> Vec<Vec<crate::core::event::value::AttributeValue>> {
+    pub fn query_all(
+        &self,
+        dur: TimeDuration,
+    ) -> Vec<Vec<crate::core::event::value::AttributeValue>> {
         if let Some(table) = self.tables.get(&dur) {
             table.all_rows()
         } else {

@@ -1,11 +1,11 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.State (factory class)
-use super::state_element::StateElement;
-use super::stream_state_element::StreamStateElement;
 use super::absent_stream_state_element::AbsentStreamStateElement;
-use super::logical_state_element::{LogicalStateElement, Type as LogicalType};
-use super::next_state_element::NextStateElement;
 use super::count_state_element::{CountStateElement, ANY_COUNT};
 use super::every_state_element::EveryStateElement;
+use super::logical_state_element::{LogicalStateElement, Type as LogicalType};
+use super::next_state_element::NextStateElement;
+use super::state_element::StateElement;
+use super::stream_state_element::StreamStateElement;
 
 use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
 use crate::query_api::expression::constant::Constant as ExpressionConstant; // Renamed TimeConstant
@@ -35,12 +35,23 @@ impl State {
         ))
     }
 
-    pub fn logical_not(stream_state_element: StreamStateElement, time: Option<ExpressionConstant>) -> AbsentStreamStateElement {
+    pub fn logical_not(
+        stream_state_element: StreamStateElement,
+        time: Option<ExpressionConstant>,
+    ) -> AbsentStreamStateElement {
         // Assuming get_single_input_stream() returns a reference to the SingleInputStream composed in StreamStateElement
-        if stream_state_element.get_single_input_stream().get_stream_reference_id_str().is_some() {
-             // TODO: This should ideally return a Result or handle error more gracefully
-            panic!("SiddhiAppValidationException: NOT pattern cannot have reference id but found {}",
-                stream_state_element.get_single_input_stream().get_stream_reference_id_str().unwrap_or_default()
+        if stream_state_element
+            .get_single_input_stream()
+            .get_stream_reference_id_str()
+            .is_some()
+        {
+            // TODO: This should ideally return a Result or handle error more gracefully
+            panic!(
+                "SiddhiAppValidationException: NOT pattern cannot have reference id but found {}",
+                stream_state_element
+                    .get_single_input_stream()
+                    .get_stream_reference_id_str()
+                    .unwrap_or_default()
             );
         }
         // AbsentStreamStateElement::new expects an owned SingleInputStream.
@@ -52,35 +63,52 @@ impl State {
     }
 
     // Now this can be implemented correctly
-    pub fn logical_not_and(absent_sse: AbsentStreamStateElement, sse2: StreamStateElement) -> StateElement {
+    pub fn logical_not_and(
+        absent_sse: AbsentStreamStateElement,
+        sse2: StreamStateElement,
+    ) -> StateElement {
         StateElement::Logical(LogicalStateElement::new(
             StateElement::AbsentStream(absent_sse), // Wrap in StateElement enum
             LogicalType::And,
-            StateElement::Stream(sse2),             // Wrap in StateElement enum
+            StateElement::Stream(sse2), // Wrap in StateElement enum
         ))
     }
 
-    pub fn next(state_element: StateElement, followed_by_state_element: StateElement) -> StateElement {
-        StateElement::Next(Box::new(NextStateElement::new(state_element, followed_by_state_element)))
+    pub fn next(
+        state_element: StateElement,
+        followed_by_state_element: StateElement,
+    ) -> StateElement {
+        StateElement::Next(Box::new(NextStateElement::new(
+            state_element,
+            followed_by_state_element,
+        )))
     }
 
     pub fn count(stream_state_element: StreamStateElement, min: i32, max: i32) -> StateElement {
         StateElement::Count(CountStateElement::new(stream_state_element, min, max))
     }
 
-    pub fn count_more_than_equal(stream_state_element: StreamStateElement, min: i32) -> StateElement {
+    pub fn count_more_than_equal(
+        stream_state_element: StreamStateElement,
+        min: i32,
+    ) -> StateElement {
         Self::count(stream_state_element, min, ANY_COUNT)
     }
 
-    pub fn count_less_than_equal(stream_state_element: StreamStateElement, max: i32) -> StateElement {
+    pub fn count_less_than_equal(
+        stream_state_element: StreamStateElement,
+        max: i32,
+    ) -> StateElement {
         Self::count(stream_state_element, ANY_COUNT, max)
     }
 
-    pub fn stream(single_input_stream: SingleInputStream) -> StreamStateElement { // Changed parameter type
+    pub fn stream(single_input_stream: SingleInputStream) -> StreamStateElement {
+        // Changed parameter type
         StreamStateElement::new(single_input_stream)
     }
 
-    pub fn stream_element(single_input_stream: SingleInputStream) -> StateElement { // Changed parameter type
+    pub fn stream_element(single_input_stream: SingleInputStream) -> StateElement {
+        // Changed parameter type
         StateElement::Stream(Self::stream(single_input_stream))
     }
 

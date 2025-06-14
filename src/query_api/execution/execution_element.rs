@@ -1,9 +1,8 @@
 // Corresponds to io.siddhi.query.api.execution.ExecutionElement
 
-use crate::query_api::execution::query::Query;
-use crate::query_api::execution::partition::Partition;
 use crate::query_api::annotation::Annotation;
-
+use crate::query_api::execution::partition::Partition;
+use crate::query_api::execution::query::Query;
 
 // This enum will wrap concrete types that are considered ExecutionElements.
 #[derive(Clone, Debug, PartialEq)]

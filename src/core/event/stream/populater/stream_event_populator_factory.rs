@@ -1,8 +1,10 @@
 // siddhi_rust/src/core/event/stream/populater/stream_event_populator_factory.rs
 use super::{SelectiveComplexEventPopulater, StreamMappingElement};
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::util::siddhi_constants::{
+    BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+};
 use crate::query_api::definition::attribute::Attribute;
-use crate::core::util::siddhi_constants::{BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX};
 
 pub fn construct_event_populator(
     meta: &MetaStreamEvent,

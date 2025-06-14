@@ -1,15 +1,17 @@
 #[path = "common/mod.rs"]
 mod common;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_compiler::parse;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
 use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Debug)]
-struct CollectCallback { events: Arc<Mutex<Vec<Event>>> }
+struct CollectCallback {
+    events: Arc<Mutex<Vec<Event>>>,
+}
 impl StreamCallback for CollectCallback {
     fn receive_events(&self, events: &[Event]) {
         self.events.lock().unwrap().extend_from_slice(events);
@@ -31,7 +33,9 @@ fn test_time_window_expiry() {
     runtime
         .add_callback(
             "Out",
-            Box::new(CollectCallback { events: Arc::clone(&collected) }),
+            Box::new(CollectCallback {
+                events: Arc::clone(&collected),
+            }),
         )
         .unwrap();
     runtime.start();

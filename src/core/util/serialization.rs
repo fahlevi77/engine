@@ -1,4 +1,4 @@
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
 /// Serialize any serde serializable object to bytes using bincode.
 pub fn to_bytes<T: Serialize>(value: &T) -> Result<Vec<u8>, bincode::Error> {

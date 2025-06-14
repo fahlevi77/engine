@@ -14,7 +14,8 @@ pub struct StreamStateElement {
 }
 
 impl StreamStateElement {
-    pub fn new(single_input_stream: SingleInputStream) -> Self { // Parameter type changed
+    pub fn new(single_input_stream: SingleInputStream) -> Self {
+        // Parameter type changed
         // It's up to the caller to ensure the provided SingleInputStream is appropriate
         // (e.g., of a Basic kind for most pattern stream elements).
         StreamStateElement {
@@ -23,7 +24,8 @@ impl StreamStateElement {
         }
     }
 
-    pub fn get_single_input_stream(&self) -> &SingleInputStream { // Method name and return type changed
+    pub fn get_single_input_stream(&self) -> &SingleInputStream {
+        // Method name and return type changed
         &self.basic_single_input_stream
     }
 

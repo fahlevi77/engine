@@ -13,7 +13,11 @@ pub trait InputProcessor: Send + Sync + std::fmt::Debug {
     ) -> Result<(), String>;
 
     fn send_single_event(&mut self, event: Event, stream_index: usize) -> Result<(), String>;
-    fn send_multiple_events(&mut self, events: Vec<Event>, stream_index: usize) -> Result<(), String>;
+    fn send_multiple_events(
+        &mut self,
+        events: Vec<Event>,
+        stream_index: usize,
+    ) -> Result<(), String>;
 }
 
 #[derive(Debug, Clone)]
@@ -52,12 +56,18 @@ impl InputHandler {
             .ok_or_else(|| "Siddhi app is not running, cannot send event".to_string())
     }
 
-    pub fn send_data(&self, data: Vec<crate::core::event::value::AttributeValue>) -> Result<(), String> {
+    pub fn send_data(
+        &self,
+        data: Vec<crate::core::event::value::AttributeValue>,
+    ) -> Result<(), String> {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis() as i64;
-        self.ensure_processor()?.lock().map_err(|_| "processor mutex poisoned".to_string())?.send_event_with_data(timestamp, data, self.stream_index)
+        self.ensure_processor()?
+            .lock()
+            .map_err(|_| "processor mutex poisoned".to_string())?
+            .send_event_with_data(timestamp, data, self.stream_index)
     }
 
     pub fn send_event_with_timestamp(
@@ -68,21 +78,30 @@ impl InputHandler {
         if self.siddhi_app_context.is_playback {
             // TODO: timestamp generator
         }
-        self.ensure_processor()?.lock().map_err(|_| "processor mutex poisoned".to_string())?.send_event_with_data(timestamp, data, self.stream_index)
+        self.ensure_processor()?
+            .lock()
+            .map_err(|_| "processor mutex poisoned".to_string())?
+            .send_event_with_data(timestamp, data, self.stream_index)
     }
 
     pub fn send_single_event(&self, event: Event) -> Result<(), String> {
         if self.siddhi_app_context.is_playback {
             // TODO: set timestamp generator
         }
-        self.ensure_processor()?.lock().map_err(|_| "processor mutex poisoned".to_string())?.send_single_event(event, self.stream_index)
+        self.ensure_processor()?
+            .lock()
+            .map_err(|_| "processor mutex poisoned".to_string())?
+            .send_single_event(event, self.stream_index)
     }
 
     pub fn send_multiple_events(&self, events: Vec<Event>) -> Result<(), String> {
         if self.siddhi_app_context.is_playback && !events.is_empty() {
             // TODO: update timestamp generator
         }
-        self.ensure_processor()?.lock().map_err(|_| "processor mutex poisoned".to_string())?.send_multiple_events(events, self.stream_index)
+        self.ensure_processor()?
+            .lock()
+            .map_err(|_| "processor mutex poisoned".to_string())?
+            .send_multiple_events(events, self.stream_index)
     }
 
     pub fn connect(&mut self) {

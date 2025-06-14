@@ -10,13 +10,13 @@ pub mod state_element; // Interface, will be an enum or trait
 pub mod stream_state_element;
 
 // Re-export key types
-pub use self::state_element::StateElement; // Main enum for different state types
 pub use self::absent_stream_state_element::AbsentStreamStateElement;
 pub use self::count_state_element::{CountStateElement, ANY_COUNT}; // ANY_COUNT instead of ANY to be more specific
 pub use self::every_state_element::EveryStateElement;
 pub use self::logical_state_element::{LogicalStateElement, Type as LogicalStateElementType};
 pub use self::next_state_element::NextStateElement;
 pub use self::state::State; // Factory methods
+pub use self::state_element::StateElement; // Main enum for different state types
 pub use self::stream_state_element::StreamStateElement;
 
 // `StateElement` will be an enum:

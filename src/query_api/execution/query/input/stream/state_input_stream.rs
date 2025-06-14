@@ -1,12 +1,14 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.stream.StateInputStream
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::execution::query::input::state::{
+    AbsentStreamStateElement, CountStateElement, EveryStateElement, LogicalStateElement,
+    NextStateElement, StateElement, StreamStateElement,
+};
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
-use crate::query_api::execution::query::input::state::{StateElement, StreamStateElement, AbsentStreamStateElement, LogicalStateElement, CountStateElement, EveryStateElement, NextStateElement};
+use crate::query_api::siddhi_element::SiddhiElement;
 // StreamHandler is not directly used by StateInputStream itself, but by its contained BasicSingleInputStreams.
 // use crate::query_api::execution::query::input::handler::StreamHandler;
 use super::input_stream::InputStreamTrait; // For get_all_stream_ids, get_unique_stream_ids
 use std::collections::HashSet;
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Type {
@@ -15,7 +17,9 @@ pub enum Type {
 }
 
 impl Default for Type {
-    fn default() -> Self { Type::Pattern }
+    fn default() -> Self {
+        Type::Pattern
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
@@ -29,7 +33,11 @@ pub struct StateInputStream {
 }
 
 impl StateInputStream {
-    pub fn new(state_type: Type, state_element: StateElement, within_time: Option<ExpressionConstant>) -> Self {
+    pub fn new(
+        state_type: Type,
+        state_element: StateElement,
+        within_time: Option<ExpressionConstant>,
+    ) -> Self {
         StateInputStream {
             siddhi_element: SiddhiElement::default(),
             state_type,
@@ -43,12 +51,21 @@ impl StateInputStream {
         match state_element {
             StateElement::Logical(logical) => {
                 // LogicalStateElement's fields are Box<StateElement>, not StreamStateElement directly.
-                Self::collect_stream_ids_recursive(logical.stream_state_element_1.as_ref(), stream_ids);
-                Self::collect_stream_ids_recursive(logical.stream_state_element_2.as_ref(), stream_ids);
+                Self::collect_stream_ids_recursive(
+                    logical.stream_state_element_1.as_ref(),
+                    stream_ids,
+                );
+                Self::collect_stream_ids_recursive(
+                    logical.stream_state_element_2.as_ref(),
+                    stream_ids,
+                );
             }
             StateElement::Count(count) => {
                 // CountStateElement holds StreamStateElement
-                Self::collect_stream_ids_recursive_from_stream_state(&count.stream_state_element, stream_ids);
+                Self::collect_stream_ids_recursive_from_stream_state(
+                    &count.stream_state_element,
+                    stream_ids,
+                );
             }
             StateElement::Every(every) => {
                 Self::collect_stream_ids_recursive(every.state_element.as_ref(), stream_ids);
@@ -58,17 +75,23 @@ impl StateInputStream {
                 Self::collect_stream_ids_recursive(next.next_state_element.as_ref(), stream_ids);
             }
             StateElement::Stream(stream_state) => {
-                 Self::collect_stream_ids_recursive_from_stream_state(stream_state, stream_ids);
+                Self::collect_stream_ids_recursive_from_stream_state(stream_state, stream_ids);
             }
             StateElement::AbsentStream(absent_stream_state) => {
-                 // AbsentStreamStateElement composes StreamStateElement
-                 Self::collect_stream_ids_recursive_from_stream_state(&absent_stream_state.stream_state_element, stream_ids);
+                // AbsentStreamStateElement composes StreamStateElement
+                Self::collect_stream_ids_recursive_from_stream_state(
+                    &absent_stream_state.stream_state_element,
+                    stream_ids,
+                );
             }
         }
     }
 
     // Helper to get ID from the BasicSingleInputStream within a StreamStateElement
-    fn collect_stream_ids_recursive_from_stream_state(stream_state: &StreamStateElement, stream_ids: &mut Vec<String>) {
+    fn collect_stream_ids_recursive_from_stream_state(
+        stream_state: &StreamStateElement,
+        stream_ids: &mut Vec<String>,
+    ) {
         // BasicSingleInputStream is within StreamStateElement
         // And BasicSingleInputStream wraps a SingleInputStream
         // SingleInputStream has get_all_stream_ids() from InputStreamTrait
@@ -95,7 +118,6 @@ impl Default for StateInputStream {
     }
 }
 
-
 impl InputStreamTrait for StateInputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {
         let mut ids = Vec::new();
@@ -111,10 +133,16 @@ impl InputStreamTrait for StateInputStream {
 }
 
 impl StateInputStream {
-    pub fn pattern_stream(state_element: StateElement, within_time: Option<ExpressionConstant>) -> Self {
+    pub fn pattern_stream(
+        state_element: StateElement,
+        within_time: Option<ExpressionConstant>,
+    ) -> Self {
         Self::new(Type::Pattern, state_element, within_time)
     }
-    pub fn sequence_stream(state_element: StateElement, within_time: Option<ExpressionConstant>) -> Self {
+    pub fn sequence_stream(
+        state_element: StateElement,
+        within_time: Option<ExpressionConstant>,
+    ) -> Self {
         Self::new(Type::Sequence, state_element, within_time)
     }
 }

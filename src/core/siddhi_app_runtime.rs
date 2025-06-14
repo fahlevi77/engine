@@ -1,23 +1,23 @@
 // Corresponds to io.siddhi.core.SiddhiAppRuntime (interface)
 // and io.siddhi.core.SiddhiAppRuntimeImpl (implementation)
 
-use crate::query_api::SiddhiApp as ApiSiddhiApp; // From query_api
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For add_callback
-use crate::core::stream::stream_junction::StreamJunction;
-use crate::core::stream::input::input_manager::InputManager;
-use crate::core::stream::input::input_handler::InputHandler;
-use std::sync::{Arc, Mutex};
-use crate::core::stream::output::stream_callback::StreamCallback; // The trait
-use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::partition::PartitionRuntime;
-use crate::core::trigger::TriggerRuntime;
-use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
-use crate::core::siddhi_app_runtime_builder::{SiddhiAppRuntimeBuilder, TableRuntimePlaceholder};
-use crate::core::window::WindowRuntime;
+use crate::core::persistence::SnapshotService;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
 use crate::core::query::processor::Processor; // Trait for CallbackProcessor
-use crate::core::persistence::SnapshotService;
+use crate::core::query::query_runtime::QueryRuntime;
+use crate::core::siddhi_app_runtime_builder::{SiddhiAppRuntimeBuilder, TableRuntimePlaceholder};
+use crate::core::stream::input::input_handler::InputHandler;
+use crate::core::stream::input::input_manager::InputManager;
+use crate::core::stream::output::stream_callback::StreamCallback; // The trait
+use crate::core::stream::stream_junction::StreamJunction;
+use crate::core::trigger::TriggerRuntime;
+use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
+use crate::core::window::WindowRuntime;
+use crate::query_api::SiddhiApp as ApiSiddhiApp; // From query_api
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use std::collections::HashMap;
@@ -51,30 +51,41 @@ impl SiddhiAppRuntime {
         siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>,
         siddhi_app_string: Option<String>,
     ) -> Result<Self, String> {
-
         // 1. Create SiddhiAppContext using @app level annotations when present
         let mut name = api_siddhi_app.name.clone();
         let mut is_playback = false;
         let mut enforce_order = false;
-        let mut root_metrics = crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF;
+        let mut root_metrics =
+            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF;
         let mut buffer_size = 0i32;
         let mut transport_creation = false;
 
-        if let Some(app_ann) = api_siddhi_app.annotations.iter().find(|a| a.name.eq_ignore_ascii_case("app")) {
+        if let Some(app_ann) = api_siddhi_app
+            .annotations
+            .iter()
+            .find(|a| a.name.eq_ignore_ascii_case("app"))
+        {
             for el in &app_ann.elements {
                 match el.key.to_lowercase().as_str() {
                     "name" => name = el.value.clone(),
                     "playback" => is_playback = el.value.eq_ignore_ascii_case("true"),
-                    "enforce.order" | "enforceorder" => enforce_order = el.value.eq_ignore_ascii_case("true"),
-                    "statistics" | "stats" => {
-                        root_metrics = match el.value.to_lowercase().as_str() {
-                            "true" | "basic" => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC,
-                            "detail" | "detailed" => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::DETAIL,
-                            _ => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
-                        }
+                    "enforce.order" | "enforceorder" => {
+                        enforce_order = el.value.eq_ignore_ascii_case("true")
                     }
+                    "statistics" | "stats" => root_metrics = match el.value.to_lowercase().as_str()
+                    {
+                        "true" | "basic" => {
+                            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC
+                        }
+                        "detail" | "detailed" => {
+                            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::DETAIL
+                        }
+                        _ => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
+                    },
                     "buffer.size" | "buffersize" => {
-                        if let Ok(sz) = el.value.parse::<i32>() { buffer_size = sz; }
+                        if let Ok(sz) = el.value.parse::<i32>() {
+                            buffer_size = sz;
+                        }
                     }
                     "transport.channel.creation" => {
                         transport_creation = el.value.eq_ignore_ascii_case("true");
@@ -93,12 +104,18 @@ impl SiddhiAppRuntime {
         ctx.set_playback(is_playback);
         ctx.set_enforce_order(enforce_order);
         ctx.set_root_metrics_level(root_metrics);
-        if buffer_size > 0 { ctx.set_buffer_size(buffer_size); }
+        if buffer_size > 0 {
+            ctx.set_buffer_size(buffer_size);
+        }
         ctx.set_transport_channel_creation_enabled(transport_creation);
         let scheduler = if let Some(exec) = ctx.get_scheduled_executor_service() {
-            Arc::new(crate::core::util::Scheduler::new(Arc::clone(&exec.executor)))
+            Arc::new(crate::core::util::Scheduler::new(Arc::clone(
+                &exec.executor,
+            )))
         } else {
-            Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default())))
+            Arc::new(crate::core::util::Scheduler::new(Arc::new(
+                crate::core::util::ExecutorService::default(),
+            )))
         };
         ctx.set_scheduler(Arc::clone(&scheduler));
         let mut ss = SnapshotService::new(name.clone());
@@ -110,7 +127,8 @@ impl SiddhiAppRuntime {
         let siddhi_app_context = Arc::new(ctx);
 
         // 2. Parse the ApiSiddhiApp into a builder
-        let builder = SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context)?;
+        let builder =
+            SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context)?;
 
         // 3. Build the SiddhiAppRuntime from the builder
         builder.build(api_siddhi_app) // Pass the Arc<ApiSiddhiApp> again
@@ -120,18 +138,27 @@ impl SiddhiAppRuntime {
         self.input_manager.get_input_handler(stream_id)
     }
 
-    pub fn add_callback(&self, stream_id: &str, callback: Box<dyn StreamCallback>) -> Result<(), String> {
-        let output_junction = self.stream_junction_map.get(stream_id)
+    pub fn add_callback(
+        &self,
+        stream_id: &str,
+        callback: Box<dyn StreamCallback>,
+    ) -> Result<(), String> {
+        let output_junction = self
+            .stream_junction_map
+            .get(stream_id)
             .ok_or_else(|| format!("StreamJunction '{}' not found to add callback", stream_id))?
             .clone();
 
-        let query_name_for_callback = format!("callback_processor_{}_{}", stream_id, Uuid::new_v4().hyphenated());
-        let query_context_for_callback = Arc::new(
-           SiddhiQueryContext::new(
-               Arc::clone(&self.siddhi_app_context),
-               query_name_for_callback.clone(),
-               None // No specific partition ID for a generic stream callback processor
-           ));
+        let query_name_for_callback = format!(
+            "callback_processor_{}_{}",
+            stream_id,
+            Uuid::new_v4().hyphenated()
+        );
+        let query_context_for_callback = Arc::new(SiddhiQueryContext::new(
+            Arc::clone(&self.siddhi_app_context),
+            query_name_for_callback.clone(),
+            None, // No specific partition ID for a generic stream callback processor
+        ));
 
         let callback_processor = Arc::new(Mutex::new(CallbackProcessor::new(
             Arc::new(Mutex::new(callback)),
@@ -139,7 +166,10 @@ impl SiddhiAppRuntime {
             query_context_for_callback,
             // query_name_for_callback, // query_name is now in query_context
         )));
-        output_junction.lock().expect("Output StreamJunction Mutex poisoned").subscribe(callback_processor);
+        output_junction
+            .lock()
+            .expect("Output StreamJunction Mutex poisoned")
+            .subscribe(callback_processor);
         Ok(())
     }
 

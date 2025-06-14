@@ -28,7 +28,6 @@ impl Element {
 //     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
 // }
 
-
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Annotation {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement

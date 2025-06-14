@@ -1,41 +1,88 @@
-use siddhi_rust::core::util::parser::QueryParser;
-use siddhi_rust::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext};
-use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::execution::query::input::stream::{InputStream, SingleInputStream, JoinType};
-use siddhi_rust::query_api::execution::query::selection::{Selector, OutputAttribute};
-use siddhi_rust::query_api::execution::query::output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction};
-use siddhi_rust::query_api::definition::StreamDefinition;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::expression::{Expression, variable::Variable};
-use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
-use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
+use siddhi_rust::core::config::{
+    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+};
+use siddhi_rust::core::event::complex_event::ComplexEvent;
 use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use siddhi_rust::core::query::processor::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
 use siddhi_rust::core::event::state::{MetaStateEvent, StateEvent};
 use siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
 use siddhi_rust::core::event::stream::stream_event::StreamEvent;
+use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
+use siddhi_rust::core::query::processor::stream::join::{
+    JoinProcessor, JoinProcessorSide, JoinSide,
+};
+use siddhi_rust::core::query::processor::{ProcessingMode, Processor};
+use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::core::stream::stream_junction::StreamJunction;
+use siddhi_rust::core::util::parser::QueryParser;
 use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::core::query::processor::{Processor, ProcessingMode};
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
+use siddhi_rust::query_api::definition::attribute::Type as AttrType;
+use siddhi_rust::query_api::definition::StreamDefinition;
+use siddhi_rust::query_api::execution::query::input::stream::{
+    InputStream, JoinType, SingleInputStream,
+};
+use siddhi_rust::query_api::execution::query::output::output_stream::{
+    InsertIntoStreamAction, OutputStream, OutputStreamAction,
+};
+use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+use siddhi_rust::query_api::execution::query::Query;
+use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
+use siddhi_rust::query_api::expression::{variable::Variable, Expression};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-fn setup_context() -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJunction>>>) {
+fn setup_context() -> (
+    Arc<SiddhiAppContext>,
+    HashMap<String, Arc<Mutex<StreamJunction>>>,
+) {
     let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("TestApp".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&siddhi_context), "TestApp".to_string(), Arc::clone(&app), String::new()));
+    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        "TestApp".to_string(),
+    ));
+    let app_ctx = Arc::new(SiddhiAppContext::new(
+        Arc::clone(&siddhi_context),
+        "TestApp".to_string(),
+        Arc::clone(&app),
+        String::new(),
+    ));
 
-    let left_def = Arc::new(StreamDefinition::new("LeftStream".to_string()).attribute("id".to_string(), AttrType::INT));
-    let right_def = Arc::new(StreamDefinition::new("RightStream".to_string()).attribute("id".to_string(), AttrType::INT));
-    let out_def = Arc::new(StreamDefinition::new("OutStream".to_string()).attribute("l".to_string(), AttrType::INT).attribute("r".to_string(), AttrType::INT));
+    let left_def = Arc::new(
+        StreamDefinition::new("LeftStream".to_string()).attribute("id".to_string(), AttrType::INT),
+    );
+    let right_def = Arc::new(
+        StreamDefinition::new("RightStream".to_string()).attribute("id".to_string(), AttrType::INT),
+    );
+    let out_def = Arc::new(
+        StreamDefinition::new("OutStream".to_string())
+            .attribute("l".to_string(), AttrType::INT)
+            .attribute("r".to_string(), AttrType::INT),
+    );
 
-    let left_junction = Arc::new(Mutex::new(StreamJunction::new("LeftStream".to_string(), Arc::clone(&left_def), Arc::clone(&app_ctx), 1024, false, None)));
-    let right_junction = Arc::new(Mutex::new(StreamJunction::new("RightStream".to_string(), Arc::clone(&right_def), Arc::clone(&app_ctx), 1024, false, None)));
-    let out_junction = Arc::new(Mutex::new(StreamJunction::new("OutStream".to_string(), Arc::clone(&out_def), Arc::clone(&app_ctx), 1024, false, None)));
+    let left_junction = Arc::new(Mutex::new(StreamJunction::new(
+        "LeftStream".to_string(),
+        Arc::clone(&left_def),
+        Arc::clone(&app_ctx),
+        1024,
+        false,
+        None,
+    )));
+    let right_junction = Arc::new(Mutex::new(StreamJunction::new(
+        "RightStream".to_string(),
+        Arc::clone(&right_def),
+        Arc::clone(&app_ctx),
+        1024,
+        false,
+        None,
+    )));
+    let out_junction = Arc::new(Mutex::new(StreamJunction::new(
+        "OutStream".to_string(),
+        Arc::clone(&out_def),
+        Arc::clone(&app_ctx),
+        1024,
+        false,
+        None,
+    )));
 
     let mut map = HashMap::new();
     map.insert("LeftStream".to_string(), left_junction);
@@ -46,36 +93,61 @@ fn setup_context() -> (Arc<SiddhiAppContext>, HashMap<String, Arc<Mutex<StreamJu
 }
 
 fn build_join_query(join_type: JoinType) -> Query {
-    let left = SingleInputStream::new_basic("LeftStream".to_string(), false, false, None, Vec::new());
-    let right = SingleInputStream::new_basic("RightStream".to_string(), false, false, None, Vec::new());
+    let left =
+        SingleInputStream::new_basic("LeftStream".to_string(), false, false, None, Vec::new());
+    let right =
+        SingleInputStream::new_basic("RightStream".to_string(), false, false, None, Vec::new());
     let cond = Expression::compare(
         Expression::Variable(Variable::new("id".to_string()).of_stream("LeftStream".to_string())),
         CompareOp::Equal,
-        Expression::Variable(Variable::new("id".to_string()).of_stream("RightStream".to_string()))
+        Expression::Variable(Variable::new("id".to_string()).of_stream("RightStream".to_string())),
     );
     let input = InputStream::join_stream(left, join_type, right, Some(cond), None, None, None);
     let mut selector = Selector::new();
     selector.selection_list = vec![
-        OutputAttribute::new(Some("l".to_string()), Expression::Variable(Variable::new("id".to_string()).of_stream("LeftStream".to_string()))),
-        OutputAttribute::new(Some("r".to_string()), Expression::Variable(Variable::new("id".to_string()).of_stream("RightStream".to_string()))),
+        OutputAttribute::new(
+            Some("l".to_string()),
+            Expression::Variable(
+                Variable::new("id".to_string()).of_stream("LeftStream".to_string()),
+            ),
+        ),
+        OutputAttribute::new(
+            Some("r".to_string()),
+            Expression::Variable(
+                Variable::new("id".to_string()).of_stream("RightStream".to_string()),
+            ),
+        ),
     ];
-    let insert_action = InsertIntoStreamAction { target_id: "OutStream".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let insert_action = InsertIntoStreamAction {
+        target_id: "OutStream".to_string(),
+        is_inner_stream: false,
+        is_fault_stream: false,
+    };
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
-    Query::query().from(input).select(selector).out_stream(out_stream)
+    Query::query()
+        .from(input)
+        .select(selector)
+        .out_stream(out_stream)
 }
 
 #[test]
 fn test_parse_inner_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
-    assert!(QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new()).is_ok());
+    assert!(
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+            .is_ok()
+    );
 }
 
 #[test]
 fn test_parse_left_outer_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
-    assert!(QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new()).is_ok());
+    assert!(
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+            .is_ok()
+    );
 }
 
 #[derive(Debug)]
@@ -98,15 +170,19 @@ fn collect_from_out_stream(
 ) -> Arc<Mutex<Vec<Vec<AttributeValue>>>> {
     let out_junction = junctions.get("OutStream").unwrap().clone();
     let collected = Arc::new(Mutex::new(Vec::new()));
-    let cb = CollectCallback { events: Arc::clone(&collected) };
+    let cb = CollectCallback {
+        events: Arc::clone(&collected),
+    };
     let cb_proc = Arc::new(Mutex::new(CallbackProcessor::new(
         Arc::new(Mutex::new(Box::new(cb) as Box<dyn StreamCallback>)),
         Arc::clone(app_ctx),
-        Arc::new(siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(
-            Arc::clone(app_ctx),
-            "callback".to_string(),
-            None,
-        )),
+        Arc::new(
+            siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(
+                Arc::clone(app_ctx),
+                "callback".to_string(),
+                None,
+            ),
+        ),
     )));
     out_junction.lock().unwrap().subscribe(cb_proc);
     collected
@@ -116,36 +192,55 @@ fn collect_from_out_stream(
 fn test_inner_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
-    assert!(QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new()).is_ok());
+    assert!(
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+            .is_ok()
+    );
     let collected = collect_from_out_stream(&app_ctx, &junctions);
 
     {
         let left = junctions.get("LeftStream").unwrap();
-        left.lock().unwrap().send_event(Event::new_with_data(0, vec![AttributeValue::Int(1)]));
+        left.lock()
+            .unwrap()
+            .send_event(Event::new_with_data(0, vec![AttributeValue::Int(1)]));
     }
     {
         let right = junctions.get("RightStream").unwrap();
-        right.lock().unwrap().send_event(Event::new_with_data(0, vec![AttributeValue::Int(1)]));
+        right
+            .lock()
+            .unwrap()
+            .send_event(Event::new_with_data(0, vec![AttributeValue::Int(1)]));
     }
 
     let out = collected.lock().unwrap().clone();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]
+    );
 }
 
 #[test]
 fn test_left_outer_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
-    assert!(QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new()).is_ok());
+    assert!(
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+            .is_ok()
+    );
     let collected = collect_from_out_stream(&app_ctx, &junctions);
 
     {
         let left = junctions.get("LeftStream").unwrap();
-        left.lock().unwrap().send_event(Event::new_with_data(0, vec![AttributeValue::Int(2)]));
+        left.lock()
+            .unwrap()
+            .send_event(Event::new_with_data(0, vec![AttributeValue::Int(2)]));
     }
 
     let out = collected.lock().unwrap().clone();
-    assert_eq!(out, vec![vec![AttributeValue::Int(2), AttributeValue::Null]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(2), AttributeValue::Null]]
+    );
 }
 
 #[derive(Debug)]
@@ -176,24 +271,64 @@ impl Processor for CollectStateEvents {
         }
     }
 
-    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> { None }
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        None
+    }
     fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
     fn clone_processor(&self, _ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        Box::new(CollectStateEvents { events: Arc::clone(&self.events) })
+        Box::new(CollectStateEvents {
+            events: Arc::clone(&self.events),
+        })
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> { Arc::new(SiddhiAppContext::new(Arc::new(SiddhiContext::new()), "T".to_string(), Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("T".to_string())), String::new())) }
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
-    fn is_stateful(&self) -> bool { false }
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::new(SiddhiAppContext::new(
+            Arc::new(SiddhiContext::new()),
+            "T".to_string(),
+            Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                "T".to_string(),
+            )),
+            String::new(),
+        ))
+    }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
+    fn is_stateful(&self) -> bool {
+        false
+    }
 }
 
-fn setup_state_join(join_type: JoinType) -> (Arc<Mutex<JoinProcessorSide>>, Arc<Mutex<JoinProcessorSide>>, Arc<Mutex<Vec<(Option<i32>, Option<i32>)>>>) {
+fn setup_state_join(
+    join_type: JoinType,
+) -> (
+    Arc<Mutex<JoinProcessorSide>>,
+    Arc<Mutex<JoinProcessorSide>>,
+    Arc<Mutex<Vec<(Option<i32>, Option<i32>)>>>,
+) {
     let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new("App".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&siddhi_context), "App".to_string(), Arc::clone(&app), String::new()));
-    let query_ctx = Arc::new(siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(Arc::clone(&app_ctx), "q".to_string(), None));
+    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        "App".to_string(),
+    ));
+    let app_ctx = Arc::new(SiddhiAppContext::new(
+        Arc::clone(&siddhi_context),
+        "App".to_string(),
+        Arc::clone(&app),
+        String::new(),
+    ));
+    let query_ctx = Arc::new(
+        siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(
+            Arc::clone(&app_ctx),
+            "q".to_string(),
+            None,
+        ),
+    );
 
-    let left_def = Arc::new(StreamDefinition::new("Left".to_string()).attribute("id".to_string(), AttrType::INT));
-    let right_def = Arc::new(StreamDefinition::new("Right".to_string()).attribute("id".to_string(), AttrType::INT));
+    let left_def = Arc::new(
+        StreamDefinition::new("Left".to_string()).attribute("id".to_string(), AttrType::INT),
+    );
+    let right_def = Arc::new(
+        StreamDefinition::new("Right".to_string()).attribute("id".to_string(), AttrType::INT),
+    );
 
     let left_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&left_def));
     let mut right_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&right_def));
@@ -204,8 +339,14 @@ fn setup_state_join(join_type: JoinType) -> (Arc<Mutex<JoinProcessorSide>>, Arc<
     mse.meta_stream_events[1] = Some(right_meta);
 
     let mut stream_meta = HashMap::new();
-    stream_meta.insert("Left".to_string(), Arc::new(mse.get_meta_stream_event(0).unwrap().clone()));
-    stream_meta.insert("Right".to_string(), Arc::new(mse.get_meta_stream_event(1).unwrap().clone()));
+    stream_meta.insert(
+        "Left".to_string(),
+        Arc::new(mse.get_meta_stream_event(0).unwrap().clone()),
+    );
+    stream_meta.insert(
+        "Right".to_string(),
+        Arc::new(mse.get_meta_stream_event(1).unwrap().clone()),
+    );
 
     let ctx = ExpressionParserContext {
         siddhi_app_context: Arc::clone(&app_ctx),
@@ -220,12 +361,20 @@ fn setup_state_join(join_type: JoinType) -> (Arc<Mutex<JoinProcessorSide>>, Arc<
 
     let cond_exec = None;
 
-    let join = Arc::new(Mutex::new(JoinProcessor::new(join_type, cond_exec, mse, Arc::clone(&app_ctx), Arc::clone(&query_ctx))));
+    let join = Arc::new(Mutex::new(JoinProcessor::new(
+        join_type,
+        cond_exec,
+        mse,
+        Arc::clone(&app_ctx),
+        Arc::clone(&query_ctx),
+    )));
     let left = JoinProcessor::create_side_processor(&join, JoinSide::Left);
     let right = JoinProcessor::create_side_processor(&join, JoinSide::Right);
 
     let collected = Arc::new(Mutex::new(Vec::new()));
-    let collector = Arc::new(Mutex::new(CollectStateEvents { events: Arc::clone(&collected) }));
+    let collector = Arc::new(Mutex::new(CollectStateEvents {
+        events: Arc::clone(&collected),
+    }));
     left.lock().unwrap().set_next_processor(Some(collector));
 
     (left, right, collected)

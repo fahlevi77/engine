@@ -1,12 +1,12 @@
 // siddhi_rust/src/core/executor/condition/in_expression_executor.rs
 // Corresponds to io.siddhi.core.executor.condition.InConditionExpressionExecutor
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::table::Table;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use std::sync::Arc; // For SiddhiAppContext in clone_executor
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
-use crate::core::table::Table;
 
 #[derive(Debug)]
 pub struct InExpressionExecutor {
@@ -69,7 +69,10 @@ impl ExpressionExecutor for InExpressionExecutor {
         ApiAttributeType::BOOL
     }
 
-    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &Arc<SiddhiAppContext>,
+    ) -> Box<dyn ExpressionExecutor> {
         Box::new(InExpressionExecutor::new(
             self.value_executor.clone_executor(siddhi_app_context),
             self.table_id.clone(),

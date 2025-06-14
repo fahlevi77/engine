@@ -2,7 +2,6 @@ use super::range_partition_type::RangePartitionType;
 use super::value_partition_type::ValuePartitionType;
 use crate::query_api::siddhi_element::SiddhiElement;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum PartitionTypeVariant {
     Value(ValuePartitionType),
@@ -28,7 +27,7 @@ impl PartitionType {
         PartitionType {
             query_context_start_index: None, // Or copy from value_type if appropriate
             query_context_end_index: None,   // Or copy from value_type if appropriate
-            variant: PartitionTypeVariant::Value(value_type)
+            variant: PartitionTypeVariant::Value(value_type),
         }
     }
 
@@ -36,7 +35,7 @@ impl PartitionType {
         PartitionType {
             query_context_start_index: None, // Or copy from range_type
             query_context_end_index: None,   // Or copy from range_type
-            variant: PartitionTypeVariant::Range(range_type)
+            variant: PartitionTypeVariant::Range(range_type),
         }
     }
 

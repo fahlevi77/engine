@@ -4,9 +4,9 @@ use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent; // StateEvent holds StreamEvents
 use crate::core::event::value::AttributeValue;
 use crate::core::util::siddhi_constants::{
-    BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+    BEFORE_WINDOW_DATA_INDEX, CURRENT, LAST, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
     STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
-    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN, CURRENT, LAST,
+    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
 };
 use std::any::Any;
 use std::fmt::Debug;
@@ -36,7 +36,10 @@ impl Clone for StateEvent {
             timestamp: self.timestamp,
             event_type: self.event_type,
             output_data: self.output_data.clone(),
-            next: self.next.as_ref().map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
+            next: self
+                .next
+                .as_ref()
+                .map(|n| crate::core::event::complex_event::clone_box_complex_event(n.as_ref())),
             id: self.id,
         }
     }
@@ -64,7 +67,11 @@ impl StateEvent {
             stream_events: stream_events_vec,
             timestamp: -1, // Default timestamp
             event_type: ComplexEventType::default(),
-            output_data: if output_size > 0 { Some(vec![AttributeValue::default(); output_size]) } else { None },
+            output_data: if output_size > 0 {
+                Some(vec![AttributeValue::default(); output_size])
+            } else {
+                None
+            },
             next: None,
             id: NEXT_STATE_EVENT_ID.fetch_add(1, Ordering::Relaxed),
         }
@@ -155,13 +162,21 @@ impl StateEvent {
 
 // Inherent methods for StateEvent
 impl StateEvent {
-    pub fn set_output_data_at_idx(&mut self, value: AttributeValue, index: usize) -> Result<(), String> {
+    pub fn set_output_data_at_idx(
+        &mut self,
+        value: AttributeValue,
+        index: usize,
+    ) -> Result<(), String> {
         if let Some(data) = self.output_data.as_mut() {
             if index < data.len() {
                 data[index] = value;
                 Ok(())
             } else {
-                Err(format!("Index {} out of bounds for output_data with len {}", index, data.len()))
+                Err(format!(
+                    "Index {} out of bounds for output_data with len {}",
+                    index,
+                    data.len()
+                ))
             }
         } else {
             if index == 0 {
@@ -196,9 +211,16 @@ impl StateEvent {
         }
         let se = self.get_stream_event_by_position(position)?;
         match *position.get(STREAM_ATTRIBUTE_TYPE_INDEX)? as usize {
-            BEFORE_WINDOW_DATA_INDEX => se.before_window_data.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
-            OUTPUT_DATA_INDEX => se.output_data.as_ref()?.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
-            ON_AFTER_WINDOW_DATA_INDEX => se.on_after_window_data.get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            BEFORE_WINDOW_DATA_INDEX => se
+                .before_window_data
+                .get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            OUTPUT_DATA_INDEX => se
+                .output_data
+                .as_ref()?
+                .get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
+            ON_AFTER_WINDOW_DATA_INDEX => se
+                .on_after_window_data
+                .get(*position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE)? as usize),
             _ => None,
         }
     }
@@ -208,7 +230,9 @@ impl StateEvent {
             BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
             STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
         };
-        if *position.get(STREAM_ATTRIBUTE_TYPE_INDEX).ok_or("pos")? as usize == STATE_OUTPUT_DATA_INDEX {
+        if *position.get(STREAM_ATTRIBUTE_TYPE_INDEX).ok_or("pos")? as usize
+            == STATE_OUTPUT_DATA_INDEX
+        {
             if let Some(ref mut vec) = self.output_data {
                 let idx = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE).ok_or("pos")? as usize;
                 if idx < vec.len() {
@@ -221,25 +245,44 @@ impl StateEvent {
                 return Err("output_data is None".into());
             }
         }
-        let se_position = *position.get(crate::core::util::siddhi_constants::STREAM_EVENT_CHAIN_INDEX).ok_or("pos")? as usize;
+        let se_position = *position
+            .get(crate::core::util::siddhi_constants::STREAM_EVENT_CHAIN_INDEX)
+            .ok_or("pos")? as usize;
         if se_position >= self.stream_events.len() {
             return Err("stream position out of bounds".into());
         }
-        let se = self.stream_events[se_position].as_mut().ok_or("no stream event")?;
+        let se = self.stream_events[se_position]
+            .as_mut()
+            .ok_or("no stream event")?;
         let idx = *position.get(STREAM_ATTRIBUTE_INDEX_IN_TYPE).ok_or("pos")? as usize;
         match *position.get(STREAM_ATTRIBUTE_TYPE_INDEX).ok_or("pos")? as usize {
             BEFORE_WINDOW_DATA_INDEX => {
-                if idx < se.before_window_data.len() { se.before_window_data[idx] = value; Ok(()) } else { Err("index out".into()) }
+                if idx < se.before_window_data.len() {
+                    se.before_window_data[idx] = value;
+                    Ok(())
+                } else {
+                    Err("index out".into())
+                }
             }
             OUTPUT_DATA_INDEX => {
                 if let Some(ref mut out) = se.output_data {
-                    if idx < out.len() { out[idx] = value; Ok(()) } else { Err("index out".into()) }
+                    if idx < out.len() {
+                        out[idx] = value;
+                        Ok(())
+                    } else {
+                        Err("index out".into())
+                    }
                 } else {
                     Err("output_data None".into())
                 }
             }
             ON_AFTER_WINDOW_DATA_INDEX => {
-                if idx < se.on_after_window_data.len() { se.on_after_window_data[idx] = value; Ok(()) } else { Err("index out".into()) }
+                if idx < se.on_after_window_data.len() {
+                    se.on_after_window_data[idx] = value;
+                    Ok(())
+                } else {
+                    Err("index out".into())
+                }
             }
             _ => Err("invalid type".into()),
         }
@@ -251,7 +294,10 @@ impl ComplexEvent for StateEvent {
         self.next.as_deref()
     }
 
-    fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>> {
+    fn set_next(
+        &mut self,
+        next_event: Option<Box<dyn ComplexEvent>>,
+    ) -> Option<Box<dyn ComplexEvent>> {
         let old_next = self.next.take();
         self.next = next_event;
         old_next
@@ -285,6 +331,10 @@ impl ComplexEvent for StateEvent {
         self.event_type = event_type;
     }
 
-    fn as_any(&self) -> &dyn Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }

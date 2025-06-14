@@ -4,9 +4,9 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For clone_
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode}; // Use CommonProcessorMeta
-use std::sync::{Arc, Mutex};
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor}; // Use CommonProcessorMeta
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 // FilterProcessor doesn't exist as a distinct class in Java Siddhi's core structure.
 // Filtering is typically part of SingleStreamProcessor or JoinProcessor using a ConditionExpressionExecutor.
@@ -25,7 +25,8 @@ impl FilterProcessor {
         siddhi_app_context: Arc<SiddhiAppContext>,
         siddhi_query_context: Arc<SiddhiQueryContext>, // query_name is in here
     ) -> Result<Self, String> {
-        if condition_executor.get_return_type() != crate::query_api::definition::AttributeType::BOOL {
+        if condition_executor.get_return_type() != crate::query_api::definition::AttributeType::BOOL
+        {
             return Err(format!(
                 "Filter condition executor must return BOOL, but found {:?}",
                 condition_executor.get_return_type()
@@ -52,7 +53,10 @@ impl Processor for FilterProcessor {
             // Detach the current event from the original chunk to process it individually.
             let next_event_in_original_chunk = current_event_box.set_next(None);
 
-            let passes_filter = match self.condition_executor.execute(Some(current_event_box.as_ref())) {
+            let passes_filter = match self
+                .condition_executor
+                .execute(Some(current_event_box.as_ref()))
+            {
                 Some(AttributeValue::Bool(true)) => true,
                 Some(AttributeValue::Bool(false)) | Some(AttributeValue::Null) => false,
                 None => false, // Error or no value from condition executor, filter out
@@ -92,10 +96,18 @@ impl Processor for FilterProcessor {
         self.meta.next_processor = next_processor;
     }
 
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        let cloned_condition_executor = self.condition_executor.clone_executor(&siddhi_query_context.siddhi_app_context);
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
+        let cloned_condition_executor = self
+            .condition_executor
+            .clone_executor(&siddhi_query_context.siddhi_app_context);
         Box::new(FilterProcessor {
-            meta: CommonProcessorMeta::new(Arc::clone(&siddhi_query_context.siddhi_app_context), Arc::clone(siddhi_query_context)),
+            meta: CommonProcessorMeta::new(
+                Arc::clone(&siddhi_query_context.siddhi_app_context),
+                Arc::clone(siddhi_query_context),
+            ),
             condition_executor: cloned_condition_executor,
         })
     }

@@ -1,6 +1,9 @@
 // siddhi_rust/src/core/event/state/state_event_cloner.rs
 // Simplified port of io.siddhi.core.event.state.StateEventCloner
-use super::{state_event::StateEvent, meta_state_event::MetaStateEvent, state_event_factory::StateEventFactory};
+use super::{
+    meta_state_event::MetaStateEvent, state_event::StateEvent,
+    state_event_factory::StateEventFactory,
+};
 
 #[derive(Debug, Clone)]
 pub struct StateEventCloner {
@@ -21,7 +24,8 @@ impl StateEventCloner {
     pub fn copy_state_event(&self, state_event: &StateEvent) -> StateEvent {
         let mut new_event = self.state_event_factory.new_instance();
         if self.output_data_size > 0 {
-            if let (Some(src), Some(dest)) = (&state_event.output_data, &mut new_event.output_data) {
+            if let (Some(src), Some(dest)) = (&state_event.output_data, &mut new_event.output_data)
+            {
                 for i in 0..self.output_data_size {
                     dest[i] = src[i].clone();
                 }
@@ -38,4 +42,3 @@ impl StateEventCloner {
         new_event
     }
 }
-

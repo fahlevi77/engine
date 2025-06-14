@@ -7,19 +7,19 @@ pub mod math;
 
 // Declare modules for individual expression types at this level
 pub mod attribute_function;
-pub mod variable;
-pub mod expression; // This is the main Expression enum
+pub mod expression;
+pub mod variable; // This is the main Expression enum
 
 // Re-export the main Expression enum and key structs/enums for easier access
 // from parent modules (e.g., query_api)
+pub use self::attribute_function::AttributeFunction;
+pub use self::constant::{Constant, ConstantValueWithFloat, TimeUtil as ConstantTimeUtil}; // Updated ConstantValue to ConstantValueWithFloat
 pub use self::expression::Expression;
 pub use self::variable::Variable;
-pub use self::constant::{Constant, ConstantValueWithFloat, TimeUtil as ConstantTimeUtil}; // Updated ConstantValue to ConstantValueWithFloat
-pub use self::attribute_function::AttributeFunction;
 
 // Re-export all math and condition structs and enums for easier use in Expression factory methods and elsewhere.
-pub use self::math::*;
 pub use self::condition::*;
+pub use self::math::*;
 // This re-exports CompareOperator from condition/mod.rs, so the specific alias below is not strictly needed
 // if condition/mod.rs already exports `Operator as CompareOperator` or just `Operator`.
 // The condition/mod.rs has `pub use self::compare::{Compare, Operator as CompareOperator};`

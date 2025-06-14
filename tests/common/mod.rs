@@ -1,10 +1,10 @@
-use siddhi_rust::query_compiler::parse;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::persistence::PersistenceStore;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
 use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::persistence::PersistenceStore;
 use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -35,26 +35,43 @@ impl AppRunner {
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
-            .add_callback(out_stream, Box::new(CollectCallback { events: Arc::clone(&collected) }))
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
             .expect("add cb");
         runtime.start();
         Self { runtime, collected }
     }
 
-    pub fn new_from_api(app: siddhi_rust::query_api::siddhi_app::SiddhiApp, out_stream: &str) -> Self {
+    pub fn new_from_api(
+        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
+        out_stream: &str,
+    ) -> Self {
         let manager = SiddhiManager::new();
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
-            .add_callback(out_stream, Box::new(CollectCallback { events: Arc::clone(&collected) }))
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
             .expect("add cb");
         runtime.start();
         Self { runtime, collected }
     }
 
-    pub fn new_with_store(app_string: &str, out_stream: &str, store: Arc<dyn PersistenceStore>) -> Self {
+    pub fn new_with_store(
+        app_string: &str,
+        out_stream: &str,
+        store: Arc<dyn PersistenceStore>,
+    ) -> Self {
         let manager = SiddhiManager::new();
         manager.set_persistence_store(store);
         let app = parse(app_string).expect("parse");
@@ -63,7 +80,12 @@ impl AppRunner {
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
-            .add_callback(out_stream, Box::new(CollectCallback { events: Arc::clone(&collected) }))
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
             .expect("add cb");
         runtime.start();
         Self { runtime, collected }
@@ -108,7 +130,6 @@ impl AppRunner {
         self.runtime.shutdown();
         self.collected.lock().unwrap().clone()
     }
-
 
     pub fn persist(&self) -> String {
         self.runtime.persist().expect("persist")

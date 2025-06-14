@@ -1,24 +1,30 @@
 // Note: query_api types are used for return types.
 // Ensure these paths are correct based on query_api module structure and re-exports.
 use crate::query_api::{
-    SiddhiApp,
-    definition::{StreamDefinition, TableDefinition, WindowDefinition, AggregationDefinition, FunctionDefinition, attribute::Type as AttributeType},
-    execution::{
-        Partition,
-        query::{Query, OnDemandQuery, StoreQuery, input::InputStream, output::output_stream::{OutputStream, OutputStreamAction, InsertIntoStreamAction}, selection::Selector},
-        ExecutionElement,
+    definition::{
+        attribute::Type as AttributeType, AggregationDefinition, FunctionDefinition,
+        StreamDefinition, TableDefinition, WindowDefinition,
     },
-    expression::{Expression, constant::Constant as ExpressionConstant, variable::Variable},
+    execution::{
+        query::{
+            input::InputStream,
+            output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction},
+            selection::Selector,
+            OnDemandQuery, Query, StoreQuery,
+        },
+        ExecutionElement, Partition,
+    },
+    expression::{constant::Constant as ExpressionConstant, variable::Variable, Expression},
+    SiddhiApp,
 };
-use std::env;
-use regex::Regex;
 use lalrpop_util::lalrpop_mod;
+use regex::Regex;
+use std::env;
 
 lalrpop_mod!(pub grammar, "/query_compiler/grammar.rs");
 
 // SiddhiCompiler in Java has only static methods.
 // In Rust, these are translated as free functions within this module.
-
 
 // update_variables function (ported from Java SiddhiCompiler)
 // This function needs to be pub if called directly from outside, or pub(crate) if only by parse functions here.
@@ -45,7 +51,10 @@ pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
                 // The Java code throws SiddhiParserException with context.
                 // For now, returning a simpler error.
                 // TODO: Enhance error reporting with line numbers if possible without full parser.
-                return Err(format!("No system or environmental variable found for '${{{}}}'", var_name));
+                return Err(format!(
+                    "No system or environmental variable found for '${{{}}}'",
+                    var_name
+                ));
             }
         }
         last_match_end = full_match.end();
@@ -67,7 +76,6 @@ fn parse_attribute_type(t: &str) -> Result<AttributeType, String> {
     }
 }
 
-
 pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
     let s = update_variables(siddhi_app_string)?;
 
@@ -88,17 +96,25 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
     let app_name = annotations
         .iter()
         .find(|a| a.name.eq_ignore_ascii_case("app"))
-        .and_then(|a| a.elements.iter().find(|e| e.key.eq_ignore_ascii_case("name")))
+        .and_then(|a| {
+            a.elements
+                .iter()
+                .find(|e| e.key.eq_ignore_ascii_case("name"))
+        })
         .map(|e| e.value.clone())
         .unwrap_or_else(|| "SiddhiApp".to_string());
 
     let mut app = SiddhiApp::new(app_name);
-    for ann in &annotations { app.add_annotation(ann.clone()); }
+    for ann in &annotations {
+        app.add_annotation(ann.clone());
+    }
 
     let mut parts = s_no_ann.split(';').peekable();
     while let Some(part) = parts.next() {
         let mut stmt = part.trim().to_string();
-        if stmt.is_empty() { continue; }
+        if stmt.is_empty() {
+            continue;
+        }
         let mut lower = stmt.to_lowercase();
 
         if lower.starts_with("partition") {

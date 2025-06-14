@@ -1,9 +1,9 @@
 // siddhi_rust/src/core/executor/function/cast_function_executor.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -23,9 +23,7 @@ impl CastFunctionExecutor {
         let type_val = match type_executor.execute(None) {
             Some(AttributeValue::String(s)) => s.to_lowercase(),
             _ => {
-                return Err(
-                    "Cast function requires a constant string as type argument".to_string(),
-                )
+                return Err("Cast function requires a constant string as type argument".to_string())
             }
         };
         let return_type = match type_val.as_str() {

@@ -1,21 +1,21 @@
 // siddhi_rust/src/core/siddhi_app_runtime_builder.rs
+use crate::core::aggregation::AggregationRuntime;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::stream::stream_junction::StreamJunction;
+use crate::core::partition::PartitionRuntime;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
+use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::window::WindowRuntime;
-use crate::core::aggregation::AggregationRuntime;
-use crate::core::partition::PartitionRuntime;
-use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg
-use crate::query_api::definition::StreamDefinition as ApiStreamDefinition; // Added this import
+use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
+use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg // Added this import
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 // Placeholders for runtime components until they are defined
-#[derive(Debug, Clone, Default)] pub struct TableRuntimePlaceholder {}
+#[derive(Debug, Clone, Default)]
+pub struct TableRuntimePlaceholder {}
 use crate::core::trigger::TriggerRuntime;
-
 
 #[derive(Debug)]
 pub struct SiddhiAppRuntimeBuilder {
@@ -24,7 +24,8 @@ pub struct SiddhiAppRuntimeBuilder {
     pub stream_definition_map: HashMap<String, Arc<ApiStreamDefinition>>,
     pub table_definition_map: HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
     pub window_definition_map: HashMap<String, Arc<crate::query_api::definition::WindowDefinition>>,
-    pub aggregation_definition_map: HashMap<String, Arc<crate::query_api::definition::AggregationDefinition>>,
+    pub aggregation_definition_map:
+        HashMap<String, Arc<crate::query_api::definition::AggregationDefinition>>,
 
     pub stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
@@ -56,16 +57,31 @@ impl SiddhiAppRuntimeBuilder {
 
     // --- Methods to add API definitions ---
     pub fn add_stream_definition(&mut self, stream_def: Arc<ApiStreamDefinition>) {
-        self.stream_definition_map.insert(stream_def.abstract_definition.id.clone(), stream_def);
+        self.stream_definition_map
+            .insert(stream_def.abstract_definition.id.clone(), stream_def);
     }
-    pub fn add_table_definition(&mut self, table_def: Arc<crate::query_api::definition::TableDefinition>) {
-        self.table_definition_map.insert(table_def.abstract_definition.id.clone(), table_def);
+    pub fn add_table_definition(
+        &mut self,
+        table_def: Arc<crate::query_api::definition::TableDefinition>,
+    ) {
+        self.table_definition_map
+            .insert(table_def.abstract_definition.id.clone(), table_def);
     }
-    pub fn add_window_definition(&mut self, window_def: Arc<crate::query_api::definition::WindowDefinition>) {
-        self.window_definition_map.insert(window_def.stream_definition.abstract_definition.id.clone(), window_def);
+    pub fn add_window_definition(
+        &mut self,
+        window_def: Arc<crate::query_api::definition::WindowDefinition>,
+    ) {
+        self.window_definition_map.insert(
+            window_def.stream_definition.abstract_definition.id.clone(),
+            window_def,
+        );
     }
-     pub fn add_aggregation_definition(&mut self, agg_def: Arc<crate::query_api::definition::AggregationDefinition>) {
-        self.aggregation_definition_map.insert(agg_def.abstract_definition.id.clone(), agg_def);
+    pub fn add_aggregation_definition(
+        &mut self,
+        agg_def: Arc<crate::query_api::definition::AggregationDefinition>,
+    ) {
+        self.aggregation_definition_map
+            .insert(agg_def.abstract_definition.id.clone(), agg_def);
     }
     // FunctionDefinition and TriggerDefinition are handled differently (often registered in context or directly creating runtimes)
 
@@ -73,13 +89,25 @@ impl SiddhiAppRuntimeBuilder {
     pub fn add_stream_junction(&mut self, stream_id: String, junction: Arc<Mutex<StreamJunction>>) {
         self.stream_junction_map.insert(stream_id, junction);
     }
-    pub fn add_table(&mut self, table_id: String, table_runtime: Arc<Mutex<TableRuntimePlaceholder>>) {
+    pub fn add_table(
+        &mut self,
+        table_id: String,
+        table_runtime: Arc<Mutex<TableRuntimePlaceholder>>,
+    ) {
         self.table_map.insert(table_id, table_runtime);
     }
-    pub fn add_window(&mut self, window_id: String, window_runtime: Arc<Mutex<crate::core::window::WindowRuntime>>) {
+    pub fn add_window(
+        &mut self,
+        window_id: String,
+        window_runtime: Arc<Mutex<crate::core::window::WindowRuntime>>,
+    ) {
         self.window_map.insert(window_id, window_runtime);
     }
-    pub fn add_aggregation_runtime(&mut self, agg_id: String, agg_runtime: Arc<Mutex<AggregationRuntime>>) {
+    pub fn add_aggregation_runtime(
+        &mut self,
+        agg_id: String,
+        agg_runtime: Arc<Mutex<AggregationRuntime>>,
+    ) {
         self.aggregation_map.insert(agg_id, agg_runtime);
     }
     pub fn add_query_runtime(&mut self, query_runtime: Arc<QueryRuntime>) {
@@ -92,7 +120,6 @@ impl SiddhiAppRuntimeBuilder {
         self.trigger_runtimes.push(trigger_runtime);
     }
 
-
     // build() method that consumes the builder and returns a SiddhiAppRuntime
     pub fn build(self, api_siddhi_app: Arc<ApiSiddhiApp>) -> Result<SiddhiAppRuntime, String> {
         // Create InputManager and populate it
@@ -101,10 +128,11 @@ impl SiddhiAppRuntimeBuilder {
             self.stream_junction_map.clone(),
         );
 
-        let scheduler = self
-            .siddhi_app_context
-            .get_scheduler()
-            .unwrap_or_else(|| Arc::new(crate::core::util::Scheduler::new(Arc::new(crate::core::util::ExecutorService::default()))));
+        let scheduler = self.siddhi_app_context.get_scheduler().unwrap_or_else(|| {
+            Arc::new(crate::core::util::Scheduler::new(Arc::new(
+                crate::core::util::ExecutorService::default(),
+            )))
+        });
 
         Ok(SiddhiAppRuntime {
             name: self.siddhi_app_context.name.clone(),

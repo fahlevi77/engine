@@ -1,5 +1,7 @@
 // siddhi_rust/src/core/event/state/populater/selective_state_event_populator.rs
-use super::{state_event_populator::StateEventPopulator, state_mapping_element::StateMappingElement};
+use super::{
+    state_event_populator::StateEventPopulator, state_mapping_element::StateMappingElement,
+};
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::state::state_event::StateEvent;
 

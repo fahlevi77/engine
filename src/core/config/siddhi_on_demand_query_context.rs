@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.core.config.SiddhiOnDemandQueryContext
-use std::sync::Arc;
 use super::siddhi_app_context::SiddhiAppContext;
-use super::siddhi_query_context::SiddhiQueryContext; // To compose/delegate
+use super::siddhi_query_context::SiddhiQueryContext;
+use std::sync::Arc; // To compose/delegate
 
 #[derive(Debug, Clone)]
 pub struct SiddhiOnDemandQueryContext {
@@ -14,7 +14,7 @@ impl SiddhiOnDemandQueryContext {
     pub fn new(
         siddhi_app_context: Arc<SiddhiAppContext>,
         query_name: String,
-        query_string: String
+        query_string: String,
     ) -> Self {
         // Java constructor: super(siddhiAppContext, queryName, null);
         // The 'null' is for partitionId, which SiddhiQueryContext::new handles.

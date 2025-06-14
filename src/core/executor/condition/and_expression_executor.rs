@@ -1,11 +1,11 @@
 // siddhi_rust/src/core/executor/condition/and_expression_executor.rs
 // Corresponds to io.siddhi.core.executor.condition.AndConditionExpressionExecutor
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
+use std::sync::Arc; // For SiddhiAppContext in clone_executor // For clone_executor
 
 #[derive(Debug)] // Cannot Clone/Default easily due to Box<dyn ExpressionExecutor>
 pub struct AndExpressionExecutor {
@@ -16,7 +16,10 @@ pub struct AndExpressionExecutor {
 }
 
 impl AndExpressionExecutor {
-    pub fn new(left: Box<dyn ExpressionExecutor>, right: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
+    pub fn new(
+        left: Box<dyn ExpressionExecutor>,
+        right: Box<dyn ExpressionExecutor>,
+    ) -> Result<Self, String> {
         // Java constructor checks if both return BOOL.
         if left.get_return_type() != ApiAttributeType::BOOL {
             return Err(format!(
@@ -30,7 +33,10 @@ impl AndExpressionExecutor {
                 right.get_return_type()
             ));
         }
-        Ok(Self { left_executor: left, right_executor: right })
+        Ok(Self {
+            left_executor: left,
+            right_executor: right,
+        })
     }
 }
 
@@ -39,7 +45,8 @@ impl ExpressionExecutor for AndExpressionExecutor {
         let left_val = self.left_executor.execute(event);
 
         match left_val {
-            Some(AttributeValue::Bool(true)) => { // Left is true, result depends on right
+            Some(AttributeValue::Bool(true)) => {
+                // Left is true, result depends on right
                 let right_val = self.right_executor.execute(event);
                 match right_val {
                     Some(AttributeValue::Bool(b)) => Some(AttributeValue::Bool(b)),
@@ -68,10 +75,16 @@ impl ExpressionExecutor for AndExpressionExecutor {
         ApiAttributeType::BOOL
     }
 
-    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-        Box::new(AndExpressionExecutor::new(
-            self.left_executor.clone_executor(siddhi_app_context),
-            self.right_executor.clone_executor(siddhi_app_context),
-        ).expect("Cloning AndExpressionExecutor failed")) // Assumes new won't fail if original was valid
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &Arc<SiddhiAppContext>,
+    ) -> Box<dyn ExpressionExecutor> {
+        Box::new(
+            AndExpressionExecutor::new(
+                self.left_executor.clone_executor(siddhi_app_context),
+                self.right_executor.clone_executor(siddhi_app_context),
+            )
+            .expect("Cloning AndExpressionExecutor failed"),
+        ) // Assumes new won't fail if original was valid
     }
 }

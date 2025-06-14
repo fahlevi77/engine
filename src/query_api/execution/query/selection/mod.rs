@@ -1,9 +1,9 @@
-pub mod output_attribute;
 pub mod order_by_attribute;
+pub mod output_attribute;
 pub mod selector;
 
+pub use self::order_by_attribute::{Order, OrderByAttribute}; // Order enum from order_by_attribute
 pub use self::output_attribute::OutputAttribute;
-pub use self::order_by_attribute::{OrderByAttribute, Order}; // Order enum from order_by_attribute
 pub use self::selector::Selector;
 
 // BasicSelector.java is not translated as a separate struct.

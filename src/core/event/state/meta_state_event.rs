@@ -8,13 +8,11 @@ use std::sync::Arc; // If definitions are shared
 // For now, assuming output data attributes can be represented by query_api::Attribute
 use crate::core::event::state::MetaStateEventAttribute;
 
-
 #[derive(Debug, Clone, Default)]
 pub struct MetaStateEvent {
     // MetaStreamEvent array, size initialized in constructor
     pub meta_stream_events: Vec<Option<MetaStreamEvent>>, // Java: MetaStreamEvent[]
     // streamEventCount is just meta_stream_events.len() or a count of Some() variants
-
     pub output_stream_definition: Option<Arc<StreamDefinition>>,
 
     // In Java, outputDataAttributes is `List<MetaStateEventAttribute>`.

@@ -1,9 +1,9 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.store.AggregationInputStore
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression;
-use super::store::Store; // The base Store
 use super::input_store::InputStoreTrait;
-use crate::query_api::aggregation::Within; // Using the actual Within struct
+use super::store::Store; // The base Store
+use crate::query_api::aggregation::Within;
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // Using the actual Within struct
 
 #[derive(Clone, Debug, PartialEq)] // Default not straightforward
 pub struct AggregationInputStore {
@@ -26,7 +26,7 @@ impl AggregationInputStore {
         store: Store,
         on_condition: Expression,
         within: Within,
-        per: Expression
+        per: Expression,
     ) -> Self {
         AggregationInputStore {
             siddhi_element: SiddhiElement::default(),
@@ -38,11 +38,7 @@ impl AggregationInputStore {
     }
 
     // Constructor for when there's no ON condition (onCondition is null in Java)
-    pub fn new_no_condition(
-        store: Store,
-        within: Within,
-        per: Expression
-    ) -> Self {
+    pub fn new_no_condition(store: Store, within: Within, per: Expression) -> Self {
         AggregationInputStore {
             siddhi_element: SiddhiElement::default(),
             store,

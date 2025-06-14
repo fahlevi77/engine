@@ -1,8 +1,8 @@
-use crate::core::table::{Table};
-use crate::core::event::value::AttributeValue;
 use crate::core::config::siddhi_context::SiddhiContext;
-use rusqlite::{Connection, params_from_iter};
+use crate::core::event::value::AttributeValue;
+use crate::core::table::Table;
 use rusqlite::types::{Value, ValueRef};
+use rusqlite::{params_from_iter, Connection};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -15,7 +15,11 @@ pub struct JdbcTable {
 }
 
 impl JdbcTable {
-    pub fn new(table_name: String, data_source_name: String, siddhi_context: Arc<SiddhiContext>) -> Result<Self, String> {
+    pub fn new(
+        table_name: String,
+        data_source_name: String,
+        siddhi_context: Arc<SiddhiContext>,
+    ) -> Result<Self, String> {
         let ds = siddhi_context
             .get_data_source(&data_source_name)
             .ok_or_else(|| format!("DataSource '{}' not found", data_source_name))?;
@@ -44,7 +48,7 @@ impl JdbcTable {
             AttributeValue::Long(l) => Value::Integer(*l),
             AttributeValue::Float(f) => Value::Real(*f as f64),
             AttributeValue::Double(d) => Value::Real(*d),
-            AttributeValue::Bool(b) => Value::Integer(if *b {1} else {0}),
+            AttributeValue::Bool(b) => Value::Integer(if *b { 1 } else { 0 }),
             AttributeValue::Null => Value::Null,
             AttributeValue::Object(_) => Value::Null,
         }
@@ -73,9 +77,18 @@ impl Table for JdbcTable {
     }
 
     fn update(&self, old_values: &[AttributeValue], new_values: &[AttributeValue]) -> bool {
-        let set_clause = (0..new_values.len()).map(|i| format!("c{}=?", i)).collect::<Vec<_>>().join(",");
-        let where_clause = (0..old_values.len()).map(|i| format!("c{}=?", i)).collect::<Vec<_>>().join(" AND ");
-        let sql = format!("UPDATE {} SET {} WHERE {}", self.table_name, set_clause, where_clause);
+        let set_clause = (0..new_values.len())
+            .map(|i| format!("c{}=?", i))
+            .collect::<Vec<_>>()
+            .join(",");
+        let where_clause = (0..old_values.len())
+            .map(|i| format!("c{}=?", i))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        let sql = format!(
+            "UPDATE {} SET {} WHERE {}",
+            self.table_name, set_clause, where_clause
+        );
         let mut params: Vec<Value> = new_values.iter().map(Self::av_to_val).collect();
         params.extend(old_values.iter().map(Self::av_to_val));
         let mut conn = self.conn.lock().unwrap();
@@ -84,7 +97,10 @@ impl Table for JdbcTable {
     }
 
     fn delete(&self, values: &[AttributeValue]) -> bool {
-        let where_clause = (0..values.len()).map(|i| format!("c{}=?", i)).collect::<Vec<_>>().join(" AND ");
+        let where_clause = (0..values.len())
+            .map(|i| format!("c{}=?", i))
+            .collect::<Vec<_>>()
+            .join(" AND ");
         let sql = format!("DELETE FROM {} WHERE {}", self.table_name, where_clause);
         let params: Vec<Value> = values.iter().map(Self::av_to_val).collect();
         let mut conn = self.conn.lock().unwrap();
@@ -93,8 +109,14 @@ impl Table for JdbcTable {
     }
 
     fn find(&self, values: &[AttributeValue]) -> Option<Vec<AttributeValue>> {
-        let where_clause = (0..values.len()).map(|i| format!("c{}=?", i)).collect::<Vec<_>>().join(" AND ");
-        let sql = format!("SELECT * FROM {} WHERE {} LIMIT 1", self.table_name, where_clause);
+        let where_clause = (0..values.len())
+            .map(|i| format!("c{}=?", i))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        let sql = format!(
+            "SELECT * FROM {} WHERE {} LIMIT 1",
+            self.table_name, where_clause
+        );
         let params: Vec<Value> = values.iter().map(Self::av_to_val).collect();
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(&sql).unwrap();
@@ -107,11 +129,14 @@ impl Table for JdbcTable {
     }
 
     fn clone_table(&self) -> Box<dyn Table> {
-        Box::new(JdbcTable::new(
-            self.table_name.clone(),
-            self.data_source_name.clone(),
-            Arc::clone(&self.siddhi_context),
-        ).unwrap())
+        Box::new(
+            JdbcTable::new(
+                self.table_name.clone(),
+                self.data_source_name.clone(),
+                Arc::clone(&self.siddhi_context),
+            )
+            .unwrap(),
+        )
     }
 }
 

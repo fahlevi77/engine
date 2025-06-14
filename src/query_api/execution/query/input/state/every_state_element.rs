@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.EveryStateElement
-use crate::query_api::siddhi_element::SiddhiElement;
-use super::state_element::StateElement; // Recursive definition
-// Expression is not used here as per Java structure. 'within' is on StateInputStream.
+use super::state_element::StateElement;
+use crate::query_api::siddhi_element::SiddhiElement; // Recursive definition
+                                                     // Expression is not used here as per Java structure. 'within' is on StateInputStream.
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct EveryStateElement {

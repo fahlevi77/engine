@@ -2,9 +2,9 @@
 // Simplified for initial ExpressionParser - focuses on a single input stream.
 // The full MetaStreamEvent in Java handles multiple input definitions, output defs, etc.
 use crate::query_api::definition::{
-    StreamDefinition as ApiStreamDefinition,
-    Attribute as ApiAttribute,
     attribute::Type as ApiAttributeType, // Import the Type enum
+    Attribute as ApiAttribute,
+    StreamDefinition as ApiStreamDefinition,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,8 @@ use std::sync::Arc;
 // This was defined in subtask 0015, turn 10.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum MetaStreamEventType {
-    #[default] DEFAULT,
+    #[default]
+    DEFAULT,
     TABLE,
     WINDOW,
     AGGREGATE,
@@ -44,9 +45,17 @@ impl MetaStreamEvent {
     pub fn new_for_single_input(input_stream_def: Arc<ApiStreamDefinition>) -> Self {
         let mut attribute_info = HashMap::new();
         // Assuming get_attribute_list() is available on ApiStreamDefinition (likely via AbstractDefinition)
-        for (index, api_attr) in input_stream_def.abstract_definition.attribute_list.iter().enumerate() {
+        for (index, api_attr) in input_stream_def
+            .abstract_definition
+            .attribute_list
+            .iter()
+            .enumerate()
+        {
             // Assuming get_name() and get_type() are available on ApiAttribute
-            attribute_info.insert(api_attr.name.clone(), (index, api_attr.attribute_type.clone()));
+            attribute_info.insert(
+                api_attr.name.clone(),
+                (index, api_attr.attribute_type.clone()),
+            );
         }
         Self {
             input_stream_definition: input_stream_def.clone(),
@@ -64,7 +73,8 @@ impl MetaStreamEvent {
 
     // Finds attribute info from the (single) input_stream_definition it holds.
     // Returns (index_in_data_array, attribute_type)
-    pub fn find_attribute_info(&self, attribute_name: &str) -> Option<&(usize, ApiAttributeType)> { // Use ApiAttributeType
+    pub fn find_attribute_info(&self, attribute_name: &str) -> Option<&(usize, ApiAttributeType)> {
+        // Use ApiAttributeType
         self.attribute_info.get(attribute_name)
     }
 
@@ -130,10 +140,14 @@ impl MetaStreamEvent {
     // different from the input (e.g., after projections).
     // For a simple VEE based on input, this specific list might not be directly used by VEE.execute(),
     // but could be used during VEE construction to determine its return type and index.
-    pub fn get_input_attribute_name_type_list(&self) -> Vec<(String, ApiAttributeType)> { // Use ApiAttributeType
-       self.input_stream_definition.abstract_definition.attribute_list.iter()
-           .map(|attr| (attr.name.clone(), attr.attribute_type.clone()))
-           .collect()
+    pub fn get_input_attribute_name_type_list(&self) -> Vec<(String, ApiAttributeType)> {
+        // Use ApiAttributeType
+        self.input_stream_definition
+            .abstract_definition
+            .attribute_list
+            .iter()
+            .map(|attr| (attr.name.clone(), attr.attribute_type.clone()))
+            .collect()
     }
 
     // TODO: Add other methods from Java MetaStreamEvent as needed for more complex parsing,

@@ -1,6 +1,6 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::expression::Variable; // Corrected path
+use crate::query_api::expression::Variable;
+use crate::query_api::siddhi_element::SiddhiElement; // Corrected path
 
 #[derive(Clone, Debug, PartialEq)] // Default is tricky due to Variable and Expression
 pub struct SetAttribute {

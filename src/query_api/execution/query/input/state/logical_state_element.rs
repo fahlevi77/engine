@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.LogicalStateElement
-use crate::query_api::siddhi_element::SiddhiElement;
 use super::state_element::StateElement;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Type {
@@ -10,7 +10,9 @@ pub enum Type {
 }
 
 impl Default for Type {
-    fn default() -> Self { Type::And } // Defaulting to AND
+    fn default() -> Self {
+        Type::And
+    } // Defaulting to AND
 }
 
 #[derive(Clone, Debug, PartialEq)] // Default is complex due to Box<StateElement>
@@ -24,20 +26,20 @@ pub struct LogicalStateElement {
 }
 
 impl LogicalStateElement {
-    pub fn new(
-        sse1: StateElement,
-        logical_type: Type,
-        sse2: StateElement,
-    ) -> Self {
+    pub fn new(sse1: StateElement, logical_type: Type, sse2: StateElement) -> Self {
         // Validation from previous step is good:
         // Ensure sse1 and sse2 are variants that represent a single effective stream.
         match sse1 {
-            StateElement::Stream(_) | StateElement::AbsentStream(_) => {},
-            _ => panic!("LogicalStateElement operand 1 must be a Stream or AbsentStream type StateElement"),
+            StateElement::Stream(_) | StateElement::AbsentStream(_) => {}
+            _ => panic!(
+                "LogicalStateElement operand 1 must be a Stream or AbsentStream type StateElement"
+            ),
         }
         match sse2 {
-            StateElement::Stream(_) | StateElement::AbsentStream(_) => {},
-            _ => panic!("LogicalStateElement operand 2 must be a Stream or AbsentStream type StateElement"),
+            StateElement::Stream(_) | StateElement::AbsentStream(_) => {}
+            _ => panic!(
+                "LogicalStateElement operand 2 must be a Stream or AbsentStream type StateElement"
+            ),
         }
 
         LogicalStateElement {

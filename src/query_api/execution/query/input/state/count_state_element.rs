@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.CountStateElement
-use crate::query_api::siddhi_element::SiddhiElement;
 use super::stream_state_element::StreamStateElement;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 // Constant for ANY count, from Java's CountStateElement.ANY = -1
 pub const ANY_COUNT: i32 = -1;

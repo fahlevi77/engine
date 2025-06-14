@@ -3,12 +3,12 @@
 pub mod aggregation_input_store;
 pub mod condition_input_store;
 pub mod input_store; // Interface, will be a trait or enum
-pub mod store;       // This is a BasicSingleInputStream that also implements InputStore
+pub mod store; // This is a BasicSingleInputStream that also implements InputStore
 
 // Re-export key types
-pub use self::input_store::InputStore; // This will be the main enum for different store input types
 pub use self::aggregation_input_store::AggregationInputStore;
 pub use self::condition_input_store::ConditionInputStore;
+pub use self::input_store::InputStore; // This will be the main enum for different store input types
 pub use self::store::Store; // The Store struct that acts as a specific InputStore type.
 
 // InputStore will likely be an enum:

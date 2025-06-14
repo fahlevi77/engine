@@ -1,19 +1,18 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.store.Store
 // Extends SingleInputStream (conceptually) and implements InputStore in Java.
 
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression;
-use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
-use crate::query_api::execution::query::input::handler::StreamHandler; // For new_with_id constructor
 use super::input_store::InputStoreTrait;
+use crate::query_api::execution::query::input::handler::StreamHandler; // For new_with_id constructor
+use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 // For on() methods returning these types, which are then wrapped in InputStore enum
 // These will need to be refactored to compose SiddhiElement as well.
-use super::condition_input_store::ConditionInputStore;
 use super::aggregation_input_store::AggregationInputStore;
+use super::condition_input_store::ConditionInputStore;
 
 // Using Within from query_api::aggregation
 use crate::query_api::aggregation::Within;
-
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Store {
@@ -41,14 +40,26 @@ impl Store {
             siddhi_element: SiddhiElement::default(),
             // BasicSingleInputStream::new functionality is now part of SingleInputStream::new_basic_from_id or similar.
             // Assuming a basic, non-fault, non-inner stream for a simple store definition.
-            single_input_stream: SingleInputStream::new_basic(store_id, false, false, None, Vec::new()),
+            single_input_stream: SingleInputStream::new_basic(
+                store_id,
+                false,
+                false,
+                None,
+                Vec::new(),
+            ),
         }
     }
 
     pub fn new_with_ref(store_reference_id: String, store_id: String) -> Self {
         Store {
             siddhi_element: SiddhiElement::default(),
-            single_input_stream: SingleInputStream::new_basic(store_id, false, false, Some(store_reference_id), Vec::new()),
+            single_input_stream: SingleInputStream::new_basic(
+                store_id,
+                false,
+                false,
+                Some(store_reference_id),
+                Vec::new(),
+            ),
         }
     }
 
@@ -67,16 +78,17 @@ impl Store {
     pub fn on_aggregation_condition(
         self,
         on_condition: Expression,
-        within: Within,  // Changed from WithinPlaceholder
-        per: Expression
+        within: Within, // Changed from WithinPlaceholder
+        per: Expression,
     ) -> AggregationInputStore {
-        AggregationInputStore::new_with_condition(self, on_condition, within, per)  // Assumes constructor exists
+        AggregationInputStore::new_with_condition(self, on_condition, within, per)
+        // Assumes constructor exists
     }
 
     pub fn on_aggregation_only(
         self,
         within: Within, // Changed from WithinPlaceholder
-        per: Expression
+        per: Expression,
     ) -> AggregationInputStore {
         AggregationInputStore::new_no_condition(self, within, per) // Assumes constructor exists
     }
@@ -107,7 +119,7 @@ impl InputStoreTrait for Store {
 
 // Delegate stream-like methods (filter, function, window, as) to SingleInputStream
 impl Store {
-     pub fn filter(mut self, filter_expression: Expression) -> Self {
+    pub fn filter(mut self, filter_expression: Expression) -> Self {
         self.single_input_stream = self.single_input_stream.filter(filter_expression); // Assuming SingleInputStream has filter
         self
     }

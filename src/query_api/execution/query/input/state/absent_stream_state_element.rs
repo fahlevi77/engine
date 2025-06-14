@@ -1,9 +1,8 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.AbsentStreamStateElement
-use crate::query_api::siddhi_element::SiddhiElement; // For direct composition if not delegating
-use crate::query_api::expression::constant::Constant as ExpressionConstant;
 use super::stream_state_element::StreamStateElement;
-use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
-
+use crate::query_api::execution::query::input::stream::SingleInputStream;
+use crate::query_api::expression::constant::Constant as ExpressionConstant;
+use crate::query_api::siddhi_element::SiddhiElement; // For direct composition if not delegating // Changed
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct AbsentStreamStateElement {
@@ -21,7 +20,11 @@ pub struct AbsentStreamStateElement {
 impl AbsentStreamStateElement {
     // Constructor takes SingleInputStream to create the inner StreamStateElement,
     // and the waiting_time.
-    pub fn new(single_input_stream: SingleInputStream, waiting_time: Option<ExpressionConstant>) -> Self { // Changed parameter type
+    pub fn new(
+        single_input_stream: SingleInputStream,
+        waiting_time: Option<ExpressionConstant>,
+    ) -> Self {
+        // Changed parameter type
         AbsentStreamStateElement {
             stream_state_element: StreamStateElement::new(single_input_stream), // Pass SingleInputStream
             waiting_time,
@@ -30,14 +33,18 @@ impl AbsentStreamStateElement {
 
     // Constructor that takes a pre-constructed StreamStateElement, as per prompt's general direction.
     // This is more flexible if StreamStateElement is already formed.
-    pub fn new_with_stream_state(stream_state_element: StreamStateElement, waiting_time: Option<ExpressionConstant>) -> Self {
+    pub fn new_with_stream_state(
+        stream_state_element: StreamStateElement,
+        waiting_time: Option<ExpressionConstant>,
+    ) -> Self {
         AbsentStreamStateElement {
             stream_state_element,
             waiting_time,
         }
     }
 
-    pub fn get_single_input_stream(&self) -> &SingleInputStream { // Changed method name and return type
+    pub fn get_single_input_stream(&self) -> &SingleInputStream {
+        // Changed method name and return type
         self.stream_state_element.get_single_input_stream()
     }
 

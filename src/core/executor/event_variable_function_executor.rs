@@ -1,12 +1,12 @@
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::state::state_event::StateEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::util::siddhi_constants::{STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN};
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 use std::sync::Arc;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::util::siddhi_constants::{STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN};
 
 #[derive(Debug, Clone)]
 pub struct EventVariableFunctionExecutor {

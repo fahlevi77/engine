@@ -15,7 +15,7 @@ pub enum AttributeValue {
     Double(f64),
     Bool(bool),
     Object(Option<Box<dyn Any + Send + Sync>>), // For OBJECT type, ensure thread safety
-    Null, // To represent null values explicitly
+    Null,                                       // To represent null values explicitly
 }
 
 // Manual implementation of Debug to handle Box<dyn Any>
@@ -36,23 +36,23 @@ impl fmt::Debug for AttributeValue {
 
 // Manual implementation of PartialEq
 impl PartialEq for AttributeValue {
-   fn eq(&self, other: &Self) -> bool {
-       match (self, other) {
-           (AttributeValue::String(a), AttributeValue::String(b)) => a == b,
-           (AttributeValue::Int(a), AttributeValue::Int(b)) => a == b,
-           (AttributeValue::Long(a), AttributeValue::Long(b)) => a == b,
-           (AttributeValue::Float(a), AttributeValue::Float(b)) => a == b, // Note: float comparison issues
-           (AttributeValue::Double(a), AttributeValue::Double(b)) => a == b, // Note: float comparison issues
-           (AttributeValue::Bool(a), AttributeValue::Bool(b)) => a == b,
-           (AttributeValue::Null, AttributeValue::Null) => true,
-           // Comparing Box<dyn Any> is problematic.
-           // Typically, objects are compared by reference or specific methods, not direct equality.
-           // For now, objects are not equal unless they are the same instance (which this comparison doesn't check)
-           // or if we had a way to downcast and compare known types.
-           (AttributeValue::Object(_), AttributeValue::Object(_)) => false,
-           _ => false, // Different enum variants
-       }
-   }
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AttributeValue::String(a), AttributeValue::String(b)) => a == b,
+            (AttributeValue::Int(a), AttributeValue::Int(b)) => a == b,
+            (AttributeValue::Long(a), AttributeValue::Long(b)) => a == b,
+            (AttributeValue::Float(a), AttributeValue::Float(b)) => a == b, // Note: float comparison issues
+            (AttributeValue::Double(a), AttributeValue::Double(b)) => a == b, // Note: float comparison issues
+            (AttributeValue::Bool(a), AttributeValue::Bool(b)) => a == b,
+            (AttributeValue::Null, AttributeValue::Null) => true,
+            // Comparing Box<dyn Any> is problematic.
+            // Typically, objects are compared by reference or specific methods, not direct equality.
+            // For now, objects are not equal unless they are the same instance (which this comparison doesn't check)
+            // or if we had a way to downcast and compare known types.
+            (AttributeValue::Object(_), AttributeValue::Object(_)) => false,
+            _ => false, // Different enum variants
+        }
+    }
 }
 
 impl Clone for AttributeValue {
@@ -71,7 +71,9 @@ impl Clone for AttributeValue {
 }
 
 impl Default for AttributeValue {
-   fn default() -> Self { AttributeValue::Null }
+    fn default() -> Self {
+        AttributeValue::Null
+    }
 }
 
 // Potential helper methods for AttributeValue:

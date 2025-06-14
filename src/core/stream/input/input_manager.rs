@@ -6,8 +6,8 @@ use super::input_entry_valve::InputEntryValve;
 use super::input_handler::{InputHandler, InputProcessor};
 use super::table_input_handler::TableInputHandler;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::stream::stream_junction::{Publisher, StreamJunction};
 use crate::core::util::thread_barrier::ThreadBarrier;
-use crate::core::stream::stream_junction::{StreamJunction, Publisher};
 
 #[derive(Debug)]
 pub struct InputManager {
@@ -25,13 +25,15 @@ impl InputManager {
         siddhi_app_context: Arc<SiddhiAppContext>,
         stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     ) -> Self {
-        let distributor: Arc<Mutex<InputDistributor>> = Arc::new(Mutex::new(InputDistributor::default()));
+        let distributor: Arc<Mutex<InputDistributor>> =
+            Arc::new(Mutex::new(InputDistributor::default()));
         let distributor_for_valve: Arc<Mutex<dyn InputProcessor>> = distributor.clone();
         let barrier = siddhi_app_context
             .get_thread_barrier()
             .unwrap_or_else(|| Arc::new(ThreadBarrier::new()));
-        let entry_valve: Arc<Mutex<dyn InputProcessor>> =
-            Arc::new(Mutex::new(InputEntryValve::new(barrier, distributor_for_valve)));
+        let entry_valve: Arc<Mutex<dyn InputProcessor>> = Arc::new(Mutex::new(
+            InputEntryValve::new(barrier, distributor_for_valve),
+        ));
         Self {
             siddhi_app_context,
             input_handlers: Mutex::new(HashMap::new()),
@@ -43,13 +45,19 @@ impl InputManager {
         }
     }
 
-    pub fn construct_input_handler(&self, stream_id: &str) -> Result<Arc<Mutex<InputHandler>>, String> {
+    pub fn construct_input_handler(
+        &self,
+        stream_id: &str,
+    ) -> Result<Arc<Mutex<InputHandler>>, String> {
         let junction = self
             .stream_junction_map
             .get(stream_id)
             .ok_or_else(|| format!("StreamJunction '{}' not found", stream_id))?
             .clone();
-        let publisher = junction.lock().map_err(|_| "junction mutex".to_string())?.construct_publisher();
+        let publisher = junction
+            .lock()
+            .map_err(|_| "junction mutex".to_string())?
+            .construct_publisher();
         self.input_distributor
             .lock()
             .map_err(|_| "distributor mutex".to_string())?
@@ -81,7 +89,10 @@ impl InputManager {
         self.construct_table_input_handler(table_id).ok()
     }
 
-    pub fn construct_table_input_handler(&self, table_id: &str) -> Result<TableInputHandler, String> {
+    pub fn construct_table_input_handler(
+        &self,
+        table_id: &str,
+    ) -> Result<TableInputHandler, String> {
         let table = self
             .siddhi_app_context
             .get_siddhi_context()

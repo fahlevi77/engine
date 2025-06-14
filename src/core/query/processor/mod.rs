@@ -2,20 +2,21 @@
 // This file now acts as the module root for the `processor` directory.
 // Its content is based on the old `processor.rs` file.
 
-use crate::core::event::complex_event::ComplexEvent;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::event::complex_event::ComplexEvent;
 // MetaStreamEvent and ApiAbstractDefinition were commented out, keep as is for now.
 // use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
 // use crate::query_api::definition::AbstractDefinition as ApiAbstractDefinition;
 // use crate::core::executor::expression_executor::ExpressionExecutor;
 
-use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ProcessingMode {
-    #[default] DEFAULT,
+    #[default]
+    DEFAULT,
     SLIDE,
     BATCH,
 }
@@ -45,7 +46,8 @@ pub trait Processor: Debug + Send + Sync {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>);
     fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>>;
     fn set_next_processor(&mut self, next_processor: Option<Arc<Mutex<dyn Processor>>>);
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor>;
+    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>)
+        -> Box<dyn Processor>;
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext>;
     fn get_processing_mode(&self) -> ProcessingMode;
     fn is_stateful(&self) -> bool;

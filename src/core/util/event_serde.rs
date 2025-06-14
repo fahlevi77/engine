@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
-use crate::core::event::{Event, value::AttributeValue};
+use crate::core::event::{value::AttributeValue, Event};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 enum AttrSer {

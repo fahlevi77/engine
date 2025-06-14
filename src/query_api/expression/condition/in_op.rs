@@ -1,9 +1,10 @@
 // Corresponds to io.siddhi.query.api.expression.condition.In
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
-pub struct InOp { // Renamed from In to InOp
+pub struct InOp {
+    // Renamed from In to InOp
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // In specific fields

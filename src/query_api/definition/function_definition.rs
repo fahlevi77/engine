@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.definition.FunctionDefinition
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::definition::attribute::Type as AttributeType;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct FunctionDefinition {
@@ -31,7 +31,8 @@ impl FunctionDefinition {
     // The Java API implies these are builder steps on a new object.
 
     // Static factories for builder pattern start
-    pub fn id(id: String) -> Self { // Starts the build with an ID
+    pub fn id(id: String) -> Self {
+        // Starts the build with an ID
         FunctionDefinition {
             id,
             ..Default::default() // Sets siddhi_element, language, body, return_type to default

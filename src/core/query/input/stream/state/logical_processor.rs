@@ -1,12 +1,14 @@
 use std::sync::{Arc, Mutex};
 
+use super::sequence_processor::SequenceSide;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
-use crate::core::event::stream::{stream_event::StreamEvent, stream_event_cloner::StreamEventCloner};
+use crate::core::event::stream::{
+    stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
+};
 use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use super::sequence_processor::SequenceSide;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LogicalType {
@@ -54,7 +56,9 @@ impl LogicalProcessor {
         second: Option<&StreamEvent>,
     ) -> StreamEvent {
         let mut event = StreamEvent::new(
-            second.map(|s| s.timestamp).unwrap_or_else(|| first.unwrap().timestamp),
+            second
+                .map(|s| s.timestamp)
+                .unwrap_or_else(|| first.unwrap().timestamp),
             self.first_attr_count + self.second_attr_count,
             0,
             0,
@@ -137,7 +141,10 @@ impl LogicalProcessor {
         }
     }
 
-    pub fn create_side_processor(self_arc: &Arc<Mutex<Self>>, side: SequenceSide) -> Arc<Mutex<LogicalProcessorSide>> {
+    pub fn create_side_processor(
+        self_arc: &Arc<Mutex<Self>>,
+        side: SequenceSide,
+    ) -> Arc<Mutex<LogicalProcessorSide>> {
         Arc::new(Mutex::new(LogicalProcessorSide {
             parent: Arc::clone(self_arc),
             side,
@@ -174,14 +181,21 @@ impl Processor for LogicalProcessorSide {
             Arc::clone(ctx),
         );
         let arc = Arc::new(Mutex::new(cloned));
-        Box::new(LogicalProcessorSide { parent: arc, side: self.side })
+        Box::new(LogicalProcessorSide {
+            parent: arc,
+            side: self.side,
+        })
     }
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         self.parent.lock().unwrap().meta.siddhi_app_context.clone()
     }
 
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
 
-    fn is_stateful(&self) -> bool { true }
+    fn is_stateful(&self) -> bool {
+        true
+    }
 }

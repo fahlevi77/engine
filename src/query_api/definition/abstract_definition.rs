@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.AbstractDefinition
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::attribute::Attribute;
-use crate::query_api::annotation::Annotation; // Assuming Annotation is defined as per previous steps
+use crate::query_api::siddhi_element::SiddhiElement; // Assuming Annotation is defined as per previous steps
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct AbstractDefinition {

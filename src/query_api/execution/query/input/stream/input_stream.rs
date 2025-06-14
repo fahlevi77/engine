@@ -2,21 +2,23 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 
 // Import specific stream types that will be variants of the InputStream enum
+use super::join_input_stream::{
+    EventTrigger as JoinEventTrigger, JoinInputStream, Type as JoinType,
+};
 use super::single_input_stream::SingleInputStream;
-use super::join_input_stream::{JoinInputStream, Type as JoinType, EventTrigger as JoinEventTrigger};
 use super::state_input_stream::{StateInputStream, Type as StateInputStreamType};
 // BasicSingleInputStream and AnonymousInputStream were removed and functionality moved into SingleInputStream.
 // Factory methods will now directly use SingleInputStream::new_basic... or SingleInputStream::new_anonymous...
 
 // For factory methods that need these:
+use crate::query_api::aggregation::Within;
 use crate::query_api::execution::query::input::state::StateElement;
-use crate::query_api::expression::Expression;
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
-use crate::query_api::aggregation::Within; // Actual Within struct
-
+use crate::query_api::expression::Expression; // Actual Within struct
 
 // Trait for common methods of InputStream (from Java's InputStream abstract class)
-pub trait InputStreamTrait { // Removed : SiddhiElement as SiddhiElement is directly implemented by the enum
+pub trait InputStreamTrait {
+    // Removed : SiddhiElement as SiddhiElement is directly implemented by the enum
     fn get_all_stream_ids(&self) -> Vec<String>;
     fn get_unique_stream_ids(&self) -> Vec<String>;
 }
@@ -55,7 +57,7 @@ impl InputStreamTrait for InputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {
         match self {
             InputStream::Single(s) => s.get_all_stream_ids(), // Assumes SingleInputStream impls InputStreamTrait
-            InputStream::Join(j) => j.get_all_stream_ids(),   // Assumes JoinInputStream impls InputStreamTrait
+            InputStream::Join(j) => j.get_all_stream_ids(), // Assumes JoinInputStream impls InputStreamTrait
             InputStream::State(st) => st.get_all_stream_ids(), // Assumes StateInputStream impls InputStreamTrait
         }
     }
@@ -76,7 +78,10 @@ impl InputStream {
         InputStream::Single(SingleInputStream::new_basic_from_id(stream_id))
     }
     pub fn stream_with_ref(stream_reference_id: String, stream_id: String) -> Self {
-        InputStream::Single(SingleInputStream::new_basic_from_ref_id(stream_reference_id, stream_id))
+        InputStream::Single(SingleInputStream::new_basic_from_ref_id(
+            stream_reference_id,
+            stream_id,
+        ))
     }
     pub fn inner_stream(stream_id: String) -> Self {
         InputStream::Single(SingleInputStream::new_basic_inner_from_id(stream_id))
@@ -96,7 +101,7 @@ impl InputStream {
         on_compare: Option<Expression>,
         trigger: Option<JoinEventTrigger>, // Made Option, Java defaults to ALL
         within: Option<Within>,
-        per: Option<Expression>
+        per: Option<Expression>,
     ) -> Self {
         InputStream::Join(Box::new(JoinInputStream::new(
             left_stream,
@@ -111,12 +116,24 @@ impl InputStream {
     // TODO: Add other overloaded JoinInputStream factories from Java
 
     // Pattern streams
-    pub fn pattern_stream(pattern_element: StateElement, within_time: Option<ExpressionConstant>) -> Self {
-        InputStream::State(Box::new(StateInputStream::pattern_stream(pattern_element, within_time)))
+    pub fn pattern_stream(
+        pattern_element: StateElement,
+        within_time: Option<ExpressionConstant>,
+    ) -> Self {
+        InputStream::State(Box::new(StateInputStream::pattern_stream(
+            pattern_element,
+            within_time,
+        )))
     }
 
     // Sequence streams
-    pub fn sequence_stream(sequence_element: StateElement, within_time: Option<ExpressionConstant>) -> Self {
-        InputStream::State(Box::new(StateInputStream::sequence_stream(sequence_element, within_time)))
+    pub fn sequence_stream(
+        sequence_element: StateElement,
+        within_time: Option<ExpressionConstant>,
+    ) -> Self {
+        InputStream::State(Box::new(StateInputStream::sequence_stream(
+            sequence_element,
+            within_time,
+        )))
     }
 }

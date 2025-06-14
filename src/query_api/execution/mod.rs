@@ -1,6 +1,6 @@
-pub mod query;
 pub mod execution_element;
 pub mod partition;
+pub mod query;
 
 // Re-export top-level executable units
 pub use self::execution_element::{ExecutionElement, ExecutionElementTrait}; // Assuming ExecutionElementTrait exists
@@ -10,7 +10,10 @@ pub use self::query::Query;
 pub use self::partition::Partition;
 
 // Re-export common partition types for convenience
-pub use self::partition::{PartitionType, PartitionTypeVariant, RangePartitionType, ValuePartitionType, RangePartitionProperty};
+pub use self::partition::{
+    PartitionType, PartitionTypeVariant, RangePartitionProperty, RangePartitionType,
+    ValuePartitionType,
+};
 
 // Re-export key sub-modules or types from query if they are frequently accessed via `execution::`
 pub use self::query::input;

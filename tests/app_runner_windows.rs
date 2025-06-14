@@ -29,12 +29,15 @@ fn length_window_basic() {
     runner.send("In", vec![AttributeValue::Int(2)]);
     runner.send("In", vec![AttributeValue::Int(3)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Int(1)],
-        vec![AttributeValue::Int(2)],
-        vec![AttributeValue::Int(1)],
-        vec![AttributeValue::Int(3)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(3)],
+        ]
+    );
 }
 
 #[test]

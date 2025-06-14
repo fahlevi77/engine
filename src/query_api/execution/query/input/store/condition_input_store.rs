@@ -1,8 +1,8 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.store.ConditionInputStore
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression;
+use super::input_store::InputStoreTrait;
 use super::store::Store; // The Store struct (wrapper around BasicSingleInputStream)
-use super::input_store::InputStoreTrait; // To implement get_store_id etc.
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // To implement get_store_id etc.
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward due to Store and Expression
 pub struct ConditionInputStore {

@@ -35,4 +35,3 @@ pub use crate::query_api::constants::*;
 /// expected a type named `SiddhiConstants` in this module.  New code should
 /// directly use the constants above.
 pub struct SiddhiConstants;
-

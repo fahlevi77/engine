@@ -1,5 +1,5 @@
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
 use siddhi_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
+use siddhi_rust::core::event::stream::stream_event::StreamEvent;
 use siddhi_rust::core::event::value::AttributeValue;
 
 #[test]
@@ -18,8 +18,12 @@ fn test_clone_event_chain() {
             if let Some(c2) = n.as_any().downcast_ref::<StreamEvent>() {
                 assert_eq!(c2.before_window_data[0], AttributeValue::Int(20));
                 assert!(c2.get_next().is_none());
-            } else { panic!("second not stream event") }
-        } else { panic!("no next") }
+            } else {
+                panic!("second not stream event")
+            }
+        } else {
+            panic!("no next")
+        }
     } else {
         panic!("first not stream event");
     }

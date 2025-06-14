@@ -37,7 +37,9 @@ impl Duration {
 }
 
 impl Default for Duration {
-    fn default() -> Self { Duration::Seconds }
+    fn default() -> Self {
+        Duration::Seconds
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
@@ -47,7 +49,9 @@ pub enum Operator {
 }
 
 impl Default for Operator {
-    fn default() -> Self { Operator::Interval } // Or Range, depending on common usage
+    fn default() -> Self {
+        Operator::Interval
+    } // Or Range, depending on common usage
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]

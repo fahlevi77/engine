@@ -1,9 +1,10 @@
 // Corresponds to io.siddhi.query.api.expression.math.Mod
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression; // Main Expression enum
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // Main Expression enum
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
-pub struct ModOp { // Renamed from Mod to ModOp
+pub struct ModOp {
+    // Renamed from Mod to ModOp
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     pub left_value: Box<Expression>,

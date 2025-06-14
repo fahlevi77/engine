@@ -1,8 +1,8 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use super::on_demand_query::{OnDemandQuery, OnDemandQueryType}; // Import Rust OnDemandQuery
+use super::OutputStream;
 use crate::query_api::execution::query::input::InputStore;
 use crate::query_api::execution::query::selection::Selector;
-use super::{OutputStream};
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum StoreQueryType {
@@ -15,12 +15,13 @@ pub enum StoreQueryType {
 }
 
 impl Default for StoreQueryType {
-    fn default() -> Self { StoreQueryType::Select } // Defaulting to Select/Find
+    fn default() -> Self {
+        StoreQueryType::Select
+    } // Defaulting to Select/Find
 }
 
 // Removed: impl From<java_sys::StoreQueryType> for StoreQueryType { ... }
 // Removed: mod java_sys { ... }
-
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom via new()
 pub struct StoreQuery {
@@ -46,16 +47,17 @@ impl StoreQuery {
 
     // getType and setType methods from Java's StoreQuery
     pub fn get_type(&self) -> Option<StoreQueryType> {
-        self.on_demand_query.on_demand_query_type.as_ref().map(|odt| {
-            match odt {
+        self.on_demand_query
+            .on_demand_query_type
+            .as_ref()
+            .map(|odt| match odt {
                 OnDemandQueryType::Insert => StoreQueryType::Insert,
                 OnDemandQueryType::Delete => StoreQueryType::Delete,
                 OnDemandQueryType::Update => StoreQueryType::Update,
                 OnDemandQueryType::Select => StoreQueryType::Select,
                 OnDemandQueryType::UpdateOrInsert => StoreQueryType::UpdateOrInsert,
                 OnDemandQueryType::Find => StoreQueryType::Find,
-            }
-        })
+            })
     }
 
     pub fn set_type(mut self, store_query_type: StoreQueryType) -> Self {

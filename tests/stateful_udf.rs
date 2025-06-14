@@ -1,19 +1,19 @@
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
 use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::query_api::expression::Expression;
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
 use siddhi_rust::query_api::definition::attribute::Type as ApiAttributeType;
+use siddhi_rust::query_api::expression::Expression;
+use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::any::Any;
 use std::sync::Mutex;
 
+use siddhi_rust::core::event::complex_event::ComplexEvent;
 use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
 use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
-use siddhi_rust::core::event::complex_event::ComplexEvent;
 
 #[derive(Debug)]
 struct StatefulCountFunction {
@@ -22,7 +22,9 @@ struct StatefulCountFunction {
 
 impl StatefulCountFunction {
     fn new() -> Self {
-        StatefulCountFunction { state: Box::new(Mutex::new(0)) }
+        StatefulCountFunction {
+            state: Box::new(Mutex::new(0)),
+        }
     }
 
     fn counter(&self) -> &Mutex<i32> {
@@ -84,7 +86,11 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
         String::new(),
     ));
 
-    let query_ctx = Arc::new(SiddhiQueryContext::new(Arc::clone(&app_ctx), "q".to_string(), None));
+    let query_ctx = Arc::new(SiddhiQueryContext::new(
+        Arc::clone(&app_ctx),
+        "q".to_string(),
+        None,
+    ));
 
     ExpressionParserContext {
         siddhi_app_context: app_ctx,

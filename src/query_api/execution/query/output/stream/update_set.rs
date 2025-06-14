@@ -1,7 +1,7 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use super::set_attribute::SetAttribute;
-use crate::query_api::expression::Variable;
 use crate::query_api::expression::Expression;
+use crate::query_api::expression::Variable;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct UpdateSet {
@@ -19,7 +19,8 @@ impl UpdateSet {
 
     // Corresponds to Java's `set(Variable tableVariable, Expression assignmentExpression)`
     pub fn add_set_attribute(mut self, table_column: Variable, value_to_set: Expression) -> Self {
-        self.set_attributes.push(SetAttribute::new(table_column, value_to_set));
+        self.set_attributes
+            .push(SetAttribute::new(table_column, value_to_set));
         self
     }
 

@@ -1,31 +1,31 @@
 // siddhi_rust/src/core/util/parser/query_parser.rs
-use crate::query_api::{
-    execution::query::Query as ApiQuery,
-    execution::query::input::InputStream as ApiInputStream,
-    definition::StreamDefinition as ApiStreamDefinition,
-    definition::Attribute as ApiAttribute, // For constructing output attributes
-    // Import other query_api parts as needed (Selector, OutputAttribute, OutputStream)
-    execution::query::selection::OutputAttribute as ApiOutputAttribute,
-    execution::query::output::OutputStream as ApiOutputStream,
-    execution::query::output::OutputEventType as ApiOutputEventType,
-    expression::Expression as ApiExpression, // Added this import
-};
+use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
-use crate::core::stream::stream_junction::StreamJunction;
-use crate::core::query::query_runtime::QueryRuntime;
-use crate::core::query::processor::Processor; // Trait
+use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
+use crate::core::query::input::stream::state::{SequenceProcessor, SequenceSide, SequenceType};
+use crate::core::query::output::insert_into_aggregation_processor::InsertIntoAggregationProcessor;
+use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
 use crate::core::query::processor::stream::filter::FilterProcessor;
 use crate::core::query::processor::stream::window::create_window_processor;
-use crate::core::query::selector::select_processor::SelectProcessor;
+use crate::core::query::processor::Processor; // Trait
+use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
+use crate::core::query::selector::select_processor::SelectProcessor;
 use crate::core::query::selector::{GroupByKeyGenerator, OrderByEventComparator};
-use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
-use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide};
-use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
-use crate::core::query::output::insert_into_aggregation_processor::InsertIntoAggregationProcessor;
-use super::expression_parser::{parse_expression, ExpressionParserContext};
-use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
+use crate::core::stream::stream_junction::StreamJunction;
+use crate::query_api::{
+    definition::Attribute as ApiAttribute, // For constructing output attributes
+    definition::StreamDefinition as ApiStreamDefinition,
+    execution::query::input::InputStream as ApiInputStream,
+    execution::query::output::OutputEventType as ApiOutputEventType,
+    execution::query::output::OutputStream as ApiOutputStream,
+    // Import other query_api parts as needed (Selector, OutputAttribute, OutputStream)
+    execution::query::selection::OutputAttribute as ApiOutputAttribute,
+    execution::query::Query as ApiQuery,
+    expression::Expression as ApiExpression, // Added this import
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 // use rand; // For generating random names, if not using query name from annotation
@@ -40,23 +40,25 @@ impl QueryParser {
         table_def_map: &HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
         aggregation_map: &HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
     ) -> Result<QueryRuntime, String> {
-
         // 1. Determine Query Name (from @info(name='foo') or generate)
-        let query_name = api_query.annotations.iter()
+        let query_name = api_query
+            .annotations
+            .iter()
             .find(|ann| ann.name == "info")
             .and_then(|ann| ann.elements.iter().find(|el| el.key == "name"))
             .map(|el| el.value.clone())
             .unwrap_or_else(|| format!("query_{}", uuid::Uuid::new_v4().hyphenated()));
 
-
         let siddhi_query_context = Arc::new(SiddhiQueryContext::new(
             Arc::clone(siddhi_app_context),
             query_name.clone(),
-            None // partition_id, assuming not in a partition for now
+            None, // partition_id, assuming not in a partition for now
         ));
 
         // 2. Identify input stream & get its junction
-        let input_stream_api = api_query.input_stream.as_ref()
+        let input_stream_api = api_query
+            .input_stream
+            .as_ref()
             .ok_or_else(|| format!("Query '{}' has no input stream defined.", query_name))?;
 
         let mut processor_chain_head: Option<Arc<Mutex<dyn Processor>>> = None;
@@ -68,7 +70,10 @@ impl QueryParser {
                 processor_chain_head = Some(new_processor_arc.clone());
             }
             if let Some(ref last_p_arc) = last_processor_in_chain {
-                last_p_arc.lock().expect("Processor Mutex poisoned").set_next_processor(Some(new_processor_arc.clone()));
+                last_p_arc
+                    .lock()
+                    .expect("Processor Mutex poisoned")
+                    .set_next_processor(Some(new_processor_arc.clone()));
             }
             last_processor_in_chain = Some(new_processor_arc);
         };
@@ -77,16 +82,29 @@ impl QueryParser {
         let expr_parser_context: ExpressionParserContext = match input_stream_api {
             ApiInputStream::Single(single_in_stream) => {
                 let input_stream_id = single_in_stream.get_stream_id_str().to_string();
-                let input_junction = stream_junction_map.get(&input_stream_id)
-                    .ok_or_else(|| format!("Input stream '{}' not found for query '{}'", input_stream_id, query_name))?
+                let input_junction = stream_junction_map
+                    .get(&input_stream_id)
+                    .ok_or_else(|| {
+                        format!(
+                            "Input stream '{}' not found for query '{}'",
+                            input_stream_id, query_name
+                        )
+                    })?
                     .clone();
-                let input_stream_def_from_junction = input_junction.lock().expect("Input junction Mutex poisoned").get_stream_definition();
-                let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(input_stream_def_from_junction));
+                let input_stream_def_from_junction = input_junction
+                    .lock()
+                    .expect("Input junction Mutex poisoned")
+                    .get_stream_definition();
+                let meta_input_event = Arc::new(MetaStreamEvent::new_for_single_input(
+                    input_stream_def_from_junction,
+                ));
                 let mut stream_meta_map = HashMap::new();
                 stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
                 let mut table_meta_map = HashMap::new();
                 for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let stream_def = Arc::new(ApiStreamDefinition {
+                        abstract_definition: table_def.abstract_definition.clone(),
+                    });
                     let meta = MetaStreamEvent::new_for_single_input(stream_def);
                     table_meta_map.insert(table_id.clone(), Arc::new(meta));
                 }
@@ -128,10 +146,22 @@ impl QueryParser {
             }
             ApiInputStream::Join(join_stream) => {
                 use crate::query_api::execution::query::input::stream::join_input_stream::JoinInputStream as ApiJoin;
-                let left_id = join_stream.left_input_stream.get_stream_id_str().to_string();
-                let right_id = join_stream.right_input_stream.get_stream_id_str().to_string();
-                let left_junction = stream_junction_map.get(&left_id).ok_or_else(|| format!("Input stream '{}' not found", left_id))?.clone();
-                let right_junction = stream_junction_map.get(&right_id).ok_or_else(|| format!("Input stream '{}' not found", right_id))?.clone();
+                let left_id = join_stream
+                    .left_input_stream
+                    .get_stream_id_str()
+                    .to_string();
+                let right_id = join_stream
+                    .right_input_stream
+                    .get_stream_id_str()
+                    .to_string();
+                let left_junction = stream_junction_map
+                    .get(&left_id)
+                    .ok_or_else(|| format!("Input stream '{}' not found", left_id))?
+                    .clone();
+                let right_junction = stream_junction_map
+                    .get(&right_id)
+                    .ok_or_else(|| format!("Input stream '{}' not found", right_id))?
+                    .clone();
 
                 let left_def = left_junction.lock().unwrap().get_stream_definition();
                 let right_def = right_junction.lock().unwrap().get_stream_definition();
@@ -148,23 +178,30 @@ impl QueryParser {
 
                 let mut table_meta_map = HashMap::new();
                 for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let stream_def = Arc::new(ApiStreamDefinition {
+                        abstract_definition: table_def.abstract_definition.clone(),
+                    });
                     let meta = MetaStreamEvent::new_for_single_input(stream_def);
                     table_meta_map.insert(table_id.clone(), Arc::new(meta));
                 }
 
                 let cond_exec = if let Some(expr) = &join_stream.on_compare {
-                    Some(parse_expression(expr, &ExpressionParserContext {
-                        siddhi_app_context: Arc::clone(siddhi_app_context),
-                        siddhi_query_context: Arc::clone(&siddhi_query_context),
-                        stream_meta_map: stream_meta_map.clone(),
-                        table_meta_map: table_meta_map.clone(),
-                        window_meta_map: HashMap::new(),
-                        state_meta_map: HashMap::new(),
-                        default_source: left_id.clone(),
-                        query_name: &query_name,
-                    })?)
-                } else { None };
+                    Some(parse_expression(
+                        expr,
+                        &ExpressionParserContext {
+                            siddhi_app_context: Arc::clone(siddhi_app_context),
+                            siddhi_query_context: Arc::clone(&siddhi_query_context),
+                            stream_meta_map: stream_meta_map.clone(),
+                            table_meta_map: table_meta_map.clone(),
+                            window_meta_map: HashMap::new(),
+                            state_meta_map: HashMap::new(),
+                            default_source: left_id.clone(),
+                            query_name: &query_name,
+                        },
+                    )?)
+                } else {
+                    None
+                };
 
                 let join_proc = Arc::new(Mutex::new(JoinProcessor::new(
                     join_stream.join_type,
@@ -202,11 +239,13 @@ impl QueryParser {
                 ctx
             }
             ApiInputStream::State(state_stream) => {
-                use crate::query_api::execution::query::input::state::state_element::StateElement;
+                use crate::core::query::input::stream::state::{
+                    LogicalProcessor, LogicalType, SequenceProcessor, SequenceSide, SequenceType,
+                };
                 use crate::query_api::execution::query::input::state::logical_state_element::Type as ApiLogicalType;
-                use crate::core::query::input::stream::state::{SequenceProcessor, SequenceType, SequenceSide, LogicalProcessor, LogicalType};
+                use crate::query_api::execution::query::input::state::state_element::StateElement;
 
-                fn extract_stream_state<'a>(se: &'a StateElement) -> Option<&'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement> {
+                fn extract_stream_state<'a>(se: &'a StateElement) -> Option<&'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement>{
                     match se {
                         StateElement::Stream(s) => Some(s),
                         StateElement::Every(ev) => extract_stream_state(&ev.state_element),
@@ -215,16 +254,35 @@ impl QueryParser {
                 }
 
                 enum StateRuntimeKind {
-                    Sequence { first_id: String, second_id: String, seq_type: SequenceType },
-                    Logical { first_id: String, second_id: String, logical_type: LogicalType },
+                    Sequence {
+                        first_id: String,
+                        second_id: String,
+                        seq_type: SequenceType,
+                    },
+                    Logical {
+                        first_id: String,
+                        second_id: String,
+                        logical_type: LogicalType,
+                    },
                 }
 
                 let runtime_kind = match state_stream.state_element.as_ref() {
                     StateElement::Next(next_elem) => {
-                        let s1 = extract_stream_state(&next_elem.state_element).ok_or_else(||
-                            format!("Query '{}': Unsupported Next pattern structure", query_name))?;
-                        let s2 = extract_stream_state(&next_elem.next_state_element).ok_or_else(||
-                            format!("Query '{}': Unsupported Next pattern structure", query_name))?;
+                        let s1 =
+                            extract_stream_state(&next_elem.state_element).ok_or_else(|| {
+                                format!(
+                                    "Query '{}': Unsupported Next pattern structure",
+                                    query_name
+                                )
+                            })?;
+                        let s2 = extract_stream_state(&next_elem.next_state_element).ok_or_else(
+                            || {
+                                format!(
+                                    "Query '{}': Unsupported Next pattern structure",
+                                    query_name
+                                )
+                            },
+                        )?;
                         let seq_type = match state_stream.state_type {
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
@@ -236,10 +294,20 @@ impl QueryParser {
                         }
                     }
                     StateElement::Logical(log_elem) => {
-                        let s1 = extract_stream_state(&log_elem.stream_state_element_1).ok_or_else(||
-                            format!("Query '{}': Unsupported Logical pattern structure", query_name))?;
-                        let s2 = extract_stream_state(&log_elem.stream_state_element_2).ok_or_else(||
-                            format!("Query '{}': Unsupported Logical pattern structure", query_name))?;
+                        let s1 = extract_stream_state(&log_elem.stream_state_element_1)
+                            .ok_or_else(|| {
+                                format!(
+                                    "Query '{}': Unsupported Logical pattern structure",
+                                    query_name
+                                )
+                            })?;
+                        let s2 = extract_stream_state(&log_elem.stream_state_element_2)
+                            .ok_or_else(|| {
+                                format!(
+                                    "Query '{}': Unsupported Logical pattern structure",
+                                    query_name
+                                )
+                            })?;
                         let logical_type = match log_elem.logical_type {
                             ApiLogicalType::And => LogicalType::And,
                             ApiLogicalType::Or => LogicalType::Or,
@@ -255,16 +323,32 @@ impl QueryParser {
                     }
                 };
 
-                let (first_junction, second_junction, first_len, second_len, mut stream_meta_map, first_id_clone, second_id_clone) = {
+                let (
+                    first_junction,
+                    second_junction,
+                    first_len,
+                    second_len,
+                    mut stream_meta_map,
+                    first_id_clone,
+                    second_id_clone,
+                ) = {
                     let fid_str = match &runtime_kind {
-                        StateRuntimeKind::Sequence{first_id, ..} | StateRuntimeKind::Logical{first_id, ..} => first_id
+                        StateRuntimeKind::Sequence { first_id, .. }
+                        | StateRuntimeKind::Logical { first_id, .. } => first_id,
                     };
                     let sid_str = match &runtime_kind {
-                        StateRuntimeKind::Sequence{second_id, ..} | StateRuntimeKind::Logical{second_id, ..} => second_id
+                        StateRuntimeKind::Sequence { second_id, .. }
+                        | StateRuntimeKind::Logical { second_id, .. } => second_id,
                     };
 
-                    let first_junction = stream_junction_map.get(fid_str).ok_or_else(|| format!("Input stream '{}' not found", fid_str))?.clone();
-                    let second_junction = stream_junction_map.get(sid_str).ok_or_else(|| format!("Input stream '{}' not found", sid_str))?.clone();
+                    let first_junction = stream_junction_map
+                        .get(fid_str)
+                        .ok_or_else(|| format!("Input stream '{}' not found", fid_str))?
+                        .clone();
+                    let second_junction = stream_junction_map
+                        .get(sid_str)
+                        .ok_or_else(|| format!("Input stream '{}' not found", sid_str))?
+                        .clone();
 
                     let first_def = first_junction.lock().unwrap().get_stream_definition();
                     let second_def = second_junction.lock().unwrap().get_stream_definition();
@@ -277,18 +361,32 @@ impl QueryParser {
                     let mut stream_meta_map = HashMap::new();
                     stream_meta_map.insert(fid_str.clone(), Arc::new(first_meta));
                     stream_meta_map.insert(sid_str.clone(), Arc::new(second_meta));
-                    (first_junction, second_junction, first_len, second_len, stream_meta_map, fid_str.clone(), sid_str.clone())
+                    (
+                        first_junction,
+                        second_junction,
+                        first_len,
+                        second_len,
+                        stream_meta_map,
+                        fid_str.clone(),
+                        sid_str.clone(),
+                    )
                 };
 
                 let mut table_meta_map = HashMap::new();
                 for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition { abstract_definition: table_def.abstract_definition.clone() });
+                    let stream_def = Arc::new(ApiStreamDefinition {
+                        abstract_definition: table_def.abstract_definition.clone(),
+                    });
                     let meta = MetaStreamEvent::new_for_single_input(stream_def);
                     table_meta_map.insert(table_id.clone(), Arc::new(meta));
                 }
 
                 match runtime_kind {
-                    StateRuntimeKind::Sequence { first_id: fid, second_id: sid, seq_type } => {
+                    StateRuntimeKind::Sequence {
+                        first_id: fid,
+                        second_id: sid,
+                        seq_type,
+                    } => {
                         let seq_proc = Arc::new(Mutex::new(SequenceProcessor::new(
                             seq_type,
                             first_len,
@@ -296,11 +394,20 @@ impl QueryParser {
                             Arc::clone(siddhi_app_context),
                             Arc::clone(&siddhi_query_context),
                         )));
-                        let first_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::First);
-                        let second_side = SequenceProcessor::create_side_processor(&seq_proc, SequenceSide::Second);
+                        let first_side = SequenceProcessor::create_side_processor(
+                            &seq_proc,
+                            SequenceSide::First,
+                        );
+                        let second_side = SequenceProcessor::create_side_processor(
+                            &seq_proc,
+                            SequenceSide::Second,
+                        );
 
                         first_junction.lock().unwrap().subscribe(first_side.clone());
-                        second_junction.lock().unwrap().subscribe(second_side.clone());
+                        second_junction
+                            .lock()
+                            .unwrap()
+                            .subscribe(second_side.clone());
 
                         link_processor(first_side.clone());
 
@@ -315,7 +422,11 @@ impl QueryParser {
                             query_name: &query_name,
                         }
                     }
-                    StateRuntimeKind::Logical { first_id: fid, second_id: sid, logical_type } => {
+                    StateRuntimeKind::Logical {
+                        first_id: fid,
+                        second_id: sid,
+                        logical_type,
+                    } => {
                         let log_proc = Arc::new(Mutex::new(LogicalProcessor::new(
                             logical_type,
                             first_len,
@@ -323,11 +434,18 @@ impl QueryParser {
                             Arc::clone(siddhi_app_context),
                             Arc::clone(&siddhi_query_context),
                         )));
-                        let first_side = LogicalProcessor::create_side_processor(&log_proc, SequenceSide::First);
-                        let second_side = LogicalProcessor::create_side_processor(&log_proc, SequenceSide::Second);
+                        let first_side =
+                            LogicalProcessor::create_side_processor(&log_proc, SequenceSide::First);
+                        let second_side = LogicalProcessor::create_side_processor(
+                            &log_proc,
+                            SequenceSide::Second,
+                        );
 
                         first_junction.lock().unwrap().subscribe(first_side.clone());
-                        second_junction.lock().unwrap().subscribe(second_side.clone());
+                        second_junction
+                            .lock()
+                            .unwrap()
+                            .subscribe(second_side.clone());
 
                         link_processor(first_side.clone());
 
@@ -347,7 +465,10 @@ impl QueryParser {
                 // unreachable
             }
             _ => {
-                return Err(format!("Query '{}': Unsupported input stream type", query_name));
+                return Err(format!(
+                    "Query '{}': Unsupported input stream type",
+                    query_name
+                ));
             }
         };
 
@@ -376,20 +497,28 @@ impl QueryParser {
         }
 
         // Determine the ID for the stream produced by this SelectProcessor
-        let output_stream_id_from_query = api_query.output_stream.get_target_id() // output_stream is not Option
-            .ok_or_else(|| format!("Query '{}' must have a target output stream for INSERT INTO", query_name))?;
+        let output_stream_id_from_query = api_query
+            .output_stream
+            .get_target_id() // output_stream is not Option
+            .ok_or_else(|| {
+                format!(
+                    "Query '{}' must have a target output stream for INSERT INTO",
+                    query_name
+                )
+            })?;
 
-        let mut temp_def = ApiStreamDefinition::new(
-            format!("_internal_{}_select_output", query_name)
-        );
+        let mut temp_def =
+            ApiStreamDefinition::new(format!("_internal_{}_select_output", query_name));
         for attr in output_attributes_for_def {
             temp_def.abstract_definition.attribute_list.push(attr);
         }
         let select_output_stream_def = Arc::new(temp_def);
 
         let having_executor = if let Some(expr) = &api_selector.having_expression {
-            Some(parse_expression(expr, &expr_parser_context)? )
-        } else { None };
+            Some(parse_expression(expr, &expr_parser_context)?)
+        } else {
+            None
+        };
 
         let mut group_execs = Vec::new();
         for var in &api_selector.group_by_list {
@@ -514,7 +643,10 @@ impl QueryParser {
         // 8. Register the entry processor with the input stream junction if applicable
         if let Some(head_proc_arc) = &query_runtime.processor_chain_head {
             if let Some(junction) = stream_junction_map.get(&expr_parser_context.default_source) {
-                junction.lock().expect("Input junction Mutex poisoned").subscribe(Arc::clone(head_proc_arc));
+                junction
+                    .lock()
+                    .expect("Input junction Mutex poisoned")
+                    .subscribe(Arc::clone(head_proc_arc));
             }
         }
 

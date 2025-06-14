@@ -1,10 +1,9 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.stream.JoinInputStream
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression;
-use super::single_input_stream::SingleInputStream;
 use super::input_stream::InputStreamTrait;
-use crate::query_api::aggregation::Within; // Using the actual Within struct
-
+use super::single_input_stream::SingleInputStream;
+use crate::query_api::aggregation::Within;
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // Using the actual Within struct
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Type {
@@ -16,7 +15,9 @@ pub enum Type {
 }
 
 impl Default for Type {
-    fn default() -> Self { Type::Join }
+    fn default() -> Self {
+        Type::Join
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
@@ -27,7 +28,9 @@ pub enum EventTrigger {
 }
 
 impl Default for EventTrigger {
-    fn default() -> Self { EventTrigger::All }
+    fn default() -> Self {
+        EventTrigger::All
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
@@ -82,7 +85,6 @@ impl Default for JoinInputStream {
         }
     }
 }
-
 
 impl InputStreamTrait for JoinInputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

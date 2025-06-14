@@ -1,5 +1,5 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Variable;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum Order {
@@ -8,9 +8,10 @@ pub enum Order {
 }
 
 impl Default for Order {
-    fn default() -> Self { Order::Asc }
+    fn default() -> Self {
+        Order::Asc
+    }
 }
-
 
 #[derive(Clone, Debug, PartialEq)] // Default requires Variable to be Default
 pub struct OrderByAttribute {

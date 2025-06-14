@@ -1,12 +1,11 @@
 // Corresponds to io.siddhi.query.api.definition.AggregationDefinition
-use crate::query_api::definition::abstract_definition::AbstractDefinition;
 use crate::query_api::annotation::Annotation;
+use crate::query_api::definition::abstract_definition::AbstractDefinition;
 // BasicSingleInputStream was merged into SingleInputStream; AggregationDefinition should use SingleInputStream.
+use crate::query_api::aggregation::TimePeriod;
 use crate::query_api::execution::query::input::stream::SingleInputStream;
 use crate::query_api::execution::query::selection::Selector;
-use crate::query_api::expression::Variable;
-use crate::query_api::aggregation::TimePeriod; // Using actual TimePeriod
-
+use crate::query_api::expression::Variable; // Using actual TimePeriod
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct AggregationDefinition {
@@ -17,9 +16,9 @@ pub struct AggregationDefinition {
     pub basic_single_input_stream: Option<SingleInputStream>, // Changed from BasicSingleInputStream
     pub selector: Option<Selector>, // In Java, it's Selector, not BasicSelector for the field type
     pub aggregate_attribute: Option<Variable>, // This is 'aggregateBy' in Java
-    pub time_period: Option<TimePeriod>,     // This is 'every' in Java
+    pub time_period: Option<TimePeriod>, // This is 'every' in Java
 
-    // annotations are in AbstractDefinition
+                                    // annotations are in AbstractDefinition
 }
 
 impl AggregationDefinition {
@@ -40,7 +39,8 @@ impl AggregationDefinition {
     }
 
     // Builder-style methods from Java
-    pub fn from(mut self, stream: SingleInputStream) -> Self { // Changed from BasicSingleInputStream
+    pub fn from(mut self, stream: SingleInputStream) -> Self {
+        // Changed from BasicSingleInputStream
         self.basic_single_input_stream = Some(stream);
         self
     }

@@ -122,8 +122,7 @@ mod tests {
 
     #[test]
     fn test_variable_of_stream() {
-        let var = Variable::new("attr2".to_string())
-            .of_stream("StockStream".to_string());
+        let var = Variable::new("attr2".to_string()).of_stream("StockStream".to_string());
         assert_eq!(var.get_attribute_name(), "attr2");
         assert_eq!(var.get_stream_id().unwrap(), "StockStream");
         assert!(!var.is_inner_stream());
@@ -141,16 +140,15 @@ mod tests {
 
     #[test]
     fn test_variable_of_function() {
-        let var = Variable::new("countVal".to_string())
-            .of_function("countEvents".to_string());
+        let var = Variable::new("countVal".to_string()).of_function("countEvents".to_string());
         assert_eq!(var.get_attribute_name(), "countVal");
         assert_eq!(var.get_function_id().unwrap(), "countEvents");
     }
 
     #[test]
     fn test_variable_of_function_with_index() {
-        let var = Variable::new("val".to_string())
-            .of_function_with_index("customFunc".to_string(), 0);
+        let var =
+            Variable::new("val".to_string()).of_function_with_index("customFunc".to_string(), 0);
         assert_eq!(var.get_attribute_name(), "val");
         assert_eq!(var.get_function_id().unwrap(), "customFunc");
         assert_eq!(var.get_function_index(), Some(0));

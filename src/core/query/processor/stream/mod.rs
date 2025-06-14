@@ -1,13 +1,13 @@
 // siddhi_rust/src/core/query/processor/stream/mod.rs
 pub mod filter;
-pub mod window; // Window processors like length, time
 pub mod join;
-// pub mod single; // If SingleStreamProcessor becomes a struct/module later
-// pub mod function; // For stream function processors
+pub mod window; // Window processors like length, time
+                // pub mod single; // If SingleStreamProcessor becomes a struct/module later
+                // pub mod function; // For stream function processors
 
 pub use self::filter::FilterProcessor;
-pub use self::window::{LengthWindowProcessor, TimeWindowProcessor};
 pub use self::join::{JoinProcessor, JoinProcessorSide, JoinSide};
+pub use self::window::{LengthWindowProcessor, TimeWindowProcessor};
 // Other StreamProcessor types would be re-exported here.
 
 // AbstractStreamProcessor.java and StreamProcessor.java (interface-like abstract class) from Java

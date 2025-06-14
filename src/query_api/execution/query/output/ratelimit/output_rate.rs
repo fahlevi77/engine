@@ -1,9 +1,8 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use super::events_output_rate::EventsOutputRate;
-use super::time_output_rate::TimeOutputRate;
 use super::snapshot_output_rate::SnapshotOutputRate;
-use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue}; // Use renamed ConstantValue
-
+use super::time_output_rate::TimeOutputRate;
+use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
+use crate::query_api::siddhi_element::SiddhiElement; // Use renamed ConstantValue
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum OutputRateBehavior {
@@ -13,7 +12,9 @@ pub enum OutputRateBehavior {
 }
 
 impl Default for OutputRateBehavior {
-    fn default() -> Self { OutputRateBehavior::All }
+    fn default() -> Self {
+        OutputRateBehavior::All
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -32,7 +33,8 @@ impl Default for OutputRateVariant {
         // which could be represented by EventsOutputRate(count=some_very_high_number or special_value, OutputRateBehavior::All)
         // Or, if OutputRate itself is Option in Query, None implies no rate limiting.
         // For a concrete default here, let's pick "every event".
-        OutputRateVariant::Events(EventsOutputRate::new(1), OutputRateBehavior::All) // Default: output every 1 event
+        OutputRateVariant::Events(EventsOutputRate::new(1), OutputRateBehavior::All)
+        // Default: output every 1 event
     }
 }
 
@@ -52,29 +54,56 @@ impl OutputRate {
     }
 
     // Factory methods based on Java static methods in OutputRate.java
-    pub fn per_events(events_constant: Constant, behavior: OutputRateBehavior) -> Result<Self, String> {
+    pub fn per_events(
+        events_constant: Constant,
+        behavior: OutputRateBehavior,
+    ) -> Result<Self, String> {
         let event_count = match events_constant.value {
             ConstantValue::Long(val) => val as i32,
             ConstantValue::Int(val) => val,
-            _ => return Err("Unsupported constant type for events count, expected Int or Long.".to_string()),
+            _ => {
+                return Err(
+                    "Unsupported constant type for events count, expected Int or Long.".to_string(),
+                )
+            }
         };
-        Ok(Self::new(OutputRateVariant::Events(EventsOutputRate::new(event_count), behavior)))
+        Ok(Self::new(OutputRateVariant::Events(
+            EventsOutputRate::new(event_count),
+            behavior,
+        )))
     }
 
-    pub fn per_time_period(time_constant: Constant, behavior: OutputRateBehavior) -> Result<Self, String> {
+    pub fn per_time_period(
+        time_constant: Constant,
+        behavior: OutputRateBehavior,
+    ) -> Result<Self, String> {
         let time_millis = match time_constant.value {
             ConstantValue::Time(ms) | ConstantValue::Long(ms) => ms,
-            _ => return Err("Unsupported constant type for time period, expected Time or Long.".to_string()),
+            _ => {
+                return Err(
+                    "Unsupported constant type for time period, expected Time or Long.".to_string(),
+                )
+            }
         };
-        Ok(Self::new(OutputRateVariant::Time(TimeOutputRate::new(time_millis), behavior)))
+        Ok(Self::new(OutputRateVariant::Time(
+            TimeOutputRate::new(time_millis),
+            behavior,
+        )))
     }
 
     pub fn per_snapshot(time_constant: Constant) -> Result<Self, String> {
         let time_millis = match time_constant.value {
             ConstantValue::Time(ms) | ConstantValue::Long(ms) => ms,
-            _ => return Err("Unsupported constant type for snapshot period, expected Time or Long.".to_string()),
+            _ => {
+                return Err(
+                    "Unsupported constant type for snapshot period, expected Time or Long."
+                        .to_string(),
+                )
+            }
         };
-        Ok(Self::new(OutputRateVariant::Snapshot(SnapshotOutputRate::new(time_millis))))
+        Ok(Self::new(OutputRateVariant::Snapshot(
+            SnapshotOutputRate::new(time_millis),
+        )))
     }
 
     pub fn is_snapshot(&self) -> bool {

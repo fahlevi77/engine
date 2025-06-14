@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.handler.StreamHandler
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 // Import specific handler types
 use super::filter::Filter;
@@ -8,7 +8,8 @@ use super::stream_function::StreamFunction;
 use super::window::Window as WindowHandler; // Renamed to avoid conflict
 
 // Trait for common methods from Java's StreamHandler interface
-pub trait StreamHandlerTrait { // Removed : SiddhiElement as SiddhiElement is directly implemented by the enum
+pub trait StreamHandlerTrait {
+    // Removed : SiddhiElement as SiddhiElement is directly implemented by the enum
     fn get_parameters_as_option_vec(&self) -> Option<Vec<&Expression>>; // Renamed for clarity
 }
 

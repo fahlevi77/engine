@@ -4,17 +4,17 @@ pub mod siddhi_compiler;
 // Re-export specific public functions from siddhi_compiler.rs module
 pub use self::siddhi_compiler::{
     parse,
-    parse_stream_definition,
-    parse_table_definition,
-    parse_window_definition,
     parse_aggregation_definition,
+    parse_expression,
+    parse_function_definition,
+    parse_on_demand_query,
     parse_partition,
     parse_query,
-    parse_function_definition,
-    parse_time_constant,
-    parse_on_demand_query,
     parse_store_query,
-    parse_expression,
+    parse_stream_definition,
+    parse_table_definition,
+    parse_time_constant,
+    parse_window_definition,
     update_variables, // if this is also intended to be part of the public API
 };
 

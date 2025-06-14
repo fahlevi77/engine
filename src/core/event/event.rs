@@ -1,7 +1,7 @@
 // siddhi_rust/src/core/event/event.rs
 // Corresponds to io.siddhi.core.event.Event
-use super::value::AttributeValue;
 use super::complex_event::{ComplexEvent, ComplexEventType};
+use super::value::AttributeValue;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // Global atomic counter for generating unique event IDs.
@@ -13,18 +13,19 @@ static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 /// Represents a single data event in Siddhi with a timestamp and data payload.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Event {
-    pub id: u64, // Unique ID, added as per prompt
-    pub timestamp: i64, // Java default -1
+    pub id: u64,                   // Unique ID, added as per prompt
+    pub timestamp: i64,            // Java default -1
     pub data: Vec<AttributeValue>, // Java Object[] data
-    pub is_expired: bool, // Java default false
-    // Java Event also has 'expiryTime', which is not standard in the base Event but used in ComplexEvent/StreamEvent.
-    // For now, aligning with the basic Event.java fields + ID.
+    pub is_expired: bool,          // Java default false
+                                   // Java Event also has 'expiryTime', which is not standard in the base Event but used in ComplexEvent/StreamEvent.
+                                   // For now, aligning with the basic Event.java fields + ID.
 }
 
 impl Event {
     // Constructor matching Event(long timestamp, Object[] data)
     // Data is passed directly.
-    pub fn new_with_data(timestamp: i64, data: Vec<AttributeValue>) -> Self { // Corrected: fn new_with_data
+    pub fn new_with_data(timestamp: i64, data: Vec<AttributeValue>) -> Self {
+        // Corrected: fn new_with_data
         Event {
             id: NEXT_EVENT_ID.fetch_add(1, Ordering::Relaxed), // Relaxed ordering sufficient for unique ID
             timestamp,
@@ -86,7 +87,11 @@ impl Event {
             self.data[i] = value;
             Ok(())
         } else {
-            Err(format!("Index {} out of bounds for event data with len {}", i, self.data.len()))
+            Err(format!(
+                "Index {} out of bounds for event data with len {}",
+                i,
+                self.data.len()
+            ))
         }
     }
 

@@ -16,10 +16,13 @@ fn sequence_basic() {
     runner.send("AStream", vec![AttributeValue::Int(3)]);
     runner.send("BStream", vec![AttributeValue::Int(4)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Int(1), AttributeValue::Int(2)],
-        vec![AttributeValue::Int(3), AttributeValue::Int(4)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1), AttributeValue::Int(2)],
+            vec![AttributeValue::Int(3), AttributeValue::Int(4)],
+        ]
+    );
 }
 
 #[test]
@@ -36,8 +39,11 @@ fn every_sequence() {
     runner.send("A", vec![AttributeValue::Int(4)]);
     runner.send("B", vec![AttributeValue::Int(5)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![
-        vec![AttributeValue::Int(1), AttributeValue::Int(2)],
-        vec![AttributeValue::Int(4), AttributeValue::Int(3)],
-    ]);
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1), AttributeValue::Int(2)],
+            vec![AttributeValue::Int(4), AttributeValue::Int(3)],
+        ]
+    );
 }

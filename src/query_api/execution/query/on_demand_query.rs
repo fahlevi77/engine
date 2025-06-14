@@ -1,15 +1,14 @@
 use crate::query_api::siddhi_element::SiddhiElement;
 // Annotation is not used here as Java OnDemandQuery doesn't have annotations field.
 // use crate::query_api::annotation::Annotation;
-use crate::query_api::execution::query::selection::Selector;
-use super::{OutputStream, OutputEventType}; // Use parent module's re-exports
+use super::{OutputEventType, OutputStream}; // Use parent module's re-exports
 use crate::query_api::execution::query::input::InputStore;
-use crate::query_api::expression::Expression;
 use crate::query_api::execution::query::output::output_stream::{
-    OutputStreamAction, DeleteStreamAction, UpdateStreamAction, UpdateOrInsertStreamAction,
+    DeleteStreamAction, OutputStreamAction, UpdateOrInsertStreamAction, UpdateStreamAction,
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
-
+use crate::query_api::execution::query::selection::Selector;
+use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 pub enum OnDemandQueryType {
@@ -22,7 +21,9 @@ pub enum OnDemandQueryType {
 }
 
 impl Default for OnDemandQueryType {
-    fn default() -> Self { OnDemandQueryType::Select } // Defaulting to Select/Find
+    fn default() -> Self {
+        OnDemandQueryType::Select
+    } // Defaulting to Select/Find
 }
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom via new()
@@ -66,7 +67,8 @@ impl OnDemandQuery {
     pub fn out_stream(mut self, output_stream: OutputStream) -> Self {
         self.output_stream = output_stream;
         if self.output_stream.get_output_event_type().is_none() {
-             self.output_stream.set_output_event_type_if_none(OutputEventType::CurrentEvents);
+            self.output_stream
+                .set_output_event_type_if_none(OutputEventType::CurrentEvents);
         }
         self
     }
@@ -76,27 +78,68 @@ impl OnDemandQuery {
         self
     }
 
-    pub fn delete_by(mut self, output_table_id: String, on_deleting_expression: Expression) -> Self {
-        let action = DeleteStreamAction { target_id: output_table_id, on_delete_expression: on_deleting_expression };
-        self.output_stream = OutputStream::new(OutputStreamAction::Delete(action), Some(OutputEventType::CurrentEvents));
+    pub fn delete_by(
+        mut self,
+        output_table_id: String,
+        on_deleting_expression: Expression,
+    ) -> Self {
+        let action = DeleteStreamAction {
+            target_id: output_table_id,
+            on_delete_expression: on_deleting_expression,
+        };
+        self.output_stream = OutputStream::new(
+            OutputStreamAction::Delete(action),
+            Some(OutputEventType::CurrentEvents),
+        );
         self
     }
 
     pub fn update_by(mut self, output_table_id: String, on_update_expression: Expression) -> Self {
-        let action = UpdateStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: None };
-        self.output_stream = OutputStream::new(OutputStreamAction::Update(action), Some(OutputEventType::CurrentEvents));
+        let action = UpdateStreamAction {
+            target_id: output_table_id,
+            on_update_expression,
+            update_set_clause: None,
+        };
+        self.output_stream = OutputStream::new(
+            OutputStreamAction::Update(action),
+            Some(OutputEventType::CurrentEvents),
+        );
         self
     }
 
-    pub fn update_by_with_set(mut self, output_table_id: String, update_set_attributes: UpdateSet, on_update_expression: Expression) -> Self {
-        let action = UpdateStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: Some(update_set_attributes) };
-        self.output_stream = OutputStream::new(OutputStreamAction::Update(action), Some(OutputEventType::CurrentEvents));
+    pub fn update_by_with_set(
+        mut self,
+        output_table_id: String,
+        update_set_attributes: UpdateSet,
+        on_update_expression: Expression,
+    ) -> Self {
+        let action = UpdateStreamAction {
+            target_id: output_table_id,
+            on_update_expression,
+            update_set_clause: Some(update_set_attributes),
+        };
+        self.output_stream = OutputStream::new(
+            OutputStreamAction::Update(action),
+            Some(OutputEventType::CurrentEvents),
+        );
         self
     }
 
-    pub fn update_or_insert_by(mut self, output_table_id: String, update_set_attributes: UpdateSet, on_update_expression: Expression) -> Self {
-        let action = UpdateOrInsertStreamAction { target_id: output_table_id, on_update_expression, update_set_clause: Some(update_set_attributes) };
-        self.output_stream = OutputStream::new(OutputStreamAction::UpdateOrInsert(action), Some(OutputEventType::CurrentEvents));
+    pub fn update_or_insert_by(
+        mut self,
+        output_table_id: String,
+        update_set_attributes: UpdateSet,
+        on_update_expression: Expression,
+    ) -> Self {
+        let action = UpdateOrInsertStreamAction {
+            target_id: output_table_id,
+            on_update_expression,
+            update_set_clause: Some(update_set_attributes),
+        };
+        self.output_stream = OutputStream::new(
+            OutputStreamAction::UpdateOrInsert(action),
+            Some(OutputEventType::CurrentEvents),
+        );
         self
     }
 

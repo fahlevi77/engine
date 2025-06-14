@@ -10,7 +10,7 @@ pub struct WindowDefinition {
 
     // Fields specific to WindowDefinition
     pub window_handler: Option<WindowHandler>, // Renamed from 'window' or 'window_placeholder'
-    pub output_event_type: OutputEventType, // Replaced placeholder, Java default is ALL_EVENTS
+    pub output_event_type: OutputEventType,    // Replaced placeholder, Java default is ALL_EVENTS
 }
 
 impl WindowDefinition {
@@ -36,8 +36,8 @@ impl WindowDefinition {
     // Builder method to set output event type (fluent style)
     // Java uses `setOutputEventType`, this makes it builder style.
     pub fn output_event_type(mut self, event_type: OutputEventType) -> Self {
-       self.output_event_type = event_type;
-       self
+        self.output_event_type = event_type;
+        self
     }
 }
 
@@ -45,7 +45,6 @@ impl WindowDefinition {
 // If StreamDefinition requires an ID, WindowDefinition cannot have a simple Default.
 // Let's assume for now that an ID-less StreamDefinition is not typical for a Default.
 // impl Default for WindowDefinition { ... }
-
 
 // Provide access to StreamDefinition, AbstractDefinition, and SiddhiElement fields
 use crate::query_api::definition::abstract_definition::AbstractDefinition;

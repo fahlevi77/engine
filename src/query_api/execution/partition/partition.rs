@@ -1,14 +1,13 @@
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::annotation::Annotation; // Using actual Annotation
 use super::partition_type::PartitionType;
+use crate::query_api::annotation::Annotation; // Using actual Annotation
 use crate::query_api::execution::query::Query; // Actual Query
+use crate::query_api::siddhi_element::SiddhiElement;
 use std::collections::HashMap;
 
 // For builder methods:
-use crate::query_api::expression::Expression;
 use super::range_partition_type::{RangePartitionProperty, RangePartitionType};
 use super::value_partition_type::ValuePartitionType;
-
+use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Partition {
@@ -49,22 +48,28 @@ impl Partition {
     pub fn with_value_partition(mut self, stream_id: String, expression: Expression) -> Self {
         let value_partition = ValuePartitionType::new(stream_id.clone(), expression);
         // TODO: Add checkDuplicateDefinition logic from Java's addPartitionType if necessary
-        self.partition_type_map.insert(stream_id, PartitionType::new_value(value_partition));
+        self.partition_type_map
+            .insert(stream_id, PartitionType::new_value(value_partition));
         self
     }
 
     // Builder method `with(String streamId, RangePartitionProperty... rangePartitionProperties)`
-    pub fn with_range_partition(mut self, stream_id: String, range_props: Vec<RangePartitionProperty>) -> Self {
+    pub fn with_range_partition(
+        mut self,
+        stream_id: String,
+        range_props: Vec<RangePartitionProperty>,
+    ) -> Self {
         let range_partition = RangePartitionType::new(stream_id.clone(), range_props);
         // TODO: Add checkDuplicateDefinition logic
-        self.partition_type_map.insert(stream_id, PartitionType::new_range(range_partition));
+        self.partition_type_map
+            .insert(stream_id, PartitionType::new_range(range_partition));
         self
     }
 
     // Builder method `with(PartitionType partitionType)`
     pub fn with_partition_type(mut self, partition_type: PartitionType) -> Self {
         let stream_id = partition_type.get_stream_id().to_string();
-         // TODO: Add checkDuplicateDefinition logic
+        // TODO: Add checkDuplicateDefinition logic
         self.partition_type_map.insert(stream_id, partition_type);
         self
     }

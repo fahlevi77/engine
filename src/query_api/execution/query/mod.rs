@@ -1,30 +1,30 @@
 // In siddhi_rust/src/query_api/execution/query/mod.rs
 
 // Existing modules
-pub mod query;
 pub mod input;
-pub mod selection;
 pub mod on_demand_query;
+pub mod query;
+pub mod selection;
 pub mod store_query;
 
 // Ensure output module is declared
 pub mod output;
 
 // Re-exports
-pub use self::query::Query;
 pub use self::on_demand_query::{OnDemandQuery, OnDemandQueryType};
+pub use self::query::Query;
 pub use self::store_query::{StoreQuery, StoreQueryType};
 
 pub use self::input::InputStream;
-pub use self::selection::Selector;
-pub use self::selection::OutputAttribute;
-pub use self::selection::OrderByAttribute;
 pub use self::selection::Order as OrderByOrder;
+pub use self::selection::OrderByAttribute;
+pub use self::selection::OutputAttribute;
+pub use self::selection::Selector;
 
 // Re-exports for the output types, using the actual names from their defining modules
-pub use self::output::OutputStream;
 pub use self::output::OutputEventType;
 pub use self::output::OutputRate;
+pub use self::output::OutputStream;
 pub use self::output::SetAttribute; // Changed from SetAttributePlaceholder
 
 // The aliases ActualOutputStream etc. are no longer needed if the output/mod.rs directly exports OutputStream.

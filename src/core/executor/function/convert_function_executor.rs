@@ -1,9 +1,9 @@
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::attribute_converter::get_property_value;
+use crate::query_api::definition::attribute::Type as ApiAttributeType;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -33,7 +33,10 @@ impl ConvertFunctionExecutor {
             "bool" | "boolean" => ApiAttributeType::BOOL,
             _ => return Err(format!("Unsupported convert target type: {}", type_val)),
         };
-        Ok(Self { value_executor, target_type })
+        Ok(Self {
+            value_executor,
+            target_type,
+        })
     }
 }
 

@@ -2,12 +2,12 @@ use crate::core::event::value::AttributeValue;
 use std::sync::RwLock;
 
 mod jdbc_table;
-pub use jdbc_table::JdbcTable;
-use std::fmt::Debug;
-use std::collections::HashMap;
 use crate::core::config::siddhi_context::SiddhiContext;
-use std::sync::Arc;
 use crate::core::extension::TableFactory;
+pub use jdbc_table::JdbcTable;
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Trait representing a table that can store rows of `AttributeValue`s.
 pub trait Table: Debug + Send + Sync {
@@ -46,7 +46,9 @@ pub struct InMemoryTable {
 
 impl InMemoryTable {
     pub fn new() -> Self {
-        Self { rows: RwLock::new(Vec::new()) }
+        Self {
+            rows: RwLock::new(Vec::new()),
+        }
     }
 
     pub fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
@@ -93,7 +95,9 @@ impl Table for InMemoryTable {
 
     fn clone_table(&self) -> Box<dyn Table> {
         let rows = self.rows.read().unwrap().clone();
-        Box::new(InMemoryTable { rows: RwLock::new(rows) })
+        Box::new(InMemoryTable {
+            rows: RwLock::new(rows),
+        })
     }
 }
 

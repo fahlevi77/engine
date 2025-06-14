@@ -1,12 +1,12 @@
 // siddhi_rust/src/core/stream/output/stream_callback.rs
 // Corresponds to io.siddhi.core.stream.output.StreamCallback
-use crate::core::event::event::Event; // Using our core Event struct
-use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::config::siddhi_app_context::SiddhiAppContext; // For setContext
+use crate::core::event::complex_event::ComplexEvent; // Trait
+use crate::core::event::event::Event; // Using our core Event struct
 use crate::query_api::definition::AbstractDefinition as AbstractDefinitionApi; // From query_api
-use std::sync::Arc;
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::collections::HashMap; // For toMap method
+use std::sync::Arc; // For toMap method
 
 use crate::core::stream::stream_junction::Receiver as StreamJunctionReceiver; // Import the Receiver trait
 
@@ -27,10 +27,12 @@ pub trait StreamCallback: StreamJunctionReceiver + Debug + Send + Sync {
     // fn set_stream_definition_cb(&mut self, def: Arc<AbstractDefinitionApi>);
     // fn set_siddhi_app_context_cb(&mut self, context: Arc<SiddhiAppContext>);
 
-
     // Default implementations for methods from StreamJunction.Receiver,
     // which then call the primary receive_events method.
-    fn default_receive_complex_event_chunk(&self, complex_event_chunk: &mut Option<Box<dyn ComplexEvent>>) {
+    fn default_receive_complex_event_chunk(
+        &self,
+        complex_event_chunk: &mut Option<Box<dyn ComplexEvent>>,
+    ) {
         let mut event_buffer = Vec::new();
         let mut current_opt = complex_event_chunk.take(); // Take ownership of the head
         while let Some(mut current_complex_event) = current_opt {
@@ -58,28 +60,46 @@ pub trait StreamCallback: StreamJunctionReceiver + Debug + Send + Sync {
         self.receive_events(&events);
     }
 
-    fn default_receive_timestamp_data(&self, timestamp: i64, data: Vec<crate::core::event::value::AttributeValue>) {
+    fn default_receive_timestamp_data(
+        &self,
+        timestamp: i64,
+        data: Vec<crate::core::event::value::AttributeValue>,
+    ) {
         self.receive_events(&[Event::new_with_data(timestamp, data)]);
     }
 
-    fn default_receive_event_array(&self, events: &[Event]) { // Changed from Vec to slice
+    fn default_receive_event_array(&self, events: &[Event]) {
+        // Changed from Vec to slice
         self.receive_events(events);
     }
 
-    fn to_map(&self, event: &Event, definition: &AbstractDefinitionApi) -> Option<HashMap<String, Option<crate::core::event::value::AttributeValue>>> {
+    fn to_map(
+        &self,
+        event: &Event,
+        definition: &AbstractDefinitionApi,
+    ) -> Option<HashMap<String, Option<crate::core::event::value::AttributeValue>>> {
         let mut map = HashMap::new();
         let attrs = &definition.attribute_list;
         if attrs.len() != event.data.len() {
             return None;
         }
-        map.insert("_timestamp".to_string(), Some(crate::core::event::value::AttributeValue::Long(event.timestamp)));
+        map.insert(
+            "_timestamp".to_string(),
+            Some(crate::core::event::value::AttributeValue::Long(
+                event.timestamp,
+            )),
+        );
         for (attr, value) in attrs.iter().zip(event.data.iter()) {
             map.insert(attr.name.clone(), Some(value.clone()));
         }
         Some(map)
     }
 
-    fn to_map_array(&self, events: &[Event], definition: &AbstractDefinitionApi) -> Option<Vec<HashMap<String, Option<crate::core::event::value::AttributeValue>>>> {
+    fn to_map_array(
+        &self,
+        events: &[Event],
+        definition: &AbstractDefinitionApi,
+    ) -> Option<Vec<HashMap<String, Option<crate::core::event::value::AttributeValue>>>> {
         let mut vec = Vec::new();
         for e in events {
             if let Some(m) = self.to_map(e, definition) {
@@ -89,14 +109,15 @@ pub trait StreamCallback: StreamJunctionReceiver + Debug + Send + Sync {
         Some(vec)
     }
 
-
     // Default provided methods from Java StreamCallback (if any beyond Receiver impl)
     // e.g., toMap - this requires streamDefinition to be accessible.
     // If StreamCallback structs store their StreamDefinition:
     // fn to_map(&self, event: &Event) -> Option<HashMap<String, Option<Box<dyn std::any::Any>>>> { ... }
 
-    fn start_processing(&self) { /* Default no-op */ }
-    fn stop_processing(&self) { /* Default no-op */ }
+    fn start_processing(&self) { /* Default no-op */
+    }
+    fn stop_processing(&self) { /* Default no-op */
+    }
 }
 
 // Implementing StreamJunctionReceiver for anything that implements StreamCallback

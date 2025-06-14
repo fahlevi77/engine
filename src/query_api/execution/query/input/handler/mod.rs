@@ -3,7 +3,7 @@
 pub mod filter;
 pub mod stream_function;
 pub mod stream_handler; // Interface, will be a trait or enum
-pub mod window;         // Renamed to window_handler internally if needed to avoid conflict
+pub mod window; // Renamed to window_handler internally if needed to avoid conflict
 
 // Re-export key types
 pub use self::filter::Filter;

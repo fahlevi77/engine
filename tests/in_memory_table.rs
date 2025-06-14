@@ -1,5 +1,5 @@
-use siddhi_rust::core::table::{InMemoryTable, Table};
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::table::{InMemoryTable, Table};
 
 #[test]
 fn test_insert_and_contains() {

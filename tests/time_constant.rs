@@ -1,5 +1,5 @@
-use siddhi_rust::query_compiler::parse_time_constant;
 use siddhi_rust::query_api::expression::constant::TimeUtil;
+use siddhi_rust::query_compiler::parse_time_constant;
 
 #[test]
 fn test_parse_seconds() {
@@ -18,4 +18,3 @@ fn test_parse_hours() {
     let c = parse_time_constant("1 hour").unwrap();
     assert_eq!(c, TimeUtil::hour(1));
 }
-

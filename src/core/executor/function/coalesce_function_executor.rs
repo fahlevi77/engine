@@ -1,11 +1,11 @@
 // siddhi_rust/src/core/executor/function/coalesce_function_executor.rs
 // Corresponds to io.siddhi.core.executor.function.CoalesceFunctionExecutor
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-// Note: Java CoalesceFunctionExecutor extends FunctionExecutor, which handles state.
-// This simplified Rust version makes it stateless for now.
+                                                                       // Note: Java CoalesceFunctionExecutor extends FunctionExecutor, which handles state.
+                                                                       // This simplified Rust version makes it stateless for now.
 
 #[derive(Debug)] // Clone not straightforward due to Vec<Box<dyn ExpressionExecutor>>
 pub struct CoalesceFunctionExecutor {
@@ -16,7 +16,9 @@ pub struct CoalesceFunctionExecutor {
 impl CoalesceFunctionExecutor {
     pub fn new(attribute_executors: Vec<Box<dyn ExpressionExecutor>>) -> Result<Self, String> {
         if attribute_executors.is_empty() {
-            return Err("CoalesceFunctionExecutor requires at least one attribute executor".to_string());
+            return Err(
+                "CoalesceFunctionExecutor requires at least one attribute executor".to_string(),
+            );
         }
         // Determine return type: In Java, it checks if all parameters are of the same type.
         // If so, that type is the return type. If not, it throws a validation exception.
@@ -27,12 +29,16 @@ impl CoalesceFunctionExecutor {
                 // This is stricter than just picking the first. Java ensures all are same.
                 return Err(format!(
                     "Coalesce parameters must all be of the same type. Found {:?} and {:?}",
-                    first_type, exec.get_return_type()
+                    first_type,
+                    exec.get_return_type()
                 ));
             }
         }
         let return_type = first_type;
-        Ok(Self { attribute_executors, return_type })
+        Ok(Self {
+            attribute_executors,
+            return_type,
+        })
     }
 }
 
@@ -57,11 +63,23 @@ impl ExpressionExecutor for CoalesceFunctionExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-        let cloned_execs = self.attribute_executors.iter().map(|e| e.clone_executor(siddhi_app_context)).collect();
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
+        let cloned_execs = self
+            .attribute_executors
+            .iter()
+            .map(|e| e.clone_executor(siddhi_app_context))
+            .collect();
         // new already determines the return type from the cloned_execs.
         // If new fails (e.g. if cloning results in incompatible types somehow, though unlikely here),
         // this clone_executor call will panic. This might be acceptable if cloning is expected to succeed.
-        Box::new(CoalesceFunctionExecutor::new(cloned_execs).expect("Cloning CoalesceFunctionExecutor failed"))
+        Box::new(
+            CoalesceFunctionExecutor::new(cloned_execs)
+                .expect("Cloning CoalesceFunctionExecutor failed"),
+        )
     }
 }

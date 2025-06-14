@@ -11,8 +11,16 @@ pub struct StreamEventFactory {
 }
 
 impl StreamEventFactory {
-    pub fn new(before_window_data_size: usize, on_after_window_data_size: usize, output_data_size: usize) -> Self {
-        Self { before_window_data_size, on_after_window_data_size, output_data_size }
+    pub fn new(
+        before_window_data_size: usize,
+        on_after_window_data_size: usize,
+        output_data_size: usize,
+    ) -> Self {
+        Self {
+            before_window_data_size,
+            on_after_window_data_size,
+            output_data_size,
+        }
     }
 
     pub fn from_meta(meta: &MetaStreamEvent) -> Self {
@@ -24,6 +32,11 @@ impl StreamEventFactory {
     }
 
     pub fn new_instance(&self) -> StreamEvent {
-        StreamEvent::new(0, self.before_window_data_size, self.on_after_window_data_size, self.output_data_size)
+        StreamEvent::new(
+            0,
+            self.before_window_data_size,
+            self.on_after_window_data_size,
+            self.output_data_size,
+        )
     }
 }

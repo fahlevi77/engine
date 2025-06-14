@@ -1,15 +1,16 @@
 // siddhi_rust/src/core/event/complex_event.rs
 // Corresponds to io.siddhi.core.event.ComplexEvent (interface)
 use super::value::AttributeValue;
-use std::fmt::Debug;
-use std::any::Any; // For as_any_mut
+use std::any::Any;
+use std::fmt::Debug; // For as_any_mut
 
 // Moved from stream_event.rs (or defined here if it wasn't there)
 // This enum corresponds to ComplexEvent.Type in Java
 /// Type of complex event (CURRENT, EXPIRED, TIMER, RESET).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 pub enum ComplexEventType {
-    #[default] Current,
+    #[default]
+    Current,
     Expired,
     Timer,
     Reset,
@@ -18,8 +19,11 @@ pub enum ComplexEventType {
 /// Trait for complex events that can form a linked list (chunk) and carry various data arrays.
 pub trait ComplexEvent: Debug + Send + Sync + 'static {
     fn get_next(&self) -> Option<&dyn ComplexEvent>;
-         fn set_next(&mut self, next_event: Option<Box<dyn ComplexEvent>>) -> Option<Box<dyn ComplexEvent>>; // Return old next
-    // Provides mutable access to the 'next' field's Option for easier list manipulation
+    fn set_next(
+        &mut self,
+        next_event: Option<Box<dyn ComplexEvent>>,
+    ) -> Option<Box<dyn ComplexEvent>>; // Return old next
+                                        // Provides mutable access to the 'next' field's Option for easier list manipulation
     fn mut_next_ref_option(&mut self) -> &mut Option<Box<dyn ComplexEvent>>;
 
     fn get_output_data(&self) -> Option<&[AttributeValue]>; // Changed to Option<&[AttributeValue]>
@@ -27,17 +31,18 @@ pub trait ComplexEvent: Debug + Send + Sync + 'static {
     // Optional: get_output_data_mut if direct mutation of Vec is needed
     // fn get_output_data_mut(&mut self) -> Option<&mut Vec<AttributeValue>>;
 
-
     fn get_timestamp(&self) -> i64;
     fn set_timestamp(&mut self, timestamp: i64);
 
     fn get_event_type(&self) -> ComplexEventType;
     fn set_event_type(&mut self, event_type: ComplexEventType);
 
-    fn is_expired(&self) -> bool { // Default impl
+    fn is_expired(&self) -> bool {
+        // Default impl
         self.get_event_type() == ComplexEventType::Expired
     }
-    fn set_expired(&mut self, expired: bool) { // Default impl
+    fn set_expired(&mut self, expired: bool) {
+        // Default impl
         if expired {
             self.set_event_type(ComplexEventType::Expired);
         } else if self.get_event_type() == ComplexEventType::Expired {
@@ -57,9 +62,15 @@ pub trait ComplexEvent: Debug + Send + Sync + 'static {
 
 /// Deep clone a [`ComplexEvent`] chain.
 pub fn clone_box_complex_event(event: &dyn ComplexEvent) -> Box<dyn ComplexEvent> {
-    if let Some(se) = event.as_any().downcast_ref::<crate::core::event::stream::StreamEvent>() {
+    if let Some(se) = event
+        .as_any()
+        .downcast_ref::<crate::core::event::stream::StreamEvent>()
+    {
         Box::new(se.clone())
-    } else if let Some(se) = event.as_any().downcast_ref::<crate::core::event::state::StateEvent>() {
+    } else if let Some(se) = event
+        .as_any()
+        .downcast_ref::<crate::core::event::state::StateEvent>()
+    {
         Box::new(se.clone())
     } else {
         panic!("Unknown ComplexEvent type for cloning");

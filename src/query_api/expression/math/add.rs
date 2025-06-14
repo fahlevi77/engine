@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.expression.math.Add
-use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::expression::Expression; // Main Expression enum
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement; // Main Expression enum
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Add {

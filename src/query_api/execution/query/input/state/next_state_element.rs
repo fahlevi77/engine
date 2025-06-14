@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.state.NextStateElement
-use crate::query_api::siddhi_element::SiddhiElement;
-use super::state_element::StateElement; // Recursive definition
+use super::state_element::StateElement;
+use crate::query_api::siddhi_element::SiddhiElement; // Recursive definition
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward due to required Box<StateElement>
 pub struct NextStateElement {

@@ -1,6 +1,6 @@
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::Variable;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 // Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]

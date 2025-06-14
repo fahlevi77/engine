@@ -1,7 +1,6 @@
-use crate::query_api::siddhi_element::SiddhiElement;
+use super::stream::{SetAttribute, UpdateSet};
 use crate::query_api::expression::Expression;
-use super::stream::{SetAttribute, UpdateSet}; // Using UpdateSet
-
+use crate::query_api::siddhi_element::SiddhiElement; // Using UpdateSet
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub enum OutputEventType {
@@ -13,7 +12,9 @@ pub enum OutputEventType {
 }
 
 impl Default for OutputEventType {
-    fn default() -> Self { OutputEventType::CurrentEvents }
+    fn default() -> Self {
+        OutputEventType::CurrentEvents
+    }
 }
 
 // Action Structs: These do not compose SiddhiElement directly.
@@ -40,16 +41,15 @@ pub struct DeleteStreamAction {
 pub struct UpdateStreamAction {
     pub target_id: String,
     pub on_update_expression: Expression, // This is the 'ON' condition for the update
-    pub update_set_clause: Option<UpdateSet>,      // This holds the SET assignments
+    pub update_set_clause: Option<UpdateSet>, // This holds the SET assignments
 }
 
 #[derive(Clone, Debug, PartialEq)] // Default removed (due to Expression, SetAttribute)
 pub struct UpdateOrInsertStreamAction {
     pub target_id: String,
-    pub on_update_expression: Expression,  // This is the 'ON' condition
-    pub update_set_clause: Option<UpdateSet>,       // This holds the SET assignments
+    pub on_update_expression: Expression, // This is the 'ON' condition
+    pub update_set_clause: Option<UpdateSet>, // This holds the SET assignments
 }
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum OutputStreamAction {

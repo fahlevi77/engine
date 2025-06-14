@@ -1,9 +1,9 @@
 // siddhi_rust/src/core/executor/math/divide.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
+use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
-use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
+use crate::core::executor::expression_executor::ExpressionExecutor;
+use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum // Use CoerceNumeric from common.rs
 
 #[derive(Debug)]
 pub struct DivideExpressionExecutor {
@@ -13,7 +13,10 @@ pub struct DivideExpressionExecutor {
 }
 
 impl DivideExpressionExecutor {
-    pub fn new(left: Box<dyn ExpressionExecutor>, right: Box<dyn ExpressionExecutor>) -> Result<Self, String> {
+    pub fn new(
+        left: Box<dyn ExpressionExecutor>,
+        right: Box<dyn ExpressionExecutor>,
+    ) -> Result<Self, String> {
         let left_type = left.get_return_type();
         let right_type = right.get_return_type();
 
@@ -23,10 +26,16 @@ impl DivideExpressionExecutor {
         // If strict integer division is needed, a separate DivInt executor or different operator could be used.
         // For now, promoting to DOUBLE for `/` operator.
         let return_type = match (left_type, right_type) {
-             (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) |
-            (ApiAttributeType::BOOL, _) | (_, ApiAttributeType::BOOL) |
-            (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
-                return Err(format!("Division not supported for input types {:?} and {:?}", left_type, right_type));
+            (ApiAttributeType::STRING, _)
+            | (_, ApiAttributeType::STRING)
+            | (ApiAttributeType::BOOL, _)
+            | (_, ApiAttributeType::BOOL)
+            | (ApiAttributeType::OBJECT, _)
+            | (_, ApiAttributeType::OBJECT) => {
+                return Err(format!(
+                    "Division not supported for input types {:?} and {:?}",
+                    left_type, right_type
+                ));
             }
             // Any division involving numbers results in DOUBLE for safety and precision by default
             _ => ApiAttributeType::DOUBLE,
@@ -44,7 +53,11 @@ impl DivideExpressionExecutor {
         // The Add example promotes to the "largest" type present. Division is trickier.
         // For now, will default to Double as per the prompt's general approach of a single executor per op.
 
-        Ok(Self { left_executor: left, right_executor: right, return_type })
+        Ok(Self {
+            left_executor: left,
+            right_executor: right,
+            return_type,
+        })
     }
 }
 
@@ -55,7 +68,9 @@ impl ExpressionExecutor for DivideExpressionExecutor {
 
         match (left_val_opt, right_val_opt) {
             (Some(left_val), Some(right_val)) => {
-                if matches!(left_val, AttributeValue::Null) || matches!(right_val, AttributeValue::Null) {
+                if matches!(left_val, AttributeValue::Null)
+                    || matches!(right_val, AttributeValue::Null)
+                {
                     return Some(AttributeValue::Null);
                 }
 
@@ -71,7 +86,8 @@ impl ExpressionExecutor for DivideExpressionExecutor {
                 }
                 let result = l / r;
 
-                match self.return_type { // This logic might be simplified if return_type is always DOUBLE
+                match self.return_type {
+                    // This logic might be simplified if return_type is always DOUBLE
                     ApiAttributeType::DOUBLE => Some(AttributeValue::Double(result)),
                     ApiAttributeType::FLOAT => Some(AttributeValue::Float(result as f32)),
                     ApiAttributeType::LONG => Some(AttributeValue::Long(result as i64)), // Truncating
@@ -85,8 +101,15 @@ impl ExpressionExecutor for DivideExpressionExecutor {
             _ => None,
         }
     }
-    fn get_return_type(&self) -> ApiAttributeType { self.return_type }
-    fn clone_executor(&self, siddhi_app_context: &std::sync::Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn get_return_type(&self) -> ApiAttributeType {
+        self.return_type
+    }
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &std::sync::Arc<
+            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        >,
+    ) -> Box<dyn ExpressionExecutor> {
         Box::new(DivideExpressionExecutor {
             left_executor: self.left_executor.clone_executor(siddhi_app_context),
             right_executor: self.right_executor.clone_executor(siddhi_app_context),

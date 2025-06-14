@@ -1,13 +1,13 @@
-use siddhi_rust::core::stream::{StreamJunction, TimerSource, Source};
-use siddhi_rust::core::stream::input::input_handler::InputHandler;
-use siddhi_rust::core::stream::output::{Sink, LogSink, StreamCallback};
-use siddhi_rust::query_api::definition::stream_definition::StreamDefinition;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
 use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
-use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
 use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
+use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
+use siddhi_rust::core::stream::input::input_handler::InputHandler;
+use siddhi_rust::core::stream::output::{LogSink, Sink, StreamCallback};
+use siddhi_rust::core::stream::{Source, StreamJunction, TimerSource};
+use siddhi_rust::query_api::definition::attribute::Type as AttrType;
+use siddhi_rust::query_api::definition::stream_definition::StreamDefinition;
+use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -15,9 +15,17 @@ use std::time::Duration;
 fn timer_source_to_log_sink() {
     let ctx = Arc::new(SiddhiContext::new());
     let app = Arc::new(SiddhiApp::new("TestApp".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(Arc::clone(&ctx), "Test".to_string(), Arc::clone(&app), String::new()));
+    let app_ctx = Arc::new(SiddhiAppContext::new(
+        Arc::clone(&ctx),
+        "Test".to_string(),
+        Arc::clone(&app),
+        String::new(),
+    ));
 
-    let stream_def = Arc::new(StreamDefinition::new("FooStream".to_string()).attribute("message".to_string(), AttrType::STRING));
+    let stream_def = Arc::new(
+        StreamDefinition::new("FooStream".to_string())
+            .attribute("message".to_string(), AttrType::STRING),
+    );
     let junction = Arc::new(Mutex::new(StreamJunction::new(
         "FooStream".to_string(),
         Arc::clone(&stream_def),
@@ -41,7 +49,11 @@ fn timer_source_to_log_sink() {
     let cb_processor = Arc::new(Mutex::new(CallbackProcessor::new(
         callback,
         Arc::clone(&app_ctx),
-        Arc::new(SiddhiQueryContext::new(Arc::clone(&app_ctx), "cb".to_string(), None)),
+        Arc::new(SiddhiQueryContext::new(
+            Arc::clone(&app_ctx),
+            "cb".to_string(),
+            None,
+        )),
     )));
     junction.lock().unwrap().subscribe(cb_processor);
 

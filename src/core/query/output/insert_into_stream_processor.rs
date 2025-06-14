@@ -5,7 +5,7 @@
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent; // Trait
-use crate::core::query::processor::{Processor, CommonProcessorMeta, ProcessingMode};
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::stream::stream_junction::StreamJunction;
 use std::sync::{Arc, Mutex};
 
@@ -35,14 +35,21 @@ impl InsertIntoStreamProcessor {
 
 impl Processor for InsertIntoStreamProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
-        if let Some(chunk_head) = complex_event_chunk { // Take ownership if Some
+        if let Some(chunk_head) = complex_event_chunk {
+            // Take ownership if Some
             // StreamJunction::send_complex_event_chunk expects Option<Box<dyn ComplexEvent>>
             // and handles the linked list internally.
-            if let Err(e) = self.output_stream_junction
-                .lock().expect("Output StreamJunction Mutex poisoned")
-                .send_complex_event_chunk(Some(chunk_head)) {
-                eprintln!("Error sending event chunk to output stream junction '{}': {}",
-                    self.output_stream_junction.lock().unwrap().stream_id, e);
+            if let Err(e) = self
+                .output_stream_junction
+                .lock()
+                .expect("Output StreamJunction Mutex poisoned")
+                .send_complex_event_chunk(Some(chunk_head))
+            {
+                eprintln!(
+                    "Error sending event chunk to output stream junction '{}': {}",
+                    self.output_stream_junction.lock().unwrap().stream_id,
+                    e
+                );
             }
         }
         // If complex_event_chunk was None, nothing to process.
@@ -60,7 +67,10 @@ impl Processor for InsertIntoStreamProcessor {
         }
     }
 
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
         Box::new(Self::new(
             Arc::clone(&self.output_stream_junction),
             Arc::clone(&self.meta.siddhi_app_context), // Clone AppContext from meta
@@ -86,5 +96,7 @@ impl Processor for InsertIntoStreamProcessor {
 // Adding placeholder to SiddhiQueryContext for processing_mode for now
 impl SiddhiQueryContext {
     // TODO: This should be a proper field determined during query parsing.
-    pub fn processing_mode_placeholder(&self) -> ProcessingMode { ProcessingMode::DEFAULT }
+    pub fn processing_mode_placeholder(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
 }

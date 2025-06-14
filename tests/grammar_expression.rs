@@ -1,16 +1,13 @@
-use siddhi_rust::query_compiler::parse_expression;
-use siddhi_rust::query_api::expression::Expression;
 use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
+use siddhi_rust::query_api::expression::Expression;
+use siddhi_rust::query_compiler::parse_expression;
 
 #[test]
 fn test_arithmetic_precedence() {
     let expr = parse_expression("1 + 2 * 3").unwrap();
     let expected = Expression::add(
         Expression::value_long(1),
-        Expression::multiply(
-            Expression::value_long(2),
-            Expression::value_long(3),
-        ),
+        Expression::multiply(Expression::value_long(2), Expression::value_long(3)),
     );
     assert_eq!(expr, expected);
 }
@@ -45,4 +42,3 @@ fn test_comparison_and_parentheses() {
     let expected = Expression::compare(left, CompareOp::GreaterThan, right);
     assert_eq!(expr, expected);
 }
-

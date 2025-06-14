@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.handler.Filter
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 // Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,6 @@ pub struct Filter {
     pub siddhi_element: SiddhiElement,
     pub filter_expression: Expression,
 }
-
 
 impl Filter {
     pub fn new(filter_expression: Expression) -> Self {

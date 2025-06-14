@@ -12,7 +12,10 @@ pub struct TableInputHandler {
 
 impl TableInputHandler {
     pub fn new(table: Arc<dyn Table>, siddhi_app_context: Arc<SiddhiAppContext>) -> Self {
-        Self { siddhi_app_context, table }
+        Self {
+            siddhi_app_context,
+            table,
+        }
     }
 
     pub fn add(&self, events: Vec<Event>) {

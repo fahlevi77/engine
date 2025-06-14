@@ -1,11 +1,11 @@
-pub mod value;
-pub mod event;
 pub mod complex_event;
-pub mod stream;
+pub mod event;
 pub mod state;
+pub mod stream;
+pub mod value;
 
-pub use self::value::AttributeValue;
-pub use self::event::Event;
 pub use self::complex_event::{ComplexEvent, ComplexEventType}; // Exporting ComplexEventType from here
-pub use self::stream::{StreamEvent, MetaStreamEvent}; // StreamEventType alias removed as ComplexEventType is used
-pub use self::state::{StateEvent, MetaStateEvent};
+pub use self::event::Event;
+pub use self::state::{MetaStateEvent, StateEvent};
+pub use self::stream::{MetaStreamEvent, StreamEvent}; // StreamEventType alias removed as ComplexEventType is used
+pub use self::value::AttributeValue;

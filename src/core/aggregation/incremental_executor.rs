@@ -57,9 +57,9 @@ impl IncrementalExecutor {
             }
         }
         // reset aggregators for next bucket
-        use crate::core::event::complex_event::{ComplexEventType, ComplexEvent};
+        use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
         for exec in &self.base_store.expression_executors {
-            let mut r = StreamEvent::new(bucket_start,0,0,0);
+            let mut r = StreamEvent::new(bucket_start, 0, 0, 0);
             r.set_event_type(ComplexEventType::Reset);
             exec.execute(Some(&r));
         }

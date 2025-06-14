@@ -1,12 +1,12 @@
 // siddhi_rust/src/core/query/selector/attribute/output_attribute_processor.rs
 // Corresponds to io.siddhi.core.query.selector.attribute.processor.AttributeProcessor
+use crate::core::config::siddhi_app_context::SiddhiAppContext; // For cloning executor
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For cloning executor
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 // This struct processes a single attribute in the select clause.
 // It wraps an ExpressionExecutor and knows at which position its result should be placed in the output event.
@@ -26,14 +26,16 @@ impl OutputAttributeProcessor {
         Self {
             expression_executor,
             // output_position, // Removed
-            return_type
+            return_type,
         }
     }
 
     // Processes the event and returns the computed AttributeValue.
     // Takes Option<&dyn ComplexEvent> to align with ExpressionExecutor::execute and SelectProcessor's call.
     pub fn process(&self, event_opt: Option<&dyn ComplexEvent>) -> AttributeValue {
-        self.expression_executor.execute(event_opt).unwrap_or(AttributeValue::Null)
+        self.expression_executor
+            .execute(event_opt)
+            .unwrap_or(AttributeValue::Null)
     }
 
     pub fn get_return_type(&self) -> ApiAttributeType {
@@ -43,11 +45,11 @@ impl OutputAttributeProcessor {
     // Needed for SelectProcessor::clone_processor
     // Requires ExpressionExecutor to have clone_executor method.
     pub fn clone_oap(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Self {
-       Self {
-           expression_executor: self.expression_executor.clone_executor(siddhi_app_context),
-           // output_position: self.output_position, // Removed
-           return_type: self.return_type,
-       }
+        Self {
+            expression_executor: self.expression_executor.clone_executor(siddhi_app_context),
+            // output_position: self.output_position, // Removed
+            return_type: self.return_type,
+        }
     }
 
     /// Whether this attribute processor involves an aggregator function.

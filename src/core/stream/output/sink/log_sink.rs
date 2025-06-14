@@ -1,6 +1,6 @@
-use crate::core::stream::output::stream_callback::StreamCallback;
-use crate::core::stream::output::sink::sink_trait::Sink;
 use crate::core::event::event::Event;
+use crate::core::stream::output::sink::sink_trait::Sink;
+use crate::core::stream::output::stream_callback::StreamCallback;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
@@ -11,7 +11,9 @@ pub struct LogSink {
 
 impl LogSink {
     pub fn new() -> Self {
-        Self { events: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            events: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 }
 
@@ -25,5 +27,7 @@ impl StreamCallback for LogSink {
 }
 
 impl Sink for LogSink {
-    fn clone_box(&self) -> Box<dyn Sink> { Box::new(self.clone()) }
+    fn clone_box(&self) -> Box<dyn Sink> {
+        Box::new(self.clone())
+    }
 }

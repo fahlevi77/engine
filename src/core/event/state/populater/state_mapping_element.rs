@@ -7,6 +7,9 @@ pub struct StateMappingElement {
 
 impl StateMappingElement {
     pub fn new(from_position: Vec<i32>, to_position: usize) -> Self {
-        Self { from_position, to_position }
+        Self {
+            from_position,
+            to_position,
+        }
     }
 }

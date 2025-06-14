@@ -1,10 +1,11 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.handler.Window
 // Implements StreamHandler and Extension in Java.
-use crate::query_api::siddhi_element::SiddhiElement;
 use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
-pub struct Window { // Aliased as WindowHandler in handler/mod.rs
+pub struct Window {
+    // Aliased as WindowHandler in handler/mod.rs
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
     // Extension fields
@@ -33,7 +34,7 @@ impl Window {
 
     // Helper for StreamHandlerTrait's get_parameters_as_option_vec
     pub(super) fn get_parameters_ref_internal(&self) -> Option<Vec<&Expression>> {
-         if self.parameters.is_empty() {
+        if self.parameters.is_empty() {
             None
         } else {
             Some(self.parameters.iter().collect())

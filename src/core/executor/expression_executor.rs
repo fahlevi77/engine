@@ -4,8 +4,8 @@
 use crate::core::event::complex_event::ComplexEvent; // The ComplexEvent trait
 use crate::core::event::value::AttributeValue; // The enum for actual data values
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::fmt::Debug;
 use std::any::Any;
+use std::fmt::Debug;
 // use std::sync::Arc; // Not needed for trait definition itself
 
 // ExpressionExecutor is an interface in Java. In Rust, it's a trait.
@@ -29,7 +29,10 @@ pub trait ExpressionExecutor: Debug + Send + Sync + 'static {
     // For stateless executors like ConstantExpressionExecutor, context might not be strictly needed for cloning itself,
     // but the interface should be consistent.
     // Child executors (if any) would be cloned recursively using their own clone_executor methods.
-    fn clone_executor(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor>;
+    fn clone_executor(
+        &self,
+        siddhi_app_context: &Arc<SiddhiAppContext>,
+    ) -> Box<dyn ExpressionExecutor>;
 
     fn as_any(&self) -> &dyn Any
     where
@@ -55,5 +58,5 @@ pub trait ExpressionExecutor: Debug + Send + Sync + 'static {
 // So, direct calls to `some_box_dyn_exec.clone_executor(ctx)` are better.
 
 // Added Arc import, which might be needed by clone_executor implementations if they store Arc<SiddhiAppContext>
-use std::sync::Arc;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use std::sync::Arc;

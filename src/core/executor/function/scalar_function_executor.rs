@@ -1,6 +1,6 @@
 // siddhi_rust/src/core/executor/function/scalar_function_executor.rs
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -44,9 +44,9 @@ pub trait ScalarFunctionExecutor: ExpressionExecutor {
 
 // Helper for cloning Box<dyn ScalarFunctionExecutor>
 impl Clone for Box<dyn ScalarFunctionExecutor> {
-   fn clone(&self) -> Self {
-       self.clone_scalar_function()
-   }
+    fn clone(&self) -> Self {
+        self.clone_scalar_function()
+    }
 }
 
 // Manual Debug for Box<dyn ScalarFunctionExecutor> is removed.

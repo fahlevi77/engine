@@ -1,27 +1,27 @@
 // siddhi_rust/src/core/util/parser/siddhi_app_parser.rs
 // Corresponds to io.siddhi.core.util.parser.SiddhiAppParser
-use std::sync::{Arc, Mutex}; // Added Mutex
-use std::collections::HashMap; // If QueryParser needs table_map etc. from builder
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex}; // Added Mutex // If QueryParser needs table_map etc. from builder
 
-use crate::query_api::{
-    SiddhiApp as ApiSiddhiApp,
-    execution::ExecutionElement as ApiExecutionElement,
-    definition::{StreamDefinition as ApiStreamDefinition, Attribute as ApiAttribute}, // For fault stream creation
-    // Other API definitions will be needed by specific parsers (Table, Window etc.)
-};
+use crate::core::aggregation::{AggregationInputProcessor, AggregationRuntime};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
+use crate::core::stream::stream_junction::{OnErrorAction, StreamJunction}; // For creating junctions
 use crate::core::window::WindowRuntime;
-use crate::core::aggregation::{AggregationRuntime, AggregationInputProcessor};
-use crate::core::stream::stream_junction::{StreamJunction, OnErrorAction}; // For creating junctions
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
+use crate::query_api::{
+    definition::{Attribute as ApiAttribute, StreamDefinition as ApiStreamDefinition}, // For fault stream creation
+    // Other API definitions will be needed by specific parsers (Table, Window etc.)
+    execution::ExecutionElement as ApiExecutionElement,
+    SiddhiApp as ApiSiddhiApp,
+};
 // use super::query_parser::QueryParser; // To be created or defined in this file for now
 use crate::core::partition::parser::PartitionParser;
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
-use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
 use super::query_parser::QueryParser; // Use the real QueryParser implementation
 use super::trigger_parser::TriggerParser;
+use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
 
 pub struct SiddhiAppParser;
 
@@ -29,10 +29,9 @@ impl SiddhiAppParser {
     // Corresponds to SiddhiAppParser.parse(SiddhiApp siddhiApp, String siddhiAppString, SiddhiContext siddhiContext)
     // The siddhiAppString is already in SiddhiAppContext. SiddhiContext is also in SiddhiAppContext.
     pub fn parse_siddhi_app_runtime_builder(
-        api_siddhi_app: &ApiSiddhiApp, // This is from query_api
+        api_siddhi_app: &ApiSiddhiApp,             // This is from query_api
         siddhi_app_context: Arc<SiddhiAppContext>, // This is from core::config
     ) -> Result<SiddhiAppRuntimeBuilder, String> {
-
         let mut builder = SiddhiAppRuntimeBuilder::new(siddhi_app_context.clone());
 
         // Parse @app level annotations to configure defaults
@@ -74,7 +73,10 @@ impl SiddhiAppParser {
                         if ann
                             .elements
                             .iter()
-                            .find(|e| e.key.eq_ignore_ascii_case("action") && e.value.eq_ignore_ascii_case("stream"))
+                            .find(|e| {
+                                e.key.eq_ignore_ascii_case("action")
+                                    && e.value.eq_ignore_ascii_case("stream")
+                            })
                             .is_some()
                         {
                             create_fault_stream = true;
@@ -85,11 +87,24 @@ impl SiddhiAppParser {
             }
 
             if create_fault_stream {
-                let mut fault_def = ApiStreamDefinition::new(format!("{}{}", crate::query_api::constants::FAULT_STREAM_FLAG, stream_id));
+                let mut fault_def = ApiStreamDefinition::new(format!(
+                    "{}{}",
+                    crate::query_api::constants::FAULT_STREAM_FLAG,
+                    stream_id
+                ));
                 for attr in &stream_def_arc.abstract_definition.attribute_list {
-                    fault_def.abstract_definition.attribute_list.push(attr.clone());
+                    fault_def
+                        .abstract_definition
+                        .attribute_list
+                        .push(attr.clone());
                 }
-                fault_def.abstract_definition.attribute_list.push(ApiAttribute::new("_error".to_string(), crate::query_api::definition::attribute::Type::OBJECT));
+                fault_def
+                    .abstract_definition
+                    .attribute_list
+                    .push(ApiAttribute::new(
+                        "_error".to_string(),
+                        crate::query_api::definition::attribute::Type::OBJECT,
+                    ));
                 builder.add_stream_definition(Arc::new(fault_def));
             }
 
@@ -123,12 +138,13 @@ impl SiddhiAppParser {
                         .get_siddhi_context()
                         .get_table_factory(t_type)
                     {
-                        factory.create(table_id.clone(), props.clone(), siddhi_app_context.get_siddhi_context())?
+                        factory.create(
+                            table_id.clone(),
+                            props.clone(),
+                            siddhi_app_context.get_siddhi_context(),
+                        )?
                     } else if t_type == "jdbc" {
-                        let ds = props
-                            .get("data_source")
-                            .cloned()
-                            .unwrap_or_default();
+                        let ds = props.get("data_source").cloned().unwrap_or_default();
                         Arc::new(crate::core::table::JdbcTable::new(
                             table_id.clone(),
                             ds,
@@ -148,7 +164,12 @@ impl SiddhiAppParser {
                 .get_siddhi_context()
                 .add_table(table_id.clone(), table);
 
-            builder.add_table(table_id.clone(), Arc::new(Mutex::new(crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder::default())));
+            builder.add_table(
+                table_id.clone(),
+                Arc::new(Mutex::new(
+                    crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder::default(),
+                )),
+            );
         }
 
         // WindowDefinitions
@@ -161,11 +182,13 @@ impl SiddhiAppParser {
                     format!("__window_{}", window_id),
                     None,
                 ));
-                if let Ok(proc) = crate::core::query::processor::stream::window::create_window_processor(
-                    handler,
-                    Arc::clone(&siddhi_app_context),
-                    Arc::clone(&qctx),
-                ) {
+                if let Ok(proc) =
+                    crate::core::query::processor::stream::window::create_window_processor(
+                        handler,
+                        Arc::clone(&siddhi_app_context),
+                        Arc::clone(&qctx),
+                    )
+                {
                     runtime.set_processor(proc);
                 }
             }
@@ -175,10 +198,9 @@ impl SiddhiAppParser {
         // AggregationDefinitions
         for (agg_id, agg_def) in &api_siddhi_app.aggregation_definition_map {
             builder.add_aggregation_definition(Arc::clone(agg_def));
-            let runtime = Arc::new(Mutex::new(crate::core::aggregation::AggregationRuntime::new(
-                agg_id.clone(),
-                HashMap::new(),
-            )));
+            let runtime = Arc::new(Mutex::new(
+                crate::core::aggregation::AggregationRuntime::new(agg_id.clone(), HashMap::new()),
+            ));
             builder.add_aggregation_runtime(agg_id.clone(), Arc::clone(&runtime));
 
             if let Some(stream) = &agg_def.basic_single_input_stream {
@@ -189,11 +211,13 @@ impl SiddhiAppParser {
                         format!("__aggregation_{}", agg_id),
                         None,
                     ));
-                    let proc = Arc::new(Mutex::new(crate::core::aggregation::AggregationInputProcessor::new(
-                        Arc::clone(&runtime),
-                        Arc::clone(&siddhi_app_context),
-                        Arc::clone(&qctx),
-                    )));
+                    let proc = Arc::new(Mutex::new(
+                        crate::core::aggregation::AggregationInputProcessor::new(
+                            Arc::clone(&runtime),
+                            Arc::clone(&siddhi_app_context),
+                            Arc::clone(&qctx),
+                        ),
+                    ));
                     junction.lock().unwrap().subscribe(proc);
                 }
             }
@@ -221,11 +245,8 @@ impl SiddhiAppParser {
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);
                 }
                 ApiExecutionElement::Partition(api_partition) => {
-                    let part_rt = PartitionParser::parse(
-                        &mut builder,
-                        api_partition,
-                        &siddhi_app_context,
-                    )?;
+                    let part_rt =
+                        PartitionParser::parse(&mut builder, api_partition, &siddhi_app_context)?;
                     builder.add_partition_runtime(Arc::new(part_rt));
                 }
             }

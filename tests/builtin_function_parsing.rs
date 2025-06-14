@@ -1,11 +1,11 @@
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::query_api::expression::Expression;
 use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
 use siddhi_rust::core::config::siddhi_context::SiddhiContext;
 use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
+use siddhi_rust::query_api::expression::Expression;
+use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -19,7 +19,11 @@ fn make_app_ctx() -> Arc<SiddhiAppContext> {
 }
 
 fn make_query_ctx(name: &str) -> Arc<SiddhiQueryContext> {
-    Arc::new(SiddhiQueryContext::new(make_app_ctx(), name.to_string(), None))
+    Arc::new(SiddhiQueryContext::new(
+        make_app_ctx(),
+        name.to_string(),
+        None,
+    ))
 }
 
 fn empty_ctx(query: &str) -> ExpressionParserContext {
@@ -105,18 +109,12 @@ fn test_format_date_function() {
 #[test]
 fn test_round_and_sqrt_functions() {
     let ctx = empty_ctx("math");
-    let round_expr = Expression::function_no_ns(
-        "round".to_string(),
-        vec![Expression::value_double(3.7)],
-    );
+    let round_expr =
+        Expression::function_no_ns("round".to_string(), vec![Expression::value_double(3.7)]);
     let round_exec = parse_expression(&round_expr, &ctx).unwrap();
     assert_eq!(round_exec.execute(None), Some(AttributeValue::Double(4.0)));
 
-    let sqrt_expr = Expression::function_no_ns(
-        "sqrt".to_string(),
-        vec![Expression::value_int(16)],
-    );
+    let sqrt_expr = Expression::function_no_ns("sqrt".to_string(), vec![Expression::value_int(16)]);
     let sqrt_exec = parse_expression(&sqrt_expr, &ctx).unwrap();
     assert_eq!(sqrt_exec.execute(None), Some(AttributeValue::Double(4.0)));
 }
-
