@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 
 // Placeholders for runtime components until they are defined
 #[derive(Debug, Clone, Default)] pub struct TableRuntimePlaceholder {}
-#[derive(Debug, Clone, Default)] pub struct TriggerRuntimePlaceholder {}
+use crate::core::trigger::TriggerRuntime;
 
 
 #[derive(Debug)]
@@ -33,7 +33,7 @@ pub struct SiddhiAppRuntimeBuilder {
 
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
     pub partition_runtimes: Vec<Arc<PartitionRuntime>>,
-    pub trigger_runtimes: Vec<Arc<TriggerRuntimePlaceholder>>,
+    pub trigger_runtimes: Vec<Arc<TriggerRuntime>>,
 }
 
 impl SiddhiAppRuntimeBuilder {
@@ -88,7 +88,7 @@ impl SiddhiAppRuntimeBuilder {
     pub fn add_partition_runtime(&mut self, partition_runtime: Arc<PartitionRuntime>) {
         self.partition_runtimes.push(partition_runtime);
     }
-    pub fn add_trigger_runtime(&mut self, trigger_runtime: Arc<TriggerRuntimePlaceholder>) {
+    pub fn add_trigger_runtime(&mut self, trigger_runtime: Arc<TriggerRuntime>) {
         self.trigger_runtimes.push(trigger_runtime);
     }
 
@@ -118,10 +118,7 @@ impl SiddhiAppRuntimeBuilder {
             table_map: self.table_map,
             window_map: self.window_map,
             aggregation_map: self.aggregation_map,
-            // Initialize other runtime fields (tables, windows, partitions, triggers)
-            // These would typically be moved from the builder to the runtime instance.
-            // partitions: self.partition_runtimes,
-            // triggers: self.trigger_runtimes,
+            trigger_runtimes: self.trigger_runtimes,
         })
     }
 }

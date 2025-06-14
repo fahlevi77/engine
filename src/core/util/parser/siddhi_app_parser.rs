@@ -21,6 +21,7 @@ use crate::core::partition::parser::PartitionParser;
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
 use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
 use super::query_parser::QueryParser; // Use the real QueryParser implementation
+use super::trigger_parser::TriggerParser;
 
 pub struct SiddhiAppParser;
 
@@ -230,7 +231,10 @@ impl SiddhiAppParser {
             }
         }
 
-        // TODO: Define Triggers
+        for (_id, trig_def) in &api_siddhi_app.trigger_definition_map {
+            let runtime = TriggerParser::parse(&mut builder, trig_def, &siddhi_app_context)?;
+            builder.add_trigger_runtime(Arc::new(runtime));
+        }
 
         Ok(builder)
     }

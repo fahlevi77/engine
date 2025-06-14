@@ -3,6 +3,7 @@
 pub mod expression_parser;
 pub mod query_parser; // Added
 pub mod siddhi_app_parser; // Added
+pub mod trigger_parser;
 // Other parsers will be added here later:
 // pub mod aggregation_parser;
 // ... etc.
@@ -10,4 +11,5 @@ pub mod siddhi_app_parser; // Added
 pub use self::expression_parser::{parse_expression, ExpressionParserContext};
 pub use self::query_parser::QueryParser; // Added
 pub use self::siddhi_app_parser::SiddhiAppParser; // Added
+pub use self::trigger_parser::TriggerParser;
 pub use crate::core::partition::parser::PartitionParser;

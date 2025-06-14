@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::partition::PartitionRuntime;
+use crate::core::trigger::TriggerRuntime;
 use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
 use crate::core::siddhi_app_runtime_builder::{SiddhiAppRuntimeBuilder, TableRuntimePlaceholder};
 use crate::core::window::WindowRuntime;
@@ -33,6 +34,7 @@ pub struct SiddhiAppRuntime {
     pub input_manager: Arc<InputManager>,
     pub query_runtimes: Vec<Arc<QueryRuntime>>,
     pub partition_runtimes: Vec<Arc<PartitionRuntime>>,
+    pub trigger_runtimes: Vec<Arc<TriggerRuntime>>,
     pub scheduler: Option<Arc<crate::core::util::Scheduler>>,
     pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
     pub window_map: HashMap<String, Arc<Mutex<WindowRuntime>>>,
@@ -146,6 +148,9 @@ impl SiddhiAppRuntime {
             // placeholder: scheduler is kept alive by self
             println!("Scheduler initialized for SiddhiAppRuntime '{}'", self.name);
         }
+        for tr in &self.trigger_runtimes {
+            tr.start();
+        }
         for pr in &self.partition_runtimes {
             pr.start();
         }
@@ -155,6 +160,9 @@ impl SiddhiAppRuntime {
     pub fn shutdown(&self) {
         if let Some(scheduler) = &self.scheduler {
             scheduler.shutdown();
+        }
+        for tr in &self.trigger_runtimes {
+            tr.shutdown();
         }
         for pr in &self.partition_runtimes {
             pr.shutdown();
