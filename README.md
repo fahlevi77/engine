@@ -16,9 +16,9 @@ The project is in the early stages of porting. Key modules have been structurall
     *   **Stream Handling (`stream`)**: Basic structures for `StreamJunction` (event routing) and `InputHandler` are defined. `StreamCallback` trait for output.
     *   **Expression Executors (`executor`)**: `ExpressionExecutor` trait defined. Implementations for constants, variables (simplified), basic math operators (+,-,*,/,mod), basic conditions (AND,OR,NOT,Compare,IsNull), and common functions (Coalesce, IfThenElse, UUID, InstanceOf*) are present.
     *   **Expression Parser (`util/parser/expression_parser.rs`)**: Initial recursive structure to convert `query_api::Expression` objects into `core::ExpressionExecutor`s.
-    *   **Stream Processors (`query/processor`)**: `Processor` trait, `CommonProcessorMeta` struct. `FilterProcessor` (for WHERE clauses) and `SelectProcessor` (for SELECT clauses, simple projections only) are defined with basic logic. `InsertIntoStreamProcessor` for output.
-    *   **Runtime Parsers (`util/parser/siddhi_app_parser.rs`, `util/parser/query_parser.rs`)**: Skeleton structure to take a `query_api::SiddhiApp` and build a runtime plan using the above core components (StreamJunctions, Processors).
-    *   **Runtime (`siddhi_app_runtime.rs`)**: Basic `SiddhiAppRuntime` that can be constructed (via `SiddhiAppParser`), can receive input events, and add callbacks for output.
+    *   **Stream Processors (`query/processor`)**: `Processor` trait and `CommonProcessorMeta` struct.  In addition to `FilterProcessor` and `SelectProcessor`, the Rust port includes `LengthWindowProcessor`, `TimeWindowProcessor`, `JoinProcessor`, and processors for event patterns and sequences.  `InsertIntoStreamProcessor` handles output routing.
+    *   **Runtime Parsers (`util/parser/siddhi_app_parser.rs`, `util/parser/query_parser.rs`)**: Build `SiddhiAppRuntime`s from the AST.  The parser supports windows, joins, patterns, sequences and incremental aggregations.
+    *   **Runtime (`siddhi_app_runtime.rs`)**: `SiddhiAppRuntime` executes queries built by the parser, including windows, joins, patterns, sequences and aggregations.  Runtimes use the scheduler for time-based operations and can register callbacks for output.
 *   **`SiddhiManager`**: Basic functionality for creating, retrieving, and shutting down `SiddhiAppRuntime` instances has been ported. Methods for managing extensions and data sources are placeholders pointing to `SiddhiContext`.
 *   **Metrics and Fault Handling**: Simple in-memory metrics trackers are available and stream junctions can route faults to fault streams or an error store.
 
@@ -40,18 +40,18 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   Stateful user-defined functions are supported via the `ScalarFunctionExecutor` trait.
 *   **Stream Processors & Query Logic**:
     *   `FilterProcessor` & `SelectProcessor`: Event chunk (linked list) manipulation is simplified (uses `Vec` intermediate for `SelectProcessor`). Advanced features for `SelectProcessor` (group by, having, order by, limit, offset) are not implemented.
-    *   **Windows**: No window processors (`TimeWindow`, `LengthWindow`, etc.) are ported. This is a major feature set.
-    *   **Joins**: No join processors or join logic implemented.
-    *   **Patterns & Sequences**: No pattern or sequence processors implemented.
-    *   **Aggregations**: Basic attribute aggregator executors (sum, avg, count, distinctCount, min/max and forever variants) are implemented for use in queries.
+    *   **Windows**: `LengthWindowProcessor` and `TimeWindowProcessor` provide basic sliding and tumbling windows.
+    *   **Joins**: `JoinProcessor` supports inner and outer joins with optional conditions.
+    *   **Patterns & Sequences**: `SequenceProcessor` and related logic implement pattern and sequence matching.
+    *   **Aggregations**: Attribute aggregator executors are available and incremental aggregations are executed via `AggregationRuntime`.
 *   **State Management & Persistence**:
     *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks. Custom table implementations can be provided via `TableFactory` instances registered with the `SiddhiManager`.
     *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.
 *   **Runtime & Orchestration**:
-    *   `SiddhiAppParser` & `QueryParser`: Can only handle very simple queries (single stream, optional filter, simple select, insert into). Cannot parse partitions, windows, joins, patterns, sequences, tables, aggregations.
-    *   `Scheduler`: Not implemented (needed for time-based windows and triggers).
-    *   `SiddhiAppRuntime`: Lifecycle methods (`start`, `shutdown`) are very basic. `persist`, `restore` not implemented.
-    *   Error handling throughout `siddhi-core` is minimal.
+    *   `SiddhiAppParser` & `QueryParser` now construct runtimes with windows, joins, patterns, sequences and aggregations.
+    *   `Scheduler` drives time-based windows and cron style callbacks.
+    *   `SiddhiAppRuntime` supports starting and shutting down applications and routes events through the configured processors.
+    *   Error handling throughout `siddhi-core` remains basic.
 *   **Extensions Framework**:
     *   `ScalarFunctionExecutor` allows registering stateful user-defined functions.
     *   Placeholders for other extension types (Window, Sink, Source, Store, Mapper, AttributeAggregator, Script) are largely missing.
@@ -62,7 +62,7 @@ This port is **far from feature-complete** with the Java version. Users should b
 
 *   **`query_api`**: Basic unit tests for constructors and getters of key data structures are planned / partially implemented.
 *   **`siddhi-core`**: Some unit tests for basic expression executors are planned / partially implemented.
-*   **Integration Testing**: A test case for a simple filter/projection query (`FROM InputStream[filter] SELECT ... INSERT INTO OutputStream`) has been outlined. This test was used to conceptually verify the design of Phase 1 components. **Actual execution and passing of this test requires further implementation and debugging.**
+*   **Integration Testing**: The `tests` directory contains end-to-end tests covering windows, joins, patterns, sequences, incremental aggregations and the scheduler.  These tests parse Siddhi applications and run them through a helper `AppRunner` to verify expected outputs.
 *   **Benchmarking**: Not yet performed.
 
 ## Registering Tables and UDFs
