@@ -7,9 +7,9 @@ This project is an experimental port of the Java-based Siddhi CEP (Complex Event
 The project is in the early stages of porting. Key modules have been structurally translated, with foundational logic for some components in place.
 
 *   **`siddhi-query-api` Module**: Largely ported. This module defines the abstract syntax tree (AST) and structures for representing Siddhi applications, stream definitions, queries, expressions, and execution plans. Most data structures have been translated to Rust structs and enums.
-*   **`siddhi-query-compiler` Module**: This module is currently a placeholder.
+*   **`siddhi-query-compiler` Module**: Provides a LALRPOP-based parser for SiddhiQL.
     *   The `update_variables` function (for substituting environment/system variables in SiddhiQL strings) has been ported.
-    *   **Actual SiddhiQL string parsing (ANTLR based in Java) is NOT yet implemented in Rust.** Placeholder functions exist in the Rust `query_compiler` that currently return "Not Implemented" errors.
+    *   Parsing now uses the grammar in `query_compiler/grammar.lalrpop` to build the AST.
 *   **`siddhi-core` Module**: Foundational elements for a Phase 1 feature set (simple stateless queries like filters and projections) are structurally in place. This includes:
     *   **Configuration (`config`)**: `SiddhiContext` and `SiddhiAppContext` defined (many internal fields are placeholders for complex Java objects like persistence stores, data sources, executor services).
     *   **Events (`event`)**: `Event`, `AttributeValue`, `ComplexEvent` trait, and `StreamEvent` are defined. Placeholders for state/meta events exist.
@@ -46,11 +46,12 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   **Aggregations**: Attribute aggregator executors are available and incremental aggregations are executed via `AggregationRuntime`.
 *   **State Management & Persistence**:
     *   **Tables**: An `InMemoryTable` implementation supports insert, update, delete and membership checks. Custom table implementations can be provided via `TableFactory` instances registered with the `SiddhiManager`.
-    *   **Persistence**: `SnapshotService` and `PersistenceStore` framework is not implemented. No state persistence or recovery.
+    *   **Persistence**: Includes a `SnapshotService` and an in-memory `PersistenceStore`. Durable persistence stores are still pending.
 *   **Runtime & Orchestration**:
     *   `SiddhiAppParser` & `QueryParser` now construct runtimes with windows, joins, patterns, sequences and aggregations.
     *   `Scheduler` drives time-based windows and cron style callbacks.
     *   `SiddhiAppRuntime` supports starting and shutting down applications and routes events through the configured processors.
+    *   Trigger runtimes are still TODO.
     *   Error handling throughout `siddhi-core` remains basic.
 *   **Extensions Framework**:
     *   `ScalarFunctionExecutor` allows registering stateful user-defined functions.
