@@ -11,6 +11,7 @@ use crate::query_api::execution::query::{Query, OnDemandQuery, StoreQuery, OnDem
 use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::execution::query::selection::order_by_attribute::{OrderByAttribute, Order as OrderByOrder};
 use crate::query_api::expression::constant::Constant;
+use crate::query_api::expression::constant::TimeUtil;
 use crate::query_api::execution::query::output::output_stream::{
     OutputStream,
     OutputStreamAction,
@@ -563,4 +564,46 @@ STRING: String = {
 };
 
 NUMBER: i64 = { <r"[0-9]+"> => <>.parse().unwrap() };
+
+TimeUnit: String = {
+    "ms" => "ms".to_string(),
+    "millisec" => "millisec".to_string(),
+    "millisecs" => "millisecs".to_string(),
+    "millisecond" => "millisecond".to_string(),
+    "milliseconds" => "milliseconds".to_string(),
+    "sec" => "sec".to_string(),
+    "second" => "second".to_string(),
+    "seconds" => "seconds".to_string(),
+    "min" => "min".to_string(),
+    "minute" => "minute".to_string(),
+    "minutes" => "minutes".to_string(),
+    "h" => "h".to_string(),
+    "hour" => "hour".to_string(),
+    "hours" => "hours".to_string(),
+    "day" => "day".to_string(),
+    "days" => "days".to_string(),
+    "week" => "week".to_string(),
+    "weeks" => "weeks".to_string(),
+    "month" => "month".to_string(),
+    "months" => "months".to_string(),
+    "year" => "year".to_string(),
+    "years" => "years".to_string(),
+};
+
+pub TimeConstant: Constant = {
+    <n:NUMBER> <u:TimeUnit> => {
+        let millis = match u.as_str() {
+            "ms" | "millisec" | "millisecs" | "millisecond" | "milliseconds" => TimeUtil::millisec_val(n),
+            "sec" | "second" | "seconds" => TimeUtil::sec_val(n),
+            "min" | "minute" | "minutes" => TimeUtil::minute_val(n),
+            "h" | "hour" | "hours" => TimeUtil::hour_val(n),
+            "day" | "days" => TimeUtil::day_val(n),
+            "week" | "weeks" => TimeUtil::week_val(n),
+            "month" | "months" => TimeUtil::month_val(n),
+            "year" | "years" => TimeUtil::year_val(n),
+            _ => unreachable!(),
+        };
+        Constant::time(millis)
+    }
+};
 

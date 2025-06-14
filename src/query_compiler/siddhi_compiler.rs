@@ -190,8 +190,10 @@ pub fn parse_function_definition(func_def_string: &str) -> Result<FunctionDefini
 // Java method returns io.siddhi.query.api.expression.constant.TimeConstant
 // Our ExpressionConstant is crate::query_api::expression::constant::Constant
 pub fn parse_time_constant(time_const_string: &str) -> Result<ExpressionConstant, String> {
-    let _ = update_variables(time_const_string)?;
-    Err("Time constant parsing not implemented".to_string())
+    let s = update_variables(time_const_string)?;
+    grammar::TimeConstantParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
 }
 
 pub fn parse_on_demand_query(query_string: &str) -> Result<OnDemandQuery, String> {
