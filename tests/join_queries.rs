@@ -354,6 +354,7 @@ fn setup_state_join(
         stream_meta_map: stream_meta,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),
+        aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
         default_source: "Left".to_string(),
         query_name: "q",

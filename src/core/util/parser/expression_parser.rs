@@ -122,6 +122,7 @@ pub struct ExpressionParserContext<'a> {
     pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub table_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub window_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
+    pub aggregation_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub state_meta_map: HashMap<String, Arc<MetaStateEvent>>,
     pub default_source: String,
     pub query_name: &'a str,
@@ -176,6 +177,18 @@ pub fn parse_expression<'a>(
                     ));
                 }
             } else if let Some(meta) = context.window_meta_map.get(stream_id) {
+                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
+                    found = Some((
+                        [
+                            0,
+                            api_var.stream_index.unwrap_or(0),
+                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                            *idx as i32,
+                        ],
+                        t.clone(),
+                    ));
+                }
+            } else if let Some(meta) = context.aggregation_meta_map.get(stream_id) {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
                     found = Some((
                         [

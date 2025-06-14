@@ -160,6 +160,7 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name: &str) -> ExpressionParse
         stream_meta_map: smap,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),
+        aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
         default_source: "s".to_string(),
         query_name: Box::leak(name.to_string().into_boxed_str()),

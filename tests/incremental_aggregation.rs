@@ -42,6 +42,7 @@ fn make_ctx(name: &str) -> ExpressionParserContext<'static> {
         stream_meta_map: stream_map,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),
+        aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
         default_source: "InStream".to_string(),
         query_name: qn,
