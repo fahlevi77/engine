@@ -8,11 +8,18 @@ use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex}; // Using VecDeque for efficient chunk building
 
 use super::{GroupByKeyGenerator, OrderByEventComparator};
+use crate::core::executor::expression_executor::ExpressionExecutor;
+
+#[derive(Debug)]
+struct GroupState {
+    oaps: Vec<OutputAttributeProcessor>,
+    having_exec: Option<Box<dyn ExpressionExecutor>>,
+}
 // OutputRateLimiter is the actual next processor for QuerySelector in Java
 #[derive(Debug)]
 pub struct OutputRateLimiterPlaceholder {
@@ -81,6 +88,8 @@ pub struct SelectProcessor {
     batching_enabled: bool,
     limit: Option<u64>,
     offset: Option<u64>,
+    /// Per-group aggregator state when both group-by and aggregators are used.
+    group_states: Mutex<std::collections::HashMap<String, GroupState>>, 
 }
 
 impl SelectProcessor {
@@ -125,6 +134,7 @@ impl SelectProcessor {
                 .offset
                 .as_ref()
                 .and_then(|c| c.value.to_u64_for_limit_offset()),
+            group_states: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -133,8 +143,12 @@ impl Processor for SelectProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         let mut input_event_opt = complex_event_chunk;
         let mut collected: Vec<Box<dyn ComplexEvent>> = Vec::new();
-        let mut group_map: std::collections::HashMap<String, Box<dyn ComplexEvent>> =
-            std::collections::HashMap::new();
+        let mut group_map: HashMap<String, Box<dyn ComplexEvent>> = HashMap::new();
+        let mut state_lock = if self.contains_aggregator && self.is_group_by {
+            Some(self.group_states.lock().unwrap())
+        } else {
+            None
+        };
 
         while let Some(mut event_box) = input_event_opt {
             let next = event_box.set_next(None);
@@ -152,34 +166,63 @@ impl Processor for SelectProcessor {
             }
 
             let mut out = Vec::with_capacity(self.output_attribute_processors.len());
-            for oap in &self.output_attribute_processors {
-                out.push(oap.process(Some(event_box.as_ref())));
-            }
-            event_box.set_output_data(Some(out));
-            if etype != ComplexEventType::Reset {
-                event_box.set_event_type(etype);
-            }
-
-            if let Some(ref having_exec) = self.having_condition_executor {
-                let pass = match having_exec.execute(Some(event_box.as_ref())) {
-                    Some(AttributeValue::Bool(true)) => true,
-                    _ => false,
-                };
-                if !pass {
-                    input_event_opt = next;
-                    continue;
-                }
-            }
-
-            if self.is_group_by {
+            if let Some(ref mut map) = state_lock {
                 let key = self
                     .group_by_key_generator
                     .as_ref()
                     .and_then(|g| g.construct_event_key(event_box.as_ref()))
                     .unwrap_or_else(|| "".to_string());
+                let state = map.entry(key.clone()).or_insert_with(|| GroupState {
+                    oaps: self
+                        .output_attribute_processors
+                        .iter()
+                        .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
+                        .collect(),
+                    having_exec: self
+                        .having_condition_executor
+                        .as_ref()
+                        .map(|e| e.clone_executor(&self.meta.siddhi_app_context)),
+                });
+                for oap in &state.oaps {
+                    out.push(oap.process(Some(event_box.as_ref())));
+                }
+                event_box.set_output_data(Some(out));
+                if etype != ComplexEventType::Reset {
+                    event_box.set_event_type(etype);
+                }
+                if let Some(ref h) = state.having_exec {
+                    let pass = matches!(h.execute(Some(event_box.as_ref())), Some(AttributeValue::Bool(true)));
+                    if !pass {
+                        input_event_opt = next;
+                        continue;
+                    }
+                }
                 group_map.insert(key, event_box);
             } else {
-                collected.push(event_box);
+                for oap in &self.output_attribute_processors {
+                    out.push(oap.process(Some(event_box.as_ref())));
+                }
+                event_box.set_output_data(Some(out));
+                if etype != ComplexEventType::Reset {
+                    event_box.set_event_type(etype);
+                }
+                if let Some(ref having_exec) = self.having_condition_executor {
+                    let pass = matches!(having_exec.execute(Some(event_box.as_ref())), Some(AttributeValue::Bool(true)));
+                    if !pass {
+                        input_event_opt = next;
+                        continue;
+                    }
+                }
+                if self.is_group_by {
+                    let key = self
+                        .group_by_key_generator
+                        .as_ref()
+                        .and_then(|g| g.construct_event_key(event_box.as_ref()))
+                        .unwrap_or_else(|| "".to_string());
+                    group_map.insert(key, event_box);
+                } else {
+                    collected.push(event_box);
+                }
             }
 
             input_event_opt = next;
@@ -274,6 +317,7 @@ impl Processor for SelectProcessor {
             batching_enabled: self.batching_enabled,
             limit: self.limit,
             offset: self.offset,
+            group_states: Mutex::new(HashMap::new()),
         })
     }
 
