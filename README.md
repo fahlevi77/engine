@@ -130,6 +130,17 @@ let cmp = CompareExpressionExecutor::new(
 assert_eq!(cmp.execute(None), Some(AttributeValue::Bool(true)));
 ```
 
+### CLI Runner
+
+A small binary `run_siddhi` can execute a SiddhiQL file and log emitted events.
+Build and run with:
+
+```bash
+cargo run --bin run_siddhi examples/sample.siddhi
+```
+
+All streams have a `LogSink` attached so events appear on stdout.
+
 ## Next Planned Phases (High-Level)
 
 1.  **Stabilize Phase 1**: Make the `test_simple_filter_projection_query` compile and run successfully by fully implementing the simplified logic paths in `ExpressionParser`, `VariableExpressionExecutor`, `FilterProcessor`, `SelectProcessor`, and event data handling.

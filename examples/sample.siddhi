@@ -1,0 +1,4 @@
+define stream InStream (a int);
+define stream OutStream (a int);
+from InStream select a insert into OutStream;
+
