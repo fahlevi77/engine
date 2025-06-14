@@ -6,9 +6,8 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For add_ca
 use crate::core::partition::PartitionRuntime;
 use crate::core::persistence::SnapshotService;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
-use crate::core::query::processor::Processor; // Trait for CallbackProcessor
 use crate::core::query::query_runtime::QueryRuntime;
-use crate::core::siddhi_app_runtime_builder::{SiddhiAppRuntimeBuilder, TableRuntimePlaceholder};
+use crate::core::siddhi_app_runtime_builder::TableRuntimePlaceholder;
 use crate::core::stream::input::input_handler::InputHandler;
 use crate::core::stream::input::input_manager::InputManager;
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
@@ -174,7 +173,7 @@ impl SiddhiAppRuntime {
     }
 
     pub fn start(&self) {
-        if let Some(scheduler) = &self.scheduler {
+        if self.scheduler.is_some() {
             // placeholder: scheduler is kept alive by self
             println!("Scheduler initialized for SiddhiAppRuntime '{}'", self.name);
         }

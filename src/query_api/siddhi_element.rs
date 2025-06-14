@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.query.api.SiddhiElement
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)] // Added Eq, Hash
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)] // Added Eq, Hash, Default
 pub struct SiddhiElement {
     pub query_context_start_index: Option<(i32, i32)>,
     pub query_context_end_index: Option<(i32, i32)>,
@@ -11,15 +11,6 @@ impl SiddhiElement {
         SiddhiElement {
             query_context_start_index: start_index,
             query_context_end_index: end_index,
-        }
-    }
-}
-
-impl Default for SiddhiElement {
-    fn default() -> Self {
-        SiddhiElement {
-            query_context_start_index: None,
-            query_context_end_index: None,
         }
     }
 }

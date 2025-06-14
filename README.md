@@ -168,3 +168,4 @@ After parsing, `AggregationRuntime` instances are created when building a
 `SiddhiAppRuntime`. Events fed to the runtime will update the aggregation buckets
 for each configured duration.  Query APIs for reading these buckets are not yet
 implemented, but tests demonstrate the accumulation logic.
+\nNote: The project still emits numerous compiler warnings due to incomplete features and placeholder code. These are expected during the early porting phase.

@@ -11,7 +11,7 @@ pub(super) trait CoerceNumeric {
 }
 
 impl CoerceNumeric for AttributeValue {
-    fn to_i32_or_err_str(&self, op_name: &str) -> Option<i32> {
+    fn to_i32_or_err_str(&self, _op_name: &str) -> Option<i32> {
         match self {
             AttributeValue::Int(v) => Some(*v),
             AttributeValue::Long(v) => Some(*v as i32),
@@ -23,7 +23,7 @@ impl CoerceNumeric for AttributeValue {
             }
         }
     }
-    fn to_i64_or_err_str(&self, op_name: &str) -> Option<i64> {
+    fn to_i64_or_err_str(&self, _op_name: &str) -> Option<i64> {
         match self {
             AttributeValue::Int(v) => Some(*v as i64),
             AttributeValue::Long(v) => Some(*v),
@@ -32,7 +32,7 @@ impl CoerceNumeric for AttributeValue {
             _ => None,
         }
     }
-    fn to_f32_or_err_str(&self, op_name: &str) -> Option<f32> {
+    fn to_f32_or_err_str(&self, _op_name: &str) -> Option<f32> {
         match self {
             AttributeValue::Int(v) => Some(*v as f32),
             AttributeValue::Long(v) => Some(*v as f32),
@@ -41,7 +41,7 @@ impl CoerceNumeric for AttributeValue {
             _ => None,
         }
     }
-    fn to_f64_or_err_str(&self, op_name: &str) -> Option<f64> {
+    fn to_f64_or_err_str(&self, _op_name: &str) -> Option<f64> {
         match self {
             AttributeValue::Int(v) => Some(*v as f64),
             AttributeValue::Long(v) => Some(*v as f64),

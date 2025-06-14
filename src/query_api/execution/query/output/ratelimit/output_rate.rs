@@ -4,17 +4,12 @@ use super::time_output_rate::TimeOutputRate;
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
 use crate::query_api::siddhi_element::SiddhiElement; // Use renamed ConstantValue
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)] // Added Eq, Hash, Copy
 pub enum OutputRateBehavior {
+    #[default]
     All,
     First,
     Last,
-}
-
-impl Default for OutputRateBehavior {
-    fn default() -> Self {
-        OutputRateBehavior::All
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

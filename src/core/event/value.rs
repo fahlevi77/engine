@@ -7,6 +7,7 @@ use std::fmt;
 // query_api::definition::attribute::Type enum has STRING, INT, LONG, FLOAT, DOUBLE, BOOL, OBJECT.
 // This enum should reflect those types for data carrying.
 
+#[derive(Default)]
 pub enum AttributeValue {
     String(String),
     Int(i32),
@@ -15,7 +16,8 @@ pub enum AttributeValue {
     Double(f64),
     Bool(bool),
     Object(Option<Box<dyn Any + Send + Sync>>), // For OBJECT type, ensure thread safety
-    Null,                                       // To represent null values explicitly
+    #[default]
+    Null,                         // To represent null values explicitly
 }
 
 // Manual implementation of Debug to handle Box<dyn Any>
@@ -67,12 +69,6 @@ impl Clone for AttributeValue {
             AttributeValue::Object(_) => AttributeValue::Object(None),
             AttributeValue::Null => AttributeValue::Null,
         }
-    }
-}
-
-impl Default for AttributeValue {
-    fn default() -> Self {
-        AttributeValue::Null
     }
 }
 

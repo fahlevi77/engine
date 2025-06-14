@@ -10,9 +10,7 @@ use crate::core::executor::ScalarFunctionExecutor; // Added for UDFs
 use crate::core::DataSource;
 use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added for data sources
                                                                        // Placeholder for actual persistence store trait/type
-use crate::core::config::siddhi_context::{
-    ConfigManagerPlaceholder, DataSourcePlaceholder, ExtensionClassPlaceholder,
-};
+use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder};
 use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
 
 use std::collections::HashMap;

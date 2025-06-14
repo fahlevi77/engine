@@ -40,12 +40,6 @@ impl MultiplyExpressionExecutor {
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
             (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT,
-            _ => {
-                return Err(format!(
-                    "Multiplication not supported for incompatible types: {:?} and {:?}",
-                    left_type, right_type
-                ))
-            }
         };
         Ok(Self {
             left_executor: left,

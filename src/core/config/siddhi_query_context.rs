@@ -72,7 +72,7 @@ impl SiddhiQueryContext {
     }
 
     pub fn get_output_event_type(&self) -> Option<OutputEventType> {
-        self.output_event_type.clone()
+        self.output_event_type
     }
 
     pub fn set_output_event_type(&mut self, output_event_type: OutputEventType) {

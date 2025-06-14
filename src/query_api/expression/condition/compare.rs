@@ -2,20 +2,15 @@
 use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)] // Added Eq, Hash, Copy
 pub enum Operator {
     LessThan,
     GreaterThan,
     LessThanEqual,
     GreaterThanEqual,
+    #[default]
     Equal,
     NotEqual,
-}
-
-impl Default for Operator {
-    fn default() -> Self {
-        Operator::Equal
-    } // Defaulting to Equal, could be any.
 }
 
 // This From impl was for a placeholder Java enum, can be removed or adapted if JNI is used.

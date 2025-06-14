@@ -52,10 +52,7 @@ impl MetaStreamEvent {
             .enumerate()
         {
             // Assuming get_name() and get_type() are available on ApiAttribute
-            attribute_info.insert(
-                api_attr.name.clone(),
-                (index, api_attr.attribute_type.clone()),
-            );
+            attribute_info.insert(api_attr.name.clone(), (index, api_attr.attribute_type));
         }
         Self {
             input_stream_definition: input_stream_def.clone(),
@@ -88,7 +85,7 @@ impl MetaStreamEvent {
         self.attribute_info = self
             .attribute_info
             .iter()
-            .map(|(k, (idx, t))| (k.clone(), (idx + offset, t.clone())))
+            .map(|(k, (idx, t))| (k.clone(), (idx + offset, *t)))
             .collect();
     }
 
@@ -146,7 +143,7 @@ impl MetaStreamEvent {
             .abstract_definition
             .attribute_list
             .iter()
-            .map(|attr| (attr.name.clone(), attr.attribute_type.clone()))
+            .map(|attr| (attr.name.clone(), attr.attribute_type))
             .collect()
     }
 

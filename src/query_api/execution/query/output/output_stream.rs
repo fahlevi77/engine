@@ -2,19 +2,14 @@ use super::stream::{SetAttribute, UpdateSet};
 use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement; // Using UpdateSet
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum OutputEventType {
     ExpiredEvents,
+    #[default]
     CurrentEvents,
     AllEvents,
     AllRawEvents,
     ExpiredRawEvents,
-}
-
-impl Default for OutputEventType {
-    fn default() -> Self {
-        OutputEventType::CurrentEvents
-    }
 }
 
 // Action Structs: These do not compose SiddhiElement directly.

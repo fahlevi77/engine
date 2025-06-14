@@ -40,12 +40,6 @@ impl ModExpressionExecutor {
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
             (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT, // Base case
-            _ => {
-                return Err(format!(
-                    "Modulo not supported for incompatible types: {:?} and {:?}",
-                    left_type, right_type
-                ))
-            }
         };
         Ok(Self {
             left_executor: left,
