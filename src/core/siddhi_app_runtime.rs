@@ -137,6 +137,13 @@ impl SiddhiAppRuntime {
         self.input_manager.get_input_handler(stream_id)
     }
 
+    pub fn get_table_input_handler(
+        &self,
+        table_id: &str,
+    ) -> Option<crate::core::stream::input::table_input_handler::TableInputHandler> {
+        self.input_manager.get_table_input_handler(table_id)
+    }
+
     pub fn add_callback(
         &self,
         stream_id: &str,

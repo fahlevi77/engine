@@ -6,6 +6,7 @@ pub mod snapshot_service;
 
 pub use self::data_source::{DataSource, DataSourceConfig};
 pub use self::persistence_store::{
-    InMemoryPersistenceStore, IncrementalPersistenceStore, PersistenceStore,
+    FilePersistenceStore, InMemoryPersistenceStore, IncrementalPersistenceStore, PersistenceStore,
+    SqlitePersistenceStore,
 };
 pub use self::snapshot_service::SnapshotService;

@@ -4,7 +4,7 @@ use std::sync::RwLock;
 mod jdbc_table;
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::extension::TableFactory;
-pub use jdbc_table::JdbcTable;
+pub use jdbc_table::{JdbcTable, JdbcTableFactory};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
