@@ -163,6 +163,7 @@ InputStreamRule: InputStream = {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
         InputStream::Single(si)
     },
+    <id:Ident> "on" <_cond:Expression> "within" <_within:Expression> "per" <_per:Expression> => InputStream::stream(id),
     <id:Ident> => InputStream::stream(id),
     <left:Ident> "join" <right:Ident> "on" <cond:Expression> => {
         InputStream::join_stream(
@@ -374,6 +375,12 @@ pub PartitionStmt: Partition = {
         for (_, pt) in rest { p = p.with_partition_type(pt); }
         for q in qs { p = p.add_query(q); }
         p
+    },
+    "define" "partition" "with" "(" <first:PartitionWithStream> <rest:("," PartitionWithStream)*> ")" "begin" <qs:QueryList> "end" => {
+        let mut p = Partition::partition().with_partition_type(first);
+        for (_, pt) in rest { p = p.with_partition_type(pt); }
+        for q in qs { p = p.add_query(q); }
+        p
     }
 };
 
@@ -557,6 +564,7 @@ PrimaryExpr: Expression = {
     <s:STRING> => Expression::value_string(s),
     <n:NUMBER> => Expression::value_long(n),
     "-" <n:NUMBER> => Expression::value_long(-n),
+    <tc:TimeConstant> => Expression::Constant(tc),
     <sid:Ident> "." <id:Ident> => Expression::Variable(Variable::new(id).of_stream(sid)),
     <ns:Ident> ":" <id:Ident> "(" <args:ExprList> ")" => Expression::function(Some(ns), id, args),
     <id:Ident> "(" <args:ExprList> ")" => Expression::function_no_ns(id, args),

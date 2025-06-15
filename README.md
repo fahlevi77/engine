@@ -26,7 +26,7 @@ The project is in the early stages of porting. Key modules have been structurall
 
 This port is **far from feature-complete** with the Java version. Users should be aware of the following critical missing pieces and simplifications:
 
-*   **No SiddhiQL String Parsing**: The `query_compiler` cannot currently parse SiddhiQL query strings into the `query_api::SiddhiApp` representation. This is the largest current omission for usability.
+*   **SiddhiQL String Parsing**: A LALRPOP-based parser converts SiddhiQL strings into the `query_api` AST.  The grammar covers streams, tables, windows, triggers, aggregations, queries and partitions (with optional `define` syntax) and supports aggregation store queries with `within`/`per` clauses, but still omits many advanced constructs.
 *   **`ExpressionParser` Completeness**:
     *   **Variable Resolution**: Current logic is highly simplified for a single input stream. It does not handle joins, patterns, states, tables, window functions, or aggregation variable lookups. Attribute position and type resolution from complex contexts is a major TODO.
     *   **Function Handling**: Only a few common built-in functions are recognized. A full function lookup mechanism (including UDFs from `SiddhiContext`, script functions) and robust argument parsing/type checking is needed.
@@ -164,7 +164,7 @@ All streams have a `LogSink` attached so events appear on stdout.
 1.  **Stabilize Phase 1**: Make the `test_simple_filter_projection_query` compile and run successfully by fully implementing the simplified logic paths in `ExpressionParser`, `VariableExpressionExecutor`, `FilterProcessor`, `SelectProcessor`, and event data handling.
 2.  **Basic Stateful Operations**: Introduce `LengthWindowProcessor` and other simple stateful processors.
 3.  **Expand Core Logic**: Gradually implement more expression executors, stream processors, join capabilities, and aggregation functions.
-4.  **SiddhiQL Parsing**: Integrate a proper SiddhiQL parser (potentially by exploring options like FFI to the Java ANTLR parser, or using a Rust parsing library for a subset of SiddhiQL).
+4.  **SiddhiQL Parsing**: Continue expanding the Rust-based grammar to support more of the language and improve error reporting.
 
 ## Contributing
 (Placeholder for contribution guidelines)
