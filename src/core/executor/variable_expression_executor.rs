@@ -5,8 +5,8 @@ use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::siddhi_constants::{
-    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_EVENT_CHAIN_INDEX,
-    STREAM_EVENT_INDEX_IN_CHAIN,
+    BEFORE_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
+    STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
 };
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 
@@ -37,6 +37,40 @@ impl VariableExpressionExecutor {
             return_type,
             attribute_name_for_debug,
         }
+    }
+
+    /// Return the current Siddhi position array describing this variable.
+    pub fn get_position(&self) -> [i32; 4] {
+        self.position
+    }
+
+    /// Update the executor's position information.  This mirrors the behaviour
+    /// of the Java implementation where a position can be specified either as a
+    /// two element array (attribute type and index) for simple stream queries or
+    /// a full four element array for state events and table lookups.
+    pub fn set_position(&mut self, position: &[i32]) {
+        use crate::core::util::siddhi_constants::{
+            STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+            STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
+        };
+        if position.len() == 2 {
+            self.position[STREAM_ATTRIBUTE_TYPE_INDEX] = position[0];
+            self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] = position[1];
+        } else if position.len() == 4 {
+            self.position[STREAM_EVENT_CHAIN_INDEX] = position[0];
+            self.position[STREAM_EVENT_INDEX_IN_CHAIN] = position[1];
+            self.position[STREAM_ATTRIBUTE_TYPE_INDEX] = position[2];
+            self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] = position[3];
+        }
+    }
+
+    /// Convenience method used when performing table lookups where the data is
+    /// provided as a plain attribute array rather than wrapped in a
+    /// [`ComplexEvent`].
+    pub fn execute_on_row(&self, values: &[AttributeValue]) -> Option<AttributeValue> {
+        values
+            .get(self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] as usize)
+            .cloned()
     }
 }
 
@@ -254,5 +288,19 @@ mod tests {
             result_before,
             Some(AttributeValue::String("clone_val_before".to_string()))
         );
+    }
+
+    #[test]
+    fn test_set_position_and_execute_on_row() {
+        let mut exec = VariableExpressionExecutor::new(
+            [0, 0, BEFORE_WINDOW_DATA_INDEX as i32, 0],
+            ApiAttributeType::INT,
+            "row_attr".to_string(),
+        );
+        exec.set_position(&[OUTPUT_DATA_INDEX as i32, 1]);
+        let row = vec![AttributeValue::Int(10), AttributeValue::Int(20)];
+        let val = exec.execute_on_row(&row);
+        assert_eq!(val, Some(AttributeValue::Int(20)));
+        assert_eq!(exec.get_position()[STREAM_ATTRIBUTE_INDEX_IN_TYPE], 1);
     }
 }

@@ -6,7 +6,7 @@ pub mod function; // Added for function executors
 pub mod math;
 pub mod multi_value_variable_function_executor;
 pub mod variable_expression_executor;
-// pub mod incremental; // For incremental aggregation executors
+pub mod incremental; // For incremental aggregation executors
 
 pub use self::condition::*;
 pub use self::constant_expression_executor::ConstantExpressionExecutor;
@@ -18,4 +18,4 @@ pub use self::multi_value_variable_function_executor::MultiValueVariableFunction
 pub use self::variable_expression_executor::VariableExpressionExecutor; // Removed VariablePosition, EventDataArrayType
                                                                         // AttributeDynamicResolveType was in the prompt for VariableExpressionExecutor, but not used in my simplified impl yet.
                                                                         // If it were, it would be exported:
-                                                                        // pub use self::variable_expression_executor::AttributeDynamicResolveType;
+pub use self::incremental::*;
