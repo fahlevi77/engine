@@ -57,7 +57,7 @@ fn test_add_data_source_uses_config() {
         },
     );
     let ds = Arc::new(MockDataSource::new());
-    ctx.add_data_source("DS".to_string(), ds.clone());
+    ctx.add_data_source("DS".to_string(), ds.clone()).unwrap();
     let stored = ds.called.lock().unwrap().clone();
     assert!(stored.is_some());
     assert_eq!(

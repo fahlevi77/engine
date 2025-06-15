@@ -232,8 +232,12 @@ impl SiddhiManager {
     }
 
     // Specific method for adding data sources
-    pub fn add_data_source(&self, name: String, data_source: Arc<dyn DataSource>) {
-        self.siddhi_context.add_data_source(name, data_source);
+    pub fn add_data_source(
+        &self,
+        name: String,
+        data_source: Arc<dyn DataSource>,
+    ) -> Result<(), String> {
+        self.siddhi_context.add_data_source(name, data_source)
     }
 
     // set_data_source was a placeholder, replaced by add_data_source

@@ -57,10 +57,12 @@ fn setup_table(ctx: &Arc<SiddhiContext>) {
 #[test]
 fn test_jdbc_table_crud() {
     let ctx = Arc::new(SiddhiContext::new());
-    ctx.add_data_source(
-        "DS1".to_string(),
-        Arc::new(SqliteDataSource::new(":memory:")),
-    );
+    ctx
+        .add_data_source(
+            "DS1".to_string(),
+            Arc::new(SqliteDataSource::new(":memory:")),
+        )
+        .unwrap();
     setup_table(&ctx);
 
     let table = JdbcTable::new("test".to_string(), "DS1".to_string(), Arc::clone(&ctx)).unwrap();

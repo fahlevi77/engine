@@ -185,7 +185,11 @@ impl SiddhiContext {
         self.data_sources.read().unwrap().get(name).cloned()
     }
 
-    pub fn add_data_source(&self, name: String, mut data_source: Arc<dyn DataSource>) {
+    pub fn add_data_source(
+        &self,
+        name: String,
+        mut data_source: Arc<dyn DataSource>,
+    ) -> Result<(), String> {
         if let Some(cfg) = self.data_source_configs.read().unwrap().get(&name).cloned() {
             let dummy_ctx = Arc::new(SiddhiAppContext::new(
                 Arc::new(self.clone()),
@@ -195,14 +199,15 @@ impl SiddhiContext {
             ));
 
             if let Some(ds_mut) = Arc::get_mut(&mut data_source) {
-                let _ = ds_mut.init(&dummy_ctx, &name, cfg);
+                ds_mut.init(&dummy_ctx, &name, cfg)?;
             } else {
                 let mut ds_box = data_source.clone_data_source();
-                let _ = ds_box.init(&dummy_ctx, &name, cfg.clone());
+                ds_box.init(&dummy_ctx, &name, cfg.clone())?;
                 data_source = Arc::from(ds_box);
             }
         }
         self.data_sources.write().unwrap().insert(name, data_source);
+        Ok(())
     }
 
     pub fn set_data_source_config(&self, name: String, config: DataSourceConfig) {

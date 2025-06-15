@@ -21,6 +21,7 @@ impl StreamCallback for CollectCallback {
     }
 }
 
+#[derive(Debug)]
 pub struct AppRunner {
     runtime: Arc<SiddhiAppRuntime>,
     pub collected: Arc<Mutex<Vec<Vec<AttributeValue>>>>,

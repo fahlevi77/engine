@@ -154,10 +154,12 @@ fn test_table_input_handler_update_delete_find() {
 #[test]
 fn test_table_input_handler_jdbc() {
     let ctx = Arc::new(SiddhiContext::new());
-    ctx.add_data_source(
-        "DS1".to_string(),
-        Arc::new(SqliteDataSource::new(":memory:")),
-    );
+    ctx
+        .add_data_source(
+            "DS1".to_string(),
+            Arc::new(SqliteDataSource::new(":memory:")),
+        )
+        .unwrap();
     setup_jdbc_table(&ctx, "test2");
 
     let app_ctx = Arc::new(SiddhiAppContext::new(

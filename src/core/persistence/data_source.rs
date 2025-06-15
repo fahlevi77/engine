@@ -44,3 +44,56 @@ impl Clone for Box<dyn DataSource> {
         self.clone_data_source()
     }
 }
+
+// --- Concrete DataSource Implementations ---
+
+use rusqlite::Connection;
+use std::sync::Mutex;
+
+/// Simple SQLite backed data source. Connections are shared via `Arc<Mutex<Connection>>`.
+#[derive(Debug)]
+pub struct SqliteDataSource {
+    conn: Arc<Mutex<Connection>>,
+}
+
+impl SqliteDataSource {
+    /// Create a new SQLite data source backed by the file at `path`.
+    pub fn new(path: &str) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            conn: Arc::new(Mutex::new(Connection::open(path)?)),
+        })
+    }
+}
+
+impl DataSource for SqliteDataSource {
+    fn get_type(&self) -> String {
+        "sqlite".to_string()
+    }
+
+    fn init(
+        &mut self,
+        _ctx: &Arc<SiddhiAppContext>,
+        _id: &str,
+        cfg: DataSourceConfig,
+    ) -> Result<(), String> {
+        if let Some(path) = cfg.properties.get("path") {
+            let conn = Connection::open(path).map_err(|e| e.to_string())?;
+            self.conn = Arc::new(Mutex::new(conn));
+        }
+        Ok(())
+    }
+
+    fn get_connection(&self) -> Result<Box<dyn Any>, String> {
+        Ok(Box::new(self.conn.clone()) as Box<dyn Any>)
+    }
+
+    fn shutdown(&mut self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn clone_data_source(&self) -> Box<dyn DataSource> {
+        Box::new(SqliteDataSource {
+            conn: self.conn.clone(),
+        })
+    }
+}
