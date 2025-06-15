@@ -119,10 +119,13 @@ fn test_variable_not_found_error() {
         query_name: "Q3",
     };
 
-    let var_b = Variable::new("missing".to_string()).of_stream("A".to_string());
+    let mut var_b = Variable::new("missing".to_string()).of_stream("A".to_string());
+    var_b.siddhi_element.query_context_start_index = Some((10, 5));
     let expr = Expression::Variable(var_b);
     let err = parse_expression(&expr, &ctx).unwrap_err();
-    assert!(err.contains("Q3"));
+    assert_eq!(err.line, Some(10));
+    assert_eq!(err.column, Some(5));
+    assert_eq!(err.query_name, "Q3");
 }
 
 #[test]

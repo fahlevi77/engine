@@ -8,7 +8,7 @@ pub mod trigger_parser;
 // pub mod aggregation_parser;
 // ... etc.
 
-pub use self::expression_parser::{parse_expression, ExpressionParserContext};
+pub use self::expression_parser::{parse_expression, ExpressionParserContext, ExpressionParseError};
 pub use self::query_parser::QueryParser; // Added
 pub use self::siddhi_app_parser::SiddhiAppParser; // Added
 pub use self::trigger_parser::TriggerParser;

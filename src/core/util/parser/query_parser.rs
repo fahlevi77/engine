@@ -131,7 +131,8 @@ impl QueryParser {
                             link_processor(win_proc);
                         }
                         crate::query_api::execution::query::input::handler::StreamHandler::Filter(f) => {
-                            let condition_executor = parse_expression(&f.filter_expression, &ctx)?;
+                            let condition_executor =
+                                parse_expression(&f.filter_expression, &ctx).map_err(|e| e.to_string())?;
                             let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
                                 condition_executor,
                                 Arc::clone(siddhi_app_context),
@@ -187,20 +188,23 @@ impl QueryParser {
                 }
 
                 let cond_exec = if let Some(expr) = &join_stream.on_compare {
-                    Some(parse_expression(
-                        expr,
-                        &ExpressionParserContext {
-                            siddhi_app_context: Arc::clone(siddhi_app_context),
-                            siddhi_query_context: Arc::clone(&siddhi_query_context),
-                            stream_meta_map: stream_meta_map.clone(),
-                            table_meta_map: table_meta_map.clone(),
-                            window_meta_map: HashMap::new(),
-                            aggregation_meta_map: HashMap::new(),
-                            state_meta_map: HashMap::new(),
-                            default_source: left_id.clone(),
-                            query_name: &query_name,
-                        },
-                    )?)
+                    Some(
+                        parse_expression(
+                            expr,
+                            &ExpressionParserContext {
+                                siddhi_app_context: Arc::clone(siddhi_app_context),
+                                siddhi_query_context: Arc::clone(&siddhi_query_context),
+                                stream_meta_map: stream_meta_map.clone(),
+                                table_meta_map: table_meta_map.clone(),
+                                window_meta_map: HashMap::new(),
+                                aggregation_meta_map: HashMap::new(),
+                                state_meta_map: HashMap::new(),
+                                default_source: left_id.clone(),
+                                query_name: &query_name,
+                            },
+                        )
+                        .map_err(|e| e.to_string())?,
+                    )
                 } else {
                     None
                 };
@@ -483,7 +487,8 @@ impl QueryParser {
         let mut output_attributes_for_def = Vec::new();
 
         for (idx, api_out_attr) in api_selector.selection_list.iter().enumerate() {
-            let expr_exec = parse_expression(&api_out_attr.expression, &expr_parser_context)?;
+            let expr_exec =
+                parse_expression(&api_out_attr.expression, &expr_parser_context).map_err(|e| e.to_string())?;
             // OutputAttributeProcessor needs the output position.
             let oap = OutputAttributeProcessor::new(expr_exec);
 
@@ -520,7 +525,7 @@ impl QueryParser {
         let select_output_stream_def = Arc::new(temp_def);
 
         let having_executor = if let Some(expr) = &api_selector.having_expression {
-            Some(parse_expression(expr, &expr_parser_context)?)
+            Some(parse_expression(expr, &expr_parser_context).map_err(|e| e.to_string())?)
         } else {
             None
         };
@@ -528,7 +533,7 @@ impl QueryParser {
         let mut group_execs = Vec::new();
         for var in &api_selector.group_by_list {
             let expr = ApiExpression::Variable(var.clone());
-            group_execs.push(parse_expression(&expr, &expr_parser_context)?);
+            group_execs.push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
         }
         let group_by_key_generator = if group_execs.is_empty() {
             None
@@ -540,7 +545,7 @@ impl QueryParser {
         let mut order_flags = Vec::new();
         for ob in &api_selector.order_by_list {
             let expr = ApiExpression::Variable(ob.get_variable().clone());
-            order_execs.push(parse_expression(&expr, &expr_parser_context)?);
+            order_execs.push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
             order_flags.push(*ob.get_order() == crate::query_api::execution::query::selection::order_by_attribute::Order::Asc);
         }
         let order_by_comparator = if order_execs.is_empty() {
