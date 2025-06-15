@@ -113,6 +113,24 @@ let manager = SiddhiManager::new();
 // manager.add_attribute_aggregator_factory("myAgg".to_string(), Box::new(MyAggFactory));
 ```
 
+### Dynamic Extension Loading
+
+Extensions can be compiled into separate crates and loaded at runtime.  A library
+must expose a `register_extension` function that registers factories with a
+`SiddhiManager`.  The integration tests contain a sample dynamic extension under
+`tests/custom_dyn_ext`.
+
+```rust
+let manager = SiddhiManager::new();
+let lib_path = custom_dyn_ext::library_path();
+manager
+    .set_extension("custom", lib_path.to_str().unwrap().to_string())
+    .unwrap();
+```
+
+Once loaded, the factories provided by the library can be used like any other
+registered extension.
+
 ### Example Usage
 
 ```rust
