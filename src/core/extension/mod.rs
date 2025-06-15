@@ -12,6 +12,7 @@ use crate::core::query::selector::attribute::aggregator::AttributeAggregatorExec
 use crate::query_api::execution::query::input::handler::WindowHandler;
 
 pub trait WindowProcessorFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn create(
         &self,
         handler: &WindowHandler,
@@ -27,6 +28,7 @@ impl Clone for Box<dyn WindowProcessorFactory> {
 }
 
 pub trait AttributeAggregatorFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor>;
     fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory>;
 }
@@ -37,6 +39,7 @@ impl Clone for Box<dyn AttributeAggregatorFactory> {
 }
 
 pub trait SourceFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn create(&self) -> Box<dyn crate::core::stream::input::source::Source>;
     fn clone_box(&self) -> Box<dyn SourceFactory>;
 }
@@ -47,6 +50,7 @@ impl Clone for Box<dyn SourceFactory> {
 }
 
 pub trait SinkFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn create(&self) -> Box<dyn crate::core::stream::output::sink::Sink>;
     fn clone_box(&self) -> Box<dyn SinkFactory>;
 }
@@ -57,6 +61,7 @@ impl Clone for Box<dyn SinkFactory> {
 }
 
 pub trait StoreFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn clone_box(&self) -> Box<dyn StoreFactory>;
 }
 impl Clone for Box<dyn StoreFactory> {
@@ -66,6 +71,7 @@ impl Clone for Box<dyn StoreFactory> {
 }
 
 pub trait SourceMapperFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn clone_box(&self) -> Box<dyn SourceMapperFactory>;
 }
 impl Clone for Box<dyn SourceMapperFactory> {
@@ -75,6 +81,7 @@ impl Clone for Box<dyn SourceMapperFactory> {
 }
 
 pub trait SinkMapperFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn clone_box(&self) -> Box<dyn SinkMapperFactory>;
 }
 impl Clone for Box<dyn SinkMapperFactory> {
@@ -84,6 +91,7 @@ impl Clone for Box<dyn SinkMapperFactory> {
 }
 
 pub trait TableFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
     fn create(
         &self,
         table_name: String,
@@ -102,6 +110,7 @@ impl Clone for Box<dyn TableFactory> {
 pub struct TimerSourceFactory;
 
 impl SourceFactory for TimerSourceFactory {
+    fn name(&self) -> &'static str { "timer" }
     fn create(&self) -> Box<dyn crate::core::stream::input::source::Source> {
         Box::new(crate::core::stream::input::source::timer_source::TimerSource::new(1000))
     }
@@ -114,6 +123,7 @@ impl SourceFactory for TimerSourceFactory {
 pub struct LogSinkFactory;
 
 impl SinkFactory for LogSinkFactory {
+    fn name(&self) -> &'static str { "log" }
     fn create(&self) -> Box<dyn crate::core::stream::output::sink::Sink> {
         Box::new(crate::core::stream::output::sink::LogSink::new())
     }

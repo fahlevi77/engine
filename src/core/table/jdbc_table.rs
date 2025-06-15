@@ -144,6 +144,7 @@ impl Table for JdbcTable {
 pub struct JdbcTableFactory;
 
 impl crate::core::extension::TableFactory for JdbcTableFactory {
+    fn name(&self) -> &'static str { "jdbc" }
     fn create(
         &self,
         table_name: String,

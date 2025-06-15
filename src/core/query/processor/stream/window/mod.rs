@@ -348,6 +348,7 @@ pub fn create_window_processor(
 pub struct LengthWindowFactory;
 
 impl WindowProcessorFactory for LengthWindowFactory {
+    fn name(&self) -> &'static str { "length" }
     fn create(
         &self,
         handler: &WindowHandler,
@@ -368,6 +369,7 @@ impl WindowProcessorFactory for LengthWindowFactory {
 pub struct TimeWindowFactory;
 
 impl WindowProcessorFactory for TimeWindowFactory {
+    fn name(&self) -> &'static str { "time" }
     fn create(
         &self,
         handler: &WindowHandler,
@@ -526,6 +528,7 @@ impl WindowProcessor for LengthBatchWindowProcessor {}
 pub struct LengthBatchWindowFactory;
 
 impl WindowProcessorFactory for LengthBatchWindowFactory {
+    fn name(&self) -> &'static str { "lengthBatch" }
     fn create(
         &self,
         handler: &WindowHandler,
@@ -713,6 +716,7 @@ impl WindowProcessor for TimeBatchWindowProcessor {}
 pub struct TimeBatchWindowFactory;
 
 impl WindowProcessorFactory for TimeBatchWindowFactory {
+    fn name(&self) -> &'static str { "timeBatch" }
     fn create(
         &self,
         handler: &WindowHandler,

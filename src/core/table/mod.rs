@@ -105,6 +105,7 @@ impl Table for InMemoryTable {
 pub struct InMemoryTableFactory;
 
 impl TableFactory for InMemoryTableFactory {
+    fn name(&self) -> &'static str { "inMemory" }
     fn create(
         &self,
         _name: String,

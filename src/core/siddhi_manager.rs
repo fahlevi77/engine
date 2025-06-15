@@ -15,13 +15,14 @@ use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use libloading::{Library, Symbol};
 // use rand::Rng; // For generating random app names if not specified
 
 /// Main entry point for managing Siddhi application runtimes.
-#[derive(Debug)] // Default not derived as SiddhiContext requires specific init.
 pub struct SiddhiManager {
     siddhi_context: Arc<SiddhiContext>,
     siddhi_app_runtime_map: Arc<Mutex<HashMap<String, Arc<SiddhiAppRuntime>>>>,
+    loaded_libraries: Arc<Mutex<Vec<libloading::Library>>>,
 }
 
 impl SiddhiManager {
@@ -29,6 +30,7 @@ impl SiddhiManager {
         Self {
             siddhi_context: Arc::new(SiddhiContext::new()), // SiddhiContext::new() provides defaults
             siddhi_app_runtime_map: Arc::new(Mutex::new(HashMap::new())),
+            loaded_libraries: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -144,16 +146,19 @@ impl SiddhiManager {
     // For scalar functions, we use `add_scalar_function_factory`.
     pub fn set_extension(
         &self,
-        _name: &str,
-        _extension_class_placeholder: ExtensionClassPlaceholder,
+        name: &str,
+        library_path: ExtensionClassPlaceholder,
     ) -> Result<(), String> {
-        // This would typically involve:
-        // 1. Loading the class/factory based on `extension_class_placeholder`.
-        // 2. Determining its type (Function, StreamProcessor, Window, etc.).
-        // 3. Registering it with the appropriate manager or map in SiddhiContext (e.g., for StreamProcessors).
-        // For ScalarFunctionExecutor, `add_scalar_function_factory` is more specific.
-        println!("[SiddhiManager] set_extension called for {} (General Placeholder - use add_scalar_function_factory for UDFs)", _name);
-        Err("General set_extension not fully implemented; use specific adders like add_scalar_function_factory.".to_string())
+        unsafe {
+            let lib = Library::new(&library_path).map_err(|e| e.to_string())?;
+            let func: Symbol<unsafe extern "C" fn(&SiddhiManager)> = lib
+                .get(b"register_extension")
+                .map_err(|e| e.to_string())?;
+            func(self);
+            self.loaded_libraries.lock().unwrap().push(lib);
+        }
+        println!("[SiddhiManager] dynamically loaded extension '{}' from {}", name, library_path);
+        Ok(())
     }
 
     // Specific method for adding scalar function factories
@@ -330,6 +335,15 @@ impl SiddhiManager {
 impl Default for SiddhiManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl std::fmt::Debug for SiddhiManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SiddhiManager")
+            .field("siddhi_context", &"SiddhiContext")
+            .field("app_runtimes", &self.siddhi_app_runtime_map.lock().unwrap().len())
+            .finish()
     }
 }
 
