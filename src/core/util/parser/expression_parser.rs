@@ -182,14 +182,21 @@ pub fn parse_expression<'a>(
         }
         ApiExpression::Variable(api_var) => {
             let attribute_name = &api_var.attribute_name;
-            let stream_id = api_var
-                .stream_id
-                .as_deref()
-                .unwrap_or(&context.default_source);
+            let stream_id_opt = api_var.stream_id.as_deref();
 
             let mut found: Option<([i32; 4], ApiAttributeType)> = None;
-            if let Some(meta) = context.stream_meta_map.get(stream_id) {
+            let mut found_id: Option<String> = None;
+
+            // Helper closure to search a meta and record result
+            let mut check_meta = |id: &str, meta: &MetaStreamEvent| {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
+                    if found.is_some() && found_id.as_deref() != Some(id) {
+                        return Err(ExpressionParseError::new(
+                            format!("Attribute '{}' found in multiple sources", attribute_name),
+                            &api_var.siddhi_element,
+                            context.query_name,
+                        ));
+                    }
                     found = Some((
                         [
                             0,
@@ -199,60 +206,51 @@ pub fn parse_expression<'a>(
                         ],
                         t.clone(),
                     ));
+                    found_id = Some(id.to_string());
                 }
-            } else if let Some(meta) = context.table_meta_map.get(stream_id) {
-                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((
-                        [
-                            0,
-                            api_var.stream_index.unwrap_or(0),
-                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
-                            *idx as i32,
-                        ],
-                        t.clone(),
-                    ));
-                }
-            } else if let Some(meta) = context.window_meta_map.get(stream_id) {
-                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((
-                        [
-                            0,
-                            api_var.stream_index.unwrap_or(0),
-                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
-                            *idx as i32,
-                        ],
-                        t.clone(),
-                    ));
-                }
-            } else if let Some(meta) = context.aggregation_meta_map.get(stream_id) {
-                if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    found = Some((
-                        [
-                            0,
-                            api_var.stream_index.unwrap_or(0),
-                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
-                            *idx as i32,
-                        ],
-                        t.clone(),
-                    ));
-                }
-            } else if let Some(state_meta) = context.state_meta_map.get(stream_id) {
-                for (pos, opt_meta) in state_meta.meta_stream_events.iter().enumerate() {
-                    if let Some(m) = opt_meta {
-                        if let Some((idx, t)) = m.find_attribute_info(attribute_name) {
-                            found = Some((
-                                [
-                                    pos as i32,
-                                    api_var.stream_index.unwrap_or(0),
-                                    crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX
-                                        as i32,
-                                    *idx as i32,
-                                ],
-                                t.clone(),
-                            ));
-                            break;
+                Ok(())
+            };
+
+            if let Some(id) = stream_id_opt {
+                if let Some(meta) = context.stream_meta_map.get(id) {
+                    check_meta(id, meta)?;
+                } else if let Some(meta) = context.table_meta_map.get(id) {
+                    check_meta(id, meta)?;
+                } else if let Some(meta) = context.window_meta_map.get(id) {
+                    check_meta(id, meta)?;
+                } else if let Some(meta) = context.aggregation_meta_map.get(id) {
+                    check_meta(id, meta)?;
+                } else if let Some(state_meta) = context.state_meta_map.get(id) {
+                    for (pos, opt_meta) in state_meta.meta_stream_events.iter().enumerate() {
+                        if let Some(m) = opt_meta {
+                            if let Some((idx, t)) = m.find_attribute_info(attribute_name) {
+                                found = Some((
+                                    [
+                                        pos as i32,
+                                        api_var.stream_index.unwrap_or(0),
+                                        crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                                        *idx as i32,
+                                    ],
+                                    t.clone(),
+                                ));
+                                found_id = Some(id.to_string());
+                                break;
+                            }
                         }
                     }
+                }
+            } else {
+                for (id, meta) in &context.stream_meta_map {
+                    check_meta(id, meta)?;
+                }
+                for (id, meta) in &context.table_meta_map {
+                    check_meta(id, meta)?;
+                }
+                for (id, meta) in &context.window_meta_map {
+                    check_meta(id, meta)?;
+                }
+                for (id, meta) in &context.aggregation_meta_map {
+                    check_meta(id, meta)?;
                 }
             }
 
@@ -264,8 +262,9 @@ pub fn parse_expression<'a>(
                 )));
             }
 
+            let stream_name = stream_id_opt.unwrap_or(&context.default_source);
             Err(ExpressionParseError::new(
-                format!("Variable '{}.{}' not found", stream_id, attribute_name),
+                format!("Variable '{}.{}' not found", stream_name, attribute_name),
                 &api_var.siddhi_element,
                 context.query_name,
             ))

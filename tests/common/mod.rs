@@ -68,6 +68,28 @@ impl AppRunner {
         Self { runtime, collected }
     }
 
+    pub fn new_with_manager(
+        manager: SiddhiManager,
+        app_string: &str,
+        out_stream: &str,
+    ) -> Self {
+        let app = parse(app_string).expect("parse");
+        let runtime = manager
+            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .expect("runtime");
+        let collected = Arc::new(Mutex::new(Vec::new()));
+        runtime
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
+            .expect("add cb");
+        runtime.start();
+        Self { runtime, collected }
+    }
+
     pub fn new_with_store(
         app_string: &str,
         out_stream: &str,
