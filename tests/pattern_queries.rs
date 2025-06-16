@@ -91,7 +91,10 @@ fn build_sequence_query() -> Query {
     selector.selection_list = vec![
         OutputAttribute::new(
             Some("aval".to_string()),
-            Expression::variable("val".to_string()),
+            Expression::Variable(
+                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                    .of_stream("AStream".to_string()),
+            ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
@@ -125,5 +128,8 @@ fn test_sequence_query_parse() {
         &HashMap::new(),
         &HashMap::new(),
     );
+    if let Err(e) = &res {
+        println!("parse err: {}", e);
+    }
     assert!(res.is_ok());
 }

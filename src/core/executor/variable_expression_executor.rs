@@ -5,8 +5,9 @@ use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::siddhi_constants::{
-    BEFORE_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
-    STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
+    BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
+    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+    STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
 };
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 
@@ -79,8 +80,26 @@ impl ExpressionExecutor for VariableExpressionExecutor {
         let complex_event = event_opt?;
 
         if let Some(stream_event) = complex_event.as_any().downcast_ref::<StreamEvent>() {
+            let idx = self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] as usize;
+            let attr = match self.position[STREAM_ATTRIBUTE_TYPE_INDEX] as usize {
+                BEFORE_WINDOW_DATA_INDEX => stream_event.before_window_data.get(idx),
+                OUTPUT_DATA_INDEX => stream_event.output_data.as_ref().and_then(|v| v.get(idx)),
+                ON_AFTER_WINDOW_DATA_INDEX => stream_event.on_after_window_data.get(idx),
+                _ => None,
+            }
+            .cloned();
+
+            if attr.is_some() {
+                return attr;
+            }
+
+            // MetaStreamEvent in the simplified parser may place all attributes
+            // in `output_data` while positions point at `before_window_data`.
+            // Fall back to output_data when the requested section is empty.
             return stream_event
-                .get_attribute_by_position(&self.position)
+                .output_data
+                .as_ref()
+                .and_then(|v| v.get(idx))
                 .cloned();
         }
 

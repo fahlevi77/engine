@@ -100,14 +100,10 @@ impl QueryParser {
                 ));
                 let mut stream_meta_map = HashMap::new();
                 stream_meta_map.insert(input_stream_id.clone(), Arc::clone(&meta_input_event));
-                let mut table_meta_map = HashMap::new();
-                for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition {
-                        abstract_definition: table_def.abstract_definition.clone(),
-                    });
-                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
-                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
-                }
+                // Table metadata is only required when a table participates as an
+                // input source. Since table queries are not yet supported, avoid
+                // registering tables here to prevent variable lookup ambiguity.
+                let table_meta_map = HashMap::new();
                 let ctx = ExpressionParserContext {
                     siddhi_app_context: Arc::clone(siddhi_app_context),
                     siddhi_query_context: Arc::clone(&siddhi_query_context),
@@ -178,14 +174,10 @@ impl QueryParser {
                 stream_meta_map.insert(left_id.clone(), Arc::new(left_meta));
                 stream_meta_map.insert(right_id.clone(), Arc::new(right_meta));
 
-                let mut table_meta_map = HashMap::new();
-                for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition {
-                        abstract_definition: table_def.abstract_definition.clone(),
-                    });
-                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
-                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
-                }
+                // Table metadata is irrelevant for join parsing until table
+                // sources are supported. Leaving the map empty avoids
+                // incorrectly flagging attribute ambiguities.
+                let table_meta_map = HashMap::new();
 
                 let cond_exec = if let Some(expr) = &join_stream.on_compare {
                     Some(
@@ -379,14 +371,10 @@ impl QueryParser {
                     )
                 };
 
-                let mut table_meta_map = HashMap::new();
-                for (table_id, table_def) in table_def_map {
-                    let stream_def = Arc::new(ApiStreamDefinition {
-                        abstract_definition: table_def.abstract_definition.clone(),
-                    });
-                    let meta = MetaStreamEvent::new_for_single_input(stream_def);
-                    table_meta_map.insert(table_id.clone(), Arc::new(meta));
-                }
+                // Tables are not currently supported as inputs for state
+                // streams, so avoid creating metadata entries that would clash
+                // with the actual stream attributes.
+                let table_meta_map = HashMap::new();
 
                 match runtime_kind {
                     StateRuntimeKind::Sequence {

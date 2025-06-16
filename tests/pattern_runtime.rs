@@ -64,7 +64,10 @@ fn test_sequence_runtime_processing() {
     selector.selection_list = vec![
         OutputAttribute::new(
             Some("aval".to_string()),
-            Expression::variable("val".to_string()),
+            Expression::Variable(
+                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                    .of_stream("AStream".to_string()),
+            ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
@@ -166,7 +169,10 @@ fn test_every_sequence() {
     selector.selection_list = vec![
         OutputAttribute::new(
             Some("aval".to_string()),
-            Expression::variable("val".to_string()),
+            Expression::Variable(
+                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                    .of_stream("AStream".to_string()),
+            ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
@@ -265,7 +271,10 @@ fn test_logical_and_pattern() {
     selector.selection_list = vec![
         OutputAttribute::new(
             Some("aval".to_string()),
-            Expression::variable("val".to_string()),
+            Expression::Variable(
+                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                    .of_stream("AStream".to_string()),
+            ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
