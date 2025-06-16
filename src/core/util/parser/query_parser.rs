@@ -244,10 +244,22 @@ impl QueryParser {
                 use crate::query_api::execution::query::input::state::logical_state_element::Type as ApiLogicalType;
                 use crate::query_api::execution::query::input::state::state_element::StateElement;
 
-                fn extract_stream_state<'a>(se: &'a StateElement) -> Option<&'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement>{
+                fn extract_stream_state_with_count<'a>(
+                    se: &'a StateElement,
+                ) -> Option<(
+                    &'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement,
+                    i32,
+                    i32,
+                )> {
                     match se {
-                        StateElement::Stream(s) => Some(s),
-                        StateElement::Every(ev) => extract_stream_state(&ev.state_element),
+                        StateElement::Stream(s) => Some((s, 1, 1)),
+                        StateElement::Every(ev) =>
+                            extract_stream_state_with_count(&ev.state_element),
+                        StateElement::Count(c) => Some((
+                            &c.stream_state_element,
+                            c.min_count,
+                            c.max_count,
+                        )),
                         _ => None,
                     }
                 }
@@ -257,6 +269,11 @@ impl QueryParser {
                         first_id: String,
                         second_id: String,
                         seq_type: SequenceType,
+                        first_min: i32,
+                        first_max: i32,
+                        second_min: i32,
+                        second_max: i32,
+                        within: Option<i64>,
                     },
                     Logical {
                         first_id: String,
@@ -267,40 +284,57 @@ impl QueryParser {
 
                 let runtime_kind = match state_stream.state_element.as_ref() {
                     StateElement::Next(next_elem) => {
-                        let s1 =
-                            extract_stream_state(&next_elem.state_element).ok_or_else(|| {
+                        let (s1, fmin, fmax) =
+                            extract_stream_state_with_count(&next_elem.state_element).ok_or_else(|| {
                                 format!(
                                     "Query '{}': Unsupported Next pattern structure",
                                     query_name
                                 )
                             })?;
-                        let s2 = extract_stream_state(&next_elem.next_state_element).ok_or_else(
-                            || {
-                                format!(
-                                    "Query '{}': Unsupported Next pattern structure",
-                                    query_name
-                                )
-                            },
-                        )?;
+                        let (s2, smin, smax) =
+                            extract_stream_state_with_count(&next_elem.next_state_element).ok_or_else(
+                                || {
+                                    format!(
+                                        "Query '{}': Unsupported Next pattern structure",
+                                        query_name
+                                    )
+                                },
+                            )?;
                         let seq_type = match state_stream.state_type {
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
                         };
+                        let within = state_stream
+                            .within_time
+                            .as_ref()
+                            .and_then(|c| match c.get_value() {
+                                crate::query_api::expression::constant::ConstantValueWithFloat::Time(t) => Some(*t),
+                                crate::query_api::expression::constant::ConstantValueWithFloat::Long(l) => Some(*l),
+                                crate::query_api::expression::constant::ConstantValueWithFloat::Int(i) => Some(*i as i64),
+                                _ => None,
+                            });
                         StateRuntimeKind::Sequence {
                             first_id: s1.get_single_input_stream().get_stream_id_str().to_string(),
                             second_id: s2.get_single_input_stream().get_stream_id_str().to_string(),
                             seq_type,
+                            first_min: fmin,
+                            first_max: fmax,
+                            second_min: smin,
+                            second_max: smax,
+                            within,
                         }
                     }
                     StateElement::Logical(log_elem) => {
-                        let s1 = extract_stream_state(&log_elem.stream_state_element_1)
+                        let (s1, _, _) =
+                            extract_stream_state_with_count(&log_elem.stream_state_element_1)
                             .ok_or_else(|| {
                                 format!(
                                     "Query '{}': Unsupported Logical pattern structure",
                                     query_name
                                 )
                             })?;
-                        let s2 = extract_stream_state(&log_elem.stream_state_element_2)
+                        let (s2, _, _) =
+                            extract_stream_state_with_count(&log_elem.stream_state_element_2)
                             .ok_or_else(|| {
                                 format!(
                                     "Query '{}': Unsupported Logical pattern structure",
@@ -381,11 +415,21 @@ impl QueryParser {
                         first_id: fid,
                         second_id: sid,
                         seq_type,
+                        first_min,
+                        first_max,
+                        second_min,
+                        second_max,
+                        within,
                     } => {
                         let seq_proc = Arc::new(Mutex::new(SequenceProcessor::new(
                             seq_type,
                             first_len,
                             second_len,
+                            first_min,
+                            first_max,
+                            second_min,
+                            second_max,
+                            within,
                             Arc::clone(siddhi_app_context),
                             Arc::clone(&siddhi_query_context),
                         )));

@@ -75,3 +75,31 @@ fn join_complex_condition() {
         ]
     );
 }
+
+#[test]
+fn right_outer_join_no_match() {
+    let app = "\
+        define stream L (id int);\n\
+        define stream R (id int);\n\
+        define stream Out (l int, r int);\n\
+        from L right outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("R", vec![AttributeValue::Int(5)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![vec![AttributeValue::Null, AttributeValue::Int(5)]]);
+}
+
+#[test]
+fn full_outer_join_basic() {
+    let app = "\
+        define stream L (id int);\n\
+        define stream R (id int);\n\
+        define stream Out (l int, r int);\n\
+        from L full outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("L", vec![AttributeValue::Int(1)]);
+    runner.send("R", vec![AttributeValue::Int(2)]);
+    let out = runner.shutdown();
+    assert!(out.contains(&vec![AttributeValue::Int(1), AttributeValue::Null]));
+    assert!(out.contains(&vec![AttributeValue::Null, AttributeValue::Int(2)]));
+}

@@ -26,6 +26,11 @@ pub struct SequenceProcessor {
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
     first_cloner: Option<StreamEventCloner>,
     second_cloner: Option<StreamEventCloner>,
+    pub first_min: i32,
+    pub first_max: i32,
+    pub second_min: i32,
+    pub second_max: i32,
+    pub within_time: Option<i64>,
 }
 
 impl SequenceProcessor {
@@ -33,6 +38,11 @@ impl SequenceProcessor {
         sequence_type: SequenceType,
         first_attr_count: usize,
         second_attr_count: usize,
+        first_min: i32,
+        first_max: i32,
+        second_min: i32,
+        second_max: i32,
+        within_time: Option<i64>,
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
@@ -46,29 +56,36 @@ impl SequenceProcessor {
             next_processor: None,
             first_cloner: None,
             second_cloner: None,
+            first_min,
+            first_max,
+            second_min,
+            second_max,
+            within_time,
         }
     }
 
-    fn build_joined_event(&self, first: &StreamEvent, second: &StreamEvent) -> StreamEvent {
+    fn build_joined_event(
+        &self,
+        first: Option<&StreamEvent>,
+        second: Option<&StreamEvent>,
+    ) -> StreamEvent {
         let mut event = StreamEvent::new(
-            second.timestamp,
+            second
+                .map(|s| s.timestamp)
+                .unwrap_or_else(|| first.map(|f| f.timestamp).unwrap_or(0)),
             self.first_attr_count + self.second_attr_count,
             0,
             0,
         );
         for i in 0..self.first_attr_count {
             let val = first
-                .before_window_data
-                .get(i)
-                .cloned()
+                .and_then(|f| f.before_window_data.get(i).cloned())
                 .unwrap_or(AttributeValue::Null);
             event.before_window_data[i] = val;
         }
         for j in 0..self.second_attr_count {
             let val = second
-                .before_window_data
-                .get(j)
-                .cloned()
+                .and_then(|s| s.before_window_data.get(j).cloned())
                 .unwrap_or(AttributeValue::Null);
             event.before_window_data[self.first_attr_count + j] = val;
         }
@@ -82,11 +99,39 @@ impl SequenceProcessor {
     }
 
     fn check_and_produce(&mut self) {
-        while !self.first_buffer.is_empty() && !self.second_buffer.is_empty() {
-            let first = self.first_buffer.remove(0);
+        while !self.second_buffer.is_empty() {
+            if (self.first_buffer.len() as i32) < self.first_min {
+                break;
+            }
             let second = self.second_buffer.remove(0);
-            let joined = self.build_joined_event(&first, &second);
-            self.forward(joined);
+
+            if self.first_min == 0 {
+                if self.within_time.is_none() || self.first_buffer.is_empty() {
+                    let joined = self.build_joined_event(None, Some(&second));
+                    self.forward(joined);
+                }
+            }
+
+            let max = if self.first_max < 0 {
+                self.first_buffer.len()
+            } else {
+                usize::min(self.first_max as usize, self.first_buffer.len())
+            };
+            let start_idx = self.first_buffer.len() - max;
+            for i in start_idx..self.first_buffer.len() {
+                let first = &self.first_buffer[i];
+                if let Some(wt) = self.within_time {
+                    if second.timestamp - first.timestamp > wt {
+                        continue;
+                    }
+                }
+                let joined = self.build_joined_event(Some(first), Some(&second));
+                self.forward(joined);
+            }
+
+            if matches!(self.sequence_type, SequenceType::Sequence) {
+                self.first_buffer.clear();
+            }
         }
     }
 
@@ -112,12 +157,20 @@ impl SequenceProcessor {
                 match side {
                     SequenceSide::First => {
                         self.first_buffer.push(se_clone);
+                        if let Some(wt) = self.within_time {
+                            self.first_buffer
+                                .retain(|e| se.timestamp - e.timestamp <= wt);
+                        }
                         if matches!(self.sequence_type, SequenceType::Pattern) {
                             self.check_and_produce();
                         }
                     }
                     SequenceSide::Second => {
                         self.second_buffer.push(se_clone);
+                        if let Some(wt) = self.within_time {
+                            self.second_buffer
+                                .retain(|e| se.timestamp - e.timestamp <= wt);
+                        }
                         self.check_and_produce();
                     }
                 }
@@ -167,6 +220,11 @@ impl Processor for SequenceProcessorSide {
             parent.sequence_type,
             parent.first_attr_count,
             parent.second_attr_count,
+            parent.first_min,
+            parent.first_max,
+            parent.second_min,
+            parent.second_max,
+            parent.within_time,
             Arc::clone(&parent.meta.siddhi_app_context),
             Arc::clone(ctx),
         );
