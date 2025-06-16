@@ -89,7 +89,7 @@ pub struct SelectProcessor {
     limit: Option<u64>,
     offset: Option<u64>,
     /// Per-group aggregator state when both group-by and aggregators are used.
-    group_states: Mutex<std::collections::HashMap<String, GroupState>>, 
+    group_states: Mutex<std::collections::HashMap<String, GroupState>>,
 }
 
 impl SelectProcessor {
@@ -136,6 +136,31 @@ impl SelectProcessor {
                 .and_then(|c| c.value.to_u64_for_limit_offset()),
             group_states: Mutex::new(HashMap::new()),
         }
+    }
+
+    fn apply_limit_offset(&self, events: Vec<Box<dyn ComplexEvent>>) -> Vec<Box<dyn ComplexEvent>> {
+        let mut final_events = Vec::new();
+        let mut seen = 0u64;
+        let offset = self.offset.unwrap_or(0);
+        let mut remaining = self.limit.unwrap_or(u64::MAX);
+
+        for ev in events.into_iter() {
+            let etype = ev.get_event_type();
+            let countable = matches!(etype, ComplexEventType::Current | ComplexEventType::Expired);
+            if countable {
+                if seen < offset {
+                    seen += 1;
+                    continue;
+                }
+                if remaining == 0 {
+                    break;
+                }
+                remaining -= 1;
+            }
+            final_events.push(ev);
+        }
+
+        final_events
     }
 }
 
@@ -191,7 +216,10 @@ impl Processor for SelectProcessor {
                     event_box.set_event_type(etype);
                 }
                 if let Some(ref h) = state.having_exec {
-                    let pass = matches!(h.execute(Some(event_box.as_ref())), Some(AttributeValue::Bool(true)));
+                    let pass = matches!(
+                        h.execute(Some(event_box.as_ref())),
+                        Some(AttributeValue::Bool(true))
+                    );
                     if !pass {
                         input_event_opt = next;
                         continue;
@@ -207,7 +235,10 @@ impl Processor for SelectProcessor {
                     event_box.set_event_type(etype);
                 }
                 if let Some(ref having_exec) = self.having_condition_executor {
-                    let pass = matches!(having_exec.execute(Some(event_box.as_ref())), Some(AttributeValue::Bool(true)));
+                    let pass = matches!(
+                        having_exec.execute(Some(event_box.as_ref())),
+                        Some(AttributeValue::Bool(true))
+                    );
                     if !pass {
                         input_event_opt = next;
                         continue;
@@ -240,27 +271,7 @@ impl Processor for SelectProcessor {
             }
         }
 
-        // Apply offset and limit
-        let mut final_events = Vec::new();
-        let mut seen = 0u64;
-        let offset = self.offset.unwrap_or(0);
-        let mut remaining = self.limit.unwrap_or(u64::MAX);
-
-        for ev in collected.into_iter() {
-            let etype = ev.get_event_type();
-            let countable = matches!(etype, ComplexEventType::Current | ComplexEventType::Expired);
-            if countable {
-                if seen < offset {
-                    seen += 1;
-                    continue;
-                }
-                if remaining == 0 {
-                    break;
-                }
-                remaining -= 1;
-            }
-            final_events.push(ev);
-        }
+        let final_events = self.apply_limit_offset(collected);
 
         // Re-link chain
         let mut head: Option<Box<dyn ComplexEvent>> = None;
