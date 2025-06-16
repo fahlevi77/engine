@@ -28,6 +28,18 @@ use crate::core::persistence::SnapshotService;
 use crate::core::util::thread_barrier::ThreadBarrier;
 #[derive(Debug, Clone, Default)]
 pub struct ScriptPlaceholder {}
+#[derive(Debug, Clone)]
+pub struct ScriptFunctionPlaceholder {
+    pub return_type: crate::query_api::definition::attribute::Type,
+}
+
+impl Default for ScriptFunctionPlaceholder {
+    fn default() -> Self {
+        Self {
+            return_type: crate::query_api::definition::attribute::Type::OBJECT,
+        }
+    }
+}
 #[derive(Debug, Clone, Default)]
 pub struct TriggerPlaceholder {}
 #[derive(Debug, Clone, Default)]
@@ -92,7 +104,8 @@ pub struct SiddhiAppContext {
     // Simplified placeholder fields for now
     _external_refs_placeholder: Vec<String>,
     _triggers_placeholder: Vec<String>,
-    _scripts_placeholder: HashMap<String, String>,
+    /// Placeholder storage for script functions keyed by name.
+    pub script_function_map: HashMap<String, ScriptFunctionPlaceholder>,
     _schedulers_placeholder: Vec<String>,
 }
 
@@ -163,9 +176,27 @@ impl SiddhiAppContext {
             // scheduler_list: Vec::new(),
             _external_refs_placeholder: Vec::new(),
             _triggers_placeholder: Vec::new(),
-            _scripts_placeholder: HashMap::new(),
+            script_function_map: HashMap::new(),
             _schedulers_placeholder: Vec::new(),
         }
+    }
+
+    /// Register a script function with the given name and return type.
+    pub fn add_script_function(
+        &mut self,
+        name: String,
+        return_type: crate::query_api::definition::attribute::Type,
+    ) {
+        self.script_function_map
+            .insert(name, ScriptFunctionPlaceholder { return_type });
+    }
+
+    /// Lookup a registered script function placeholder by name.
+    pub fn get_script_function(
+        &self,
+        name: &str,
+    ) -> Option<&ScriptFunctionPlaceholder> {
+        self.script_function_map.get(name)
     }
 
     // --- Getter and Setter examples ---

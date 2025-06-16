@@ -563,6 +563,23 @@ pub fn parse_expression<'a>(
                                 ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
                             })?,
                         ))
+                    } else if let Some(script_fn) = context
+                        .siddhi_app_context
+                        .get_script_function(&function_lookup_name)
+                    {
+                        Ok(Box::new(
+                            AttributeFunctionExpressionExecutor::new(
+                                Box::new(ScriptFunctionExecutor::new(
+                                    function_lookup_name.clone(),
+                                    script_fn.return_type,
+                                )),
+                                arg_execs,
+                                Arc::clone(&context.siddhi_app_context),
+                            )
+                            .map_err(|e| {
+                                ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                            })?,
+                        ))
                     } else {
                         Err(ExpressionParseError::new(
                             format!("Unsupported or unknown function: {}", function_lookup_name),
