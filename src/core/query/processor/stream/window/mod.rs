@@ -221,7 +221,8 @@ impl Schedulable for BatchFlushTask {
 
         if expired_batch.is_empty() && current_batch.is_empty() {
             *self.start_time.lock().unwrap() = Some(timestamp);
-            self.scheduler.notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
+            self.scheduler
+                .notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
             return;
         }
 
@@ -252,7 +253,8 @@ impl Schedulable for BatchFlushTask {
         }
 
         *self.start_time.lock().unwrap() = Some(timestamp);
-        self.scheduler.notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
+        self.scheduler
+            .notify_at(timestamp + self.duration_ms, Arc::new(self.clone()));
     }
 }
 
@@ -333,12 +335,18 @@ pub fn create_window_processor(
             "time" => Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
                 handler, app_ctx, query_ctx,
             )?))),
-            "lengthBatch" => Ok(Arc::new(Mutex::new(LengthBatchWindowProcessor::from_handler(
-                handler, app_ctx, query_ctx,
-            )?))),
-            "timeBatch" => Ok(Arc::new(Mutex::new(TimeBatchWindowProcessor::from_handler(
-                handler, app_ctx, query_ctx,
-            )?))),
+            "lengthBatch" => Ok(Arc::new(Mutex::new(
+                LengthBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
+            "timeBatch" => Ok(Arc::new(Mutex::new(
+                TimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
+            "externalTime" => Ok(Arc::new(Mutex::new(
+                ExternalTimeWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
+            "externalTimeBatch" => Ok(Arc::new(Mutex::new(
+                ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
     }
@@ -348,7 +356,9 @@ pub fn create_window_processor(
 pub struct LengthWindowFactory;
 
 impl WindowProcessorFactory for LengthWindowFactory {
-    fn name(&self) -> &'static str { "length" }
+    fn name(&self) -> &'static str {
+        "length"
+    }
     fn create(
         &self,
         handler: &WindowHandler,
@@ -369,7 +379,9 @@ impl WindowProcessorFactory for LengthWindowFactory {
 pub struct TimeWindowFactory;
 
 impl WindowProcessorFactory for TimeWindowFactory {
-    fn name(&self) -> &'static str { "time" }
+    fn name(&self) -> &'static str {
+        "time"
+    }
     fn create(
         &self,
         handler: &WindowHandler,
@@ -423,9 +435,7 @@ impl LengthBatchWindowProcessor {
             let len = match &c.value {
                 ConstantValueWithFloat::Int(i) => *i as usize,
                 ConstantValueWithFloat::Long(l) => *l as usize,
-                _ => {
-                    return Err("LengthBatch window size must be int or long".to_string())
-                }
+                _ => return Err("LengthBatch window size must be int or long".to_string()),
             };
             Ok(Self::new(len, app_ctx, query_ctx))
         } else {
@@ -528,16 +538,18 @@ impl WindowProcessor for LengthBatchWindowProcessor {}
 pub struct LengthBatchWindowFactory;
 
 impl WindowProcessorFactory for LengthBatchWindowFactory {
-    fn name(&self) -> &'static str { "lengthBatch" }
+    fn name(&self) -> &'static str {
+        "lengthBatch"
+    }
     fn create(
         &self,
         handler: &WindowHandler,
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-        Ok(Arc::new(Mutex::new(LengthBatchWindowProcessor::from_handler(
-            handler, app_ctx, query_ctx,
-        )?)))
+        Ok(Arc::new(Mutex::new(
+            LengthBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
     }
 
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
@@ -716,16 +728,325 @@ impl WindowProcessor for TimeBatchWindowProcessor {}
 pub struct TimeBatchWindowFactory;
 
 impl WindowProcessorFactory for TimeBatchWindowFactory {
-    fn name(&self) -> &'static str { "timeBatch" }
+    fn name(&self) -> &'static str {
+        "timeBatch"
+    }
     fn create(
         &self,
         handler: &WindowHandler,
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-        Ok(Arc::new(Mutex::new(TimeBatchWindowProcessor::from_handler(
-            handler, app_ctx, query_ctx,
-        )?)))
+        Ok(Arc::new(Mutex::new(
+            TimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+// ---- ExternalTimeWindowProcessor ----
+
+#[derive(Debug)]
+pub struct ExternalTimeWindowProcessor {
+    meta: CommonProcessorMeta,
+    pub duration_ms: i64,
+    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
+}
+
+impl ExternalTimeWindowProcessor {
+    pub fn new(
+        duration_ms: i64,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            duration_ms,
+            buffer: Arc::new(Mutex::new(VecDeque::new())),
+        }
+    }
+
+    pub fn from_handler(
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        let expr = handler
+            .get_parameters()
+            .get(1)
+            .ok_or("externalTime window requires a duration parameter")?;
+        if let Expression::Constant(c) = expr {
+            let dur = match &c.value {
+                ConstantValueWithFloat::Time(t) => *t,
+                ConstantValueWithFloat::Long(l) => *l,
+                _ => return Err("externalTime window duration must be time constant".to_string()),
+            };
+            Ok(Self::new(dur, app_ctx, query_ctx))
+        } else {
+            Err("externalTime window duration must be constant".to_string())
+        }
+    }
+}
+
+impl Processor for ExternalTimeWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(ref next) = self.meta.next_processor {
+            if let Some(chunk) = complex_event_chunk {
+                let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+                while let Some(ev) = current_opt {
+                    if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                        let ts = se.timestamp;
+                        let mut expired_head: Option<Box<dyn ComplexEvent>> = None;
+                        let mut tail = &mut expired_head;
+                        {
+                            let mut buf = self.buffer.lock().unwrap();
+                            while let Some(front) = buf.front() {
+                                if ts - front.timestamp >= self.duration_ms {
+                                    if let Some(old) = buf.pop_front() {
+                                        let mut ex = old.as_ref().clone_without_next();
+                                        ex.set_event_type(ComplexEventType::Expired);
+                                        ex.set_timestamp(ts);
+                                        *tail = Some(Box::new(ex));
+                                        tail = tail.as_mut().unwrap().mut_next_ref_option();
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            buf.push_back(Arc::new(se.clone_without_next()));
+                        }
+
+                        *tail = Some(Box::new(se.clone_without_next()));
+                        next.lock().unwrap().process(expired_head);
+                    }
+                    current_opt = ev.get_next();
+                }
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.duration_ms,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::SLIDE
+    }
+
+    fn is_stateful(&self) -> bool {
+        true
+    }
+}
+
+impl WindowProcessor for ExternalTimeWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct ExternalTimeWindowFactory;
+
+impl WindowProcessorFactory for ExternalTimeWindowFactory {
+    fn name(&self) -> &'static str {
+        "externalTime"
+    }
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            ExternalTimeWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+// ---- ExternalTimeBatchWindowProcessor ----
+
+#[derive(Debug)]
+pub struct ExternalTimeBatchWindowProcessor {
+    meta: CommonProcessorMeta,
+    pub duration_ms: i64,
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+    start_time: Arc<Mutex<Option<i64>>>,
+}
+
+impl ExternalTimeBatchWindowProcessor {
+    pub fn new(
+        duration_ms: i64,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            duration_ms,
+            buffer: Arc::new(Mutex::new(Vec::new())),
+            expired: Arc::new(Mutex::new(Vec::new())),
+            start_time: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    pub fn from_handler(
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        let expr = handler
+            .get_parameters()
+            .get(1)
+            .ok_or("externalTimeBatch window requires a duration parameter")?;
+        if let Expression::Constant(c) = expr {
+            let dur = match &c.value {
+                ConstantValueWithFloat::Time(t) => *t,
+                ConstantValueWithFloat::Long(l) => *l,
+                _ => {
+                    return Err(
+                        "externalTimeBatch window duration must be time constant".to_string()
+                    )
+                }
+            };
+            Ok(Self::new(dur, app_ctx, query_ctx))
+        } else {
+            Err("externalTimeBatch window duration must be constant".to_string())
+        }
+    }
+
+    fn flush(&self, timestamp: i64) {
+        if let Some(ref next) = self.meta.next_processor {
+            let expired_batch: Vec<StreamEvent> = {
+                let mut ex = self.expired.lock().unwrap();
+                std::mem::take(&mut *ex)
+            };
+            let current_batch: Vec<StreamEvent> = {
+                let mut buf = self.buffer.lock().unwrap();
+                std::mem::take(&mut *buf)
+            };
+
+            if expired_batch.is_empty() && current_batch.is_empty() {
+                return;
+            }
+
+            let mut head: Option<Box<dyn ComplexEvent>> = None;
+            let mut tail = &mut head;
+
+            for mut e in expired_batch {
+                e.set_event_type(ComplexEventType::Expired);
+                e.set_timestamp(timestamp);
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            for e in &current_batch {
+                *tail = Some(Box::new(e.clone_without_next()));
+                tail = tail.as_mut().unwrap().mut_next_ref_option();
+            }
+
+            {
+                let mut ex = self.expired.lock().unwrap();
+                ex.extend(current_batch);
+            }
+
+            if let Some(chain) = head {
+                next.lock().unwrap().process(Some(chain));
+            }
+        }
+        *self.start_time.lock().unwrap() = Some(timestamp);
+    }
+}
+
+impl Processor for ExternalTimeBatchWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(chunk) = complex_event_chunk {
+            let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+            while let Some(ev) = current_opt {
+                if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                    let ts = se.timestamp;
+                    let mut start = self.start_time.lock().unwrap();
+                    if start.is_none() {
+                        *start = Some(ts);
+                    }
+                    while ts - start.unwrap() >= self.duration_ms {
+                        let flush_ts = start.unwrap() + self.duration_ms;
+                        drop(start);
+                        self.flush(flush_ts);
+                        start = self.start_time.lock().unwrap();
+                    }
+                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                }
+                current_opt = ev.get_next();
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.duration_ms,
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::BATCH
+    }
+
+    fn is_stateful(&self) -> bool {
+        true
+    }
+}
+
+impl WindowProcessor for ExternalTimeBatchWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct ExternalTimeBatchWindowFactory;
+
+impl WindowProcessorFactory for ExternalTimeBatchWindowFactory {
+    fn name(&self) -> &'static str {
+        "externalTimeBatch"
+    }
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
     }
 
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {

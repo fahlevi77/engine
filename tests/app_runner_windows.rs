@@ -80,3 +80,112 @@ fn time_window_expiry() {
     assert!(out.len() >= 2);
     assert_eq!(out[0], vec![AttributeValue::Int(5)]);
 }
+
+#[test]
+fn length_batch_window() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#lengthBatch(2) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(1)]);
+    runner.send("In", vec![AttributeValue::Int(2)]);
+    runner.send("In", vec![AttributeValue::Int(3)]);
+    runner.send("In", vec![AttributeValue::Int(4)]);
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(3)],
+            vec![AttributeValue::Int(4)],
+        ]
+    );
+}
+
+#[test]
+fn time_batch_window() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#timeBatch(100) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(1)]);
+    sleep(Duration::from_millis(120));
+    runner.send("In", vec![AttributeValue::Int(2)]);
+    sleep(Duration::from_millis(120));
+    let out = runner.shutdown();
+    assert!(out.len() >= 3);
+    assert_eq!(out[0], vec![AttributeValue::Int(1)]);
+}
+
+#[test]
+fn external_time_window_basic() {
+    let app = "\
+        define stream In (ts long, v int);\n\
+        define stream Out (v int);\n\
+        from In#externalTime(ts, 100) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send_with_ts(
+        "In",
+        0,
+        vec![AttributeValue::Long(0), AttributeValue::Int(1)],
+    );
+    runner.send_with_ts(
+        "In",
+        150,
+        vec![AttributeValue::Long(150), AttributeValue::Int(2)],
+    );
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+        ]
+    );
+}
+
+#[test]
+fn external_time_batch_window() {
+    let app = "\
+        define stream In (ts long, v int);\n\
+        define stream Out (v int);\n\
+        from In#externalTimeBatch(ts, 100) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send_with_ts(
+        "In",
+        0,
+        vec![AttributeValue::Long(0), AttributeValue::Int(1)],
+    );
+    runner.send_with_ts(
+        "In",
+        60,
+        vec![AttributeValue::Long(60), AttributeValue::Int(2)],
+    );
+    runner.send_with_ts(
+        "In",
+        120,
+        vec![AttributeValue::Long(120), AttributeValue::Int(3)],
+    );
+    runner.send_with_ts(
+        "In",
+        240,
+        vec![AttributeValue::Long(240), AttributeValue::Int(4)],
+    );
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(3)],
+        ]
+    );
+}
