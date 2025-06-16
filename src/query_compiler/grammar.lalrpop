@@ -26,6 +26,7 @@ use crate::query_api::execution::query::output::output_stream::{
     UpdateStreamAction,
     DeleteStreamAction,
 };
+use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::execution::query::input::{
     InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
 };
@@ -48,7 +49,31 @@ pub AnnotationStmt: Annotation = {
 };
 
 pub OnDemandQueryStmt: OnDemandQuery = {
-    "from" <st:InputStoreRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> => {
+    "from" <st:InputStoreRule> <sel:QuerySection> => {
+        OnDemandQuery::query()
+            .from(st)
+            .select(sel)
+            .set_type(OnDemandQueryType::Find)
+    },
+    "delete" <t:Ident> "on" <cond:Expression> => {
+        OnDemandQuery::query()
+            .delete_by(t, cond)
+            .set_type(OnDemandQueryType::Delete)
+    },
+    "update" <t:Ident> <set:SetClauseOpt> "on" <cond:Expression> => {
+        match set {
+            Some(s) => OnDemandQuery::query()
+                .update_by_with_set(t, s, cond)
+                .set_type(OnDemandQueryType::Update),
+            None => OnDemandQuery::query()
+                .update_by(t, cond)
+                .set_type(OnDemandQueryType::Update),
+        }
+    }
+};
+
+QuerySection: Selector = {
+    "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> => {
         let mut selector = Selector::new();
         for (expr, alias) in sel {
             match alias {
@@ -64,11 +89,30 @@ pub OnDemandQueryStmt: OnDemandQuery = {
         for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
         if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
         if let Some(o) = off { selector = selector.offset(o).unwrap(); }
-        OnDemandQuery::query()
-            .from(st)
-            .select(selector)
-            .set_type(OnDemandQueryType::Find)
+        selector
     }
+};
+
+VariableRef: Variable = {
+    <sid:Ident> "." <id:Ident> => Variable::new(id).of_stream(sid),
+    <id:Ident> => Variable::new(id),
+};
+
+SetAssignment: (Variable, Expression) = {
+    <var:VariableRef> "=" <expr:Expression> => (var, expr),
+};
+
+SetClause: UpdateSet = {
+    "set" <first:SetAssignment> <rest:("," SetAssignment)*> => {
+        let mut us = UpdateSet::new().add_set_attribute(first.0, first.1);
+        for (_, (v, e)) in rest { us = us.add_set_attribute(v, e); }
+        us
+    }
+};
+
+SetClauseOpt: Option<UpdateSet> = {
+    <s:SetClause> => Some(s),
+    => None,
 };
 
 pub StoreQueryStmt: StoreQuery = { <q:OnDemandQueryStmt> => StoreQuery::new(q) };

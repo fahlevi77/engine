@@ -43,7 +43,8 @@ fn every_sequence() {
         out,
         vec![
             vec![AttributeValue::Int(1), AttributeValue::Int(2)],
-            vec![AttributeValue::Int(4), AttributeValue::Int(3)],
+            vec![AttributeValue::Int(1), AttributeValue::Int(3)],
+            vec![AttributeValue::Int(4), AttributeValue::Int(5)],
         ]
     );
 }
