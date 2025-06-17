@@ -1,0 +1,9 @@
+define trigger Tick at every 1 sec;
+
+-- Simple query logging each trigger event
+from Tick
+select triggered_time
+insert into OutStream;
+
+-- Output stream for logging
+define stream OutStream (triggered_time long);

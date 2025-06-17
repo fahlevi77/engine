@@ -51,7 +51,7 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   `SiddhiAppParser` & `QueryParser` now construct runtimes with windows, joins, patterns, sequences and aggregations.
     *   `Scheduler` drives time-based windows and cron style callbacks.
     *   `SiddhiAppRuntime` supports starting and shutting down applications and routes events through the configured processors.
-    *   Trigger runtimes are still TODO.
+    *   Triggers are executed via `TriggerRuntime`, allowing periodic or cron-based event generation.
     *   Error handling throughout `siddhi-core` remains basic.
 *   **Extensions Framework**:
     *   `ScalarFunctionExecutor` allows registering stateful user-defined functions.
@@ -155,6 +155,12 @@ Build and run with:
 
 ```bash
 cargo run --bin run_siddhi examples/sample.siddhi
+```
+
+To see trigger events in action you can run the trigger example:
+
+```bash
+cargo run --bin run_siddhi examples/trigger.siddhi
 ```
 
 All streams have a `LogSink` attached so events appear on stdout.
