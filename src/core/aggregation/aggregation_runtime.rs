@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
+use crate::query_api::aggregation::within::Within;
 
 use super::incremental_executor::IncrementalExecutor;
 use crate::core::table::{InMemoryTable, Table};
@@ -47,5 +48,24 @@ impl AggregationRuntime {
         } else {
             Vec::new()
         }
+    }
+
+    /// Query aggregated data optionally using `within` and `per` clauses.
+    /// Currently, these clauses are not fully supported and the implementation
+    /// simply returns the table rows for the requested `per` duration when
+    /// provided. If no `per` duration is specified, the first available
+    /// duration is used. The `within` clause is ignored.
+    pub fn query(
+        &self,
+        _within: Option<Within>,
+        per: Option<TimeDuration>,
+    ) -> Vec<Vec<crate::core::event::value::AttributeValue>> {
+        if let Some(d) = per {
+            return self.query_all(d);
+        }
+        if let Some((&d, _)) = self.tables.iter().next() {
+            return self.query_all(d);
+        }
+        Vec::new()
     }
 }

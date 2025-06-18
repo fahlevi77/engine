@@ -229,6 +229,20 @@ impl SiddhiAppRuntime {
         service.restore_revision(revision)
     }
 
+    /// Query an aggregation runtime using optional `within` and `per` clauses.
+    pub fn query_aggregation(
+        &self,
+        agg_id: &str,
+        within: Option<crate::query_api::aggregation::Within>,
+        per: Option<crate::query_api::aggregation::TimeDuration>,
+    ) -> Vec<Vec<crate::core::event::value::AttributeValue>> {
+        if let Some(rt) = self.aggregation_map.get(agg_id) {
+            rt.lock().unwrap().query(within, per)
+        } else {
+            Vec::new()
+        }
+    }
+
     // TODO: Implement other methods from SiddhiAppRuntime interface:
     // get_stream_definition_map, get_table_definition_map, etc. (from composed ApiSiddhiApp)
     // get_sources, get_sinks, get_tables (runtime instances), get_queries, get_partitions

@@ -162,16 +162,14 @@ impl AppRunner {
         self.runtime.restore_revision(rev).expect("restore")
     }
 
-    /// Retrieve all aggregated rows for the given aggregation id and duration.
+    /// Retrieve aggregated rows using optional `within` and `per` clauses.
     pub fn get_aggregation_data(
         &self,
         agg_id: &str,
-        dur: siddhi_rust::query_api::aggregation::time_period::Duration,
+        within: Option<siddhi_rust::query_api::aggregation::Within>,
+        per: Option<siddhi_rust::query_api::aggregation::time_period::Duration>,
     ) -> Vec<Vec<AttributeValue>> {
-        if let Some(rt) = self.runtime.aggregation_map.get(agg_id) {
-            rt.lock().unwrap().query_all(dur)
-        } else {
-            Vec::new()
-        }
+        self.runtime
+            .query_aggregation(agg_id, within, per)
     }
 }

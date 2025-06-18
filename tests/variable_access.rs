@@ -29,7 +29,7 @@ fn variable_from_aggregation() {
     runner.send_with_ts("In", 200, vec![AttributeValue::Int(5)]);
     // Flush first bucket
     runner.send_with_ts("In", 1100, vec![AttributeValue::Int(1)]);
-    let data = runner.get_aggregation_data("Agg", Duration::Seconds);
+    let data = runner.get_aggregation_data("Agg", None, Some(Duration::Seconds));
     let _ = runner.shutdown();
     assert!(data.is_empty() || data[0] == vec![AttributeValue::Long(10)]);
 }
@@ -79,7 +79,7 @@ fn aggregation_variable_access() {
     runner.send_with_ts("In", 0, vec![AttributeValue::Int(1)]);
     runner.send_with_ts("In", 200, vec![AttributeValue::Int(1)]);
     runner.send_with_ts("In", 1100, vec![AttributeValue::Int(1)]);
-    let data = runner.get_aggregation_data("Agg", Duration::Seconds);
+    let data = runner.get_aggregation_data("Agg", None, Some(Duration::Seconds));
     let _ = runner.shutdown();
     assert!(data.is_empty() || data[0] == vec![AttributeValue::Long(2)]);
 }
