@@ -7,6 +7,8 @@ use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::extension::WindowProcessorFactory;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::util::scheduler::{Schedulable, Scheduler};
+use crate::core::util::state_holder::StateHolder;
+use crate::core::util::{event_from_bytes, event_to_bytes, from_bytes, to_bytes};
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expression};
 use std::collections::VecDeque;
@@ -21,16 +23,63 @@ pub struct LengthWindowProcessor {
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
 }
 
+#[derive(Debug)]
+struct LengthWindowStateHolder {
+    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
+}
+
+impl StateHolder for LengthWindowStateHolder {
+    fn snapshot_state(&self) -> Vec<u8> {
+        let buf = self.buffer.lock().unwrap();
+        let events: Vec<Vec<u8>> = buf
+            .iter()
+            .map(|e| {
+                let mut ev = crate::core::event::event::Event::new_with_data(
+                    e.timestamp,
+                    e.before_window_data.clone(),
+                );
+                ev.is_expired = e.event_type == ComplexEventType::Expired;
+                event_to_bytes(&ev).unwrap_or_default()
+            })
+            .collect();
+        to_bytes(&events).unwrap_or_default()
+    }
+
+    fn restore_state(&self, snapshot: &[u8]) {
+        if let Ok(ev_bytes) = from_bytes::<Vec<Vec<u8>>>(snapshot) {
+            let mut buf = self.buffer.lock().unwrap();
+            buf.clear();
+            for b in ev_bytes {
+                if let Ok(ev) = event_from_bytes(&b) {
+                    let mut se = StreamEvent::new(ev.timestamp, ev.data.len(), 0, 0);
+                    se.before_window_data = ev.data;
+                    se.event_type = if ev.is_expired {
+                        ComplexEventType::Expired
+                    } else {
+                        ComplexEventType::Current
+                    };
+                    buf.push_back(Arc::new(se));
+                }
+            }
+        }
+    }
+}
+
 impl LengthWindowProcessor {
     pub fn new(
         length: usize,
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
+        let buffer = Arc::new(Mutex::new(VecDeque::new()));
+        let holder = Arc::new(LengthWindowStateHolder {
+            buffer: Arc::clone(&buffer),
+        });
+        query_ctx.register_state_holder("length_window".to_string(), holder);
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length,
-            buffer: Arc::new(Mutex::new(VecDeque::new())),
+            buffer,
         }
     }
 

@@ -10,6 +10,7 @@ pub mod scheduled_executor_service;
 pub mod scheduler; // new scheduler module
 pub mod serialization;
 pub mod siddhi_constants; // Added siddhi_constants module
+pub mod state_holder;
 pub mod thread_barrier;
 // Potentially other existing util submodules:
 // pub mod cache;
@@ -36,3 +37,4 @@ pub use self::scheduler::{Schedulable, Scheduler};
 pub use self::serialization::{from_bytes, to_bytes};
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
 pub use self::thread_barrier::ThreadBarrier;
+pub use self::state_holder::StateHolder;

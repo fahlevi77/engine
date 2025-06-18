@@ -1,6 +1,8 @@
 // Corresponds to io.siddhi.core.config.SiddhiQueryContext
 use super::siddhi_app_context::SiddhiAppContext;
 use crate::core::util::id_generator::IdGenerator;
+use crate::core::util::state_holder::StateHolder;
+use std::sync::atomic::{AtomicBool, Ordering};
 use crate::query_api::execution::query::output::OutputEventType;
 use std::sync::Arc; // From query_api, as Java uses it.
                     // use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
@@ -10,7 +12,7 @@ use std::sync::Arc; // From query_api, as Java uses it.
 #[derive(Debug, Clone, Default)]
 pub struct LatencyTrackerPlaceholder {}
 
-#[derive(Debug, Clone)] // Default needs SiddhiAppContext and name
+#[derive(Debug)] // Custom Clone below
 pub struct SiddhiQueryContext {
     // transient SiddhiAppContext siddhiAppContext in Java
     // Store as Arc<SiddhiAppContext> because SiddhiAppContext is likely shared.
@@ -23,7 +25,22 @@ pub struct SiddhiQueryContext {
     pub output_event_type: Option<OutputEventType>,         // Java type, optional
     pub latency_tracker: Option<LatencyTrackerPlaceholder>, // transient in Java, Option in Rust
     pub id_generator: IdGenerator,                          // new-ed in Java constructor
-    pub stateful: bool,                                     // Java default false
+    pub stateful: AtomicBool,                               // whether any state holders registered
+}
+
+impl Clone for SiddhiQueryContext {
+    fn clone(&self) -> Self {
+        Self {
+            siddhi_app_context: Arc::clone(&self.siddhi_app_context),
+            name: self.name.clone(),
+            partition_id: self.partition_id.clone(),
+            partitioned: self.partitioned,
+            output_event_type: self.output_event_type,
+            latency_tracker: self.latency_tracker.clone(),
+            id_generator: self.id_generator.clone(),
+            stateful: AtomicBool::new(self.stateful.load(Ordering::SeqCst)),
+        }
+    }
 }
 
 impl SiddhiQueryContext {
@@ -41,7 +58,7 @@ impl SiddhiQueryContext {
             output_event_type: None,
             latency_tracker: None,
             id_generator: IdGenerator::default(),
-            stateful: false,
+            stateful: AtomicBool::new(false),
         }
     }
 
@@ -92,8 +109,16 @@ impl SiddhiQueryContext {
     }
 
     pub fn is_stateful(&self) -> bool {
-        self.stateful
+        self.stateful.load(Ordering::SeqCst)
     }
 
-    // TODO: Implement generateStateHolder methods (these are complex and involve SnapshotService, StateFactory etc.)
+    /// Register a state holder with the application's `SnapshotService`.
+    /// The provided `name` is namespaced by the query name to ensure uniqueness.
+    pub fn register_state_holder(&self, name: String, holder: Arc<dyn StateHolder>) {
+        if let Some(service) = self.siddhi_app_context.get_snapshot_service() {
+            let key = format!("{}::{}", self.name, name);
+            service.register_state_holder(key, holder);
+            self.stateful.store(true, Ordering::SeqCst);
+        }
+    }
 }
