@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::event::stream::{stream_event::StreamEvent, stream_event_factory::StreamEventFactory};
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 
@@ -14,6 +14,7 @@ pub struct IncrementalExecutor {
     pub group_by_fn: Box<dyn Fn(&StreamEvent) -> String + Send + Sync>,
     pub bucket_start: Mutex<i64>,
     pub table: Arc<InMemoryTable>,
+    event_factory: StreamEventFactory,
 }
 
 impl std::fmt::Debug for IncrementalExecutor {
@@ -31,6 +32,7 @@ impl IncrementalExecutor {
         group_by_fn: Box<dyn Fn(&StreamEvent) -> String + Send + Sync>,
         table: Arc<InMemoryTable>,
     ) -> Self {
+        let factory = StreamEventFactory::new(0, 0, executors.len());
         Self {
             duration,
             base_store: Arc::new(BaseIncrementalValueStore::new(executors)),
@@ -38,6 +40,7 @@ impl IncrementalExecutor {
             group_by_fn,
             bucket_start: Mutex::new(-1),
             table,
+            event_factory: factory,
         }
     }
 
@@ -49,8 +52,13 @@ impl IncrementalExecutor {
         let (_timestamp, groups) = self.base_store.drain_grouped_values();
         for (_k, values) in groups.into_iter() {
             println!("flush {:?} -> {:?}", self.duration, values);
-            let mut ev = StreamEvent::new(bucket_start, 0, 0, values.len());
-            ev.output_data = Some(values.clone());
+            let mut ev = self.event_factory.new_instance();
+            ev.timestamp = bucket_start;
+            if let Some(ref mut out) = ev.output_data {
+                for (i, v) in values.iter().enumerate() {
+                    out[i] = v.clone();
+                }
+            }
             self.table.insert(&values);
             if let Some(ref next) = self.next {
                 next.execute(&ev);
@@ -59,7 +67,8 @@ impl IncrementalExecutor {
         // reset aggregators for next bucket
         use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
         for exec in &self.base_store.expression_executors {
-            let mut r = StreamEvent::new(bucket_start, 0, 0, 0);
+            let mut r = self.event_factory.new_instance();
+            r.timestamp = bucket_start;
             r.set_event_type(ComplexEventType::Reset);
             exec.execute(Some(&r));
         }

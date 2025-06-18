@@ -1,5 +1,8 @@
 use siddhi_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
+use siddhi_rust::core::event::stream::{
+    stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
+    stream_event_factory::StreamEventFactory,
+};
 use siddhi_rust::core::event::value::AttributeValue;
 
 #[test]
@@ -41,4 +44,21 @@ fn test_clone_event_chain() {
             }
         }
     }
+}
+
+#[test]
+fn test_stream_event_pool_and_cloner() {
+    let factory = StreamEventFactory::new(1, 0, 0);
+    assert_eq!(factory.pool_size(), 0);
+    let mut ev = factory.new_instance();
+    ev.before_window_data[0] = AttributeValue::Int(5);
+    let cloner = StreamEventCloner::from_event(&ev);
+    let copy = cloner.copy_stream_event(&ev);
+    assert_eq!(copy.before_window_data[0], AttributeValue::Int(5));
+    factory.release(ev);
+    factory.release(copy);
+    assert_eq!(factory.pool_size(), 2);
+    let reused = factory.new_instance();
+    assert_eq!(factory.pool_size(), 1);
+    assert_eq!(reused.before_window_data[0], AttributeValue::Null);
 }

@@ -1,4 +1,4 @@
-use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::event::stream::{stream_event::StreamEvent, stream_event_factory::StreamEventFactory};
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::collections::HashMap;
@@ -9,14 +9,17 @@ pub struct BaseIncrementalValueStore {
     pub expression_executors: Vec<Box<dyn ExpressionExecutor>>,
     grouped_values: Mutex<HashMap<String, Vec<AttributeValue>>>,
     timestamp: Mutex<i64>,
+    event_factory: StreamEventFactory,
 }
 
 impl BaseIncrementalValueStore {
     pub fn new(expression_executors: Vec<Box<dyn ExpressionExecutor>>) -> Self {
+        let factory = StreamEventFactory::new(0, 0, expression_executors.len());
         Self {
             expression_executors,
             grouped_values: Mutex::new(HashMap::new()),
             timestamp: Mutex::new(-1),
+            event_factory: factory,
         }
     }
 
@@ -44,8 +47,13 @@ impl BaseIncrementalValueStore {
         let timestamp = *self.timestamp.lock().unwrap();
         let mut out = HashMap::new();
         for (k, v) in map.iter() {
-            let mut se = StreamEvent::new(timestamp, 0, 0, v.len());
-            se.output_data = Some(v.clone());
+            let mut se = self.event_factory.new_instance();
+            se.timestamp = timestamp;
+            if let Some(ref mut out_vec) = se.output_data {
+                for (i, val) in v.iter().enumerate() {
+                    out_vec[i] = val.clone();
+                }
+            }
             out.insert(k.clone(), se);
         }
         out

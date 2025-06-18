@@ -6,6 +6,7 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::{
     stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
+    stream_event_factory::StreamEventFactory,
 };
 use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
@@ -27,6 +28,7 @@ pub struct LogicalProcessor {
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
     first_cloner: Option<StreamEventCloner>,
     second_cloner: Option<StreamEventCloner>,
+    event_factory: StreamEventFactory,
 }
 
 impl LogicalProcessor {
@@ -47,6 +49,11 @@ impl LogicalProcessor {
             next_processor: None,
             first_cloner: None,
             second_cloner: None,
+            event_factory: StreamEventFactory::new(
+                first_attr_count + second_attr_count,
+                0,
+                0,
+            ),
         }
     }
 
@@ -55,14 +62,10 @@ impl LogicalProcessor {
         first: Option<&StreamEvent>,
         second: Option<&StreamEvent>,
     ) -> StreamEvent {
-        let mut event = StreamEvent::new(
-            second
-                .map(|s| s.timestamp)
-                .unwrap_or_else(|| first.unwrap().timestamp),
-            self.first_attr_count + self.second_attr_count,
-            0,
-            0,
-        );
+        let mut event = self.event_factory.new_instance();
+        event.timestamp = second
+            .map(|s| s.timestamp)
+            .unwrap_or_else(|| first.unwrap().timestamp);
         for i in 0..self.first_attr_count {
             let val = first
                 .and_then(|f| f.before_window_data.get(i).cloned())

@@ -6,12 +6,27 @@ use super::{
     stream_event_factory::StreamEventFactory,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StreamEventCloner {
     before_window_data_size: usize,
     on_after_window_data_size: usize,
     output_data_size: usize,
     event_factory: StreamEventFactory,
+}
+
+impl Clone for StreamEventCloner {
+    fn clone(&self) -> Self {
+        Self {
+            before_window_data_size: self.before_window_data_size,
+            on_after_window_data_size: self.on_after_window_data_size,
+            output_data_size: self.output_data_size,
+            event_factory: StreamEventFactory::new(
+                self.before_window_data_size,
+                self.on_after_window_data_size,
+                self.output_data_size,
+            ),
+        }
+    }
 }
 
 impl StreamEventCloner {
