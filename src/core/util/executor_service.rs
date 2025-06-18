@@ -7,11 +7,15 @@ use rayon::ThreadPoolBuilder;
 #[derive(Debug)]
 pub struct ExecutorService {
     pool: ThreadPool,
+    threads: usize,
 }
 
 impl Default for ExecutorService {
     fn default() -> Self {
-        let threads = num_cpus::get().max(1);
+        let threads = std::env::var("SIDDHI_EXECUTOR_THREADS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or_else(|| num_cpus::get().max(1));
         ExecutorService::new("executor", threads)
     }
 }
@@ -25,7 +29,7 @@ impl ExecutorService {
             .thread_name(move |i| format!("{}-{}", name_str, i))
             .build()
             .expect("failed to build thread pool");
-        Self { pool }
+        Self { pool, threads }
     }
 
     /// Submit a task for asynchronous execution.
@@ -38,6 +42,10 @@ impl ExecutorService {
 
     /// Block until queued tasks complete. Rayon manages its threads so this is a no-op.
     pub fn wait_all(&self) {}
+
+    pub fn pool_size(&self) -> usize {
+        self.threads
+    }
 }
 
 impl Drop for ExecutorService {
