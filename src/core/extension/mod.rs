@@ -2,6 +2,10 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use crate::core::stream::output::stream_callback::StreamCallback;
+use crate::core::stream::input::mapper::SourceMapper;
+use crate::core::stream::output::mapper::SinkMapper;
+use crate::core::store::Store;
+use crate::core::function::script::Script;
 
 use crate::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
@@ -62,6 +66,7 @@ impl Clone for Box<dyn SinkFactory> {
 
 pub trait StoreFactory: Debug + Send + Sync {
     fn name(&self) -> &'static str;
+    fn create(&self) -> Box<dyn Store>;
     fn clone_box(&self) -> Box<dyn StoreFactory>;
 }
 impl Clone for Box<dyn StoreFactory> {
@@ -72,6 +77,7 @@ impl Clone for Box<dyn StoreFactory> {
 
 pub trait SourceMapperFactory: Debug + Send + Sync {
     fn name(&self) -> &'static str;
+    fn create(&self) -> Box<dyn SourceMapper>;
     fn clone_box(&self) -> Box<dyn SourceMapperFactory>;
 }
 impl Clone for Box<dyn SourceMapperFactory> {
@@ -82,6 +88,7 @@ impl Clone for Box<dyn SourceMapperFactory> {
 
 pub trait SinkMapperFactory: Debug + Send + Sync {
     fn name(&self) -> &'static str;
+    fn create(&self) -> Box<dyn SinkMapper>;
     fn clone_box(&self) -> Box<dyn SinkMapperFactory>;
 }
 impl Clone for Box<dyn SinkMapperFactory> {
@@ -101,6 +108,17 @@ pub trait TableFactory: Debug + Send + Sync {
     fn clone_box(&self) -> Box<dyn TableFactory>;
 }
 impl Clone for Box<dyn TableFactory> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+pub trait ScriptFactory: Debug + Send + Sync {
+    fn name(&self) -> &'static str;
+    fn create(&self) -> Box<dyn Script>;
+    fn clone_box(&self) -> Box<dyn ScriptFactory>;
+}
+impl Clone for Box<dyn ScriptFactory> {
     fn clone(&self) -> Self {
         self.clone_box()
     }

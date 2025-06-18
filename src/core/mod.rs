@@ -14,6 +14,7 @@ pub mod exception; // For custom core-specific error types
 pub mod executor;
 pub mod extension;
 pub mod function; // For UDFs like Script.java
+pub mod store;
 pub mod partition;
 pub mod persistence; // Added
 pub mod query;
