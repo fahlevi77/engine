@@ -16,6 +16,7 @@ pub mod extension;
 pub mod function; // For UDFs like Script.java
 pub mod store;
 pub mod partition;
+pub mod data_source;
 pub mod persistence; // Added
 pub mod query;
 pub mod stream;
@@ -25,7 +26,7 @@ pub mod util;
 pub mod window;
 
 // Re-export key public-facing structs from core
-pub use self::persistence::{DataSource, DataSourceConfig};
+pub use self::data_source::{DataSource, DataSourceConfig, SqliteDataSource};
 pub use self::siddhi_app_runtime::SiddhiAppRuntime;
 pub use self::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 pub use self::siddhi_manager::SiddhiManager; // Added
