@@ -163,7 +163,19 @@ To see trigger events in action you can run the trigger example:
 cargo run --bin run_siddhi examples/trigger.siddhi
 ```
 
-All streams have a `LogSink` attached so events appear on stdout.
+All streams have a `LogSink` attached so events appear on stdout. The CLI accepts
+some additional flags:
+
+```
+--persistence-dir <dir>   # enable file persistence
+--sqlite <db>             # use SQLite persistence
+--extension <lib>         # load a dynamic extension library (repeatable)
+--config <file>           # provide a custom configuration
+```
+
+Several example SiddhiQL files live in `examples/` including `simple_filter.siddhi`,
+`time_window.siddhi`, `partition.siddhi` and `extension.siddhi` mirroring the
+Java quick start samples.
 
 ## Next Planned Phases (High-Level)
 

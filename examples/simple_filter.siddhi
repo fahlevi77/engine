@@ -1,0 +1,5 @@
+define stream StockStream (symbol string, price float, volume long);
+@info(name = 'query1')
+from StockStream[volume < 150]
+select symbol, price
+insert into OutputStream;

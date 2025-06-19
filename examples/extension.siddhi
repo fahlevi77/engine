@@ -1,0 +1,5 @@
+define stream StockStream (symbol string, price long, volume long);
+@info(name = 'query1')
+from StockStream
+select symbol , custom:plus(price, volume) as totalCount
+insert into Output;
