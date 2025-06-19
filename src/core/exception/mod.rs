@@ -1,5 +1,4 @@
 pub mod error;
-pub mod error_store;
-
 pub use error::SiddhiError;
-pub use error_store::{ErrorStore, InMemoryErrorStore};
+// ErrorStore types now live under the stream::output module
+pub use crate::core::stream::output::error_store::{ErrorStore, InMemoryErrorStore};

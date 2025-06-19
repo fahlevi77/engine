@@ -18,7 +18,7 @@ pub type DataSourcePlaceholder = String; // Simplified
 
 use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
 
-use crate::core::exception::error_store::ErrorStore;
+use crate::core::stream::output::error_store::ErrorStore;
 
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait

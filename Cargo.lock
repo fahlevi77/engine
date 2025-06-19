@@ -793,6 +793,7 @@ dependencies = [
  "lalrpop-util",
  "libloading",
  "num_cpus",
+ "once_cell",
  "rand",
  "rayon",
  "regex",

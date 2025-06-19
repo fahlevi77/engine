@@ -1,6 +1,11 @@
 use crate::core::config::SiddhiAppContext;
-use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::sync::{atomic::{AtomicI64, AtomicU64, Ordering}, Arc, Mutex};
 use std::time::Duration;
+
+static LATENCY_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<LatencyTracker>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static THROUGHPUT_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<ThroughputTracker>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Debug, Default)]
 pub struct LatencyTracker {
@@ -18,8 +23,13 @@ impl Clone for LatencyTracker {
 }
 
 impl LatencyTracker {
-    pub fn new(_name: &str, _ctx: &SiddhiAppContext) -> Self {
-        Self::default()
+    pub fn new(name: &str, _ctx: &SiddhiAppContext) -> Arc<Self> {
+        let tracker = Arc::new(Self::default());
+        LATENCY_BY_STREAM
+            .lock()
+            .unwrap()
+            .insert(name.to_string(), Arc::clone(&tracker));
+        tracker
     }
     pub fn add_latency(&self, dur: Duration) {
         self.total_ns
@@ -50,8 +60,13 @@ impl Clone for ThroughputTracker {
 }
 
 impl ThroughputTracker {
-    pub fn new(_name: &str, _ctx: &SiddhiAppContext) -> Self {
-        Self::default()
+    pub fn new(name: &str, _ctx: &SiddhiAppContext) -> Arc<Self> {
+        let tracker = Arc::new(Self::default());
+        THROUGHPUT_BY_STREAM
+            .lock()
+            .unwrap()
+            .insert(name.to_string(), Arc::clone(&tracker));
+        tracker
     }
     pub fn event_in(&self) {
         self.count.fetch_add(1, Ordering::Relaxed);
@@ -87,4 +102,22 @@ impl BufferedEventsTracker {
     pub fn get_size(&self) -> i64 {
         self.count.load(Ordering::Relaxed)
     }
+}
+
+/// Retrieve the average latency in nanoseconds for a stream if metrics exist.
+pub fn get_stream_latency(stream_id: &str) -> Option<u64> {
+    LATENCY_BY_STREAM
+        .lock()
+        .unwrap()
+        .get(stream_id)
+        .and_then(|t| t.average_latency_ns())
+}
+
+/// Retrieve the total number of events processed for a stream if metrics exist.
+pub fn get_stream_throughput(stream_id: &str) -> Option<u64> {
+    THROUGHPUT_BY_STREAM
+        .lock()
+        .unwrap()
+        .get(stream_id)
+        .map(|t| t.total_events())
 }

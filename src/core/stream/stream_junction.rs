@@ -4,7 +4,8 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::stream::StreamEvent; // Actual struct for conversion
-use crate::core::exception::{ErrorStore, SiddhiError};
+use crate::core::exception::SiddhiError;
+use crate::core::stream::output::error_store::ErrorStore;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::stream::input::input_handler::InputProcessor;
 use crate::core::util::executor_service::ExecutorService;
@@ -85,8 +86,8 @@ pub struct StreamJunction {
     is_async: bool,
     buffer_size: usize,
 
-    latency_tracker: Option<LatencyTracker>,
-    throughput_tracker: Option<ThroughputTracker>,
+    latency_tracker: Option<Arc<LatencyTracker>>,
+    throughput_tracker: Option<Arc<ThroughputTracker>>,
     // buffered_events_tracker: Option<BufferedEventsTrackerPlaceholder>, // Part of EventBufferHolder interface
 
     // Subscribers are Processors. Using Arc<Mutex<dyn Processor>> for shared mutable access.
@@ -154,18 +155,12 @@ impl StreamJunction {
             is_async,
             buffer_size,
             latency_tracker: if enable_metrics {
-                Some(LatencyTracker::new(
-                    &id_clone_for_metrics,
-                    &siddhi_app_context,
-                ))
+                Some(LatencyTracker::new(&id_clone_for_metrics, &siddhi_app_context))
             } else {
                 None
             },
             throughput_tracker: if enable_metrics {
-                Some(ThroughputTracker::new(
-                    &id_clone_for_metrics,
-                    &siddhi_app_context,
-                ))
+                Some(ThroughputTracker::new(&id_clone_for_metrics, &siddhi_app_context))
             } else {
                 None
             },
