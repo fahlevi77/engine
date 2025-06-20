@@ -17,15 +17,35 @@ struct DynWindowProcessor {
 }
 
 impl Processor for DynWindowProcessor {
-    fn process(&self, _c: Option<Box<dyn ComplexEvent>>) {}
-    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> { None }
-    fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
+    fn process(&self, chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(ref next) = self.meta.next_processor {
+            next.lock().unwrap().process(chunk);
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
     fn clone_processor(&self, q: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
         Box::new(DynWindowProcessor { meta: CommonProcessorMeta::new(Arc::clone(&self.meta.siddhi_app_context), Arc::clone(q)) })
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> { Arc::clone(&self.meta.siddhi_app_context) }
-    fn get_processing_mode(&self) -> ProcessingMode { ProcessingMode::BATCH }
-    fn is_stateful(&self) -> bool { false }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::BATCH
+    }
+
+    fn is_stateful(&self) -> bool {
+        false
+    }
 }
 impl WindowProcessor for DynWindowProcessor {}
 

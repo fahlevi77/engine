@@ -103,3 +103,40 @@ fn full_outer_join_basic() {
     assert!(out.contains(&vec![AttributeValue::Int(1), AttributeValue::Null]));
     assert!(out.contains(&vec![AttributeValue::Null, AttributeValue::Int(2)]));
 }
+
+#[test]
+fn join_with_group_by() {
+    let app = "\
+        define stream L (id int, cat int);\n\
+        define stream R (id int);\n\
+        define stream Out (cat int, c long);\n\
+        from L join R on L.id == R.id\n\
+        select L.cat as cat, count() as c\n\
+        group by cat order by cat asc insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send_batch(
+        "L",
+        vec![
+            vec![AttributeValue::Int(1), AttributeValue::Int(10)],
+            vec![AttributeValue::Int(1), AttributeValue::Int(10)],
+            vec![AttributeValue::Int(2), AttributeValue::Int(20)],
+        ],
+    );
+    runner.send_batch(
+        "R",
+        vec![
+            vec![AttributeValue::Int(1)],
+            vec![AttributeValue::Int(2)],
+            vec![AttributeValue::Int(1)],
+        ],
+    );
+    let out = runner.shutdown();
+    let expected = vec![
+        vec![AttributeValue::Int(10), AttributeValue::Long(1)],
+        vec![AttributeValue::Int(10), AttributeValue::Long(2)],
+        vec![AttributeValue::Int(20), AttributeValue::Long(1)],
+        vec![AttributeValue::Int(10), AttributeValue::Long(3)],
+        vec![AttributeValue::Int(10), AttributeValue::Long(4)],
+    ];
+    assert_eq!(out, expected);
+}

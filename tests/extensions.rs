@@ -1,3 +1,6 @@
+#[path = "common/mod.rs"]
+mod common;
+use common::AppRunner;
 use siddhi_rust::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
 };
@@ -34,11 +37,17 @@ struct DummyWindowProcessor {
     meta: CommonProcessorMeta,
 }
 impl Processor for DummyWindowProcessor {
-    fn process(&self, _c: Option<Box<dyn ComplexEvent>>) {}
-    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
-        None
+    fn process(&self, c: Option<Box<dyn ComplexEvent>>) {
+        if let Some(ref next) = self.meta.next_processor {
+            next.lock().unwrap().process(c);
+        }
     }
-    fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
     fn clone_processor(&self, q: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
         Box::new(DummyWindowProcessor {
             meta: CommonProcessorMeta::new(
@@ -280,6 +289,20 @@ fn test_query_parser_uses_custom_window_factory() {
     let head = runtime.processor_chain_head.expect("head");
     let dbg = format!("{:?}", head.lock().unwrap());
     assert!(dbg.contains("DummyWindowProcessor"));
+}
+
+#[test]
+fn app_runner_custom_window() {
+    let mut manager = SiddhiManager::new();
+    manager.add_window_factory("ptWin".to_string(), Box::new(DummyWindowFactory));
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#ptWin() select v insert into Out;\n";
+    let runner = common::AppRunner::new_with_manager(manager, app, "Out");
+    runner.send("In", vec![AttributeValue::Int(1)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![vec![AttributeValue::Int(1)]]);
 }
 
 #[test]
