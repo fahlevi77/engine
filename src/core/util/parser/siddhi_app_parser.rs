@@ -35,7 +35,9 @@ impl SiddhiAppParser {
         let mut builder = SiddhiAppRuntimeBuilder::new(siddhi_app_context.clone());
 
         // Parse @app level annotations to configure defaults
-        let mut default_stream_async = false;
+        let mut default_stream_async = siddhi_app_context
+            .get_siddhi_context()
+            .get_default_async_mode();
         for ann in &api_siddhi_app.annotations {
             if ann.name.eq_ignore_ascii_case("app") {
                 for el in &ann.elements {

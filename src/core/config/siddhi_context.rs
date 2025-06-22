@@ -72,6 +72,12 @@ pub struct SiddhiContext {
     record_table_handler_manager: Option<RecordTableHandlerManagerPlaceholder>,
     default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder,
 
+    /// Default buffer size for StreamJunctions created when parsing Siddhi apps.
+    default_junction_buffer_size: usize,
+    /// Whether StreamJunctions should run asynchronously by default when no
+    /// annotation overrides the mode.
+    default_junction_async: bool,
+
     // Actual fields for extensions and data sources
     /// Stores factories for User-Defined Scalar Functions. Key: "namespace:name" or "name", Value: clonable factory instance.
     scalar_function_factories: Arc<RwLock<HashMap<String, Box<dyn ScalarFunctionExecutor>>>>,
@@ -133,6 +139,8 @@ impl SiddhiContext {
             source_handler_manager: None,
             record_table_handler_manager: None,
             default_disrupter_exception_handler: "DefaultDisruptorExceptionHandler".to_string(),
+            default_junction_buffer_size: 1024,
+            default_junction_async: false,
             dummy_field_siddhi_context_extensions: String::new(),
         };
         ctx.register_default_extensions();
@@ -273,6 +281,22 @@ impl SiddhiContext {
 
     pub fn get_default_disruptor_exception_handler(&self) -> &String {
         &self.default_disrupter_exception_handler
+    }
+
+    pub fn get_default_junction_buffer_size(&self) -> usize {
+        self.default_junction_buffer_size
+    }
+
+    pub fn set_default_junction_buffer_size(&mut self, size: usize) {
+        self.default_junction_buffer_size = size;
+    }
+
+    pub fn get_default_async_mode(&self) -> bool {
+        self.default_junction_async
+    }
+
+    pub fn set_default_async_mode(&mut self, mode: bool) {
+        self.default_junction_async = mode;
     }
 
     pub fn get_attributes(
@@ -552,6 +576,8 @@ impl Clone for SiddhiContext {
             source_handler_manager: self.source_handler_manager.clone(),
             record_table_handler_manager: self.record_table_handler_manager.clone(),
             default_disrupter_exception_handler: self.default_disrupter_exception_handler.clone(),
+            default_junction_buffer_size: self.default_junction_buffer_size,
+            default_junction_async: self.default_junction_async,
             dummy_field_siddhi_context_extensions: self
                 .dummy_field_siddhi_context_extensions
                 .clone(),

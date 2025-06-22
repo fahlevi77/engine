@@ -16,8 +16,3 @@ stateless query pipeline so the integration test in `src/lib.rs`
   (windows, tables, persistence, etc.).  Placeholders are provided where
   required by the API.
 
-## TODO
-
-* Implement proper `StreamEvent` factories and event pooling.
-* Flesh out the asynchronous path in `StreamJunction`.
-* Complete support for stateful processors and other execution types.

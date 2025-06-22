@@ -149,6 +149,7 @@ impl SiddhiAppContext {
         siddhi_app_string: String,
     ) -> Self {
         // Default values from Java SiddhiAppContext() constructor and field initializers
+        let default_buffer = siddhi_context.get_default_junction_buffer_size() as i32;
         Self {
             siddhi_context,
             name,
@@ -170,7 +171,7 @@ impl SiddhiAppContext {
             // script_function_map: HashMap::new(),
             // disruptor_exception_handler: None, // Uses siddhiContext's default if not set
             // runtime_exception_listener: None,
-            buffer_size: 0, // Default not specified, using 0
+            buffer_size: default_buffer,
             // included_metrics: None,
             transport_channel_creation_enabled: false, // Default not specified, assuming false
             // scheduler_list: Vec::new(),
