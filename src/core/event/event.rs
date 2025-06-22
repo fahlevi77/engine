@@ -2,6 +2,7 @@
 // Corresponds to io.siddhi.core.event.Event
 use super::complex_event::{ComplexEvent, ComplexEventType};
 use super::value::AttributeValue;
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // Global atomic counter for generating unique event IDs.
@@ -11,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 
 /// Represents a single data event in Siddhi with a timestamp and data payload.
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Event {
     pub id: u64,                   // Unique ID, added as per prompt
     pub timestamp: i64,            // Java default -1

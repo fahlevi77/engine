@@ -1,13 +1,14 @@
 // siddhi_rust/src/core/event/complex_event.rs
 // Corresponds to io.siddhi.core.event.ComplexEvent (interface)
 use super::value::AttributeValue;
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::fmt::Debug; // For as_any_mut
 
 // Moved from stream_event.rs (or defined here if it wasn't there)
 // This enum corresponds to ComplexEvent.Type in Java
 /// Type of complex event (CURRENT, EXPIRED, TIMER, RESET).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum ComplexEventType {
     #[default]
     Current,
@@ -77,18 +78,28 @@ pub fn clone_box_complex_event(event: &dyn ComplexEvent) -> Box<dyn ComplexEvent
     }
 }
 
+/// Clone a single [`ComplexEvent`] without cloning its `next` pointer.
+pub fn clone_box_complex_event_without_next(event: &dyn ComplexEvent) -> Box<dyn ComplexEvent> {
+    if let Some(se) = event
+        .as_any()
+        .downcast_ref::<crate::core::event::stream::StreamEvent>()
+    {
+        Box::new(se.clone_without_next())
+    } else if let Some(se) = event
+        .as_any()
+        .downcast_ref::<crate::core::event::state::StateEvent>()
+    {
+        Box::new(se.clone_without_next())
+    } else {
+        panic!("Unknown ComplexEvent type for cloning");
+    }
+}
+
 /// Clone an entire chain of [`ComplexEvent`]s starting at `head`.
 pub fn clone_event_chain(head: &dyn ComplexEvent) -> Box<dyn ComplexEvent> {
-    let mut new_head = clone_box_complex_event(head);
-    let mut tail_ref = new_head.mut_next_ref_option();
-    let mut current_opt = head.get_next();
-    while let Some(curr) = current_opt {
-        let cloned = clone_box_complex_event(curr);
-        *tail_ref = Some(cloned);
-        if let Some(ref mut t) = *tail_ref {
-            tail_ref = t.mut_next_ref_option();
-        }
-        current_opt = curr.get_next();
+    let mut new_head = clone_box_complex_event_without_next(head);
+    if let Some(next) = head.get_next() {
+        new_head.set_next(Some(clone_event_chain(next)));
     }
     new_head
 }

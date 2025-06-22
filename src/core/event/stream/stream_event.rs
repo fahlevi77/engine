@@ -6,11 +6,12 @@ use crate::core::util::siddhi_constants::{
     BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
     STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
 };
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::fmt::Debug;
 
 /// A concrete implementation of ComplexEvent for stream processing.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StreamEvent {
     pub timestamp: i64,
     pub output_data: Option<Vec<AttributeValue>>,
@@ -19,6 +20,7 @@ pub struct StreamEvent {
     pub before_window_data: Vec<AttributeValue>,
     pub on_after_window_data: Vec<AttributeValue>,
 
+    #[serde(default, skip_serializing, skip_deserializing)]
     pub next: Option<Box<dyn ComplexEvent>>,
 }
 
@@ -37,6 +39,7 @@ impl Clone for StreamEvent {
         }
     }
 }
+
 
 impl StreamEvent {
     pub fn new(

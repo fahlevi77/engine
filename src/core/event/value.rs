@@ -1,4 +1,5 @@
 // siddhi_rust/src/core/event/value.rs
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::any::Any;
 use std::fmt;
 
@@ -69,6 +70,54 @@ impl Clone for AttributeValue {
             AttributeValue::Object(_) => AttributeValue::Object(None),
             AttributeValue::Null => AttributeValue::Null,
         }
+    }
+}
+
+// --- serde support ---
+#[derive(Serialize, Deserialize)]
+pub(crate) enum AttrSer {
+    String(String),
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
+    Bool(bool),
+    Null,
+}
+
+impl Serialize for AttributeValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let repr = match self {
+            AttributeValue::String(s) => AttrSer::String(s.clone()),
+            AttributeValue::Int(i) => AttrSer::Int(*i),
+            AttributeValue::Long(l) => AttrSer::Long(*l),
+            AttributeValue::Float(f) => AttrSer::Float(*f),
+            AttributeValue::Double(d) => AttrSer::Double(*d),
+            AttributeValue::Bool(b) => AttrSer::Bool(*b),
+            _ => AttrSer::Null,
+        };
+        repr.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for AttributeValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let repr = AttrSer::deserialize(deserializer)?;
+        Ok(match repr {
+            AttrSer::String(s) => AttributeValue::String(s),
+            AttrSer::Int(i) => AttributeValue::Int(i),
+            AttrSer::Long(l) => AttributeValue::Long(l),
+            AttrSer::Float(f) => AttributeValue::Float(f),
+            AttrSer::Double(d) => AttributeValue::Double(d),
+            AttrSer::Bool(b) => AttributeValue::Bool(b),
+            AttrSer::Null => AttributeValue::Null,
+        })
     }
 }
 

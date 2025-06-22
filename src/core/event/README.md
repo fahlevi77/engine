@@ -20,16 +20,4 @@ where appropriate.
 - Constants used for array index calculations are located in
   `core::util::siddhi_constants.rs`.
 
-## TODO
-
-The current implementation is functional enough for simple query
-execution but several areas still need work:
-
-- Comprehensive cloning of event chains.
-- Full parity with all methods of the Java classes (some advanced
-  serialization helpers are omitted).
-- Additional utility types under `state` and `stream` packages are only
-  partially ported.  Basic factories and attribute mapping structures are
-  available but cloners and populaters are TODO.
-
 Contributions and further improvements are welcome.

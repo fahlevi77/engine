@@ -8,13 +8,14 @@ use crate::core::util::siddhi_constants::{
     STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
     STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
 };
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static NEXT_STATE_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Debug, Default)] // Default is placeholder
+#[derive(Debug, Default, Serialize, Deserialize)] // Default is placeholder
 pub struct StateEvent {
     // Fields from Java StateEvent
     pub stream_events: Vec<Option<StreamEvent>>, // Java: StreamEvent[], can have nulls
@@ -23,6 +24,7 @@ pub struct StateEvent {
     pub output_data: Option<Vec<AttributeValue>>, // Corresponds to outputData field
 
     // For ComplexEvent linked list
+    #[serde(default, skip_serializing, skip_deserializing)]
     pub next: Option<Box<dyn ComplexEvent>>,
 
     // Java StateEvent has an 'id' field too (long)
