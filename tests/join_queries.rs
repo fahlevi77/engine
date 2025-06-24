@@ -356,6 +356,12 @@ fn setup_state_join(
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("Left".to_string(), 0);
+            m.insert("Right".to_string(), 1);
+            m
+        },
         default_source: "Left".to_string(),
         query_name: "q",
     };

@@ -161,6 +161,10 @@ pub struct ExpressionParserContext<'a> {
     pub window_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub aggregation_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub state_meta_map: HashMap<String, Arc<MetaStateEvent>>,
+    /// Map of source id (stream/table) to its position within a StateEvent chain.
+    /// Single stream queries map their input id to position 0 while joins and
+    /// patterns map each participating id to the appropriate index.
+    pub stream_positions: HashMap<String, i32>,
     pub default_source: String,
     pub query_name: &'a str,
 }
@@ -197,9 +201,10 @@ pub fn parse_expression<'a>(
                             context.query_name,
                         ));
                     }
+                    let pos = *context.stream_positions.get(id).unwrap_or(&0);
                     found = Some((
                         [
-                            0,
+                            pos,
                             api_var.stream_index.unwrap_or(0),
                             crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
                             *idx as i32,
@@ -581,8 +586,19 @@ pub fn parse_expression<'a>(
                             })?,
                         ))
                     } else {
+                        let scalars = context
+                            .siddhi_app_context
+                            .list_scalar_function_names()
+                            .join(", ");
+                        let aggs = context
+                            .siddhi_app_context
+                            .list_attribute_aggregator_names()
+                            .join(", ");
                         Err(ExpressionParseError::new(
-                            format!("Unsupported or unknown function: {}", function_lookup_name),
+                            format!(
+                                "Unsupported or unknown function: {}. Known scalar functions: [{}]. Known aggregators: [{}]",
+                                function_lookup_name, scalars, aggs
+                            ),
                             &api_func.siddhi_element,
                             context.query_name,
                         ))

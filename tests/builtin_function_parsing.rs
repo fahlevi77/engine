@@ -35,6 +35,7 @@ fn empty_ctx(query: &str) -> ExpressionParserContext {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: query,
     }

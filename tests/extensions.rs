@@ -173,6 +173,11 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name: &str) -> ExpressionParse
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("s".to_string(), 0);
+            m
+        },
         default_source: "s".to_string(),
         query_name: Box::leak(name.to_string().into_boxed_str()),
     }

@@ -205,6 +205,16 @@ impl SiddhiAppContext {
         Arc::clone(&self.siddhi_context)
     }
 
+    /// Convenience wrapper that lists available scalar function names.
+    pub fn list_scalar_function_names(&self) -> Vec<String> {
+        self.siddhi_context.list_scalar_function_names()
+    }
+
+    /// Convenience wrapper that lists available attribute aggregators.
+    pub fn list_attribute_aggregator_names(&self) -> Vec<String> {
+        self.siddhi_context.list_attribute_aggregator_names()
+    }
+
     // In Java, getAttributes() delegates to siddhiContext.getAttributes().
     pub fn get_attributes(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, String>> {
         // Delegate to SiddhiContext's thread-safe attributes map

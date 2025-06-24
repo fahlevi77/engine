@@ -59,6 +59,12 @@ fn test_parse_expression_multi_stream_variable() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("A".to_string(), 0);
+            m.insert("B".to_string(), 1);
+            m
+        },
         default_source: "A".to_string(),
         query_name: "Q1",
     };
@@ -85,6 +91,7 @@ fn test_compare_type_coercion_int_double() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: "Q2",
     };
@@ -118,6 +125,11 @@ fn test_variable_not_found_error() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("A".to_string(), 0);
+            m
+        },
         default_source: "A".to_string(),
         query_name: "Q3",
     };
@@ -150,6 +162,11 @@ fn test_table_variable_resolution() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("T".to_string(), 0);
+            m
+        },
         default_source: "T".to_string(),
         query_name: "Q4",
     };
@@ -240,6 +257,7 @@ fn test_custom_udf_plus_one() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: HashMap::new(),
         default_source: "dummy".to_string(),
         query_name: "Q5",
     };
@@ -354,6 +372,12 @@ fn test_join_query_parsing() {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: {
+            let mut m = HashMap::new();
+            m.insert("S1".to_string(), 0);
+            m.insert("S2".to_string(), 1);
+            m
+        },
         default_source: "S1".to_string(),
         query_name: "J",
     };
@@ -765,4 +789,38 @@ fn test_app_runner_custom_udf() {
     runner.send("In", vec![AttributeValue::Int(4)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(5)]]);
+}
+
+#[test]
+fn app_runner_join_variable_resolution() {
+    use common::AppRunner;
+    use siddhi_rust::core::event::value::AttributeValue;
+
+    let app = "\
+        define stream L (id int);\n\
+        define stream R (id int);\n\
+        define stream Out (l int, r int);\n\
+        from L join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("L", vec![AttributeValue::Int(1)]);
+    runner.send("R", vec![AttributeValue::Int(1)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]);
+}
+
+#[test]
+fn app_runner_pattern_variable_resolution() {
+    use common::AppRunner;
+    use siddhi_rust::core::event::value::AttributeValue;
+
+    let app = "\
+        define stream A (val int);\n\
+        define stream B (val int);\n\
+        define stream Out (a int, b int);\n\
+        from A -> B select A.val as a, B.val as b insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("A", vec![AttributeValue::Int(1)]);
+    runner.send("B", vec![AttributeValue::Int(2)]);
+    let out = runner.shutdown();
+    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(2)]]);
 }

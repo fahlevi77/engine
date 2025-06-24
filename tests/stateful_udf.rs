@@ -100,6 +100,7 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
         window_meta_map: HashMap::new(),
         aggregation_meta_map: HashMap::new(),
         state_meta_map: HashMap::new(),
+        stream_positions: HashMap::new(),
         default_source: "default".to_string(),
         query_name: "q",
     }

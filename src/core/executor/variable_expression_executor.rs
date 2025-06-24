@@ -6,7 +6,7 @@ use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::siddhi_constants::{
     BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
-    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
+    STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
     STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
 };
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
@@ -83,7 +83,9 @@ impl ExpressionExecutor for VariableExpressionExecutor {
             let idx = self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] as usize;
             let attr = match self.position[STREAM_ATTRIBUTE_TYPE_INDEX] as usize {
                 BEFORE_WINDOW_DATA_INDEX => stream_event.before_window_data.get(idx),
-                OUTPUT_DATA_INDEX => stream_event.output_data.as_ref().and_then(|v| v.get(idx)),
+                OUTPUT_DATA_INDEX | STATE_OUTPUT_DATA_INDEX => {
+                    stream_event.output_data.as_ref().and_then(|v| v.get(idx))
+                }
                 ON_AFTER_WINDOW_DATA_INDEX => stream_event.on_after_window_data.get(idx),
                 _ => None,
             }
@@ -321,5 +323,17 @@ mod tests {
         let val = exec.execute_on_row(&row);
         assert_eq!(val, Some(AttributeValue::Int(20)));
         assert_eq!(exec.get_position()[STREAM_ATTRIBUTE_INDEX_IN_TYPE], 1);
+    }
+
+    #[test]
+    fn test_state_output_index_on_stream_event() {
+        let exec = VariableExpressionExecutor::new(
+            [0, 0, STATE_OUTPUT_DATA_INDEX as i32, 0],
+            ApiAttributeType::INT,
+            "out".to_string(),
+        );
+        let se = create_test_stream_event_with_output_data(vec![AttributeValue::Int(5)]);
+        let val = exec.execute(Some(&se as &dyn ComplexEvent));
+        assert_eq!(val, Some(AttributeValue::Int(5)));
     }
 }

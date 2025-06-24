@@ -112,6 +112,11 @@ impl QueryParser {
                     window_meta_map: HashMap::new(),
                     aggregation_meta_map: HashMap::new(),
                     state_meta_map: HashMap::new(),
+                    stream_positions: {
+                        let mut m = HashMap::new();
+                        m.insert(input_stream_id.clone(), 0);
+                        m
+                    },
                     default_source: input_stream_id.clone(),
                     query_name: &query_name,
                 };
@@ -191,6 +196,12 @@ impl QueryParser {
                                 window_meta_map: HashMap::new(),
                                 aggregation_meta_map: HashMap::new(),
                                 state_meta_map: HashMap::new(),
+                                stream_positions: {
+                                    let mut m = HashMap::new();
+                                    m.insert(left_id.clone(), 0);
+                                    m.insert(right_id.clone(), 1);
+                                    m
+                                },
                                 default_source: left_id.clone(),
                                 query_name: &query_name,
                             },
@@ -232,6 +243,12 @@ impl QueryParser {
                     window_meta_map: HashMap::new(),
                     aggregation_meta_map: HashMap::new(),
                     state_meta_map: HashMap::new(),
+                    stream_positions: {
+                        let mut m = HashMap::new();
+                        m.insert(left_id.clone(), 0);
+                        m.insert(right_id.clone(), 1);
+                        m
+                    },
                     default_source: left_id.clone(),
                     query_name: &query_name,
                 };
@@ -458,6 +475,12 @@ impl QueryParser {
                             window_meta_map: HashMap::new(),
                             aggregation_meta_map: HashMap::new(),
                             state_meta_map: HashMap::new(),
+                            stream_positions: {
+                                let mut m = HashMap::new();
+                                m.insert(first_id_clone.clone(), 0);
+                                m.insert(second_id_clone.clone(), 1);
+                                m
+                            },
                             default_source: first_id_clone.clone(),
                             query_name: &query_name,
                         }
@@ -497,6 +520,12 @@ impl QueryParser {
                             window_meta_map: HashMap::new(),
                             aggregation_meta_map: HashMap::new(),
                             state_meta_map: HashMap::new(),
+                            stream_positions: {
+                                let mut m = HashMap::new();
+                                m.insert(first_id_clone.clone(), 0);
+                                m.insert(second_id_clone.clone(), 1);
+                                m
+                            },
                             default_source: first_id_clone.clone(),
                             query_name: &query_name,
                         }

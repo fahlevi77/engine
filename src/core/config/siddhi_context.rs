@@ -445,6 +445,26 @@ impl SiddhiContext {
             .cloned()
     }
 
+    /// List the names of all registered scalar functions.
+    pub fn list_scalar_function_names(&self) -> Vec<String> {
+        self.scalar_function_factories
+            .read()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect()
+    }
+
+    /// List the names of all registered attribute aggregators.
+    pub fn list_attribute_aggregator_names(&self) -> Vec<String> {
+        self.attribute_aggregator_factories
+            .read()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect()
+    }
+
     pub fn add_source_factory(
         &self,
         name: String,

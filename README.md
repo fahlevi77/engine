@@ -28,12 +28,12 @@ This port is **far from feature-complete** with the Java version. Users should b
 
 *   **SiddhiQL String Parsing**: A LALRPOP-based parser converts SiddhiQL strings into the `query_api` AST.  The grammar covers streams, tables, windows, triggers, aggregations, queries and partitions (with optional `define` syntax) and supports aggregation store queries with `within`/`per` clauses, but still omits many advanced constructs.
 *   **`ExpressionParser` Completeness**:
-    *   **Variable Resolution**: Current logic is highly simplified for a single input stream. It does not handle joins, patterns, states, tables, window functions, or aggregation variable lookups. Attribute position and type resolution from complex contexts is a major TODO.
-    *   **Function Handling**: Only a few common built-in functions are recognized. A full function lookup mechanism (including UDFs from `SiddhiContext`, script functions) and robust argument parsing/type checking is needed.
+    *   **Variable Resolution**: Variables can now be resolved from joins, pattern queries and tables in addition to single streams, and executors retrieve the correct attribute from these sources.
+    *   **Function Handling**: Built-in and user-defined functions are resolved with descriptive error messages when missing.
     *   **Type Checking & Coercion**: Rigorous Siddhi-specific type checking and coercion for all operators and functions is not yet implemented.
     *   **Error Handling**: Error reporting from parsing is basic (String-based).
 *   **`ExpressionExecutor` Implementations**:
-    *   `VariableExpressionExecutor`: `execute` method uses a simplified data access model (assumes data in `StreamEvent::output_data` or `before_window_data` via a simple index). Needs to correctly handle different event types, data arrays (input, output, before/after window data), and dynamic resolution (tables, stores).
+    *   `VariableExpressionExecutor`: Retrieves attributes from joined streams, patterns and tables using state event positions. More advanced handling of different event types and data sections is still needed.
     *   `CompareExpressionExecutor`: Supports numeric, boolean and string comparisons with type coercion.
     *   `InExpressionExecutor`: Implements the `IN` operator using registered tables such as `InMemoryTable`.
     *   Built‑in function executors cover casts, string operations, date utilities, math functions and UUID generation.

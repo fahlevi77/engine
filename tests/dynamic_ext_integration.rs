@@ -34,6 +34,11 @@ fn test_dynamic_extension_loading() {
         window_meta_map: std::collections::HashMap::new(),
         aggregation_meta_map: std::collections::HashMap::new(),
         state_meta_map: std::collections::HashMap::new(),
+        stream_positions: {
+            let mut m = std::collections::HashMap::new();
+            m.insert("S".to_string(), 0);
+            m
+        },
         default_source: "S".to_string(),
         query_name: "Q",
     };
