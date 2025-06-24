@@ -339,8 +339,9 @@ impl SiddhiContext {
         use crate::core::executor::function::builtin_wrapper::register_builtin_scalar_functions;
         use crate::core::extension::{LogSinkFactory, TimerSourceFactory};
         use crate::core::query::processor::stream::window::{
-            ExternalTimeBatchWindowFactory, ExternalTimeWindowFactory, LengthBatchWindowFactory,
-            LengthWindowFactory, TimeBatchWindowFactory, TimeWindowFactory,
+            CronWindowFactory, ExternalTimeBatchWindowFactory, ExternalTimeWindowFactory,
+            LengthBatchWindowFactory, LengthWindowFactory, LossyCountingWindowFactory,
+            TimeBatchWindowFactory, TimeWindowFactory,
         };
         use crate::core::query::selector::attribute::aggregator::{
             AvgAttributeAggregatorFactory, CountAttributeAggregatorFactory,
@@ -365,6 +366,8 @@ impl SiddhiContext {
             "externalTimeBatch".to_string(),
             Box::new(ExternalTimeBatchWindowFactory),
         );
+        self.add_window_factory("lossyCounting".to_string(), Box::new(LossyCountingWindowFactory));
+        self.add_window_factory("cron".to_string(), Box::new(CronWindowFactory));
 
         self.add_attribute_aggregator_factory(
             "sum".to_string(),

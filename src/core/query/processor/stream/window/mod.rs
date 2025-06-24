@@ -1080,6 +1080,267 @@ impl Processor for ExternalTimeBatchWindowProcessor {
 
 impl WindowProcessor for ExternalTimeBatchWindowProcessor {}
 
+// ---- LossyCountingWindowProcessor ----
+
+#[derive(Debug)]
+pub struct LossyCountingWindowProcessor {
+    meta: CommonProcessorMeta,
+}
+
+impl LossyCountingWindowProcessor {
+    pub fn new(app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+        }
+    }
+
+    pub fn from_handler(
+        _handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        Ok(Self::new(app_ctx, query_ctx))
+    }
+}
+
+impl Processor for LossyCountingWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(ref next) = self.meta.next_processor {
+            next.lock().unwrap().process(complex_event_chunk);
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::DEFAULT
+    }
+
+    fn is_stateful(&self) -> bool {
+        false
+    }
+}
+
+impl WindowProcessor for LossyCountingWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct LossyCountingWindowFactory;
+
+impl WindowProcessorFactory for LossyCountingWindowFactory {
+    fn name(&self) -> &'static str {
+        "lossyCounting"
+    }
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            LossyCountingWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+// ---- CronWindowProcessor ----
+
+#[derive(Debug)]
+pub struct CronWindowProcessor {
+    meta: CommonProcessorMeta,
+    cron: String,
+    scheduler: Option<Arc<Scheduler>>,
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+    scheduled: Arc<Mutex<bool>>,
+}
+
+impl CronWindowProcessor {
+    pub fn new(cron: String, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
+        let scheduler = app_ctx.get_scheduler();
+        Self {
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
+            cron,
+            scheduler,
+            buffer: Arc::new(Mutex::new(Vec::new())),
+            expired: Arc::new(Mutex::new(Vec::new())),
+            scheduled: Arc::new(Mutex::new(false)),
+        }
+    }
+
+    pub fn from_handler(
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Self, String> {
+        let expr = handler
+            .get_parameters()
+            .first()
+            .ok_or("cron window requires a cron expression")?;
+        if let Expression::Constant(c) = expr {
+            if let ConstantValueWithFloat::String(s) = &c.value {
+                Ok(Self::new(s.clone(), app_ctx, query_ctx))
+            } else {
+                Err("cron expression must be a string".to_string())
+            }
+        } else {
+            Err("cron expression must be constant".to_string())
+        }
+    }
+
+    fn schedule(&self) {
+        if let Some(ref sched) = self.scheduler {
+            if !*self.scheduled.lock().unwrap() {
+                let task = CronFlushTask {
+                    buffer: Arc::clone(&self.buffer),
+                    expired: Arc::clone(&self.expired),
+                    next: self.meta.next_processor.as_ref().map(Arc::clone),
+                };
+                let _ = sched.schedule_cron(&self.cron, Arc::new(task), None);
+                *self.scheduled.lock().unwrap() = true;
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+struct CronFlushTask {
+    buffer: Arc<Mutex<Vec<StreamEvent>>>,
+    expired: Arc<Mutex<Vec<StreamEvent>>>,
+    next: Option<Arc<Mutex<dyn Processor>>>,
+}
+
+impl Schedulable for CronFlushTask {
+    fn on_time(&self, timestamp: i64) {
+        let expired_batch: Vec<StreamEvent> = {
+            let mut ex = self.expired.lock().unwrap();
+            std::mem::take(&mut *ex)
+        };
+        let current_batch: Vec<StreamEvent> = {
+            let mut buf = self.buffer.lock().unwrap();
+            std::mem::take(&mut *buf)
+        };
+
+        if expired_batch.is_empty() && current_batch.is_empty() {
+            return;
+        }
+
+        let mut head: Option<Box<dyn ComplexEvent>> = None;
+        let mut tail = &mut head;
+
+        for mut e in expired_batch {
+            e.set_event_type(ComplexEventType::Expired);
+            e.set_timestamp(timestamp);
+            *tail = Some(Box::new(e.clone_without_next()));
+            tail = tail.as_mut().unwrap().mut_next_ref_option();
+        }
+
+        for e in &current_batch {
+            *tail = Some(Box::new(e.clone_without_next()));
+            tail = tail.as_mut().unwrap().mut_next_ref_option();
+        }
+
+        {
+            let mut ex = self.expired.lock().unwrap();
+            ex.extend(current_batch);
+        }
+
+        if let Some(chain) = head {
+            if let Some(ref next) = self.next {
+                next.lock().unwrap().process(Some(chain));
+            }
+        }
+    }
+}
+
+impl Processor for CronWindowProcessor {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if let Some(chunk) = complex_event_chunk {
+            let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
+            while let Some(ev) = current_opt {
+                if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
+                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                }
+                current_opt = ev.get_next();
+            }
+        }
+    }
+
+    fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
+        self.meta.next_processor.as_ref().map(Arc::clone)
+    }
+
+    fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
+        self.meta.next_processor = next;
+        self.schedule();
+    }
+
+    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(Self::new(
+            self.cron.clone(),
+            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(ctx),
+        ))
+    }
+
+    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
+        Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_processing_mode(&self) -> ProcessingMode {
+        ProcessingMode::BATCH
+    }
+
+    fn is_stateful(&self) -> bool {
+        true
+    }
+}
+
+impl WindowProcessor for CronWindowProcessor {}
+
+#[derive(Debug, Clone)]
+pub struct CronWindowFactory;
+
+impl WindowProcessorFactory for CronWindowFactory {
+    fn name(&self) -> &'static str {
+        "cron"
+    }
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            CronWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ExternalTimeBatchWindowFactory;
 

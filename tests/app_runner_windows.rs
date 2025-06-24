@@ -189,3 +189,36 @@ fn external_time_batch_window() {
         ]
     );
 }
+
+#[test]
+fn lossy_counting_window() {
+    let app = "\
+        define stream In (v string);\n\
+        define stream Out (v string);\n\
+        from In#lossyCounting(1,1) select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::String("A".to_string())]);
+    runner.send("In", vec![AttributeValue::String("B".to_string())]);
+    let out = runner.shutdown();
+    assert_eq!(
+        out,
+        vec![
+            vec![AttributeValue::String("A".to_string())],
+            vec![AttributeValue::String("B".to_string())],
+        ]
+    );
+}
+
+#[test]
+fn cron_window_basic() {
+    let app = "\
+        define stream In (v int);\n\
+        define stream Out (v int);\n\
+        from In#cron('*/1 * * * * *') select v insert into Out;\n";
+    let runner = AppRunner::new(app, "Out");
+    runner.send("In", vec![AttributeValue::Int(1)]);
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    let out = runner.shutdown();
+    assert!(!out.is_empty());
+    assert_eq!(out[0], vec![AttributeValue::Int(1)]);
+}
