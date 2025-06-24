@@ -17,8 +17,3 @@ simplified to keep the initial port manageable.
   `getTimeZone`, `shouldUpdate`, `getAggregationStartTime`,
   `getStartTimeEndTime`) have been ported from the Java implementation.
 
-## TODO
-
-* `EventVariableFunctionExecutor` and `MultiValueVariableFunctionExecutor`
-  assume simplified position handling compared to the Java implementation.
-  They should be revisited once the full event model is available.

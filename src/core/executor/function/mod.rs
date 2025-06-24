@@ -20,14 +20,23 @@ pub use self::builtin_wrapper::{BuiltinBuilder, BuiltinScalarFunction};
 pub use self::cast_function_executor::CastFunctionExecutor;
 pub use self::coalesce_function_executor::CoalesceFunctionExecutor;
 pub use self::convert_function_executor::ConvertFunctionExecutor;
-pub use self::date_functions::{CurrentTimestampFunctionExecutor, FormatDateFunctionExecutor};
+pub use self::date_functions::{
+    CurrentTimestampFunctionExecutor, DateAddFunctionExecutor, FormatDateFunctionExecutor,
+    ParseDateFunctionExecutor,
+};
 pub use self::event_timestamp_function_executor::EventTimestampFunctionExecutor;
 pub use self::if_then_else_function_executor::IfThenElseFunctionExecutor;
 pub use self::instance_of_checkers::*;
-pub use self::math_functions::{RoundFunctionExecutor, SqrtFunctionExecutor};
+pub use self::math_functions::{
+    LogFunctionExecutor, RoundFunctionExecutor, SinFunctionExecutor, SqrtFunctionExecutor,
+    TanFunctionExecutor,
+};
 pub use self::script_function_executor::ScriptFunctionExecutor;
 pub use self::scalar_function_executor::ScalarFunctionExecutor; // Added
-pub use self::string_functions::{ConcatFunctionExecutor, LengthFunctionExecutor};
+pub use self::string_functions::{
+    ConcatFunctionExecutor, LengthFunctionExecutor, LowerFunctionExecutor,
+    SubstringFunctionExecutor, UpperFunctionExecutor,
+};
 pub use self::uuid_function_executor::UuidFunctionExecutor;
 
 // Other function executors to be added here:

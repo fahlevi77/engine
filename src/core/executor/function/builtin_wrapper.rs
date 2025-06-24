@@ -118,6 +118,48 @@ fn build_concat(
     Ok(Box::new(ConcatFunctionExecutor::new(args)?))
 }
 
+fn build_lower(
+    args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 1 {
+        return Err("lower() requires one argument".to_string());
+    }
+    Ok(Box::new(LowerFunctionExecutor::new(
+        args.into_iter().next().unwrap(),
+    )?))
+}
+
+fn build_upper(
+    args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 1 {
+        return Err("upper() requires one argument".to_string());
+    }
+    Ok(Box::new(UpperFunctionExecutor::new(
+        args.into_iter().next().unwrap(),
+    )?))
+}
+
+fn build_substring(
+    mut args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() < 2 || args.len() > 3 {
+        return Err("substring() requires two or three arguments".to_string());
+    }
+    let length_exec = if args.len() == 3 {
+        Some(args.remove(2))
+    } else {
+        None
+    };
+    let start_exec = args.remove(1);
+    let val_exec = args.remove(0);
+    Ok(Box::new(SubstringFunctionExecutor::new(
+        val_exec,
+        start_exec,
+        length_exec,
+    )?))
+}
+
 fn build_length(
     args: Vec<Box<dyn ExpressionExecutor>>,
 ) -> Result<Box<dyn ExpressionExecutor>, String> {
@@ -172,6 +214,29 @@ fn build_format_date(
     Ok(Box::new(FormatDateFunctionExecutor::new(ts, pattern)?))
 }
 
+fn build_parse_date(
+    mut args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 2 {
+        return Err("parseDate() requires two arguments".to_string());
+    }
+    let pattern_exec = args.remove(1);
+    let date_exec = args.remove(0);
+    Ok(Box::new(ParseDateFunctionExecutor::new(date_exec, pattern_exec)?))
+}
+
+fn build_date_add(
+    mut args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 3 {
+        return Err("dateAdd() requires three arguments".to_string());
+    }
+    let unit_exec = args.remove(2);
+    let inc_exec = args.remove(1);
+    let ts_exec = args.remove(0);
+    Ok(Box::new(DateAddFunctionExecutor::new(ts_exec, inc_exec, unit_exec)?))
+}
+
 fn build_round(
     args: Vec<Box<dyn ExpressionExecutor>>,
 ) -> Result<Box<dyn ExpressionExecutor>, String> {
@@ -190,6 +255,39 @@ fn build_sqrt(
         return Err("sqrt() requires one argument".to_string());
     }
     Ok(Box::new(SqrtFunctionExecutor::new(
+        args.into_iter().next().unwrap(),
+    )?))
+}
+
+fn build_log(
+    args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 1 {
+        return Err("log() requires one argument".to_string());
+    }
+    Ok(Box::new(LogFunctionExecutor::new(
+        args.into_iter().next().unwrap(),
+    )?))
+}
+
+fn build_sin(
+    args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 1 {
+        return Err("sin() requires one argument".to_string());
+    }
+    Ok(Box::new(SinFunctionExecutor::new(
+        args.into_iter().next().unwrap(),
+    )?))
+}
+
+fn build_tan(
+    args: Vec<Box<dyn ExpressionExecutor>>,
+) -> Result<Box<dyn ExpressionExecutor>, String> {
+    if args.len() != 1 {
+        return Err("tan() requires one argument".to_string());
+    }
+    Ok(Box::new(TanFunctionExecutor::new(
         args.into_iter().next().unwrap(),
     )?))
 }
@@ -235,6 +333,30 @@ pub fn register_builtin_scalar_functions(ctx: &crate::core::config::siddhi_conte
         Box::new(BuiltinScalarFunction::new("str:length", build_length)),
     );
     ctx.add_scalar_function_factory(
+        "lower".to_string(),
+        Box::new(BuiltinScalarFunction::new("lower", build_lower)),
+    );
+    ctx.add_scalar_function_factory(
+        "str:lower".to_string(),
+        Box::new(BuiltinScalarFunction::new("str:lower", build_lower)),
+    );
+    ctx.add_scalar_function_factory(
+        "upper".to_string(),
+        Box::new(BuiltinScalarFunction::new("upper", build_upper)),
+    );
+    ctx.add_scalar_function_factory(
+        "str:upper".to_string(),
+        Box::new(BuiltinScalarFunction::new("str:upper", build_upper)),
+    );
+    ctx.add_scalar_function_factory(
+        "substring".to_string(),
+        Box::new(BuiltinScalarFunction::new("substring", build_substring)),
+    );
+    ctx.add_scalar_function_factory(
+        "str:substring".to_string(),
+        Box::new(BuiltinScalarFunction::new("str:substring", build_substring)),
+    );
+    ctx.add_scalar_function_factory(
         "coalesce".to_string(),
         Box::new(BuiltinScalarFunction::new("coalesce", build_coalesce)),
     );
@@ -272,6 +394,22 @@ pub fn register_builtin_scalar_functions(ctx: &crate::core::config::siddhi_conte
         )),
     );
     ctx.add_scalar_function_factory(
+        "parseDate".to_string(),
+        Box::new(BuiltinScalarFunction::new("parseDate", build_parse_date)),
+    );
+    ctx.add_scalar_function_factory(
+        "time:parseDate".to_string(),
+        Box::new(BuiltinScalarFunction::new("time:parseDate", build_parse_date)),
+    );
+    ctx.add_scalar_function_factory(
+        "dateAdd".to_string(),
+        Box::new(BuiltinScalarFunction::new("dateAdd", build_date_add)),
+    );
+    ctx.add_scalar_function_factory(
+        "time:dateAdd".to_string(),
+        Box::new(BuiltinScalarFunction::new("time:dateAdd", build_date_add)),
+    );
+    ctx.add_scalar_function_factory(
         "round".to_string(),
         Box::new(BuiltinScalarFunction::new("round", build_round)),
     );
@@ -286,6 +424,30 @@ pub fn register_builtin_scalar_functions(ctx: &crate::core::config::siddhi_conte
     ctx.add_scalar_function_factory(
         "math:sqrt".to_string(),
         Box::new(BuiltinScalarFunction::new("math:sqrt", build_sqrt)),
+    );
+    ctx.add_scalar_function_factory(
+        "log".to_string(),
+        Box::new(BuiltinScalarFunction::new("log", build_log)),
+    );
+    ctx.add_scalar_function_factory(
+        "math:log".to_string(),
+        Box::new(BuiltinScalarFunction::new("math:log", build_log)),
+    );
+    ctx.add_scalar_function_factory(
+        "sin".to_string(),
+        Box::new(BuiltinScalarFunction::new("sin", build_sin)),
+    );
+    ctx.add_scalar_function_factory(
+        "math:sin".to_string(),
+        Box::new(BuiltinScalarFunction::new("math:sin", build_sin)),
+    );
+    ctx.add_scalar_function_factory(
+        "tan".to_string(),
+        Box::new(BuiltinScalarFunction::new("tan", build_tan)),
+    );
+    ctx.add_scalar_function_factory(
+        "math:tan".to_string(),
+        Box::new(BuiltinScalarFunction::new("math:tan", build_tan)),
     );
     ctx.add_scalar_function_factory(
         "eventTimestamp".to_string(),

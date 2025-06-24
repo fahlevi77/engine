@@ -120,3 +120,76 @@ fn test_round_and_sqrt_functions() {
     let sqrt_exec = parse_expression(&sqrt_expr, &ctx).unwrap();
     assert_eq!(sqrt_exec.execute(None), Some(AttributeValue::Double(4.0)));
 }
+
+#[test]
+fn test_additional_math_functions() {
+    let ctx = empty_ctx("math_extra");
+    let log_expr = Expression::function_no_ns("log".to_string(), vec![Expression::value_double(1.0)]);
+    let log_exec = parse_expression(&log_expr, &ctx).unwrap();
+    assert_eq!(log_exec.execute(None), Some(AttributeValue::Double(0.0)));
+
+    let sin_expr = Expression::function_no_ns(
+        "sin".to_string(),
+        vec![Expression::value_double(std::f64::consts::PI / 2.0)],
+    );
+    let sin_exec = parse_expression(&sin_expr, &ctx).unwrap();
+    assert!(matches!(sin_exec.execute(None), Some(AttributeValue::Double(v)) if (v-1.0).abs() < 1e-6));
+
+    let tan_expr = Expression::function_no_ns("tan".to_string(), vec![Expression::value_double(0.0)]);
+    let tan_exec = parse_expression(&tan_expr, &ctx).unwrap();
+    assert_eq!(tan_exec.execute(None), Some(AttributeValue::Double(0.0)));
+}
+
+#[test]
+fn test_string_and_date_functions() {
+    let ctx = empty_ctx("str_date");
+    let lower_expr = Expression::function_no_ns(
+        "lower".to_string(),
+        vec![Expression::value_string("ABC".to_string())],
+    );
+    let lower_exec = parse_expression(&lower_expr, &ctx).unwrap();
+    assert_eq!(lower_exec.execute(None), Some(AttributeValue::String("abc".to_string())));
+
+    let upper_expr = Expression::function_no_ns(
+        "upper".to_string(),
+        vec![Expression::value_string("abc".to_string())],
+    );
+    let upper_exec = parse_expression(&upper_expr, &ctx).unwrap();
+    assert_eq!(upper_exec.execute(None), Some(AttributeValue::String("ABC".to_string())));
+
+    let substr_expr = Expression::function_no_ns(
+        "substring".to_string(),
+        vec![
+            Expression::value_string("hello".to_string()),
+            Expression::value_int(1),
+            Expression::value_int(3),
+        ],
+    );
+    let substr_exec = parse_expression(&substr_expr, &ctx).unwrap();
+    assert_eq!(substr_exec.execute(None), Some(AttributeValue::String("ell".to_string())));
+
+    let parse_expr = Expression::function_no_ns(
+        "parseDate".to_string(),
+        vec![
+            Expression::value_string("1970-01-02".to_string()),
+            Expression::value_string("%Y-%m-%d".to_string()),
+        ],
+    );
+    let parse_exec = parse_expression(&parse_expr, &ctx).unwrap();
+    assert_eq!(
+        parse_exec.execute(None),
+        Some(AttributeValue::Long(86_400_000))
+    );
+
+    let add_expr = Expression::function_no_ns(
+        "dateAdd".to_string(),
+        vec![
+            Expression::value_long(0),
+            Expression::value_int(1),
+            Expression::value_string("days".to_string()),
+        ],
+    );
+    let add_exec = parse_expression(&add_expr, &ctx).unwrap();
+    assert_eq!(add_exec.execute(None), Some(AttributeValue::Long(86_400_000)));
+}
+
