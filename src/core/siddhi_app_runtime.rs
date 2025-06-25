@@ -203,6 +203,9 @@ impl SiddhiAppRuntime {
         for pr in &self.partition_runtimes {
             pr.shutdown();
         }
+        for qr in &self.query_runtimes {
+            qr.flush();
+        }
         if let Some(service) = self.siddhi_app_context.get_snapshot_service() {
             if let Some(store) = &service.persistence_store {
                 store.clear_all_revisions(&self.name);
@@ -218,6 +221,25 @@ impl SiddhiAppRuntime {
             .get_snapshot_service()
             .ok_or("SnapshotService not set")?;
         service.persist()
+    }
+
+    /// Capture a snapshot of the current state via the SnapshotService.
+    pub fn snapshot(&self) -> Result<Vec<u8>, String> {
+        let service = self
+            .siddhi_app_context
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        Ok(service.snapshot())
+    }
+
+    /// Restore the given snapshot bytes using the SnapshotService.
+    pub fn restore(&self, snapshot: &[u8]) -> Result<(), String> {
+        let service = self
+            .siddhi_app_context
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        service.set_state(snapshot.to_vec());
+        Ok(())
     }
 
     /// Restore the given revision using the SnapshotService.

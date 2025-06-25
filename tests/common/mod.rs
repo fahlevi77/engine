@@ -68,6 +68,29 @@ impl AppRunner {
         Self { runtime, collected }
     }
 
+    pub fn new_from_api_with_store(
+        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
+        out_stream: &str,
+        store: Arc<dyn PersistenceStore>,
+    ) -> Self {
+        let manager = SiddhiManager::new();
+        manager.set_persistence_store(store);
+        let runtime = manager
+            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .expect("runtime");
+        let collected = Arc::new(Mutex::new(Vec::new()));
+        runtime
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
+            .expect("add cb");
+        runtime.start();
+        Self { runtime, collected }
+    }
+
     pub fn new_with_manager(
         manager: SiddhiManager,
         app_string: &str,
@@ -160,6 +183,14 @@ impl AppRunner {
 
     pub fn restore_revision(&self, rev: &str) {
         self.runtime.restore_revision(rev).expect("restore")
+    }
+
+    pub fn snapshot(&self) -> Vec<u8> {
+        self.runtime.snapshot().expect("snapshot")
+    }
+
+    pub fn restore(&self, snap: &[u8]) {
+        self.runtime.restore(snap).expect("restore")
     }
 
     /// Retrieve aggregated rows using optional `within` and `per` clauses.

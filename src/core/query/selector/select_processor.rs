@@ -11,6 +11,9 @@ use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex}; // Using VecDeque for efficient chunk building
+use serde::{Deserialize, Serialize};
+
+use crate::core::util::state_holder::StateHolder;
 
 use super::{GroupByKeyGenerator, OrderByEventComparator};
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -20,54 +23,214 @@ struct GroupState {
     oaps: Vec<OutputAttributeProcessor>,
     having_exec: Option<Box<dyn ExpressionExecutor>>,
 }
-// OutputRateLimiter is the actual next processor for QuerySelector in Java
+// Simplified OutputRateLimiter supporting event-count based throttling.
 #[derive(Debug)]
-pub struct OutputRateLimiterPlaceholder {
+pub struct OutputRateLimiter {
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
     pub siddhi_app_context: Arc<SiddhiAppContext>,
+    batch_size: usize,
+    behavior: crate::query_api::execution::query::output::ratelimit::OutputRateBehavior,
+    buffer: Arc<Mutex<Vec<Box<dyn ComplexEvent>>>>,
+    counter: Arc<Mutex<usize>>,
 }
-impl OutputRateLimiterPlaceholder {
+
+#[derive(Debug)]
+struct OutputRateLimiterStateHolder {
+    buffer: Arc<Mutex<Vec<Box<dyn ComplexEvent>>>>,
+    counter: Arc<Mutex<usize>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct StoredEvent {
+    ts: i64,
+    data: Vec<AttributeValue>,
+    expired: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct LimiterSnapshot {
+    count: usize,
+    events: Vec<StoredEvent>,
+}
+
+impl StateHolder for OutputRateLimiterStateHolder {
+    fn snapshot_state(&self) -> Vec<u8> {
+        let count = *self.counter.lock().unwrap();
+        let events = self
+            .buffer
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|e| StoredEvent {
+                ts: e.get_timestamp(),
+                data: e.get_output_data().map_or(Vec::new(), |d| d.to_vec()),
+                expired: e.get_event_type() == ComplexEventType::Expired,
+            })
+            .collect();
+        let snap = LimiterSnapshot { count, events };
+        crate::core::util::to_bytes(&snap).unwrap_or_default()
+    }
+
+    fn restore_state(&self, snapshot: &[u8]) {
+        if let Ok(snap) = crate::core::util::from_bytes::<LimiterSnapshot>(snapshot) {
+            *self.counter.lock().unwrap() = snap.count;
+            let mut buf = self.buffer.lock().unwrap();
+            buf.clear();
+            for ev in snap.events {
+                let mut se = StreamEvent::new(ev.ts, 0, 0, ev.data.len());
+                se.output_data = Some(ev.data);
+                se.event_type = if ev.expired {
+                    ComplexEventType::Expired
+                } else {
+                    ComplexEventType::Current
+                };
+                buf.push(Box::new(se));
+            }
+        }
+    }
+}
+
+impl OutputRateLimiter {
     pub fn new(
         next_processor: Option<Arc<Mutex<dyn Processor>>>,
         siddhi_app_context: Arc<SiddhiAppContext>,
+        siddhi_query_context: Arc<SiddhiQueryContext>,
+        batch_size: usize,
+        behavior: crate::query_api::execution::query::output::ratelimit::OutputRateBehavior,
     ) -> Self {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let counter = Arc::new(Mutex::new(0usize));
+        let holder = Arc::new(OutputRateLimiterStateHolder {
+            buffer: Arc::clone(&buffer),
+            counter: Arc::clone(&counter),
+        });
+        siddhi_query_context.register_state_holder("output_rate_limiter".into(), holder);
         Self {
             next_processor,
             siddhi_app_context,
+            batch_size,
+            behavior,
+            buffer,
+            counter,
         }
     }
-    // TODO: Actual rate limiting logic would go into its process method
-}
-impl Processor for OutputRateLimiterPlaceholder {
-    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+
+    fn emit(&self, events: Vec<Box<dyn ComplexEvent>>) {
         if let Some(ref next) = self.next_processor {
-            next.lock().unwrap().process(complex_event_chunk);
+            let mut head: Option<Box<dyn ComplexEvent>> = None;
+            let mut tail = &mut head;
+            for mut ev in events {
+                *tail = Some(ev);
+                if let Some(ref mut t) = *tail {
+                    tail = t.mut_next_ref_option();
+                }
+            }
+            next.lock().unwrap().process(head);
         }
     }
+}
+
+impl Processor for OutputRateLimiter {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+        if complex_event_chunk.is_none() {
+            let mut out = Vec::new();
+            {
+                let mut buf = self.buffer.lock().unwrap();
+                if !buf.is_empty() {
+                    out.extend(buf.drain(..));
+                    *self.counter.lock().unwrap() = 0;
+                }
+            }
+            if !out.is_empty() {
+                self.emit(out);
+            }
+            return;
+        }
+        let mut current = complex_event_chunk;
+        while let Some(mut ev) = current {
+            let next = ev.set_next(None);
+            {
+                let mut count = self.counter.lock().unwrap();
+                let mut buf = self.buffer.lock().unwrap();
+                *count += 1;
+                match self.behavior {
+                    crate::query_api::execution::query::output::ratelimit::OutputRateBehavior::All => {
+                        buf.push(ev);
+                    }
+                    crate::query_api::execution::query::output::ratelimit::OutputRateBehavior::First => {
+                        if *count == 1 {
+                            buf.push(ev);
+                        }
+                    }
+                    crate::query_api::execution::query::output::ratelimit::OutputRateBehavior::Last => {
+                        buf.clear();
+                        buf.push(ev);
+                    }
+                }
+                if *count >= self.batch_size {
+                    let out: Vec<Box<dyn ComplexEvent>> = buf.drain(..).collect();
+                    *count = 0;
+                    drop(buf);
+                    drop(count);
+                    self.emit(out);
+                }
+            }
+            current = next;
+        }
+    }
+
     fn next_processor(&self) -> Option<Arc<Mutex<dyn Processor>>> {
         self.next_processor.as_ref().map(Arc::clone)
     }
+
     fn set_next_processor(&mut self, next_processor: Option<Arc<Mutex<dyn Processor>>>) {
         self.next_processor = next_processor;
     }
-    fn clone_processor(
-        &self,
-        siddhi_query_context: &Arc<SiddhiQueryContext>,
-    ) -> Box<dyn Processor> {
-        Box::new(Self::new(
+
+    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        Box::new(OutputRateLimiter::new(
             self.next_processor.as_ref().map(Arc::clone),
-            Arc::clone(&siddhi_query_context.siddhi_app_context),
+            Arc::clone(&self.siddhi_app_context),
+            Arc::clone(siddhi_query_context),
+            self.batch_size,
+            self.behavior,
         ))
     }
+
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.siddhi_app_context)
     }
+
     fn get_processing_mode(&self) -> ProcessingMode {
-        ProcessingMode::DEFAULT
+        ProcessingMode::BATCH
     }
+
     fn is_stateful(&self) -> bool {
         true
-    } // Rate limiting is often stateful
+    }
+}
+
+impl Drop for OutputRateLimiter {
+    fn drop(&mut self) {
+        let mut buf = self.buffer.lock().unwrap();
+        if buf.is_empty() {
+            return;
+        }
+        let events: Vec<_> = buf.drain(..).collect();
+        *self.counter.lock().unwrap() = 0;
+        drop(buf);
+        if let Some(ref next) = self.next_processor {
+            let mut head: Option<Box<dyn ComplexEvent>> = None;
+            let mut tail = &mut head;
+            for mut ev in events {
+                *tail = Some(ev);
+                if let Some(ref mut t) = *tail {
+                    tail = t.mut_next_ref_option();
+                }
+            }
+            next.lock().unwrap().process(head);
+        }
+    }
 }
 
 /// A stream processor that handles SELECT clause projections.

@@ -12,7 +12,7 @@ use crate::core::query::processor::stream::window::create_window_processor;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::query::selector::attribute::OutputAttributeProcessor; // OAP
-use crate::core::query::selector::select_processor::SelectProcessor;
+use crate::core::query::selector::select_processor::{OutputRateLimiter, SelectProcessor};
 use crate::core::query::selector::{GroupByKeyGenerator, OrderByEventComparator};
 use crate::core::stream::stream_junction::StreamJunction;
 use crate::query_api::{
@@ -628,7 +628,20 @@ impl QueryParser {
             order_by_comparator,
             None,
         )));
-        link_processor(select_processor);
+        link_processor(select_processor.clone());
+
+        if let Some(rate) = api_query.get_output_rate() {
+            if let crate::query_api::execution::query::output::ratelimit::OutputRateVariant::Events(ev, beh) = &rate.variant {
+                let limiter = Arc::new(Mutex::new(OutputRateLimiter::new(
+                    None,
+                    Arc::clone(siddhi_app_context),
+                    Arc::clone(&siddhi_query_context),
+                    ev.event_count as usize,
+                    *beh,
+                )));
+                link_processor(limiter);
+            }
+        }
 
         // 6. Output Processor (e.g., InsertIntoStreamProcessor)
         // This needs to match on api_query.output_stream.action

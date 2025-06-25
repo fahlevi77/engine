@@ -67,6 +67,53 @@ impl QueryRuntime {
             processor_chain_head: None,
         }
     }
+
+    /// Snapshot the current state using the application's `SnapshotService`.
+    pub fn snapshot(&self) -> Result<Vec<u8>, String> {
+        let ctx = self
+            .siddhi_query_context
+            .as_ref()
+            .ok_or("SiddhiQueryContext not set")?;
+        let service = ctx
+            .get_siddhi_app_context()
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        Ok(service.snapshot())
+    }
+
+    /// Restore the provided snapshot bytes using the `SnapshotService`.
+    pub fn restore(&self, snapshot: &[u8]) -> Result<(), String> {
+        let ctx = self
+            .siddhi_query_context
+            .as_ref()
+            .ok_or("SiddhiQueryContext not set")?;
+        let service = ctx
+            .get_siddhi_app_context()
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        service.set_state(snapshot.to_vec());
+        Ok(())
+    }
+
+    /// Restore a persisted revision via the application's `SnapshotService`.
+    pub fn restore_revision(&self, revision: &str) -> Result<(), String> {
+        let ctx = self
+            .siddhi_query_context
+            .as_ref()
+            .ok_or("SiddhiQueryContext not set")?;
+        let service = ctx
+            .get_siddhi_app_context()
+            .get_snapshot_service()
+            .ok_or("SnapshotService not set")?;
+        service.restore_revision(revision)
+    }
+
+    /// Flush any buffered events through the processor chain.
+    pub fn flush(&self) {
+        if let Some(head) = &self.processor_chain_head {
+            head.lock().unwrap().process(None);
+        }
+    }
 }
 
 impl QueryRuntimeTrait for QueryRuntime {
@@ -86,10 +133,3 @@ impl QueryRuntimeTrait for QueryRuntime {
     }
 }
 
-// TODO: Implement methods from QueryRuntimeImpl if needed, e.g.,
-// get_query_name(), get_input_handler() (if it has one directly),
-// get_query_selector(), set_output_rate_limiter(), get_output_rate_limiter(),
-// get_output_callback(), set_output_callback(), get_siddhi_query_context(),
-// notify_updater(), get_snapshot(), restore_from_snapshot(),
-// start(), stop().
-// Many of these will involve interacting with the processor chain.
