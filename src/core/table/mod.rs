@@ -2,9 +2,11 @@ use crate::core::event::value::AttributeValue;
 use std::sync::RwLock;
 
 mod jdbc_table;
+mod cache_table;
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::extension::TableFactory;
 pub use jdbc_table::{JdbcTable, JdbcTableFactory};
+pub use cache_table::{CacheTable, CacheTableFactory};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;

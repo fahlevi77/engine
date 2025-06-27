@@ -349,7 +349,7 @@ impl SiddhiContext {
             MaxForeverAttributeAggregatorFactory, MinAttributeAggregatorFactory,
             MinForeverAttributeAggregatorFactory, SumAttributeAggregatorFactory,
         };
-        use crate::core::table::{InMemoryTableFactory, JdbcTableFactory};
+        use crate::core::table::{CacheTableFactory, InMemoryTableFactory, JdbcTableFactory};
 
         self.add_window_factory("length".to_string(), Box::new(LengthWindowFactory));
         self.add_window_factory("time".to_string(), Box::new(TimeWindowFactory));
@@ -404,6 +404,7 @@ impl SiddhiContext {
 
         self.add_table_factory("inMemory".to_string(), Box::new(InMemoryTableFactory));
         self.add_table_factory("jdbc".to_string(), Box::new(JdbcTableFactory));
+        self.add_table_factory("cache".to_string(), Box::new(CacheTableFactory));
         self.add_source_factory("timer".to_string(), Box::new(TimerSourceFactory));
         self.add_sink_factory("log".to_string(), Box::new(LogSinkFactory));
 
