@@ -1,6 +1,11 @@
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::event::value::AttributeValue;
-use crate::core::table::Table;
+use crate::core::table::{
+    Table, CompiledCondition, CompiledUpdateSet, SimpleCompiledCondition,
+    SimpleCompiledUpdateSet,
+};
+use crate::query_api::expression::Expression;
+use crate::query_api::execution::query::output::stream::UpdateSet;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{params_from_iter, Connection};
 use std::collections::HashMap;
@@ -126,6 +131,14 @@ impl Table for JdbcTable {
 
     fn contains(&self, values: &[AttributeValue]) -> bool {
         self.find(values).is_some()
+    }
+
+    fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
+        Box::new(SimpleCompiledCondition(cond))
+    }
+
+    fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
+        Box::new(SimpleCompiledUpdateSet(us))
     }
 
     fn clone_table(&self) -> Box<dyn Table> {

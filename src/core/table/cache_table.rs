@@ -2,6 +2,9 @@ use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::event::value::AttributeValue;
 use crate::core::extension::TableFactory;
 use crate::core::table::Table;
+use crate::core::table::{CompiledCondition, CompiledUpdateSet, SimpleCompiledCondition, SimpleCompiledUpdateSet};
+use crate::query_api::expression::Expression;
+use crate::query_api::execution::query::output::stream::UpdateSet;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
@@ -71,6 +74,14 @@ impl Table for CacheTable {
 
     fn contains(&self, values: &[AttributeValue]) -> bool {
         self.rows.read().unwrap().iter().any(|row| row == values)
+    }
+
+    fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
+        Box::new(SimpleCompiledCondition(cond))
+    }
+
+    fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
+        Box::new(SimpleCompiledUpdateSet(us))
     }
 
     fn clone_table(&self) -> Box<dyn Table> {

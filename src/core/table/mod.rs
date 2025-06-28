@@ -1,4 +1,6 @@
 use crate::core::event::value::AttributeValue;
+use crate::query_api::execution::query::output::stream::UpdateSet;
+use crate::query_api::expression::Expression;
 use std::sync::RwLock;
 
 mod jdbc_table;
@@ -10,6 +12,24 @@ pub use cache_table::{CacheTable, CacheTableFactory};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+/// Marker trait for compiled conditions used by tables.
+pub trait CompiledCondition: Debug + Send + Sync {}
+
+/// Marker trait for compiled update sets used by tables.
+pub trait CompiledUpdateSet: Debug + Send + Sync {}
+
+/// Simple wrapper implementing `CompiledCondition` for tables that do not
+/// perform any special compilation.
+#[derive(Debug, Clone)]
+pub struct SimpleCompiledCondition(pub Expression);
+impl CompiledCondition for SimpleCompiledCondition {}
+
+/// Simple wrapper implementing `CompiledUpdateSet` for tables that do not
+/// perform any special compilation.
+#[derive(Debug, Clone)]
+pub struct SimpleCompiledUpdateSet(pub UpdateSet);
+impl CompiledUpdateSet for SimpleCompiledUpdateSet {}
 
 /// Trait representing a table that can store rows of `AttributeValue`s.
 pub trait Table: Debug + Send + Sync {
@@ -29,6 +49,20 @@ pub trait Table: Debug + Send + Sync {
 
     /// Returns `true` if the table contains the given row.
     fn contains(&self, values: &[AttributeValue]) -> bool;
+
+    /// Compile a conditional expression into a table-specific representation.
+    ///
+    /// By default this wraps the expression in [`SimpleCompiledCondition`].
+    fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
+        Box::new(SimpleCompiledCondition(cond))
+    }
+
+    /// Compile an update set into a table-specific representation.
+    ///
+    /// By default this wraps the update set in [`SimpleCompiledUpdateSet`].
+    fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
+        Box::new(SimpleCompiledUpdateSet(us))
+    }
 
     /// Clone helper for boxed trait objects.
     fn clone_table(&self) -> Box<dyn Table>;
@@ -93,6 +127,14 @@ impl Table for InMemoryTable {
 
     fn contains(&self, values: &[AttributeValue]) -> bool {
         self.rows.read().unwrap().iter().any(|row| row == values)
+    }
+
+    fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
+        Box::new(SimpleCompiledCondition(cond))
+    }
+
+    fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
+        Box::new(SimpleCompiledUpdateSet(us))
     }
 
     fn clone_table(&self) -> Box<dyn Table> {
