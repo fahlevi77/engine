@@ -3,7 +3,9 @@ use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
 use siddhi_rust::core::config::siddhi_context::SiddhiContext;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
-use siddhi_rust::core::table::{JdbcTable, Table};
+use siddhi_rust::core::table::{
+    InMemoryCompiledCondition, InMemoryCompiledUpdateSet, JdbcTable, Table,
+};
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
@@ -71,16 +73,18 @@ fn test_jdbc_table_crud() {
         AttributeValue::String("b".into()),
     ];
     table.insert(&row1);
-    assert!(table.contains(&row1));
+    assert!(table.contains(&InMemoryCompiledCondition { values: row1.clone() }));
 
     let row2 = vec![
         AttributeValue::String("x".into()),
         AttributeValue::String("y".into()),
     ];
-    assert!(table.update(&row1, &row2));
-    assert!(!table.contains(&row1));
-    assert!(table.contains(&row2));
+    let cond = InMemoryCompiledCondition { values: row1.clone() };
+    let us = InMemoryCompiledUpdateSet { values: row2.clone() };
+    assert!(table.update(&cond, &us));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: row1 }));
+    assert!(table.contains(&InMemoryCompiledCondition { values: row2.clone() }));
 
-    assert!(table.delete(&row2));
-    assert!(!table.contains(&row2));
+    assert!(table.delete(&InMemoryCompiledCondition { values: row2.clone() }));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: row2 }));
 }

@@ -1,8 +1,8 @@
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::event::value::AttributeValue;
 use crate::core::table::{
-    Table, CompiledCondition, CompiledUpdateSet, SimpleCompiledCondition,
-    SimpleCompiledUpdateSet,
+    CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
+    InMemoryCompiledUpdateSet, SimpleCompiledCondition, SimpleCompiledUpdateSet, Table,
 };
 use crate::query_api::expression::Expression;
 use crate::query_api::execution::query::output::stream::UpdateSet;
@@ -81,12 +81,24 @@ impl Table for JdbcTable {
         conn.execute(&sql, params_from_iter(params.iter())).unwrap();
     }
 
-    fn update(&self, old_values: &[AttributeValue], new_values: &[AttributeValue]) -> bool {
-        let set_clause = (0..new_values.len())
+    fn update(
+        &self,
+        condition: &dyn CompiledCondition,
+        update_set: &dyn CompiledUpdateSet,
+    ) -> bool {
+        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(c) => &c.values,
+            None => return false,
+        };
+        let us = match update_set.as_any().downcast_ref::<InMemoryCompiledUpdateSet>() {
+            Some(u) => &u.values,
+            None => return false,
+        };
+        let set_clause = (0..us.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
             .join(",");
-        let where_clause = (0..old_values.len())
+        let where_clause = (0..cond.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
             .join(" AND ");
@@ -94,14 +106,18 @@ impl Table for JdbcTable {
             "UPDATE {} SET {} WHERE {}",
             self.table_name, set_clause, where_clause
         );
-        let mut params: Vec<Value> = new_values.iter().map(Self::av_to_val).collect();
-        params.extend(old_values.iter().map(Self::av_to_val));
+        let mut params: Vec<Value> = us.iter().map(Self::av_to_val).collect();
+        params.extend(cond.iter().map(Self::av_to_val));
         let mut conn = self.conn.lock().unwrap();
         let count = conn.execute(&sql, params_from_iter(params.iter())).unwrap();
         count > 0
     }
 
-    fn delete(&self, values: &[AttributeValue]) -> bool {
+    fn delete(&self, condition: &dyn CompiledCondition) -> bool {
+        let values = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(c) => &c.values,
+            None => return false,
+        };
         let where_clause = (0..values.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
@@ -113,7 +129,11 @@ impl Table for JdbcTable {
         count > 0
     }
 
-    fn find(&self, values: &[AttributeValue]) -> Option<Vec<AttributeValue>> {
+    fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
+        let values = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(c) => &c.values,
+            None => return None,
+        };
         let where_clause = (0..values.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
@@ -129,8 +149,8 @@ impl Table for JdbcTable {
         rows.next().unwrap().map(|row| Self::row_to_attr(row))
     }
 
-    fn contains(&self, values: &[AttributeValue]) -> bool {
-        self.find(values).is_some()
+    fn contains(&self, condition: &dyn CompiledCondition) -> bool {
+        self.find(condition).is_some()
     }
 
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {

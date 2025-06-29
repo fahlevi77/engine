@@ -2,7 +2,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use crate::core::table::Table;
+use crate::core::table::{InMemoryCompiledCondition, Table};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -29,7 +29,8 @@ impl Processor for DeleteTableProcessor {
         while let Some(mut event) = chunk {
             let next = event.set_next(None);
             if let Some(data) = event.get_output_data() {
-                self.table.delete(data);
+                let cond = InMemoryCompiledCondition { values: data.to_vec() };
+                self.table.delete(&cond);
             }
             chunk = next;
         }

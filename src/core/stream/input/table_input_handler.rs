@@ -1,7 +1,9 @@
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::event::Event;
 use crate::core::event::value::AttributeValue;
-use crate::core::table::Table;
+use crate::core::table::{
+    InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table,
+};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -25,10 +27,13 @@ impl TableInputHandler {
     }
 
     pub fn update(&self, old: Vec<AttributeValue>, new: Vec<AttributeValue>) -> bool {
-        self.table.update(&old, &new)
+        let cond = InMemoryCompiledCondition { values: old };
+        let us = InMemoryCompiledUpdateSet { values: new };
+        self.table.update(&cond, &us)
     }
 
     pub fn delete(&self, values: Vec<AttributeValue>) -> bool {
-        self.table.delete(&values)
+        let cond = InMemoryCompiledCondition { values };
+        self.table.delete(&cond)
     }
 }

@@ -11,7 +11,9 @@ use siddhi_rust::core::query::output::InsertIntoTableProcessor;
 use siddhi_rust::core::query::processor::Processor;
 use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
 use siddhi_rust::core::table::JdbcTable;
-use siddhi_rust::core::table::{InMemoryTable, Table};
+use siddhi_rust::core::table::{
+    InMemoryCompiledCondition, InMemoryCompiledUpdateSet, InMemoryTable, Table,
+};
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -82,7 +84,7 @@ fn test_table_input_handler_add() {
         .get_siddhi_context()
         .get_table("T1")
         .unwrap()
-        .contains(&[AttributeValue::Int(5)]));
+        .contains(&InMemoryCompiledCondition { values: vec![AttributeValue::Int(5)] }));
 }
 
 #[test]
@@ -112,7 +114,7 @@ fn test_insert_into_table_processor() {
         .get_siddhi_context()
         .get_table("T2")
         .unwrap()
-        .contains(&[AttributeValue::Int(7)]));
+        .contains(&InMemoryCompiledCondition { values: vec![AttributeValue::Int(7)] }));
 }
 
 #[test]
@@ -133,20 +135,20 @@ fn test_table_input_handler_update_delete_find() {
         0,
         vec![AttributeValue::String("a".into())],
     )]);
-    assert!(table.contains(&[AttributeValue::String("a".into())]));
+    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("a".into())] }));
     assert!(handler.update(
         vec![AttributeValue::String("a".into())],
         vec![AttributeValue::String("b".into())]
     ));
-    assert!(table.contains(&[AttributeValue::String("b".into())]));
+    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
     assert!(handler.delete(vec![AttributeValue::String("b".into())]));
-    assert!(!table.contains(&[AttributeValue::String("b".into())]));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
     handler.add(vec![Event::new_with_data(
         0,
         vec![AttributeValue::String("x".into())],
     )]);
     assert_eq!(
-        table.find(&[AttributeValue::String("x".into())]),
+        table.find(&InMemoryCompiledCondition { values: vec![AttributeValue::String("x".into())] }),
         Some(vec![AttributeValue::String("x".into())])
     );
 }
@@ -181,14 +183,14 @@ fn test_table_input_handler_jdbc() {
         0,
         vec![AttributeValue::String("a".into())],
     )]);
-    assert!(table.contains(&[AttributeValue::String("a".into())]));
+    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("a".into())] }));
     assert!(handler.update(
         vec![AttributeValue::String("a".into())],
         vec![AttributeValue::String("b".into())]
     ));
-    assert!(table.contains(&[AttributeValue::String("b".into())]));
+    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
     assert!(handler.delete(vec![AttributeValue::String("b".into())]));
-    assert!(!table.contains(&[AttributeValue::String("b".into())]));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
 }
 
 #[test]

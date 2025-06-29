@@ -4,7 +4,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_exec
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::table::Table;
+use crate::core::table::{InMemoryCompiledCondition, Table};
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use std::sync::Arc; // For SiddhiAppContext in clone_executor
 
@@ -56,7 +56,7 @@ impl ExpressionExecutor for InExpressionExecutor {
             .get_table(&self.table_id);
 
         if let Some(table) = table_opt {
-            let key = vec![value.clone()];
+            let key = InMemoryCompiledCondition { values: vec![value.clone()] };
             let contains = table.contains(&key);
             Some(AttributeValue::Bool(contains))
         } else {

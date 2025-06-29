@@ -2,7 +2,10 @@ use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::event::value::AttributeValue;
 use crate::core::extension::TableFactory;
 use crate::core::table::Table;
-use crate::core::table::{CompiledCondition, CompiledUpdateSet, SimpleCompiledCondition, SimpleCompiledUpdateSet};
+use crate::core::table::{
+    constant_to_av, CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
+    InMemoryCompiledUpdateSet,
+};
 use crate::query_api::expression::Expression;
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use std::collections::{HashMap, VecDeque};
@@ -34,6 +37,52 @@ impl CacheTable {
     pub fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
         self.rows.read().unwrap().iter().cloned().collect()
     }
+
+    /// Update rows using already compiled condition and update set.
+    pub fn update_compiled(
+        &self,
+        condition: &InMemoryCompiledCondition,
+        update_set: &InMemoryCompiledUpdateSet,
+    ) -> bool {
+        let mut rows = self.rows.write().unwrap();
+        let mut updated = false;
+        for row in rows.iter_mut() {
+            if row.as_slice() == condition.values.as_slice() {
+                *row = update_set.values.clone();
+                updated = true;
+            }
+        }
+        updated
+    }
+
+    /// Delete rows matching the compiled condition.
+    pub fn delete_compiled(&self, condition: &InMemoryCompiledCondition) -> bool {
+        let mut rows = self.rows.write().unwrap();
+        let orig_len = rows.len();
+        rows.retain(|row| row.as_slice() != condition.values.as_slice());
+        orig_len != rows.len()
+    }
+
+    /// Find a row matching the compiled condition.
+    pub fn find_compiled(&self, condition: &InMemoryCompiledCondition) -> Option<Vec<AttributeValue>> {
+        self
+            .rows
+            .read()
+            .unwrap()
+            .iter()
+            .find(|row| row.as_slice() == condition.values.as_slice())
+            .cloned()
+    }
+
+    /// Check if any row matches the compiled condition.
+    pub fn contains_compiled(&self, condition: &InMemoryCompiledCondition) -> bool {
+        self
+            .rows
+            .read()
+            .unwrap()
+            .iter()
+            .any(|row| row.as_slice() == condition.values.as_slice())
+    }
 }
 
 impl Table for CacheTable {
@@ -43,45 +92,59 @@ impl Table for CacheTable {
         self.trim_if_needed(&mut rows);
     }
 
-    fn update(&self, old_values: &[AttributeValue], new_values: &[AttributeValue]) -> bool {
-        let mut rows = self.rows.write().unwrap();
-        let mut updated = false;
-        for row in rows.iter_mut() {
-            if row.as_slice() == old_values {
-                *row = new_values.to_vec();
-                updated = true;
-            }
+    fn update(
+        &self,
+        condition: &dyn CompiledCondition,
+        update_set: &dyn CompiledUpdateSet,
+    ) -> bool {
+        match (
+            condition.as_any().downcast_ref::<InMemoryCompiledCondition>(),
+            update_set.as_any().downcast_ref::<InMemoryCompiledUpdateSet>(),
+        ) {
+            (Some(cond), Some(us)) => self.update_compiled(cond, us),
+            _ => false,
         }
-        updated
     }
 
-    fn delete(&self, values: &[AttributeValue]) -> bool {
-        let mut rows = self.rows.write().unwrap();
-        let orig_len = rows.len();
-        rows.retain(|row| row.as_slice() != values);
-        orig_len != rows.len()
+    fn delete(&self, condition: &dyn CompiledCondition) -> bool {
+        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(cond) => self.delete_compiled(cond),
+            None => false,
+        }
     }
 
-    fn find(&self, values: &[AttributeValue]) -> Option<Vec<AttributeValue>> {
-        self
-            .rows
-            .read()
-            .unwrap()
-            .iter()
-            .find(|row| row.as_slice() == values)
-            .cloned()
+    fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
+        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(cond) => self.find_compiled(cond),
+            None => None,
+        }
     }
 
-    fn contains(&self, values: &[AttributeValue]) -> bool {
-        self.rows.read().unwrap().iter().any(|row| row == values)
+    fn contains(&self, condition: &dyn CompiledCondition) -> bool {
+        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+            Some(cond) => self.contains_compiled(cond),
+            None => false,
+        }
     }
 
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
-        Box::new(SimpleCompiledCondition(cond))
+        if let Expression::Constant(c) = cond {
+            Box::new(InMemoryCompiledCondition {
+                values: vec![constant_to_av(&c)],
+            })
+        } else {
+            Box::new(InMemoryCompiledCondition { values: Vec::new() })
+        }
     }
 
     fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
-        Box::new(SimpleCompiledUpdateSet(us))
+        let mut vals = Vec::new();
+        for sa in us.set_attributes.iter() {
+            if let Expression::Constant(c) = &sa.value_to_set {
+                vals.push(constant_to_av(c));
+            }
+        }
+        Box::new(InMemoryCompiledUpdateSet { values: vals })
     }
 
     fn clone_table(&self) -> Box<dyn Table> {

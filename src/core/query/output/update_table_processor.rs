@@ -3,7 +3,7 @@ use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use crate::core::table::Table;
+use crate::core::table::{InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -32,7 +32,9 @@ impl Processor for UpdateTableProcessor {
             if let Some(se) = event.as_any().downcast_ref::<StreamEvent>() {
                 let old = se.before_window_data.clone();
                 if let Some(new) = se.get_output_data() {
-                    self.table.update(&old, new);
+                    let cond = InMemoryCompiledCondition { values: old };
+                    let us = InMemoryCompiledUpdateSet { values: new.to_vec() };
+                    self.table.update(&cond, &us);
                 }
             }
             chunk = next;

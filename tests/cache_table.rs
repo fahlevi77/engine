@@ -1,5 +1,7 @@
 use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::table::{CacheTable, Table};
+use siddhi_rust::core::table::{
+    CacheTable, InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table,
+};
 
 #[test]
 fn test_cache_insert_and_eviction() {
@@ -11,9 +13,9 @@ fn test_cache_insert_and_eviction() {
     table.insert(&r2);
     table.insert(&r3);
     // r1 should be evicted
-    assert!(!table.contains(&r1));
-    assert!(table.contains(&r2));
-    assert!(table.contains(&r3));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: r1 }));
+    assert!(table.contains(&InMemoryCompiledCondition { values: r2.clone() }));
+    assert!(table.contains(&InMemoryCompiledCondition { values: r3.clone() }));
 }
 
 #[test]
@@ -22,10 +24,12 @@ fn test_cache_update_delete_find() {
     let r1 = vec![AttributeValue::Int(1)];
     table.insert(&r1);
     let r2 = vec![AttributeValue::Int(2)];
-    assert!(table.update(&r1, &r2));
-    assert!(!table.contains(&r1));
-    assert!(table.contains(&r2));
-    assert_eq!(table.find(&r2), Some(r2.clone()));
-    assert!(table.delete(&r2));
-    assert!(table.find(&r2).is_none());
+    let cond = InMemoryCompiledCondition { values: r1.clone() };
+    let us = InMemoryCompiledUpdateSet { values: r2.clone() };
+    assert!(table.update(&cond, &us));
+    assert!(!table.contains(&InMemoryCompiledCondition { values: r1 }));
+    assert!(table.contains(&InMemoryCompiledCondition { values: r2.clone() }));
+    assert_eq!(table.find(&InMemoryCompiledCondition { values: r2.clone() }), Some(r2.clone()));
+    assert!(table.delete(&InMemoryCompiledCondition { values: r2.clone() }));
+    assert!(table.find(&InMemoryCompiledCondition { values: r2 }).is_none());
 }
