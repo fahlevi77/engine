@@ -1,14 +1,13 @@
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::event::value::AttributeValue;
 use crate::core::table::{
-    CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
-    InMemoryCompiledUpdateSet, SimpleCompiledCondition, SimpleCompiledUpdateSet, Table,
+    constant_to_av, CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
+    InMemoryCompiledUpdateSet, Table,
 };
-use crate::query_api::expression::Expression;
 use crate::query_api::execution::query::output::stream::UpdateSet;
+use crate::query_api::expression::Expression;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{params_from_iter, Connection};
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -72,12 +71,76 @@ impl JdbcTable {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct JdbcCompiledCondition {
+    pub where_clause: String,
+    pub params: Vec<AttributeValue>,
+}
+
+impl CompiledCondition for JdbcCompiledCondition {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct JdbcCompiledUpdateSet {
+    pub assignments: String,
+    pub params: Vec<AttributeValue>,
+}
+
+impl CompiledUpdateSet for JdbcCompiledUpdateSet {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+fn expression_to_sql(expr: &Expression, params: &mut Vec<AttributeValue>) -> String {
+    use crate::query_api::expression::condition::compare::Operator as CmpOp;
+    use Expression::*;
+    match expr {
+        Constant(c) => {
+            params.push(constant_to_av(c));
+            "?".to_string()
+        }
+        Variable(v) => v.attribute_name.clone(),
+        Compare(c) => {
+            let left = expression_to_sql(&c.left_expression, params);
+            let right = expression_to_sql(&c.right_expression, params);
+            let op = match c.operator {
+                CmpOp::LessThan => "<",
+                CmpOp::GreaterThan => ">",
+                CmpOp::LessThanEqual => "<=",
+                CmpOp::GreaterThanEqual => ">=",
+                CmpOp::Equal => "=",
+                CmpOp::NotEqual => "!=",
+            };
+            format!("{left} {op} {right}")
+        }
+        And(a) => {
+            let left = expression_to_sql(&a.left_expression, params);
+            let right = expression_to_sql(&a.right_expression, params);
+            format!("({left} AND {right})")
+        }
+        Or(o) => {
+            let left = expression_to_sql(&o.left_expression, params);
+            let right = expression_to_sql(&o.right_expression, params);
+            format!("({left} OR {right})")
+        }
+        Not(n) => {
+            let inner = expression_to_sql(&n.expression, params);
+            format!("NOT ({inner})")
+        }
+        _ => String::new(),
+    }
+}
+
 impl Table for JdbcTable {
     fn insert(&self, values: &[AttributeValue]) {
         let placeholders = (0..values.len()).map(|_| "?").collect::<Vec<_>>().join(",");
         let sql = format!("INSERT INTO {} VALUES ({})", self.table_name, placeholders);
         let params: Vec<Value> = values.iter().map(Self::av_to_val).collect();
-        let mut conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().unwrap();
         conn.execute(&sql, params_from_iter(params.iter())).unwrap();
     }
 
@@ -86,19 +149,40 @@ impl Table for JdbcTable {
         condition: &dyn CompiledCondition,
         update_set: &dyn CompiledUpdateSet,
     ) -> bool {
-        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        if let (Some(cond), Some(us)) = (
+            condition.as_any().downcast_ref::<JdbcCompiledCondition>(),
+            update_set.as_any().downcast_ref::<JdbcCompiledUpdateSet>(),
+        ) {
+            let sql = format!(
+                "UPDATE {} SET {} WHERE {}",
+                self.table_name, us.assignments, cond.where_clause
+            );
+            let mut params: Vec<Value> = us.params.iter().map(Self::av_to_val).collect();
+            params.extend(cond.params.iter().map(Self::av_to_val));
+            let conn = self.conn.lock().unwrap();
+            let count = conn.execute(&sql, params_from_iter(params.iter())).unwrap();
+            return count > 0;
+        }
+
+        let cond_vals = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => &c.values,
             None => return false,
         };
-        let us = match update_set.as_any().downcast_ref::<InMemoryCompiledUpdateSet>() {
+        let us_vals = match update_set
+            .as_any()
+            .downcast_ref::<InMemoryCompiledUpdateSet>()
+        {
             Some(u) => &u.values,
             None => return false,
         };
-        let set_clause = (0..us.len())
+        let set_clause = (0..us_vals.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
             .join(",");
-        let where_clause = (0..cond.len())
+        let where_clause = (0..cond_vals.len())
             .map(|i| format!("c{}=?", i))
             .collect::<Vec<_>>()
             .join(" AND ");
@@ -106,15 +190,29 @@ impl Table for JdbcTable {
             "UPDATE {} SET {} WHERE {}",
             self.table_name, set_clause, where_clause
         );
-        let mut params: Vec<Value> = us.iter().map(Self::av_to_val).collect();
-        params.extend(cond.iter().map(Self::av_to_val));
-        let mut conn = self.conn.lock().unwrap();
+        let mut params: Vec<Value> = us_vals.iter().map(Self::av_to_val).collect();
+        params.extend(cond_vals.iter().map(Self::av_to_val));
+        let conn = self.conn.lock().unwrap();
         let count = conn.execute(&sql, params_from_iter(params.iter())).unwrap();
         count > 0
     }
 
     fn delete(&self, condition: &dyn CompiledCondition) -> bool {
-        let values = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        if let Some(cond) = condition.as_any().downcast_ref::<JdbcCompiledCondition>() {
+            let sql = format!(
+                "DELETE FROM {} WHERE {}",
+                self.table_name, cond.where_clause
+            );
+            let params: Vec<Value> = cond.params.iter().map(Self::av_to_val).collect();
+            let conn = self.conn.lock().unwrap();
+            let count = conn.execute(&sql, params_from_iter(params.iter())).unwrap();
+            return count > 0;
+        }
+
+        let values = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => &c.values,
             None => return false,
         };
@@ -124,13 +222,28 @@ impl Table for JdbcTable {
             .join(" AND ");
         let sql = format!("DELETE FROM {} WHERE {}", self.table_name, where_clause);
         let params: Vec<Value> = values.iter().map(Self::av_to_val).collect();
-        let mut conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().unwrap();
         let count = conn.execute(&sql, params_from_iter(params.iter())).unwrap();
         count > 0
     }
 
     fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
-        let values = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        if let Some(cond) = condition.as_any().downcast_ref::<JdbcCompiledCondition>() {
+            let sql = format!(
+                "SELECT * FROM {} WHERE {} LIMIT 1",
+                self.table_name, cond.where_clause
+            );
+            let params: Vec<Value> = cond.params.iter().map(Self::av_to_val).collect();
+            let conn = self.conn.lock().unwrap();
+            let mut stmt = conn.prepare(&sql).unwrap();
+            let mut rows = stmt.query(params_from_iter(params.iter())).unwrap();
+            return rows.next().unwrap().map(|row| Self::row_to_attr(row));
+        }
+
+        let values = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => &c.values,
             None => return None,
         };
@@ -154,11 +267,25 @@ impl Table for JdbcTable {
     }
 
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
-        Box::new(SimpleCompiledCondition(cond))
+        let mut params = Vec::new();
+        let where_clause = expression_to_sql(&cond, &mut params);
+        Box::new(JdbcCompiledCondition {
+            where_clause,
+            params,
+        })
     }
 
     fn compile_update_set(&self, us: UpdateSet) -> Box<dyn CompiledUpdateSet> {
-        Box::new(SimpleCompiledUpdateSet(us))
+        let mut params = Vec::new();
+        let mut assigns = Vec::new();
+        for sa in us.set_attributes.iter() {
+            let expr_sql = expression_to_sql(&sa.value_to_set, &mut params);
+            assigns.push(format!("{} = {}", sa.table_column.attribute_name, expr_sql));
+        }
+        Box::new(JdbcCompiledUpdateSet {
+            assignments: assigns.join(","),
+            params,
+        })
     }
 
     fn clone_table(&self) -> Box<dyn Table> {
@@ -177,7 +304,9 @@ impl Table for JdbcTable {
 pub struct JdbcTableFactory;
 
 impl crate::core::extension::TableFactory for JdbcTableFactory {
-    fn name(&self) -> &'static str { "jdbc" }
+    fn name(&self) -> &'static str {
+        "jdbc"
+    }
     fn create(
         &self,
         table_name: String,
