@@ -4,6 +4,7 @@ use siddhi_rust::core::persistence::PersistenceStore;
 use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
 use siddhi_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 
@@ -212,6 +213,11 @@ impl AppRunner {
 
     pub fn runtime(&self) -> Arc<SiddhiAppRuntime> {
         Arc::clone(&self.runtime)
+    }
+
+    /// Obtain an input handler for the given table id if available.
+    pub fn get_table_input_handler(&self, table_id: &str) -> Option<TableInputHandler> {
+        self.runtime.get_table_input_handler(table_id)
     }
 
     /// Retrieve aggregated rows using optional `within` and `per` clauses.

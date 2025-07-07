@@ -205,3 +205,66 @@ fn stream_table_join_jdbc() {
         ]]
     );
 }
+
+#[test]
+fn cache_and_jdbc_tables_eviction_and_queries() {
+    let mut manager = SiddhiManager::new();
+    manager
+        .add_data_source("DS1".to_string(), Arc::new(SqliteDataSource::new(":memory:")))
+        .unwrap();
+    let ctx = manager.siddhi_context();
+    setup_sqlite_table(&ctx, "J3");
+
+    let query = "\
+        define stream In (v string);\n\
+        define stream Out (v string);\n\
+        @store(type='cache', max_size='2')\n\
+        define table C (v string);\n\
+        @store(type='jdbc', data_source='DS1')\n\
+        define table J3 (v string);\n\
+        from In select v insert into C;\n\
+        from In select v insert into J3;\n\
+        from In select v insert into Out;\n";
+    let runner = AppRunner::new_with_manager(manager, query, "Out");
+
+    runner.send("In", vec![AttributeValue::String("a".into())]);
+    runner.send("In", vec![AttributeValue::String("b".into())]);
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    let ctx = runner.runtime().siddhi_app_context.get_siddhi_context();
+    let cache = ctx.get_table("C").unwrap();
+    let jdbc = ctx.get_table("J3").unwrap();
+
+    let cond_a = cache.compile_condition(parse_expression("'a'").unwrap());
+    assert!(cache.contains(&*cond_a));
+    let us_x = cache.compile_update_set(parse_set_clause("set v = 'x'").unwrap());
+    assert!(cache.update(&*cond_a, &*us_x));
+    let cond_x = cache.compile_condition(parse_expression("'x'").unwrap());
+    assert!(cache.contains(&*cond_x));
+
+    let cond_b_j = jdbc.compile_condition(parse_expression("v == 'b'").unwrap());
+    assert!(jdbc.contains(&*cond_b_j));
+    let us_y = jdbc.compile_update_set(parse_set_clause("set v = 'y'").unwrap());
+    assert!(jdbc.update(&*cond_b_j, &*us_y));
+    let cond_y = jdbc.compile_condition(parse_expression("v == 'y'").unwrap());
+    assert_eq!(jdbc.find(&*cond_y), Some(vec![AttributeValue::String("y".into())]));
+
+    runner.send("In", vec![AttributeValue::String("c".into())]);
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    let cond_b = cache.compile_condition(parse_expression("'b'").unwrap());
+    let cond_c = cache.compile_condition(parse_expression("'c'").unwrap());
+    assert!(cache.contains(&*cond_b));
+    assert!(cache.contains(&*cond_c));
+    assert!(!cache.contains(&*cond_x));
+
+    assert!(jdbc.contains(&*cond_y));
+    assert!(jdbc.delete(&*cond_y));
+    assert!(!jdbc.contains(&*cond_y));
+    let cond_a_j = jdbc.compile_condition(parse_expression("v == 'a'").unwrap());
+    let cond_c_j = jdbc.compile_condition(parse_expression("v == 'c'").unwrap());
+    assert!(jdbc.contains(&*cond_a_j));
+    assert!(jdbc.contains(&*cond_c_j));
+
+    let _ = runner.shutdown();
+}
