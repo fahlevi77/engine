@@ -1,5 +1,7 @@
 pub mod join_processor;
+pub mod table_join_processor;
 pub use join_processor::{JoinProcessor, JoinProcessorSide, JoinSide};
+pub use table_join_processor::TableJoinProcessor;
 
 #[derive(Debug)]
 pub struct JoinStreamRuntime {

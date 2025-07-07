@@ -6,8 +6,10 @@ use crate::core::table::{
     constant_to_av, CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
     InMemoryCompiledUpdateSet,
 };
-use crate::query_api::expression::Expression;
 use crate::query_api::execution::query::output::stream::UpdateSet;
+use crate::query_api::expression::Expression;
+use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
@@ -64,9 +66,11 @@ impl CacheTable {
     }
 
     /// Find a row matching the compiled condition.
-    pub fn find_compiled(&self, condition: &InMemoryCompiledCondition) -> Option<Vec<AttributeValue>> {
-        self
-            .rows
+    pub fn find_compiled(
+        &self,
+        condition: &InMemoryCompiledCondition,
+    ) -> Option<Vec<AttributeValue>> {
+        self.rows
             .read()
             .unwrap()
             .iter()
@@ -76,8 +80,7 @@ impl CacheTable {
 
     /// Check if any row matches the compiled condition.
     pub fn contains_compiled(&self, condition: &InMemoryCompiledCondition) -> bool {
-        self
-            .rows
+        self.rows
             .read()
             .unwrap()
             .iter()
@@ -92,14 +95,22 @@ impl Table for CacheTable {
         self.trim_if_needed(&mut rows);
     }
 
+    fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
+        self.rows.read().unwrap().iter().cloned().collect()
+    }
+
     fn update(
         &self,
         condition: &dyn CompiledCondition,
         update_set: &dyn CompiledUpdateSet,
     ) -> bool {
         match (
-            condition.as_any().downcast_ref::<InMemoryCompiledCondition>(),
-            update_set.as_any().downcast_ref::<InMemoryCompiledUpdateSet>(),
+            condition
+                .as_any()
+                .downcast_ref::<InMemoryCompiledCondition>(),
+            update_set
+                .as_any()
+                .downcast_ref::<InMemoryCompiledUpdateSet>(),
         ) {
             (Some(cond), Some(us)) => self.update_compiled(cond, us),
             _ => false,
@@ -107,24 +118,68 @@ impl Table for CacheTable {
     }
 
     fn delete(&self, condition: &dyn CompiledCondition) -> bool {
-        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(cond) => self.delete_compiled(cond),
             None => false,
         }
     }
 
     fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
-        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(cond) => self.find_compiled(cond),
             None => None,
         }
     }
 
     fn contains(&self, condition: &dyn CompiledCondition) -> bool {
-        match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(cond) => self.contains_compiled(cond),
             None => false,
         }
+    }
+
+    fn find_rows_for_join(
+        &self,
+        stream_event: &StreamEvent,
+        _compiled_condition: Option<&dyn CompiledCondition>,
+        condition_executor: Option<&dyn ExpressionExecutor>,
+    ) -> Vec<Vec<AttributeValue>> {
+        let rows = self.rows.read().unwrap();
+        let mut matched = Vec::new();
+        let stream_attr_count = stream_event.before_window_data.len();
+        for row in rows.iter() {
+            if let Some(exec) = condition_executor {
+                let mut joined = StreamEvent::new(
+                    stream_event.timestamp,
+                    stream_attr_count + row.len(),
+                    0,
+                    0,
+                );
+                for i in 0..stream_attr_count {
+                    joined.before_window_data[i] =
+                        stream_event.before_window_data[i].clone();
+                }
+                for j in 0..row.len() {
+                    joined.before_window_data[stream_attr_count + j] =
+                        row[j].clone();
+                }
+                if let Some(AttributeValue::Bool(true)) = exec.execute(Some(&joined)) {
+                    matched.push(row.clone());
+                }
+            } else {
+                matched.push(row.clone());
+            }
+        }
+        matched
     }
 
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
@@ -183,4 +238,3 @@ impl TableFactory for CacheTableFactory {
         Box::new(self.clone())
     }
 }
-

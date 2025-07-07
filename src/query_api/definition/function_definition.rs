@@ -1,6 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.FunctionDefinition
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::annotation::Annotation;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct FunctionDefinition {
@@ -11,6 +12,7 @@ pub struct FunctionDefinition {
     pub language: String,
     pub body: String,
     pub return_type: AttributeType, // Default for AttributeType::OBJECT
+    pub annotations: Vec<Annotation>,
 }
 
 impl FunctionDefinition {
@@ -22,6 +24,7 @@ impl FunctionDefinition {
             language,
             body,
             return_type,
+            annotations: Vec::new(),
         }
     }
 
@@ -35,6 +38,7 @@ impl FunctionDefinition {
         // Starts the build with an ID
         FunctionDefinition {
             id,
+            annotations: Vec::new(),
             ..Default::default() // Sets siddhi_element, language, body, return_type to default
         }
     }
@@ -53,6 +57,11 @@ impl FunctionDefinition {
     // Renamed from `type` in Java
     pub fn return_type(mut self, return_type: AttributeType) -> Self {
         self.return_type = return_type;
+        self
+    }
+
+    pub fn annotation(mut self, annotation: Annotation) -> Self {
+        self.annotations.push(annotation);
         self
     }
 }

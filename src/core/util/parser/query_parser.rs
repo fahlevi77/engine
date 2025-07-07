@@ -3,7 +3,9 @@ use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
-use crate::core::query::input::stream::join::{JoinProcessor, JoinProcessorSide, JoinSide};
+use crate::core::query::input::stream::join::{
+    JoinProcessor, JoinProcessorSide, JoinSide, TableJoinProcessor,
+};
 use crate::core::query::input::stream::state::{SequenceProcessor, SequenceSide, SequenceType};
 use crate::core::query::output::insert_into_aggregation_processor::InsertIntoAggregationProcessor;
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
@@ -157,102 +159,218 @@ impl QueryParser {
                     .right_input_stream
                     .get_stream_id_str()
                     .to_string();
-                let left_junction = stream_junction_map
-                    .get(&left_id)
-                    .ok_or_else(|| format!("Input stream '{}' not found", left_id))?
-                    .clone();
-                let right_junction = stream_junction_map
-                    .get(&right_id)
-                    .ok_or_else(|| format!("Input stream '{}' not found", right_id))?
-                    .clone();
+                let left_is_table = table_def_map.contains_key(&left_id);
+                let right_is_table = table_def_map.contains_key(&right_id);
 
-                let left_def = left_junction.lock().unwrap().get_stream_definition();
-                let right_def = right_junction.lock().unwrap().get_stream_definition();
-                let left_len = left_def.abstract_definition.attribute_list.len();
-                let right_len = right_def.abstract_definition.attribute_list.len();
+                if left_is_table ^ right_is_table {
+                    // stream-table join
+                    let (stream_id, table_id, stream_on_left) = if left_is_table {
+                        (right_id.clone(), left_id.clone(), false)
+                    } else {
+                        (left_id.clone(), right_id.clone(), true)
+                    };
+                    let stream_junction = stream_junction_map
+                        .get(&stream_id)
+                        .ok_or_else(|| format!("Input stream '{}' not found", stream_id))?
+                        .clone();
+                    let stream_def = stream_junction.lock().unwrap().get_stream_definition();
+                    let table_def = table_def_map
+                        .get(&table_id)
+                        .ok_or_else(|| format!("Table definition '{}' not found", table_id))?
+                        .clone();
+                    let table = siddhi_app_context
+                        .get_siddhi_context()
+                        .get_table(&table_id)
+                        .ok_or_else(|| format!("Table '{}' not found", table_id))?;
 
-                let mut left_meta = MetaStreamEvent::new_for_single_input(left_def);
-                let mut right_meta = MetaStreamEvent::new_for_single_input(right_def);
-                right_meta.apply_attribute_offset(left_len);
+                    let stream_len = stream_def.abstract_definition.attribute_list.len();
+                    let table_len = table_def.abstract_definition.attribute_list.len();
 
-                let mut stream_meta_map = HashMap::new();
-                stream_meta_map.insert(left_id.clone(), Arc::new(left_meta));
-                stream_meta_map.insert(right_id.clone(), Arc::new(right_meta));
+                    let mut stream_meta = MetaStreamEvent::new_for_single_input(stream_def.clone());
+                    let table_stream_def = Arc::new(
+                        crate::query_api::definition::stream_definition::StreamDefinition {
+                            abstract_definition: table_def.abstract_definition.clone(),
+                        },
+                    );
+                    let mut table_meta = MetaStreamEvent::new_for_single_input(table_stream_def);
+                    if stream_on_left {
+                        table_meta.apply_attribute_offset(stream_len);
+                    } else {
+                        stream_meta.apply_attribute_offset(table_len);
+                    }
 
-                // Table metadata is irrelevant for join parsing until table
-                // sources are supported. Leaving the map empty avoids
-                // incorrectly flagging attribute ambiguities.
-                let table_meta_map = HashMap::new();
+                    let mut stream_meta_map = HashMap::new();
+                    let mut table_meta_map = HashMap::new();
+                    stream_meta_map.insert(stream_id.clone(), Arc::new(stream_meta));
+                    table_meta_map.insert(table_id.clone(), Arc::new(table_meta));
 
-                let cond_exec = if let Some(expr) = &join_stream.on_compare {
-                    Some(
-                        parse_expression(
-                            expr,
-                            &ExpressionParserContext {
-                                siddhi_app_context: Arc::clone(siddhi_app_context),
-                                siddhi_query_context: Arc::clone(&siddhi_query_context),
-                                stream_meta_map: stream_meta_map.clone(),
-                                table_meta_map: table_meta_map.clone(),
-                                window_meta_map: HashMap::new(),
-                                aggregation_meta_map: HashMap::new(),
-                                state_meta_map: HashMap::new(),
-                                stream_positions: {
-                                    let mut m = HashMap::new();
-                                    m.insert(left_id.clone(), 0);
-                                    m.insert(right_id.clone(), 1);
-                                    m
+                    let cond_exec = if let Some(expr) = &join_stream.on_compare {
+                        Some(
+                            parse_expression(
+                                expr,
+                                &ExpressionParserContext {
+                                    siddhi_app_context: Arc::clone(siddhi_app_context),
+                                    siddhi_query_context: Arc::clone(&siddhi_query_context),
+                                    stream_meta_map: stream_meta_map.clone(),
+                                    table_meta_map: table_meta_map.clone(),
+                                    window_meta_map: HashMap::new(),
+                                    aggregation_meta_map: HashMap::new(),
+                                    state_meta_map: HashMap::new(),
+                                    stream_positions: {
+                                        let mut m = HashMap::new();
+                                        if stream_on_left {
+                                            m.insert(stream_id.clone(), 0);
+                                            m.insert(table_id.clone(), 1);
+                                        } else {
+                                            m.insert(table_id.clone(), 0);
+                                            m.insert(stream_id.clone(), 1);
+                                        }
+                                        m
+                                    },
+                                    default_source: stream_id.clone(),
+                                    query_name: &query_name,
                                 },
-                                default_source: left_id.clone(),
-                                query_name: &query_name,
-                            },
+                            )
+                            .map_err(|e| e.to_string())?,
                         )
-                        .map_err(|e| e.to_string())?,
-                    )
+                    } else {
+                        None
+                    };
+
+                    let comp_cond = if let Some(expr) = &join_stream.on_compare {
+                        table.compile_join_condition(
+                            expr.clone(),
+                            &stream_id,
+                            &stream_def,
+                        )
+                    } else {
+                        None
+                    };
+                    let join_proc = Arc::new(Mutex::new(TableJoinProcessor::new(
+                        join_stream.join_type,
+                        comp_cond.map(Arc::from),
+                        cond_exec,
+                        stream_len,
+                        table_len,
+                        table,
+                        Arc::clone(siddhi_app_context),
+                        Arc::clone(&siddhi_query_context),
+                    )));
+                    stream_junction.lock().unwrap().subscribe(join_proc.clone());
+                    link_processor(join_proc.clone());
+
+                    let ctx = ExpressionParserContext {
+                        siddhi_app_context: Arc::clone(siddhi_app_context),
+                        siddhi_query_context: Arc::clone(&siddhi_query_context),
+                        stream_meta_map,
+                        table_meta_map,
+                        window_meta_map: HashMap::new(),
+                        aggregation_meta_map: HashMap::new(),
+                        state_meta_map: HashMap::new(),
+                        stream_positions: {
+                            let mut m = HashMap::new();
+                            if stream_on_left {
+                                m.insert(stream_id.clone(), 0);
+                                m.insert(table_id.clone(), 1);
+                            } else {
+                                m.insert(table_id.clone(), 0);
+                                m.insert(stream_id.clone(), 1);
+                            }
+                            m
+                        },
+                        default_source: stream_id.clone(),
+                        query_name: &query_name,
+                    };
+                    ctx
                 } else {
-                    None
-                };
+                    let left_junction = stream_junction_map
+                        .get(&left_id)
+                        .ok_or_else(|| format!("Input stream '{}' not found", left_id))?
+                        .clone();
+                    let right_junction = stream_junction_map
+                        .get(&right_id)
+                        .ok_or_else(|| format!("Input stream '{}' not found", right_id))?
+                        .clone();
 
-                let join_proc = Arc::new(Mutex::new(JoinProcessor::new(
-                    join_stream.join_type,
-                    cond_exec,
-                    left_len,
-                    right_len,
-                    Arc::clone(siddhi_app_context),
-                    Arc::clone(&siddhi_query_context),
-                )));
-                let left_side = JoinProcessor::create_side_processor(&join_proc, JoinSide::Left);
-                let right_side = JoinProcessor::create_side_processor(&join_proc, JoinSide::Right);
+                    let left_def = left_junction.lock().unwrap().get_stream_definition();
+                    let right_def = right_junction.lock().unwrap().get_stream_definition();
+                    let left_len = left_def.abstract_definition.attribute_list.len();
+                    let right_len = right_def.abstract_definition.attribute_list.len();
 
-                left_junction.lock().unwrap().subscribe(left_side.clone());
-                right_junction.lock().unwrap().subscribe(right_side.clone());
+                    let mut left_meta = MetaStreamEvent::new_for_single_input(left_def);
+                    let mut right_meta = MetaStreamEvent::new_for_single_input(right_def);
+                    right_meta.apply_attribute_offset(left_len);
 
-                // Treat the left side processor as the entry point for the
-                // processor chain so that downstream processors can be linked
-                // using the existing `link_processor` helper.
-                link_processor(left_side.clone());
+                    let mut stream_meta_map = HashMap::new();
+                    stream_meta_map.insert(left_id.clone(), Arc::new(left_meta));
+                    stream_meta_map.insert(right_id.clone(), Arc::new(right_meta));
+                    let table_meta_map = HashMap::new();
 
-                // The right side is subscribed directly and shares the same
-                // JoinProcessor through `join_proc`, so it does not need to be
-                // part of the sequential chain.
+                    let cond_exec = if let Some(expr) = &join_stream.on_compare {
+                        Some(
+                            parse_expression(
+                                expr,
+                                &ExpressionParserContext {
+                                    siddhi_app_context: Arc::clone(siddhi_app_context),
+                                    siddhi_query_context: Arc::clone(&siddhi_query_context),
+                                    stream_meta_map: stream_meta_map.clone(),
+                                    table_meta_map: table_meta_map.clone(),
+                                    window_meta_map: HashMap::new(),
+                                    aggregation_meta_map: HashMap::new(),
+                                    state_meta_map: HashMap::new(),
+                                    stream_positions: {
+                                        let mut m = HashMap::new();
+                                        m.insert(left_id.clone(), 0);
+                                        m.insert(right_id.clone(), 1);
+                                        m
+                                    },
+                                    default_source: left_id.clone(),
+                                    query_name: &query_name,
+                                },
+                            )
+                            .map_err(|e| e.to_string())?,
+                        )
+                    } else {
+                        None
+                    };
 
-                let ctx = ExpressionParserContext {
-                    siddhi_app_context: Arc::clone(siddhi_app_context),
-                    siddhi_query_context: Arc::clone(&siddhi_query_context),
-                    stream_meta_map,
-                    table_meta_map,
-                    window_meta_map: HashMap::new(),
-                    aggregation_meta_map: HashMap::new(),
-                    state_meta_map: HashMap::new(),
-                    stream_positions: {
-                        let mut m = HashMap::new();
-                        m.insert(left_id.clone(), 0);
-                        m.insert(right_id.clone(), 1);
-                        m
-                    },
-                    default_source: left_id.clone(),
-                    query_name: &query_name,
-                };
-                ctx
+                    let join_proc = Arc::new(Mutex::new(JoinProcessor::new(
+                        join_stream.join_type,
+                        cond_exec,
+                        left_len,
+                        right_len,
+                        Arc::clone(siddhi_app_context),
+                        Arc::clone(&siddhi_query_context),
+                    )));
+                    let left_side =
+                        JoinProcessor::create_side_processor(&join_proc, JoinSide::Left);
+                    let right_side =
+                        JoinProcessor::create_side_processor(&join_proc, JoinSide::Right);
+
+                    left_junction.lock().unwrap().subscribe(left_side.clone());
+                    right_junction.lock().unwrap().subscribe(right_side.clone());
+
+                    link_processor(left_side.clone());
+
+                    let ctx = ExpressionParserContext {
+                        siddhi_app_context: Arc::clone(siddhi_app_context),
+                        siddhi_query_context: Arc::clone(&siddhi_query_context),
+                        stream_meta_map,
+                        table_meta_map,
+                        window_meta_map: HashMap::new(),
+                        aggregation_meta_map: HashMap::new(),
+                        state_meta_map: HashMap::new(),
+                        stream_positions: {
+                            let mut m = HashMap::new();
+                            m.insert(left_id.clone(), 0);
+                            m.insert(right_id.clone(), 1);
+                            m
+                        },
+                        default_source: left_id.clone(),
+                        query_name: &query_name,
+                    };
+                    ctx
+                }
             }
             ApiInputStream::State(state_stream) => {
                 use crate::core::query::input::stream::state::{
@@ -267,16 +385,15 @@ impl QueryParser {
                     &'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement,
                     i32,
                     i32,
-                )> {
+                )>{
                     match se {
                         StateElement::Stream(s) => Some((s, 1, 1)),
-                        StateElement::Every(ev) =>
-                            extract_stream_state_with_count(&ev.state_element),
-                        StateElement::Count(c) => Some((
-                            &c.stream_state_element,
-                            c.min_count,
-                            c.max_count,
-                        )),
+                        StateElement::Every(ev) => {
+                            extract_stream_state_with_count(&ev.state_element)
+                        }
+                        StateElement::Count(c) => {
+                            Some((&c.stream_state_element, c.min_count, c.max_count))
+                        }
                         _ => None,
                     }
                 }
@@ -301,22 +418,20 @@ impl QueryParser {
 
                 let runtime_kind = match state_stream.state_element.as_ref() {
                     StateElement::Next(next_elem) => {
-                        let (s1, fmin, fmax) =
-                            extract_stream_state_with_count(&next_elem.state_element).ok_or_else(|| {
-                                format!(
-                                    "Query '{}': Unsupported Next pattern structure",
-                                    query_name
-                                )
-                            })?;
+                        let (s1, fmin, fmax) = extract_stream_state_with_count(
+                            &next_elem.state_element,
+                        )
+                        .ok_or_else(|| {
+                            format!("Query '{}': Unsupported Next pattern structure", query_name)
+                        })?;
                         let (s2, smin, smax) =
-                            extract_stream_state_with_count(&next_elem.next_state_element).ok_or_else(
-                                || {
+                            extract_stream_state_with_count(&next_elem.next_state_element)
+                                .ok_or_else(|| {
                                     format!(
                                         "Query '{}': Unsupported Next pattern structure",
                                         query_name
                                     )
-                                },
-                            )?;
+                                })?;
                         let seq_type = match state_stream.state_type {
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Pattern => SequenceType::Pattern,
                             crate::query_api::execution::query::input::stream::state_input_stream::Type::Sequence => SequenceType::Sequence,
@@ -344,20 +459,20 @@ impl QueryParser {
                     StateElement::Logical(log_elem) => {
                         let (s1, _, _) =
                             extract_stream_state_with_count(&log_elem.stream_state_element_1)
-                            .ok_or_else(|| {
-                                format!(
-                                    "Query '{}': Unsupported Logical pattern structure",
-                                    query_name
-                                )
-                            })?;
+                                .ok_or_else(|| {
+                                    format!(
+                                        "Query '{}': Unsupported Logical pattern structure",
+                                        query_name
+                                    )
+                                })?;
                         let (s2, _, _) =
                             extract_stream_state_with_count(&log_elem.stream_state_element_2)
-                            .ok_or_else(|| {
-                                format!(
-                                    "Query '{}': Unsupported Logical pattern structure",
-                                    query_name
-                                )
-                            })?;
+                                .ok_or_else(|| {
+                                    format!(
+                                        "Query '{}': Unsupported Logical pattern structure",
+                                        query_name
+                                    )
+                                })?;
                         let logical_type = match log_elem.logical_type {
                             ApiLogicalType::And => LogicalType::And,
                             ApiLogicalType::Or => LogicalType::Or,
@@ -548,8 +663,8 @@ impl QueryParser {
         let mut output_attributes_for_def = Vec::new();
 
         for (idx, api_out_attr) in api_selector.selection_list.iter().enumerate() {
-            let expr_exec =
-                parse_expression(&api_out_attr.expression, &expr_parser_context).map_err(|e| e.to_string())?;
+            let expr_exec = parse_expression(&api_out_attr.expression, &expr_parser_context)
+                .map_err(|e| e.to_string())?;
             // OutputAttributeProcessor needs the output position.
             let oap = OutputAttributeProcessor::new(expr_exec);
 
@@ -594,7 +709,8 @@ impl QueryParser {
         let mut group_execs = Vec::new();
         for var in &api_selector.group_by_list {
             let expr = ApiExpression::Variable(var.clone());
-            group_execs.push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
+            group_execs
+                .push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
         }
         let group_by_key_generator = if group_execs.is_empty() {
             None
@@ -606,7 +722,8 @@ impl QueryParser {
         let mut order_flags = Vec::new();
         for ob in &api_selector.order_by_list {
             let expr = ApiExpression::Variable(ob.get_variable().clone());
-            order_execs.push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
+            order_execs
+                .push(parse_expression(&expr, &expr_parser_context).map_err(|e| e.to_string())?);
             order_flags.push(*ob.get_order() == crate::query_api::execution::query::selection::order_by_attribute::Order::Asc);
         }
         let order_by_comparator = if order_execs.is_empty() {

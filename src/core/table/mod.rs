@@ -2,13 +2,15 @@ use crate::core::event::value::AttributeValue;
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::expression::Expression;
 use std::sync::RwLock;
+use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 
-mod jdbc_table;
 mod cache_table;
+mod jdbc_table;
 use crate::core::config::siddhi_context::SiddhiContext;
 use crate::core::extension::TableFactory;
-pub use jdbc_table::{JdbcTable, JdbcTableFactory};
 pub use cache_table::{CacheTable, CacheTableFactory};
+pub use jdbc_table::{JdbcTable, JdbcTableFactory};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -90,11 +92,8 @@ pub trait Table: Debug + Send + Sync {
 
     /// Updates rows matching `condition` using the values from `update_set`.
     /// Returns `true` if any row was updated.
-    fn update(
-        &self,
-        condition: &dyn CompiledCondition,
-        update_set: &dyn CompiledUpdateSet,
-    ) -> bool;
+    fn update(&self, condition: &dyn CompiledCondition, update_set: &dyn CompiledUpdateSet)
+        -> bool;
 
     /// Deletes rows matching `condition` from the table.
     /// Returns `true` if any row was removed.
@@ -105,6 +104,61 @@ pub trait Table: Debug + Send + Sync {
 
     /// Returns `true` if the table contains any row matching `condition`.
     fn contains(&self, condition: &dyn CompiledCondition) -> bool;
+
+    /// Retrieve all rows currently stored in the table.
+    fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
+        Vec::new()
+    }
+
+    /// Find all rows that satisfy either the `compiled_condition` or
+    /// `condition_executor` when evaluated against a joined event composed from
+    /// `stream_event` and each row.
+    fn find_rows_for_join(
+        &self,
+        stream_event: &StreamEvent,
+        compiled_condition: Option<&dyn CompiledCondition>,
+        condition_executor: Option<&dyn ExpressionExecutor>,
+    ) -> Vec<Vec<AttributeValue>> {
+        let rows = self.all_rows();
+        let mut matched = Vec::new();
+        let stream_attr_count = stream_event.before_window_data.len();
+        for row in rows.into_iter() {
+            if let Some(exec) = condition_executor {
+                let mut joined = StreamEvent::new(
+                    stream_event.timestamp,
+                    stream_attr_count + row.len(),
+                    0,
+                    0,
+                );
+                for i in 0..stream_attr_count {
+                    joined.before_window_data[i] =
+                        stream_event.before_window_data[i].clone();
+                }
+                for j in 0..row.len() {
+                    joined.before_window_data[stream_attr_count + j] =
+                        row[j].clone();
+                }
+                if let Some(AttributeValue::Bool(true)) = exec.execute(Some(&joined)) {
+                    matched.push(row);
+                }
+            } else {
+                matched.push(row);
+            }
+        }
+        matched
+    }
+
+    /// Compile a join condition referencing both stream and table attributes.
+    /// Default implementation does not support join-specific compilation and
+    /// returns `None`.
+    fn compile_join_condition(
+        &self,
+        _cond: Expression,
+        _stream_id: &str,
+        _stream_def: &crate::query_api::definition::stream_definition::StreamDefinition,
+    ) -> Option<Box<dyn CompiledCondition>> {
+        None
+    }
 
     /// Compile a conditional expression into a table-specific representation.
     ///
@@ -153,16 +207,26 @@ impl Table for InMemoryTable {
         self.rows.write().unwrap().push(values.to_vec());
     }
 
+    fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
+        self.rows.read().unwrap().clone()
+    }
+
     fn update(
         &self,
         condition: &dyn CompiledCondition,
         update_set: &dyn CompiledUpdateSet,
     ) -> bool {
-        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        let cond = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => c,
             None => return false,
         };
-        let us = match update_set.as_any().downcast_ref::<InMemoryCompiledUpdateSet>() {
+        let us = match update_set
+            .as_any()
+            .downcast_ref::<InMemoryCompiledUpdateSet>()
+        {
             Some(u) => u,
             None => return false,
         };
@@ -179,7 +243,10 @@ impl Table for InMemoryTable {
     }
 
     fn delete(&self, condition: &dyn CompiledCondition) -> bool {
-        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        let cond = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => c,
             None => return false,
         };
@@ -190,7 +257,10 @@ impl Table for InMemoryTable {
     }
 
     fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
-        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        let cond = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => c,
             None => return None,
         };
@@ -203,7 +273,10 @@ impl Table for InMemoryTable {
     }
 
     fn contains(&self, condition: &dyn CompiledCondition) -> bool {
-        let cond = match condition.as_any().downcast_ref::<InMemoryCompiledCondition>() {
+        let cond = match condition
+            .as_any()
+            .downcast_ref::<InMemoryCompiledCondition>()
+        {
             Some(c) => c,
             None => return false,
         };
@@ -212,6 +285,41 @@ impl Table for InMemoryTable {
             .unwrap()
             .iter()
             .any(|row| row.as_slice() == cond.values.as_slice())
+    }
+
+    fn find_rows_for_join(
+        &self,
+        stream_event: &StreamEvent,
+        _compiled_condition: Option<&dyn CompiledCondition>,
+        condition_executor: Option<&dyn ExpressionExecutor>,
+    ) -> Vec<Vec<AttributeValue>> {
+        let rows = self.rows.read().unwrap();
+        let mut matched = Vec::new();
+        let stream_attr_count = stream_event.before_window_data.len();
+        for row in rows.iter() {
+            if let Some(exec) = condition_executor {
+                let mut joined = StreamEvent::new(
+                    stream_event.timestamp,
+                    stream_attr_count + row.len(),
+                    0,
+                    0,
+                );
+                for i in 0..stream_attr_count {
+                    joined.before_window_data[i] =
+                        stream_event.before_window_data[i].clone();
+                }
+                for j in 0..row.len() {
+                    joined.before_window_data[stream_attr_count + j] =
+                        row[j].clone();
+                }
+                if let Some(AttributeValue::Bool(true)) = exec.execute(Some(&joined)) {
+                    matched.push(row.clone());
+                }
+            } else {
+                matched.push(row.clone());
+            }
+        }
+        matched
     }
 
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
@@ -246,7 +354,9 @@ impl Table for InMemoryTable {
 pub struct InMemoryTableFactory;
 
 impl TableFactory for InMemoryTableFactory {
-    fn name(&self) -> &'static str { "inMemory" }
+    fn name(&self) -> &'static str {
+        "inMemory"
+    }
     fn create(
         &self,
         _name: String,

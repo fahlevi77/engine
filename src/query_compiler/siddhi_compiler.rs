@@ -14,6 +14,7 @@ use crate::query_api::{
         query::{
             input::InputStream,
             output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction},
+            output::stream::UpdateSet,
             selection::Selector,
             OnDemandQuery, Query, StoreQuery,
         },
@@ -90,8 +91,10 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
         let trimmed = line.trim();
         if trimmed.starts_with('@') {
             if let Ok(ann) = grammar::AnnotationStmtParser::new().parse(trimmed) {
-                annotations.push(ann);
-                continue;
+                if ann.name.eq_ignore_ascii_case("app") {
+                    annotations.push(ann);
+                    continue;
+                }
             }
         }
         lines_without_ann.push(line);
@@ -134,22 +137,22 @@ pub fn parse(siddhi_app_string: &str) -> Result<SiddhiApp, String> {
             }
             let p = parse_partition(&stmt)?;
             app.add_execution_element(ExecutionElement::Partition(p));
-        } else if lower.starts_with("define stream") {
+        } else if lower.contains("define stream") {
             let def = parse_stream_definition(&stmt)?;
             app.add_stream_definition(def);
-        } else if lower.starts_with("define table") {
+        } else if lower.contains("define table") {
             let def = parse_table_definition(&stmt)?;
             app.add_table_definition(def);
-        } else if lower.starts_with("define window") {
+        } else if lower.contains("define window") {
             let def = parse_window_definition(&stmt)?;
             app.add_window_definition(def);
-        } else if lower.starts_with("define function") {
+        } else if lower.contains("define function") {
             let def = parse_function_definition(&stmt)?;
             app.add_function_definition(def);
-        } else if lower.starts_with("define trigger") {
+        } else if lower.contains("define trigger") {
             let def = parse_trigger_definition(&stmt)?;
             app.add_trigger_definition(def);
-        } else if lower.starts_with("define aggregation") {
+        } else if lower.contains("define aggregation") {
             let def = parse_aggregation_definition(&stmt)?;
             app.add_aggregation_definition(def);
         } else if lower.starts_with("from") {
@@ -245,6 +248,13 @@ pub fn parse_store_query(store_query_string: &str) -> Result<StoreQuery, String>
 pub fn parse_expression(expr_string: &str) -> Result<Expression, String> {
     let s = update_variables(expr_string)?;
     grammar::ExpressionParser::new()
+        .parse(&s)
+        .map_err(|e| format!("{:?}", e))
+}
+
+pub fn parse_set_clause(set_clause_string: &str) -> Result<UpdateSet, String> {
+    let s = update_variables(set_clause_string)?;
+    grammar::SetClauseParser::new()
         .parse(&s)
         .map_err(|e| format!("{:?}", e))
 }

@@ -91,11 +91,28 @@ impl AppRunner {
         Self { runtime, collected }
     }
 
-    pub fn new_with_manager(
+    pub fn new_from_api_with_manager(
         manager: SiddhiManager,
-        app_string: &str,
+        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
         out_stream: &str,
     ) -> Self {
+        let runtime = manager
+            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .expect("runtime");
+        let collected = Arc::new(Mutex::new(Vec::new()));
+        runtime
+            .add_callback(
+                out_stream,
+                Box::new(CollectCallback {
+                    events: Arc::clone(&collected),
+                }),
+            )
+            .expect("add cb");
+        runtime.start();
+        Self { runtime, collected }
+    }
+
+    pub fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
         let app = parse(app_string).expect("parse");
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
@@ -193,6 +210,10 @@ impl AppRunner {
         self.runtime.restore(snap).expect("restore")
     }
 
+    pub fn runtime(&self) -> Arc<SiddhiAppRuntime> {
+        Arc::clone(&self.runtime)
+    }
+
     /// Retrieve aggregated rows using optional `within` and `per` clauses.
     pub fn get_aggregation_data(
         &self,
@@ -200,7 +221,6 @@ impl AppRunner {
         within: Option<siddhi_rust::query_api::aggregation::Within>,
         per: Option<siddhi_rust::query_api::aggregation::time_period::Duration>,
     ) -> Vec<Vec<AttributeValue>> {
-        self.runtime
-            .query_aggregation(agg_id, within, per)
+        self.runtime.query_aggregation(agg_id, within, per)
     }
 }

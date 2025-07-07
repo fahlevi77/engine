@@ -24,6 +24,7 @@ use crate::query_api::execution::query::output::output_stream::{
     OutputStreamAction,
     InsertIntoStreamAction,
     UpdateStreamAction,
+    UpdateOrInsertStreamAction,
     DeleteStreamAction,
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
@@ -43,10 +44,26 @@ use crate::query_api::execution::{
 };
 
 pub AnnotationStmt: Annotation = {
+    "@" <name:Ident> "(" <pairs:KeyValuePairs> ")" => {
+        let mut a = Annotation::new(name);
+        for (k, v) in pairs { a = a.element(Some(k), v); }
+        a
+    },
     "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
         Annotation::new(name).element(Some(key), val)
-    } 
+    }
 };
+
+KeyValuePairs: Vec<(String, String)> = {
+    <first:KeyValue> <rest:("," KeyValue)*> => {
+        let mut v = vec![first];
+        for (_, kv) in rest { v.push(kv); }
+        v
+    },
+    => Vec::new(),
+};
+
+KeyValue: (String, String) = { <k:Ident> "=" <v:STRING> => (k, v) };
 
 pub OnDemandQueryStmt: OnDemandQuery = {
     "from" <st:InputStoreRule> <sel:QuerySection> => {
@@ -69,6 +86,11 @@ pub OnDemandQueryStmt: OnDemandQuery = {
                 .update_by(t, cond)
                 .set_type(OnDemandQueryType::Update),
         }
+    },
+    "update" "or" "insert" "into" <t:Ident> <set:SetClauseOpt> "on" <cond:Expression> => {
+        OnDemandQuery::query()
+            .update_or_insert_by(t, set.unwrap_or_else(UpdateSet::new), cond)
+            .set_type(OnDemandQueryType::UpdateOrInsert)
     }
 };
 
@@ -102,7 +124,7 @@ SetAssignment: (Variable, Expression) = {
     <var:VariableRef> "=" <expr:Expression> => (var, expr),
 };
 
-SetClause: UpdateSet = {
+pub SetClause: UpdateSet = {
     "set" <first:SetAssignment> <rest:("," SetAssignment)*> => {
         let mut us = UpdateSet::new().add_set_attribute(first.0, first.1);
         for (_, (v, e)) in rest { us = us.add_set_attribute(v, e); }
@@ -128,17 +150,19 @@ Annotations: Vec<Annotation> = {
 
 
 pub StreamDef: StreamDefinition = {
-    "define" "stream" <id:Ident> "(" <attrs:AttrList> ")" => {
+    <ann:Annotations> "define" "stream" <id:Ident> "(" <attrs:AttrList> ")" => {
         let mut d = StreamDefinition::new(id);
         for (n,t) in attrs { d = d.attribute(n, t); }
+        for a in ann { d = d.annotation(a); }
         d
     }
 };
 
 pub TableDef: TableDefinition = {
-    "define" "table" <id:Ident> "(" <attrs:AttrList> ")" => {
+    <ann:Annotations> "define" "table" <id:Ident> "(" <attrs:AttrList> ")" => {
         let mut d = TableDefinition::new(id);
         for (n,t) in attrs { d = d.attribute(n, t); }
+        for a in ann { d = d.annotation(a); }
         d
     }
 };
@@ -153,33 +177,40 @@ WindowParamOpt: Option<WindowHandler> = {
 };
 
 pub WindowDef: WindowDefinition = {
-    "define" "window" <id:Ident> "(" <attrs:AttrList> ")" <param:WindowParamOpt> => {
+    <ann:Annotations> "define" "window" <id:Ident> "(" <attrs:AttrList> ")" <param:WindowParamOpt> => {
         let mut d = WindowDefinition::new(id);
         for (n, t) in attrs {
             d.stream_definition.abstract_definition.attribute_list.push(Attribute::new(n, t));
         }
         if let Some(w) = param { d = d.window(w); }
+        for a in ann { d = d.annotation(a); }
         d
     }
 };
 
 pub FunctionDef: FunctionDefinition = {
-    "define" "function" <id:Ident> "[" <lang:Ident> "]" "return" <ty:Type> <body:STRING> => {
-        FunctionDefinition::new(id, lang, body, ty)
+    <ann:Annotations> "define" "function" <id:Ident> "[" <lang:Ident> "]" "return" <ty:Type> <body:STRING> => {
+        let mut d = FunctionDefinition::new(id, lang, body, ty);
+        for a in ann { d = d.annotation(a); }
+        d
     }
 };
 
 pub TriggerDef: TriggerDefinition = {
-    "define" "trigger" <id:Ident> "at" "every" <dur:TimeConstant> => {
-        TriggerDefinition::id(id).at_every_time_constant(dur).unwrap()
+    <ann:Annotations> "define" "trigger" <id:Ident> "at" "every" <dur:TimeConstant> => {
+        let mut d = TriggerDefinition::id(id).at_every_time_constant(dur).unwrap();
+        for a in ann { d = d.annotation(a); }
+        d
     },
-    "define" "trigger" <id:Ident> "at" <expr:STRING> => {
-        TriggerDefinition::id(id).at(expr)
+    <ann:Annotations> "define" "trigger" <id:Ident> "at" <expr:STRING> => {
+        let mut d = TriggerDefinition::id(id).at(expr);
+        for a in ann { d = d.annotation(a); }
+        d
     }
 };
 
 pub AggDef: AggregationDefinition = {
-    "define" "aggregation" <id:Ident> "from" <in_id:Ident> "select" <sel:SelectList> "group" "by" <grp:Ident> "aggregate" "every" <durs:DurationList> => {
+    <ann:Annotations> "define" "aggregation" <id:Ident> "from" <in_id:Ident> "select" <sel:SelectList> "group" "by" <grp:Ident> "aggregate" "every" <durs:DurationList> => {
         let mut agg = AggregationDefinition::new(id);
         let input_stream = crate::query_api::execution::query::input::InputStream::stream(in_id.clone());
         let single = match input_stream { crate::query_api::execution::query::input::InputStream::Single(s) => s, _ => unreachable!() };
@@ -194,6 +225,7 @@ pub AggDef: AggregationDefinition = {
             }
         }
         let period = TimePeriod::interval(durs);
+        for a in ann { agg = agg.annotation(a); }
         agg.from(single).select(selector).aggregate_by(Variable::new(grp)).every(period)
     }
 };
@@ -366,7 +398,29 @@ pub QueryStmt: Query = {
         let output_stream = OutputStream::new(OutputStreamAction::InsertInto(insert_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     },
-    // UPDATE TABLE
+    // UPDATE TABLE with ON condition
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "update" <t_id:Ident> <set:SetClauseOpt> "on" <cond:Expression> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
+        let update_action = UpdateStreamAction { target_id: t_id, on_update_expression: cond, update_set_clause: set };
+        let output_stream = OutputStream::new(OutputStreamAction::Update(update_action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
+    // Legacy UPDATE TABLE syntax
     "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "update" "table" <t_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
@@ -388,7 +442,51 @@ pub QueryStmt: Query = {
         let output_stream = OutputStream::new(OutputStreamAction::Update(update_action), None);
         Query::query().from(in_stream).select(selector).out_stream(output_stream)
     },
-    // DELETE FROM TABLE
+    // UPDATE OR INSERT INTO TABLE
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "update" "or" "insert" "into" <t_id:Ident> <set:SetClauseOpt> "on" <cond:Expression> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
+        let action = UpdateOrInsertStreamAction { target_id: t_id, on_update_expression: cond, update_set_clause: set };
+        let output_stream = OutputStream::new(OutputStreamAction::UpdateOrInsert(action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
+    // DELETE FROM TABLE with ON condition
+    "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "delete" <t_id:Ident> "on" <cond:Expression> => {
+        let in_stream = istream;
+        let mut selector = Selector::new();
+        for (expr, alias) in sel {
+            match alias {
+                Some(a) => selector = selector.select(a, expr),
+                None => match expr.clone() {
+                    Expression::Variable(var) => selector = selector.select_variable(var),
+                    _ => selector = selector.select(String::new(), expr),
+                },
+            }
+        }
+        for v in grp { selector = selector.group_by(v); }
+        if let Some(h) = hav { selector = selector.having(h); }
+        for ob in ord { selector = selector.order_by_with_order(ob.variable.clone(), ob.order); }
+        if let Some(l) = lim { selector = selector.limit(l).unwrap(); }
+        if let Some(o) = off { selector = selector.offset(o).unwrap(); }
+        let delete_action = DeleteStreamAction { target_id: t_id, on_delete_expression: cond };
+        let output_stream = OutputStream::new(OutputStreamAction::Delete(delete_action), None);
+        Query::query().from(in_stream).select(selector).out_stream(output_stream)
+    },
+    // Legacy DELETE TABLE syntax
     "from" <istream:InputStreamRule> "select" <sel:SelectList> <grp:GroupByOpt> <hav:HavingOpt> <ord:OrderByOpt> <lim:LimitOpt> <off:OffsetOpt> "delete" "table" <t_id:Ident> => {
         let in_stream = istream;
         let mut selector = Selector::new();
@@ -588,6 +686,7 @@ CompareExpr: Expression = {
     <l:AddExpr> "<" <r:AddExpr> => Expression::compare(l, CompareOperator::LessThan, r),
     <l:AddExpr> "==" <r:AddExpr> => Expression::compare(l, CompareOperator::Equal, r),
     <l:AddExpr> "!=" <r:AddExpr> => Expression::compare(l, CompareOperator::NotEqual, r),
+    <l:AddExpr> "in" <tbl:Ident> => Expression::in_op(l, tbl),
     <e:AddExpr> => e,
 };
 

@@ -39,6 +39,11 @@ impl WindowDefinition {
         self.output_event_type = event_type;
         self
     }
+
+    pub fn annotation(mut self, annotation: crate::query_api::annotation::Annotation) -> Self {
+        self.stream_definition = self.stream_definition.annotation(annotation);
+        self
+    }
 }
 
 // Custom Default implementation if needed, or ensure StreamDefinition::default() is sensible.

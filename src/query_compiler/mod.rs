@@ -13,6 +13,7 @@ pub use self::siddhi_compiler::{
     parse_store_query,
     parse_stream_definition,
     parse_table_definition,
+    parse_set_clause,
     parse_trigger_definition,
     parse_time_constant,
     parse_window_definition,

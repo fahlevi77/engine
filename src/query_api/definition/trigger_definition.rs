@@ -1,6 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.TriggerDefinition
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
 use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::annotation::Annotation;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct TriggerDefinition {
@@ -10,6 +11,7 @@ pub struct TriggerDefinition {
     pub id: String,
     pub at_every: Option<i64>, // Java Long maps to i64 in Rust
     pub at: Option<String>,    // For cron expressions or similar string-based time definitions
+    pub annotations: Vec<Annotation>,
 }
 
 impl TriggerDefinition {
@@ -20,6 +22,7 @@ impl TriggerDefinition {
             id,
             at_every: None,
             at: None,
+            annotations: Vec::new(),
         }
     }
 
@@ -28,6 +31,7 @@ impl TriggerDefinition {
         // This creates a new TriggerDefinition with the given ID and defaults for other fields
         TriggerDefinition {
             id,
+            annotations: Vec::new(),
             ..Default::default()
         }
     }
@@ -56,6 +60,11 @@ impl TriggerDefinition {
 
     pub fn at(mut self, interval: String) -> Self {
         self.at = Some(interval);
+        self
+    }
+
+    pub fn annotation(mut self, annotation: Annotation) -> Self {
+        self.annotations.push(annotation);
         self
     }
 }

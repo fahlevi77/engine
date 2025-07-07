@@ -131,6 +131,23 @@ manager
 Once loaded, the factories provided by the library can be used like any other
 registered extension.
 
+### Writing Extensions
+See [docs/writing_extensions.md](docs/writing_extensions.md) for a full guide.
+
+Extensions implement traits from `siddhi_rust::core::extension` and are
+registered with a `SiddhiManager`.  A table extension provides a
+`TableFactory` that constructs structs implementing the `Table` trait.  Queries
+can reference the extension using an `@store(type='<name>')` annotation.  To
+optimize operations, the table should also implement `compile_condition` and
+`compile_update_set` which translate Siddhi expressions into a custom
+`CompiledCondition` or `CompiledUpdateSet`.  For joins, implementing
+`compile_join_condition` allows the extension to pre-process the join
+expression.
+
+The built-in `CacheTable` and `JdbcTable` are examples of table extensions that
+support compiled conditions.  Custom extensions can follow the same pattern to
+provide efficient lookups for other storage engines.
+
 ### Example Usage
 
 ```rust

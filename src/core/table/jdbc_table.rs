@@ -6,6 +6,8 @@ use crate::core::table::{
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::expression::Expression;
+use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{params_from_iter, Connection};
 use std::sync::{Arc, Mutex};
@@ -95,6 +97,24 @@ impl CompiledUpdateSet for JdbcCompiledUpdateSet {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum JoinParamSource {
+    Constant(AttributeValue),
+    StreamAttr(usize),
+}
+
+#[derive(Debug, Clone)]
+pub struct JdbcJoinCompiledCondition {
+    pub where_clause: String,
+    pub params: Vec<JoinParamSource>,
+}
+
+impl CompiledCondition for JdbcJoinCompiledCondition {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 fn expression_to_sql(expr: &Expression, params: &mut Vec<AttributeValue>) -> String {
     use crate::query_api::expression::condition::compare::Operator as CmpOp;
     use Expression::*;
@@ -135,6 +155,67 @@ fn expression_to_sql(expr: &Expression, params: &mut Vec<AttributeValue>) -> Str
     }
 }
 
+fn expression_to_sql_join(
+    expr: &Expression,
+    stream_id: &str,
+    stream_def: &crate::query_api::definition::stream_definition::StreamDefinition,
+    params: &mut Vec<JoinParamSource>,
+) -> String {
+    use crate::query_api::expression::condition::compare::Operator as CmpOp;
+    use Expression::*;
+    match expr {
+        Constant(c) => {
+            params.push(JoinParamSource::Constant(constant_to_av(c)));
+            "?".to_string()
+        }
+        Variable(v) => {
+            if v.stream_id.as_deref() == Some(stream_id) {
+                if let Some(idx) = stream_def
+                    .abstract_definition
+                    .attribute_list
+                    .iter()
+                    .position(|a| a.get_name() == &v.attribute_name)
+                {
+                    params.push(JoinParamSource::StreamAttr(idx));
+                    "?".to_string()
+                } else {
+                    v.attribute_name.clone()
+                }
+            } else {
+                v.attribute_name.clone()
+            }
+        }
+        Compare(c) => {
+            let left = expression_to_sql_join(&c.left_expression, stream_id, stream_def, params);
+            let right = expression_to_sql_join(&c.right_expression, stream_id, stream_def, params);
+            let op = match c.operator {
+                CmpOp::LessThan => "<",
+                CmpOp::GreaterThan => ">",
+                CmpOp::LessThanEqual => "<=",
+                CmpOp::GreaterThanEqual => ">=",
+                CmpOp::Equal => "=",
+                CmpOp::NotEqual => "!=",
+            };
+            format!("{left} {op} {right}")
+        }
+        And(a) => {
+            let left = expression_to_sql_join(&a.left_expression, stream_id, stream_def, params);
+            let right = expression_to_sql_join(&a.right_expression, stream_id, stream_def, params);
+            format!("({left} AND {right})")
+        }
+        Or(o) => {
+            let left = expression_to_sql_join(&o.left_expression, stream_id, stream_def, params);
+            let right = expression_to_sql_join(&o.right_expression, stream_id, stream_def, params);
+            format!("({left} OR {right})")
+        }
+        Not(n) => {
+            let inner = expression_to_sql_join(&n.expression, stream_id, stream_def, params);
+            format!("NOT ({inner})")
+        }
+        _ => String::new(),
+    }
+}
+
 impl Table for JdbcTable {
     fn insert(&self, values: &[AttributeValue]) {
         let placeholders = (0..values.len()).map(|_| "?").collect::<Vec<_>>().join(",");
@@ -142,6 +223,18 @@ impl Table for JdbcTable {
         let params: Vec<Value> = values.iter().map(Self::av_to_val).collect();
         let conn = self.conn.lock().unwrap();
         conn.execute(&sql, params_from_iter(params.iter())).unwrap();
+    }
+
+    fn all_rows(&self) -> Vec<Vec<AttributeValue>> {
+        let sql = format!("SELECT * FROM {}", self.table_name);
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(&sql).unwrap();
+        let mut rows = stmt.query([]).unwrap();
+        let mut out = Vec::new();
+        while let Some(row) = rows.next().unwrap() {
+            out.push(Self::row_to_attr(row));
+        }
+        out
     }
 
     fn update(
@@ -266,6 +359,71 @@ impl Table for JdbcTable {
         self.find(condition).is_some()
     }
 
+    fn find_rows_for_join(
+        &self,
+        stream_event: &StreamEvent,
+        compiled_condition: Option<&dyn CompiledCondition>,
+        condition_executor: Option<&dyn ExpressionExecutor>,
+    ) -> Vec<Vec<AttributeValue>> {
+        if let Some(cond) = compiled_condition
+            .and_then(|c| c.as_any().downcast_ref::<JdbcJoinCompiledCondition>())
+        {
+            let sql = if cond.where_clause.is_empty() {
+                format!("SELECT * FROM {}", self.table_name)
+            } else {
+                format!("SELECT * FROM {} WHERE {}", self.table_name, cond.where_clause)
+            };
+            let mut params: Vec<Value> = Vec::new();
+            for p in &cond.params {
+                match p {
+                    JoinParamSource::Constant(av) => params.push(Self::av_to_val(av)),
+                    JoinParamSource::StreamAttr(idx) => params
+                        .push(Self::av_to_val(&stream_event.before_window_data[*idx])),
+                }
+            }
+            let conn = self.conn.lock().unwrap();
+            let mut stmt = conn.prepare(&sql).unwrap();
+            let mut rows = stmt.query(params_from_iter(params.iter())).unwrap();
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().unwrap() {
+                out.push(Self::row_to_attr(row));
+            }
+            return out;
+        }
+
+        // Fallback to in-memory style evaluation
+        let sql = format!("SELECT * FROM {}", self.table_name);
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(&sql).unwrap();
+        let mut rows_iter = stmt.query([]).unwrap();
+        let mut matched = Vec::new();
+        let stream_attr_count = stream_event.before_window_data.len();
+        while let Some(row) = rows_iter.next().unwrap() {
+            let vals = Self::row_to_attr(row);
+            if let Some(exec) = condition_executor {
+                let mut joined = StreamEvent::new(
+                    stream_event.timestamp,
+                    stream_attr_count + vals.len(),
+                    0,
+                    0,
+                );
+                for i in 0..stream_attr_count {
+                    joined.before_window_data[i] =
+                        stream_event.before_window_data[i].clone();
+                }
+                for j in 0..vals.len() {
+                    joined.before_window_data[stream_attr_count + j] = vals[j].clone();
+                }
+                if let Some(AttributeValue::Bool(true)) = exec.execute(Some(&joined)) {
+                    matched.push(vals);
+                }
+            } else {
+                matched.push(vals);
+            }
+        }
+        matched
+    }
+
     fn compile_condition(&self, cond: Expression) -> Box<dyn CompiledCondition> {
         let mut params = Vec::new();
         let where_clause = expression_to_sql(&cond, &mut params);
@@ -286,6 +444,17 @@ impl Table for JdbcTable {
             assignments: assigns.join(","),
             params,
         })
+    }
+
+    fn compile_join_condition(
+        &self,
+        cond: Expression,
+        stream_id: &str,
+        stream_def: &crate::query_api::definition::stream_definition::StreamDefinition,
+    ) -> Option<Box<dyn CompiledCondition>> {
+        let mut params = Vec::new();
+        let where_clause = expression_to_sql_join(&cond, stream_id, stream_def, &mut params);
+        Some(Box::new(JdbcJoinCompiledCondition { where_clause, params }))
     }
 
     fn clone_table(&self) -> Box<dyn Table> {
