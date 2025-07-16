@@ -114,14 +114,17 @@ impl PersistenceStore for FilePersistenceStore {
             return;
         }
         let path = self.file_path(siddhi_app_id, revision);
-        if let Err(e) = fs::write(&path, snapshot) {
-            eprintln!("FilePersistenceStore: write failed: {}", e);
-            return;
+        match fs::write(&path, snapshot) {
+            Ok(_) => {
+                self.last_revision
+                    .lock()
+                    .unwrap()
+                    .insert(siddhi_app_id.to_string(), revision.to_string());
+            }
+            Err(e) => {
+                eprintln!("FilePersistenceStore: write failed: {}", e);
+            }
         }
-        self.last_revision
-            .lock()
-            .unwrap()
-            .insert(siddhi_app_id.to_string(), revision.to_string());
     }
 
     fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
@@ -166,10 +169,12 @@ impl SqlitePersistenceStore {
 impl PersistenceStore for SqlitePersistenceStore {
     fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
         let conn = self.conn.lock().unwrap();
-        let _ = conn.execute(
+        if let Err(e) = conn.execute(
             "INSERT OR REPLACE INTO snapshots(app, rev, data) VALUES (?1, ?2, ?3)",
             params![siddhi_app_id, revision, snapshot],
-        );
+        ) {
+            eprintln!("SqlitePersistenceStore: write failed: {}", e);
+        }
     }
 
     fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {

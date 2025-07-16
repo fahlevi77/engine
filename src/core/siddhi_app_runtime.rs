@@ -38,7 +38,6 @@ pub struct SiddhiAppRuntime {
     pub table_map: HashMap<String, Arc<Mutex<TableRuntimePlaceholder>>>,
     pub window_map: HashMap<String, Arc<Mutex<WindowRuntime>>>,
     pub aggregation_map: HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
-    // TODO: Add other runtime component maps (partitions, triggers)
 }
 
 impl SiddhiAppRuntime {
@@ -206,11 +205,7 @@ impl SiddhiAppRuntime {
         for qr in &self.query_runtimes {
             qr.flush();
         }
-        if let Some(service) = self.siddhi_app_context.get_snapshot_service() {
-            if let Some(store) = &service.persistence_store {
-                store.clear_all_revisions(&self.name);
-            }
-        }
+        // Persisted revisions are retained after shutdown for potential restoration
         println!("SiddhiAppRuntime '{}' shutdown", self.name);
     }
 
@@ -264,9 +259,4 @@ impl SiddhiAppRuntime {
             Vec::new()
         }
     }
-
-    // TODO: Implement other methods from SiddhiAppRuntime interface:
-    // get_stream_definition_map, get_table_definition_map, etc. (from composed ApiSiddhiApp)
-    // get_sources, get_sinks, get_tables (runtime instances), get_queries, get_partitions
-    // query(onDemandQueryString), persist, snapshot, restore, etc.
 }
