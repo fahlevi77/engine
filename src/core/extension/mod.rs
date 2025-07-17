@@ -149,3 +149,16 @@ impl SinkFactory for LogSinkFactory {
         Box::new(self.clone())
     }
 }
+
+/// FFI callback type used when dynamically loading extensions.
+pub type RegisterFn = unsafe extern "C" fn(&crate::core::siddhi_manager::SiddhiManager);
+
+/// Symbol names looked up by [`SiddhiManager::set_extension`].
+pub const REGISTER_EXTENSION_FN: &[u8] = b"register_extension";
+pub const REGISTER_WINDOWS_FN: &[u8] = b"register_windows";
+pub const REGISTER_FUNCTIONS_FN: &[u8] = b"register_functions";
+pub const REGISTER_SOURCES_FN: &[u8] = b"register_sources";
+pub const REGISTER_SINKS_FN: &[u8] = b"register_sinks";
+pub const REGISTER_STORES_FN: &[u8] = b"register_stores";
+pub const REGISTER_SOURCE_MAPPERS_FN: &[u8] = b"register_source_mappers";
+pub const REGISTER_SINK_MAPPERS_FN: &[u8] = b"register_sink_mappers";

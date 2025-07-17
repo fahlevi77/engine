@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 use siddhi_rust::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext};
 use siddhi_rust::core::event::complex_event::ComplexEvent;
 use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::extension::{AttributeAggregatorFactory, WindowProcessorFactory};
+use siddhi_rust::core::extension::WindowProcessorFactory;
 use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
+use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
 use siddhi_rust::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use siddhi_rust::core::query::processor::stream::window::WindowProcessor;
-use siddhi_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::query_api::execution::query::input::handler::WindowHandler;
@@ -59,33 +59,45 @@ impl WindowProcessorFactory for DynWindowFactory {
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> { Box::new(self.clone()) }
 }
 
-#[derive(Debug, Clone)]
-struct DynAggFactory;
 #[derive(Debug, Default)]
-struct DynAggExec;
-impl AttributeAggregatorFactory for DynAggFactory {
-    fn name(&self) -> &'static str { "dynConstAgg" }
-    fn create(&self) -> Box<dyn AttributeAggregatorExecutor> { Box::new(DynAggExec::default()) }
-    fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> { Box::new(self.clone()) }
+struct DynPlusOne {
+    arg: Option<Box<dyn ExpressionExecutor>>,
 }
-impl AttributeAggregatorExecutor for DynAggExec {
-    fn init(&mut self, _e: Vec<Box<dyn ExpressionExecutor>>, _m: ProcessingMode, _ex: bool, _c: &SiddhiQueryContext) -> Result<(), String> { Ok(()) }
-    fn process_add(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> { Some(AttributeValue::Int(7)) }
-    fn process_remove(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> { Some(AttributeValue::Int(7)) }
-    fn reset(&self) -> Option<AttributeValue> { Some(AttributeValue::Int(7)) }
-    fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> { Box::new(DynAggExec::default()) }
+impl Clone for DynPlusOne {
+    fn clone(&self) -> Self { Self { arg: None } }
 }
-impl ExpressionExecutor for DynAggExec {
-    fn execute(&self, _e: Option<&dyn ComplexEvent>) -> Option<AttributeValue> { Some(AttributeValue::Int(7)) }
+impl ExpressionExecutor for DynPlusOne {
+    fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
+        let v = self.arg.as_ref()?.execute(event)?;
+        match v {
+            AttributeValue::Int(i) => Some(AttributeValue::Int(i + 1)),
+            _ => None,
+        }
+    }
     fn get_return_type(&self) -> AttrType { AttrType::INT }
-    fn clone_executor(&self, _c: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> { Box::new(DynAggExec::default()) }
-    fn is_attribute_aggregator(&self) -> bool { true }
+    fn clone_executor(&self, _c: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        Box::new(self.clone())
+    }
+}
+impl ScalarFunctionExecutor for DynPlusOne {
+    fn init(&mut self, args: &Vec<Box<dyn ExpressionExecutor>>, ctx: &Arc<SiddhiAppContext>) -> Result<(), String> {
+        if args.len() != 1 { return Err("dynPlusOne expects one argument".to_string()); }
+        self.arg = Some(args[0].clone_executor(ctx));
+        Ok(())
+    }
+    fn destroy(&mut self) {}
+    fn get_name(&self) -> String { "dynPlusOne".to_string() }
+    fn clone_scalar_function(&self) -> Box<dyn ScalarFunctionExecutor> { Box::new(self.clone()) }
 }
 
 #[no_mangle]
-pub extern "C" fn register_extension(manager: &SiddhiManager) {
+pub extern "C" fn register_windows(manager: &SiddhiManager) {
     manager.add_window_factory("dynWindow".to_string(), Box::new(DynWindowFactory));
-    manager.add_attribute_aggregator_factory("dynConstAgg".to_string(), Box::new(DynAggFactory));
+}
+
+#[no_mangle]
+pub extern "C" fn register_functions(manager: &SiddhiManager) {
+    manager.add_scalar_function_factory("dynPlusOne".to_string(), Box::new(DynPlusOne::default()));
 }
 
 /// Returns the path to the compiled dynamic library for this crate.

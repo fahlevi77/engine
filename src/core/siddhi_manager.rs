@@ -12,6 +12,7 @@ use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added 
                                                                        // Placeholder for actual persistence store trait/type
 use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder};
 use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
+use crate::core::extension;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -151,12 +152,27 @@ impl SiddhiManager {
     ) -> Result<(), String> {
         unsafe {
             let lib = Library::new(&library_path).map_err(|e| e.to_string())?;
-            let func: Symbol<unsafe extern "C" fn(&SiddhiManager)> = lib
-                .get(b"register_extension")
-                .map_err(|e| e.to_string())?;
-            func(self);
+
+            macro_rules! call_if_exists {
+                ($sym:expr) => {
+                    if let Ok(f) = lib.get::<extension::RegisterFn>($sym) {
+                        f(self);
+                    }
+                };
+            }
+
+            call_if_exists!(extension::REGISTER_EXTENSION_FN);
+            call_if_exists!(extension::REGISTER_WINDOWS_FN);
+            call_if_exists!(extension::REGISTER_FUNCTIONS_FN);
+            call_if_exists!(extension::REGISTER_SOURCES_FN);
+            call_if_exists!(extension::REGISTER_SINKS_FN);
+            call_if_exists!(extension::REGISTER_STORES_FN);
+            call_if_exists!(extension::REGISTER_SOURCE_MAPPERS_FN);
+            call_if_exists!(extension::REGISTER_SINK_MAPPERS_FN);
+
             self.loaded_libraries.lock().unwrap().push(lib);
         }
+
         println!("[SiddhiManager] dynamically loaded extension '{}' from {}", name, library_path);
         Ok(())
     }

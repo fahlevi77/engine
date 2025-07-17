@@ -50,3 +50,48 @@ using compiled values.
 
 Extensions for other storage engines can follow these examples to provide their
 own compiled condition formats.
+
+## Dynamic Extensions
+
+Extensions can also be distributed as separate crates compiled into dynamic
+libraries.  When the `SiddhiManager` loads a library via `set_extension` it will
+try to invoke a set of registration callbacks if they are exported:
+
+```text
+register_extension
+register_windows
+register_functions
+register_sources
+register_sinks
+register_stores
+register_source_mappers
+register_sink_mappers
+```
+
+Each callback should have the type `unsafe extern "C" fn(&SiddhiManager)` and
+can register any number of factories.  Only the callbacks required by your
+extension need to be implemented.  A minimal crate might look like:
+
+```rust
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
+
+#[no_mangle]
+pub extern "C" fn register_functions(manager: &SiddhiManager) {
+    manager.add_scalar_function_factory("myFn".to_string(), Box::new(MyFn));
+}
+
+#[no_mangle]
+pub extern "C" fn register_windows(manager: &SiddhiManager) {
+    manager.add_window_factory("myWindow".to_string(), Box::new(MyWindowFactory));
+}
+```
+
+Compile the crate as a `cdylib` and load it at runtime:
+
+```bash
+cargo build -p my_extension
+```
+
+```rust
+manager.set_extension("ext", "./target/debug/libmy_extension.so".into()).unwrap();
+```

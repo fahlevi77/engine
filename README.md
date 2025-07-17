@@ -115,10 +115,29 @@ let manager = SiddhiManager::new();
 
 ### Dynamic Extension Loading
 
-Extensions can be compiled into separate crates and loaded at runtime.  A library
-must expose a `register_extension` function that registers factories with a
-`SiddhiManager`.  The integration tests contain a sample dynamic extension under
-`tests/custom_dyn_ext`.
+Extensions can be compiled into separate crates and loaded at runtime.  When
+`SiddhiManager::set_extension` loads a dynamic library it looks up a set of
+optional registration functions and calls any that are present:
+
+```text
+register_extension
+register_windows
+register_functions
+register_sources
+register_sinks
+register_stores
+register_source_mappers
+register_sink_mappers
+```
+
+Each function should have the signature
+`unsafe extern "C" fn(&SiddhiManager)` and is free to register any number of
+factories using the provided manager reference.  Only the callbacks implemented
+in the library need to be exported.
+
+The integration tests contain a sample dynamic extension under
+`tests/custom_dyn_ext` exposing a window and a scalar function.  Loading the
+compiled library looks like:
 
 ```rust
 let manager = SiddhiManager::new();
@@ -129,7 +148,15 @@ manager
 ```
 
 Once loaded, the factories provided by the library can be used like any other
-registered extension.
+registered extension in Siddhi applications.
+
+When developing your own extensions you can compile the crate as a
+`cdylib` and point `set_extension` at the resulting shared library:
+
+```bash
+cargo build -p my_extension
+./target/debug/libmy_extension.{so|dylib|dll}
+```
 
 ### Writing Extensions
 See [docs/writing_extensions.md](docs/writing_extensions.md) for a full guide.
