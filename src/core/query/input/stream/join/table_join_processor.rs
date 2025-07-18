@@ -132,6 +132,9 @@ impl Processor for TableJoinProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
 
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::DEFAULT

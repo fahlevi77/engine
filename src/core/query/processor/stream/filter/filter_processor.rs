@@ -116,6 +116,10 @@ impl Processor for FilterProcessor {
         Arc::clone(&self.meta.siddhi_app_context)
     }
 
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
+
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::DEFAULT // Filter is usually a pass-through or simple mode
     }

@@ -41,6 +41,7 @@ impl QueryParser {
         stream_junction_map: &HashMap<String, Arc<Mutex<StreamJunction>>>,
         table_def_map: &HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
         aggregation_map: &HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
+        partition_id: Option<String>,
     ) -> Result<QueryRuntime, String> {
         // 1. Determine Query Name (from @info(name='foo') or generate)
         let query_name = api_query
@@ -51,11 +52,15 @@ impl QueryParser {
             .map(|el| el.value.clone())
             .unwrap_or_else(|| format!("query_{}", uuid::Uuid::new_v4().hyphenated()));
 
-        let siddhi_query_context = Arc::new(SiddhiQueryContext::new(
+        let mut siddhi_query_context = SiddhiQueryContext::new(
             Arc::clone(siddhi_app_context),
             query_name.clone(),
-            None, // partition_id, assuming not in a partition for now
-        ));
+            partition_id.clone(),
+        );
+        if partition_id.is_some() {
+            siddhi_query_context.set_partitioned(true);
+        }
+        let siddhi_query_context = Arc::new(siddhi_query_context);
 
         // 2. Identify input stream & get its junction
         let input_stream_api = api_query

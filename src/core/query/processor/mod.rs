@@ -39,6 +39,10 @@ impl CommonProcessorMeta {
             next_processor: None,
         }
     }
+
+    pub fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::clone(&self.siddhi_query_context)
+    }
 }
 
 /// Trait for stream processors that process event chunks.
@@ -49,6 +53,7 @@ pub trait Processor: Debug + Send + Sync {
     fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>)
         -> Box<dyn Processor>;
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext>;
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext>;
     fn get_processing_mode(&self) -> ProcessingMode;
     fn is_stateful(&self) -> bool;
 }

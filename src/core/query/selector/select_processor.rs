@@ -28,6 +28,7 @@ struct GroupState {
 pub struct OutputRateLimiter {
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
     pub siddhi_app_context: Arc<SiddhiAppContext>,
+    pub siddhi_query_context: Arc<SiddhiQueryContext>,
     batch_size: usize,
     behavior: crate::query_api::execution::query::output::ratelimit::OutputRateBehavior,
     buffer: Arc<Mutex<Vec<Box<dyn ComplexEvent>>>>,
@@ -108,6 +109,7 @@ impl OutputRateLimiter {
         Self {
             next_processor,
             siddhi_app_context,
+            siddhi_query_context,
             batch_size,
             behavior,
             buffer,
@@ -199,6 +201,10 @@ impl Processor for OutputRateLimiter {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.siddhi_app_context)
+    }
+
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::clone(&self.siddhi_query_context)
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -497,6 +503,10 @@ impl Processor for SelectProcessor {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
+    }
+
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

@@ -28,7 +28,7 @@ pub mod thread_barrier;
 
 pub use self::attribute_converter::{get_property_value, get_property_value_from_str};
 pub use self::event_serde::{event_from_bytes, event_to_bytes};
-pub use self::executor_service::ExecutorService;
+pub use self::executor_service::{ExecutorService, ExecutorServiceRegistry};
 pub use self::id_generator::IdGenerator;
 pub use self::metrics::*;
 pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export key items from parser

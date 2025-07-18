@@ -242,6 +242,7 @@ impl SiddhiAppParser {
                         &builder.stream_junction_map,
                         &builder.table_definition_map,
                         &builder.aggregation_map,
+                        None,
                     )?;
                     builder.add_query_runtime(Arc::new(query_runtime));
                     // TODO: siddhi_app_context.addEternalReferencedHolder(queryRuntime);

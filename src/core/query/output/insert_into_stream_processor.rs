@@ -82,6 +82,10 @@ impl Processor for InsertIntoStreamProcessor {
         Arc::clone(&self.meta.siddhi_app_context)
     }
 
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
+
     fn get_processing_mode(&self) -> ProcessingMode {
         // Usually determined by upstream processors (e.g., window, aggregation)
         // For a simple insert, it might be considered DEFAULT or pass-through.

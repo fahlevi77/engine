@@ -3,6 +3,8 @@
 
 use rayon::ThreadPool;
 use rayon::ThreadPoolBuilder;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
 pub struct ExecutorService {
@@ -50,4 +52,37 @@ impl ExecutorService {
 
 impl Drop for ExecutorService {
     fn drop(&mut self) {}
+}
+
+/// Registry for managing multiple named executor services.
+#[derive(Debug, Default)]
+pub struct ExecutorServiceRegistry {
+    pools: RwLock<HashMap<String, Arc<ExecutorService>>>,
+}
+
+impl ExecutorServiceRegistry {
+    /// Create a new, empty registry.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Register a pool under the given name.
+    pub fn register_named(&self, name: String, exec: Arc<ExecutorService>) {
+        self.pools.write().unwrap().insert(name, exec);
+    }
+
+    /// Get a pool by name if present.
+    pub fn get(&self, name: &str) -> Option<Arc<ExecutorService>> {
+        self.pools.read().unwrap().get(name).cloned()
+    }
+
+    /// Get a pool if it exists or create one with the provided size.
+    pub fn get_or_create(&self, name: &str, threads: usize) -> Arc<ExecutorService> {
+        if let Some(e) = self.get(name) {
+            return e;
+        }
+        let exec = Arc::new(ExecutorService::new(name, threads));
+        self.register_named(name.to_string(), Arc::clone(&exec));
+        exec
+    }
 }

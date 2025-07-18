@@ -238,7 +238,8 @@ fn test_query_parser_with_table_actions() {
         &app_ctx,
         &junctions,
         &table_defs,
-        &HashMap::new()
+        &HashMap::new(),
+        None
     )
     .is_ok());
 
@@ -248,7 +249,8 @@ fn test_query_parser_with_table_actions() {
         &app_ctx,
         &junctions,
         &table_defs,
-        &HashMap::new()
+        &HashMap::new(),
+        None
     )
     .is_ok());
 
@@ -258,7 +260,8 @@ fn test_query_parser_with_table_actions() {
         &app_ctx,
         &junctions,
         &table_defs,
-        &HashMap::new()
+        &HashMap::new(),
+        None
     )
     .is_ok());
 }

@@ -221,7 +221,22 @@ impl StreamJunction {
                             event_chunk.as_ref(),
                         );
                         let sub_arc = Arc::clone(&sub);
-                        exec.execute(move || {
+                        let pool = {
+                            let ctx = sub_arc
+                                .lock()
+                                .expect("subscriber mutex")
+                                .get_siddhi_query_context();
+                            if ctx.is_partitioned() {
+                                ctx
+                                    .siddhi_app_context
+                                    .get_siddhi_context()
+                                    .get_executor_service(&ctx.partition_id)
+                                    .unwrap_or_else(|| Arc::clone(&exec))
+                            } else {
+                                Arc::clone(&exec)
+                            }
+                        };
+                        pool.execute(move || {
                             sub_arc
                                 .lock()
                                 .expect("subscriber mutex")

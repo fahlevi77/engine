@@ -354,6 +354,7 @@ fn test_join_query_parsing() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 
@@ -461,6 +462,7 @@ fn test_pattern_query_parsing() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 }
@@ -530,7 +532,7 @@ fn test_table_in_expression_query() {
     let mut table_defs = HashMap::new();
     table_defs.insert("T".to_string(), t_def);
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs, &HashMap::new());
+    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs, &HashMap::new(), None);
     assert!(res.is_ok());
 }
 #[test]
@@ -589,6 +591,7 @@ fn test_join_query_parsing_from_string() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 }
@@ -647,6 +650,7 @@ fn test_pattern_query_parsing_from_string() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 }

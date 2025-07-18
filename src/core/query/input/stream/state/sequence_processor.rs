@@ -243,6 +243,10 @@ impl Processor for SequenceProcessorSide {
         self.parent.lock().unwrap().meta.siddhi_app_context.clone()
     }
 
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.parent.lock().unwrap().meta.get_siddhi_query_context()
+    }
+
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::DEFAULT
     }

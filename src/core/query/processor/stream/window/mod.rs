@@ -162,6 +162,9 @@ impl Processor for LengthWindowProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
 
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::SLIDE
@@ -353,6 +356,9 @@ impl Processor for TimeWindowProcessor {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
+    }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -571,6 +577,9 @@ impl Processor for LengthBatchWindowProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
 
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
@@ -761,6 +770,9 @@ impl Processor for TimeBatchWindowProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
 
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
@@ -895,6 +907,9 @@ impl Processor for ExternalTimeWindowProcessor {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
+    }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1068,6 +1083,9 @@ impl Processor for ExternalTimeBatchWindowProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
+    }
 
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
@@ -1127,6 +1145,9 @@ impl Processor for LossyCountingWindowProcessor {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
+    }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1305,6 +1326,9 @@ impl Processor for CronWindowProcessor {
 
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
+    }
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        self.meta.get_siddhi_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

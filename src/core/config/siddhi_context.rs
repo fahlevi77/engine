@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard}; // For shared, thread-safe components, Added RwLockReadGuard
 
 use super::statistics_configuration::StatisticsConfiguration;
+use crate::core::util::executor_service::{ExecutorService, ExecutorServiceRegistry};
 
 // --- Placeholders for complex types/trait objects ---
 // These would be defined in their respective modules (e.g., util::persistence, extension, etc.)
@@ -108,6 +109,9 @@ pub struct SiddhiContext {
     /// Registered tables available for queries.
     tables: Arc<RwLock<HashMap<String, Arc<dyn Table>>>>,
 
+    /// Named executor services for asynchronous processing.
+    pub executor_services: Arc<crate::core::util::executor_service::ExecutorServiceRegistry>,
+
     pub dummy_field_siddhi_context_extensions: String,
 }
 
@@ -128,6 +132,7 @@ impl SiddhiContext {
             data_source_configs: Arc::new(RwLock::new(HashMap::new())),
             data_sources: Arc::new(RwLock::new(HashMap::new())),
             tables: Arc::new(RwLock::new(HashMap::new())),
+            executor_services: Arc::new(crate::core::util::executor_service::ExecutorServiceRegistry::new()),
             siddhi_extensions: HashMap::new(),
             deprecated_siddhi_extensions: HashMap::new(),
             persistence_store: Arc::new(RwLock::new(None)),
@@ -143,6 +148,10 @@ impl SiddhiContext {
             default_junction_async: false,
             dummy_field_siddhi_context_extensions: String::new(),
         };
+        ctx.executor_services.register_named(
+            "default".to_string(),
+            Arc::new(crate::core::util::ExecutorService::default()),
+        );
         ctx.register_default_extensions();
         ctx
     }
@@ -309,6 +318,16 @@ impl SiddhiContext {
     pub fn set_attribute(&self, key: String, value: AttributeValuePlaceholder) {
         // Takes &self due to RwLock
         self.attributes.write().unwrap().insert(key, value);
+    }
+
+    /// Register a new executor service under the given name.
+    pub fn add_executor_service(&self, name: String, exec: Arc<ExecutorService>) {
+        self.executor_services.register_named(name, exec);
+    }
+
+    /// Retrieve an executor service by name.
+    pub fn get_executor_service(&self, name: &str) -> Option<Arc<ExecutorService>> {
+        self.executor_services.get(name)
     }
 
     // --- Scalar Function Methods ---
@@ -589,6 +608,7 @@ impl Clone for SiddhiContext {
             data_source_configs: Arc::clone(&self.data_source_configs),
             data_sources: Arc::clone(&self.data_sources),
             tables: Arc::clone(&self.tables),
+            executor_services: Arc::clone(&self.executor_services),
             siddhi_extensions: self.siddhi_extensions.clone(),
             deprecated_siddhi_extensions: self.deprecated_siddhi_extensions.clone(),
             persistence_store: self.persistence_store.clone(),
