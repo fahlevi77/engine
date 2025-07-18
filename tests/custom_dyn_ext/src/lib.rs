@@ -39,6 +39,10 @@ impl Processor for DynWindowProcessor {
         Arc::clone(&self.meta.siddhi_app_context)
     }
 
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::clone(&self.meta.siddhi_query_context)
+    }
+
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
     }

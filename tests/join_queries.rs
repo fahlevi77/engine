@@ -135,7 +135,7 @@ fn test_parse_inner_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
     assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
             .is_ok()
     );
 }
@@ -145,7 +145,7 @@ fn test_parse_left_outer_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
     assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
             .is_ok()
     );
 }
@@ -193,7 +193,7 @@ fn test_inner_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
     assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
             .is_ok()
     );
     let collected = collect_from_out_stream(&app_ctx, &junctions);
@@ -224,7 +224,7 @@ fn test_left_outer_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
     assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new())
+        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
             .is_ok()
     );
     let collected = collect_from_out_stream(&app_ctx, &junctions);
@@ -288,6 +288,21 @@ impl Processor for CollectStateEvents {
                 "T".to_string(),
             )),
             String::new(),
+        ))
+    }
+
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::new(SiddhiQueryContext::new(
+            Arc::new(SiddhiAppContext::new(
+                Arc::new(SiddhiContext::new()),
+                "T".to_string(),
+                Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                    "T".to_string(),
+                )),
+                String::new(),
+            )),
+            "q".to_string(),
+            None,
         ))
     }
     fn get_processing_mode(&self) -> ProcessingMode {

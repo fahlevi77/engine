@@ -59,6 +59,10 @@ impl Processor for DummyWindowProcessor {
     fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
         Arc::clone(&self.meta.siddhi_app_context)
     }
+
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::clone(&self.meta.siddhi_query_context)
+    }
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
     }
@@ -289,6 +293,7 @@ fn test_query_parser_uses_custom_window_factory() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     )
     .unwrap();
     let head = runtime.processor_chain_head.expect("head");

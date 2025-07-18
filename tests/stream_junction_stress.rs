@@ -7,6 +7,7 @@ use siddhi_rust::core::event::stream::StreamEvent;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::query::processor::Processor;
 use siddhi_rust::core::stream::stream_junction::StreamJunction;
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::query_api::definition::StreamDefinition;
 use std::sync::{Arc, Mutex};
@@ -50,6 +51,21 @@ impl Processor for RecordingProcessor {
                 "T".to_string(),
             )),
             String::new(),
+        ))
+    }
+
+    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
+        Arc::new(SiddhiQueryContext::new(
+            Arc::new(SiddhiAppContext::new(
+                Arc::new(SiddhiContext::new()),
+                "T".to_string(),
+                Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                    "T".to_string(),
+                )),
+                String::new(),
+            )),
+            "q".to_string(),
+            None,
         ))
     }
     fn get_processing_mode(&self) -> siddhi_rust::core::query::processor::ProcessingMode {

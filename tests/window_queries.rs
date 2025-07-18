@@ -105,6 +105,7 @@ fn test_length_window_query_parse() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 }
@@ -134,6 +135,7 @@ fn test_time_window_query_parse() {
         &junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     assert!(res.is_ok());
 }

@@ -127,6 +127,7 @@ fn test_sequence_query_parse() {
         &mut junctions,
         &HashMap::new(),
         &HashMap::new(),
+        None,
     );
     if let Err(e) = &res {
         println!("parse err: {}", e);
