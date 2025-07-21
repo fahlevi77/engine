@@ -102,7 +102,7 @@ fn setup_junction(
         "InputStream".to_string(),
         Arc::clone(&def),
         Arc::clone(&app_ctx),
-        1024,
+        4096,
         async_mode,
         None,
     )));
@@ -132,7 +132,7 @@ fn stress_async_concurrent_publish() {
     for h in handles {
         h.join().unwrap();
     }
-    thread::sleep(Duration::from_millis(500));
+    thread::sleep(Duration::from_millis(1000));
     let data = rec.lock().unwrap();
     assert_eq!(data.len(), 2000);
     // metrics

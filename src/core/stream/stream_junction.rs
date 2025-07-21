@@ -5,9 +5,9 @@ use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::stream::StreamEvent; // Actual struct for conversion
 use crate::core::exception::SiddhiError;
-use crate::core::stream::output::error_store::ErrorStore;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::stream::input::input_handler::InputProcessor;
+use crate::core::stream::output::error_store::ErrorStore;
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::metrics::*;
 use crate::query_api::definition::StreamDefinition;
@@ -155,12 +155,18 @@ impl StreamJunction {
             is_async,
             buffer_size,
             latency_tracker: if enable_metrics {
-                Some(LatencyTracker::new(&id_clone_for_metrics, &siddhi_app_context))
+                Some(LatencyTracker::new(
+                    &id_clone_for_metrics,
+                    &siddhi_app_context,
+                ))
             } else {
                 None
             },
             throughput_tracker: if enable_metrics {
-                Some(ThroughputTracker::new(&id_clone_for_metrics, &siddhi_app_context))
+                Some(ThroughputTracker::new(
+                    &id_clone_for_metrics,
+                    &siddhi_app_context,
+                ))
             } else {
                 None
             },
@@ -227,11 +233,10 @@ impl StreamJunction {
                                 .expect("subscriber mutex")
                                 .get_siddhi_query_context();
                             if ctx.is_partitioned() {
-                                ctx
-                                    .siddhi_app_context
+                                ctx.siddhi_app_context
                                     .get_siddhi_context()
-                                    .get_executor_service(&ctx.partition_id)
-                                    .unwrap_or_else(|| Arc::clone(&exec))
+                                    .executor_services
+                                    .get_or_create_from_env(&ctx.partition_id, exec.pool_size())
                             } else {
                                 Arc::clone(&exec)
                             }

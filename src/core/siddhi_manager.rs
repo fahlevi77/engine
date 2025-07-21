@@ -20,10 +20,11 @@ use libloading::{Library, Symbol};
 // use rand::Rng; // For generating random app names if not specified
 
 /// Main entry point for managing Siddhi application runtimes.
+#[repr(C)]
 pub struct SiddhiManager {
     siddhi_context: Arc<SiddhiContext>,
     siddhi_app_runtime_map: Arc<Mutex<HashMap<String, Arc<SiddhiAppRuntime>>>>,
-    loaded_libraries: Arc<Mutex<Vec<libloading::Library>>>,
+    loaded_libraries: Arc<Mutex<Vec<std::mem::ManuallyDrop<libloading::Library>>>>,
 }
 
 impl SiddhiManager {
@@ -170,7 +171,10 @@ impl SiddhiManager {
             call_if_exists!(extension::REGISTER_SOURCE_MAPPERS_FN);
             call_if_exists!(extension::REGISTER_SINK_MAPPERS_FN);
 
-            self.loaded_libraries.lock().unwrap().push(lib);
+            self.loaded_libraries
+                .lock()
+                .unwrap()
+                .push(std::mem::ManuallyDrop::new(lib));
         }
 
         println!("[SiddhiManager] dynamically loaded extension '{}' from {}", name, library_path);

@@ -17,16 +17,10 @@ impl PartitionParser {
         let mut partition_runtime = PartitionRuntime::new();
 
         // ensure a named executor for partition queries exists
-        if siddhi_app_context
+        siddhi_app_context
             .get_siddhi_context()
-            .get_executor_service("partition")
-            .is_none()
-        {
-            siddhi_app_context.get_siddhi_context().add_executor_service(
-                "partition".to_string(),
-                Arc::new(crate::core::util::ExecutorService::new("partition", 2)),
-            );
-        }
+            .executor_services
+            .get_or_create_from_env("partition", 2);
 
         for query in &partition.query_list {
             let qr = QueryParser::parse_query(

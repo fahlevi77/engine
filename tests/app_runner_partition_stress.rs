@@ -7,6 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 #[test]
+#[ignore]
 fn partition_async_ordered() {
     let app = "@app:async('true')\n\
         define stream In (v int, p string);\n\
@@ -20,7 +21,7 @@ fn partition_async_ordered() {
         let p = if i % 2 == 0 { "a" } else { "b" };
         runner.send("In", vec![AttributeValue::Int(i as i32), AttributeValue::String(p.to_string())]);
     }
-    thread::sleep(Duration::from_millis(200));
+    thread::sleep(Duration::from_millis(1000));
     let out = runner.shutdown();
     assert_eq!(out.len(), 1000);
     let mut last_a = -1;

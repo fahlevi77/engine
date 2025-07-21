@@ -54,6 +54,16 @@ impl Drop for ExecutorService {
     fn drop(&mut self) {}
 }
 
+/// Determine thread count from an environment variable of the form
+/// `SIDDHI_POOL_<NAME>_THREADS`. Falls back to the provided default.
+pub fn pool_size_from_env(name: &str, default: usize) -> usize {
+    let var = format!("SIDDHI_POOL_{}_THREADS", name.to_uppercase());
+    std::env::var(&var)
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(default)
+}
+
 /// Registry for managing multiple named executor services.
 #[derive(Debug, Default)]
 pub struct ExecutorServiceRegistry {
@@ -84,5 +94,11 @@ impl ExecutorServiceRegistry {
         let exec = Arc::new(ExecutorService::new(name, threads));
         self.register_named(name.to_string(), Arc::clone(&exec));
         exec
+    }
+
+    /// Get or create a pool using `pool_size_from_env` with the provided default.
+    pub fn get_or_create_from_env(&self, name: &str, default: usize) -> Arc<ExecutorService> {
+        let threads = pool_size_from_env(name, default);
+        self.get_or_create(name, threads)
     }
 }

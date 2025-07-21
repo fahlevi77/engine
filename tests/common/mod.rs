@@ -26,6 +26,7 @@ impl StreamCallback for CollectCallback {
 pub struct AppRunner {
     runtime: Arc<SiddhiAppRuntime>,
     pub collected: Arc<Mutex<Vec<Vec<AttributeValue>>>>,
+    _manager: SiddhiManager,
 }
 
 impl AppRunner {
@@ -45,7 +46,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn new_from_api(
@@ -66,7 +67,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn new_from_api_with_store(
@@ -89,7 +90,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn new_from_api_with_manager(
@@ -110,7 +111,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
@@ -128,7 +129,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn new_with_store(
@@ -152,7 +153,7 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected }
+        Self { runtime, collected, _manager: manager }
     }
 
     pub fn send(&self, stream_id: &str, data: Vec<AttributeValue>) {

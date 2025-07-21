@@ -96,11 +96,13 @@ impl ScalarFunctionExecutor for DynPlusOne {
 
 #[no_mangle]
 pub extern "C" fn register_windows(manager: &SiddhiManager) {
+    println!("[dyn_ext] register_windows called");
     manager.add_window_factory("dynWindow".to_string(), Box::new(DynWindowFactory));
 }
 
 #[no_mangle]
 pub extern "C" fn register_functions(manager: &SiddhiManager) {
+    println!("[dyn_ext] register_functions called");
     manager.add_scalar_function_factory("dynPlusOne".to_string(), Box::new(DynPlusOne::default()));
 }
 

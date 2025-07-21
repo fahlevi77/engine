@@ -56,6 +56,7 @@ use std::sync::RwLock; // Added for scalar_function_factories and attributes, da
 
 /// Shared context for all Siddhi Apps in a SiddhiManager instance.
 // Custom Debug is implemented to avoid requiring Debug on trait objects.
+#[repr(C)]
 pub struct SiddhiContext {
     pub statistics_configuration: StatisticsConfiguration,
     attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>,
@@ -132,7 +133,9 @@ impl SiddhiContext {
             data_source_configs: Arc::new(RwLock::new(HashMap::new())),
             data_sources: Arc::new(RwLock::new(HashMap::new())),
             tables: Arc::new(RwLock::new(HashMap::new())),
-            executor_services: Arc::new(crate::core::util::executor_service::ExecutorServiceRegistry::new()),
+            executor_services: Arc::new(
+                crate::core::util::executor_service::ExecutorServiceRegistry::new(),
+            ),
             siddhi_extensions: HashMap::new(),
             deprecated_siddhi_extensions: HashMap::new(),
             persistence_store: Arc::new(RwLock::new(None)),
@@ -144,13 +147,29 @@ impl SiddhiContext {
             source_handler_manager: None,
             record_table_handler_manager: None,
             default_disrupter_exception_handler: "DefaultDisruptorExceptionHandler".to_string(),
-            default_junction_buffer_size: 1024,
+            // Increased default async buffer to handle high throughput tests
+            default_junction_buffer_size: 4096,
             default_junction_async: false,
             dummy_field_siddhi_context_extensions: String::new(),
         };
+        let default_threads = crate::core::util::executor_service::pool_size_from_env(
+            "default",
+            num_cpus::get().max(1),
+        );
         ctx.executor_services.register_named(
             "default".to_string(),
-            Arc::new(crate::core::util::ExecutorService::default()),
+            Arc::new(crate::core::util::ExecutorService::new(
+                "default",
+                default_threads,
+            )),
+        );
+        let part_threads = crate::core::util::executor_service::pool_size_from_env("partition", 2);
+        ctx.executor_services.register_named(
+            "partition".to_string(),
+            Arc::new(crate::core::util::ExecutorService::new(
+                "partition",
+                part_threads,
+            )),
         );
         ctx.register_default_extensions();
         ctx
@@ -385,7 +404,10 @@ impl SiddhiContext {
             "externalTimeBatch".to_string(),
             Box::new(ExternalTimeBatchWindowFactory),
         );
-        self.add_window_factory("lossyCounting".to_string(), Box::new(LossyCountingWindowFactory));
+        self.add_window_factory(
+            "lossyCounting".to_string(),
+            Box::new(LossyCountingWindowFactory),
+        );
         self.add_window_factory("cron".to_string(), Box::new(CronWindowFactory));
 
         self.add_attribute_aggregator_factory(
