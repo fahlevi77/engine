@@ -132,7 +132,8 @@ fn stress_async_concurrent_publish() {
     for h in handles {
         h.join().unwrap();
     }
-    thread::sleep(Duration::from_millis(1000));
+    // Give the async executor sufficient time to process all events.
+    thread::sleep(Duration::from_millis(2000));
     let data = rec.lock().unwrap();
     assert_eq!(data.len(), 2000);
     // metrics

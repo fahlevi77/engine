@@ -19,22 +19,25 @@ pub mod thread_barrier;
 // pub mod error;  // This might conflict with core::exception or query_api::error
 // pub mod event;  // This might conflict with core::event
 // pub mod extension;
-// pub mod lock;
+pub mod lock;
 // pub mod persistence;
-// pub mod snapshot;
-// pub mod statistics; // This might conflict with core::config::StatisticsConfiguration
-// pub mod timestamp;
-// pub mod transport;
+pub mod snapshot;
+pub mod statistics; // This might conflict with core::config::StatisticsConfiguration
+                    // pub mod timestamp;
+                    // pub mod transport;
 
 pub use self::attribute_converter::{get_property_value, get_property_value_from_str};
 pub use self::event_serde::{event_from_bytes, event_to_bytes};
 pub use self::executor_service::{ExecutorService, ExecutorServiceRegistry};
 pub use self::id_generator::IdGenerator;
+pub use self::lock::{LockSynchronizer, LockWrapper};
 pub use self::metrics::*;
 pub use self::parser::{parse_expression, ExpressionParserContext}; // Re-export key items from parser
 pub use self::scheduled_executor_service::ScheduledExecutorService;
 pub use self::scheduler::{Schedulable, Scheduler};
 pub use self::serialization::{from_bytes, to_bytes};
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
-pub use self::thread_barrier::ThreadBarrier;
+pub use self::snapshot::{IncrementalSnapshot, PersistenceReference};
 pub use self::state_holder::StateHolder;
+pub use self::statistics::{DefaultStatisticsManager, StatisticsManager};
+pub use self::thread_barrier::ThreadBarrier;

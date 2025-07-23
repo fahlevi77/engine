@@ -1,11 +1,19 @@
-use crate::core::config::SiddhiAppContext;
+use crate::core::config::{SiddhiAppContext, SiddhiContext};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::sync::{atomic::{AtomicI64, AtomicU64, Ordering}, Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicI64, AtomicU64, Ordering},
+    Arc, Mutex,
+};
 use std::time::Duration;
 
-static LATENCY_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<LatencyTracker>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-static THROUGHPUT_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<ThroughputTracker>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static LATENCY_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<LatencyTracker>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static THROUGHPUT_BY_STREAM: Lazy<Mutex<HashMap<String, Arc<ThroughputTracker>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static COUNTERS: Lazy<Mutex<HashMap<String, Arc<Counter>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static TIMERS: Lazy<Mutex<HashMap<String, Arc<Timer>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Debug, Default)]
 pub struct LatencyTracker {
@@ -82,6 +90,66 @@ impl ThroughputTracker {
 #[derive(Debug, Default)]
 pub struct BufferedEventsTracker {
     count: AtomicI64,
+}
+
+#[derive(Debug, Default)]
+pub struct Counter {
+    count: AtomicU64,
+}
+
+impl Counter {
+    pub fn new(name: &str, _ctx: &SiddhiContext) -> Arc<Self> {
+        let c = Arc::new(Self::default());
+        COUNTERS
+            .lock()
+            .unwrap()
+            .insert(name.to_string(), Arc::clone(&c));
+        c
+    }
+
+    pub fn inc(&self) {
+        self.count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn add(&self, v: u64) {
+        self.count.fetch_add(v, Ordering::Relaxed);
+    }
+
+    pub fn value(&self) -> u64 {
+        self.count.load(Ordering::Relaxed)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Timer {
+    total_ns: AtomicU64,
+    count: AtomicU64,
+}
+
+impl Timer {
+    pub fn new(name: &str, _ctx: &SiddhiContext) -> Arc<Self> {
+        let t = Arc::new(Self::default());
+        TIMERS
+            .lock()
+            .unwrap()
+            .insert(name.to_string(), Arc::clone(&t));
+        t
+    }
+
+    pub fn record(&self, dur: Duration) {
+        self.total_ns
+            .fetch_add(dur.as_nanos() as u64, Ordering::Relaxed);
+        self.count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn average_ns(&self) -> Option<u64> {
+        let c = self.count.load(Ordering::Relaxed);
+        if c == 0 {
+            None
+        } else {
+            Some(self.total_ns.load(Ordering::Relaxed) / c)
+        }
+    }
 }
 
 impl Clone for BufferedEventsTracker {

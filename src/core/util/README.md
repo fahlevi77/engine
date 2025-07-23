@@ -20,8 +20,9 @@ placeholders noted below.
 
 ## TODOs
 
-* Many Java utility classes (lock helpers, snapshot utilities,
-  etc.) are still missing.
-* Metrics system is rudimentary and should be extended for production use.
+* Fill out additional helpers from the Java util package as
+  the Rust port grows.
+* Metrics system remains basic and should be extended for
+  production use.
 
 Contributions welcome!
