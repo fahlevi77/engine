@@ -15,12 +15,10 @@ form the internal processing chain.
 * `output` – contains terminal processors such as `InsertIntoStreamProcessor` and
   `CallbackProcessor` that publish results.
 
-## Notes / TODO
+## Notes
 
-* Many advanced Siddhi features like windows, joins and rate limiting are not yet
-  ported.  Placeholders are left where appropriate.
-* `QueryRuntime` does not implement snapshotting or state management.  These should
-  be added when the relevant subsystems are available.
-* Event chunk manipulation in `FilterProcessor` and `SelectProcessor` is simplified
-  and should be revisited for efficiency.
+The module now supports windows, joins and pattern execution.  Snapshotting of
+stateful processors is handled via the `SnapshotService`.  Event chunk
+manipulation in `FilterProcessor` and `SelectProcessor` remains simplified but
+works for the common query flows.
 

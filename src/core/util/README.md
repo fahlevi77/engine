@@ -1,9 +1,8 @@
 # `core::util`
 
-A partial port of the `io.siddhi.core.util` Java package.  Only the
-components currently needed by the Rust prototype are implemented.
-Future ports should extend this module structure and remove the
-placeholders noted below.
+A partial port of the `io.siddhi.core.util` Java package providing the
+utility functions required by the Rust runtime.  Additional helpers can
+be added as needed.
 
 ## Implemented Modules
 
@@ -18,11 +17,7 @@ placeholders noted below.
 * `siddhi_constants` – constants shared across the core modules.
 * `scheduler` – lightweight task scheduler for time based windows and triggers.
 
-## TODOs
-
-* Fill out additional helpers from the Java util package as
-  the Rust port grows.
-* Metrics system remains basic and should be extended for
-  production use.
+Metrics tracking is intentionally lightweight but used throughout the
+runtime.
 
 Contributions welcome!

@@ -1,0 +1,6 @@
+define stream AStream (val int);
+define stream BStream (val int);
+@info(name='pattern_query')
+from every AStream -> BStream
+select AStream.val as a, BStream.val as b
+insert into ABSequence;

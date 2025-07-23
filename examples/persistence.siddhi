@@ -1,0 +1,4 @@
+@app:name('PersistExample')
+define stream InStream (v int);
+define stream OutStream (v int);
+from InStream#length(2) select v insert into OutStream;

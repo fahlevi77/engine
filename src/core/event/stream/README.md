@@ -12,7 +12,7 @@ Rust equivalent of the Java `io.siddhi.core.event.stream` package.
   meta information.
 - `Operation` – small helper struct mirroring Siddhi's `Operation` class.
 
-## Missing Parts / TODO
+## Missing Parts
 
 Several advanced helpers (`StreamEventCloner`, converters, holders and
 populators) have not yet been ported.  Serialization helpers present in the Java

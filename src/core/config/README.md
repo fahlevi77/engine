@@ -2,10 +2,9 @@
 
 This directory contains Rust ports of the Java `io.siddhi.core.config` package.  
 The goal of these implementations is to mirror the behaviour of the Java classes
-while allowing the rest of the Rust code base to compile.  Many complex
-subsystems of Siddhi (persistence stores, metrics, snapshotting, etc.) are not
-yet implemented in Rust.  Placeholder structs and simple `String` types are used
-in their place so that APIs remain compatible.
+while allowing the rest of the Rust code base to compile.  Persistence stores
+(in-memory, file and SQLite) and basic metrics are available, while other
+subsystems still rely on simplified placeholders.
 
 ## Files
 
@@ -15,14 +14,12 @@ in their place so that APIs remain compatible.
 - `siddhi_query_context.rs` – Context associated with individual queries.
 - `siddhi_on_demand_query_context.rs` – Context for on-demand queries.
 
-## Notes / TODO
+## Notes
 
-- Extension holders, persistence stores, and error stores are represented with
-  simple placeholders.  Actual implementations should provide concrete traits or
-  structs.
-- `SiddhiAppContext::generate_state_holder` and
-  `SiddhiQueryContext::generate_state_holder` require snapshot storage logic and
-  are left as future work.
+ - Extension holders and error stores are represented with simple placeholders.
+ - `SiddhiAppContext::generate_state_holder` and
+   `SiddhiQueryContext::generate_state_holder` will evolve with the
+   snapshotting system.
 - Exception handling for disruptor and runtime errors is simplified to string
   placeholders.
 

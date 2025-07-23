@@ -10,8 +10,8 @@ simplified.
   `InputEntryValve` follow the same responsibilities as in the Java
   implementation.  Thread barriers and metrics are represented by
   placeholders.
-* `TableInputHandler` is largely unimplemented because table support is
-  missing in this prototype.
+* `TableInputHandler` allows events to be inserted into tables so they can be
+  joined with streams.
 * The event injection API is functional for the basic stateless query
   paths used in the current integration tests.
 

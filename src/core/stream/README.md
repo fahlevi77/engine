@@ -19,7 +19,7 @@ thread barriers are represented by placeholders.
   classes in structure, though many behaviours are simplified.
 * `ServiceDeploymentInfo` – basic representation of service deployment metadata.
 
-## Notes / TODO
+## Notes
 
 * Event chunks are now cloned for each subscriber and dispatched using the
   improved executor service when a junction is marked asynchronous.

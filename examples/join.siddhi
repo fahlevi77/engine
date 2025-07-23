@@ -1,0 +1,6 @@
+define stream LeftStream (id int, val string);
+define stream RightStream (id int, category string);
+@info(name='join_query')
+from LeftStream#window.length(5) as L join RightStream#window.length(5) as R on L.id == R.id
+select L.id as id, L.val as val, R.category as category
+insert into JoinedStream;

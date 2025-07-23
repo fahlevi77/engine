@@ -1,0 +1,10 @@
+define stream TableIn (roomNo int, type string);
+@store(type='cache', max_size='10')
+define table RoomTable (roomNo int, type string);
+from TableIn select roomNo, type insert into RoomTable;
+
+define stream InputStream (roomNo int, value string);
+define stream OutputStream (roomNo int, type string, value string);
+from InputStream join RoomTable on InputStream.roomNo == RoomTable.roomNo
+select InputStream.roomNo as roomNo, RoomTable.type as type, InputStream.value as value
+insert into OutputStream;
