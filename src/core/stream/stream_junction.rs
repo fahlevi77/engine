@@ -367,31 +367,35 @@ impl StreamJunction {
                         // Use try_send for non-blocking, or send for blocking
                         Ok(_) => Ok(()),
                         Err(TrySendError::Full(event_back)) => {
-                            let err = SiddhiError::SendError(format!(
-                                "Async buffer full for stream {}",
-                                self.stream_id
-                            ));
-                            self.handle_error_with_event(Some(event_back), err.clone());
-                            Err(err)
+                            let err = SiddhiError::SendError {
+                                message: format!("Async buffer full for stream {}", self.stream_id),
+                            };
+                            self.handle_error_with_event(Some(event_back), err);
+                            Err(SiddhiError::SendError {
+                                message: format!("Async buffer full for stream {}", self.stream_id),
+                            })
                         }
                         Err(TrySendError::Disconnected(event_back)) => {
-                            let err = SiddhiError::SendError(format!(
-                                "Async channel disconnected for stream {}",
-                                self.stream_id
-                            ));
-                            self.handle_error_with_event(Some(event_back), err.clone());
-                            Err(err)
+                            let err = SiddhiError::SendError {
+                                message: format!("Async channel disconnected for stream {}", self.stream_id),
+                            };
+                            self.handle_error_with_event(Some(event_back), err);
+                            Err(SiddhiError::SendError {
+                                message: format!("Async channel disconnected for stream {}", self.stream_id),
+                            })
                         }
                     }
                 } else {
                     Ok(())
                 }
             } else {
-                let err = SiddhiError::SendError(
-                    "Async junction not initialized with a sender".to_string(),
-                );
-                self.handle_error_with_event(complex_event_chunk, err.clone());
-                Err(err)
+                let err = SiddhiError::SendError {
+                    message: "Async junction not initialized with a sender".to_string(),
+                };
+                self.handle_error_with_event(complex_event_chunk, err);
+                Err(SiddhiError::SendError {
+                    message: "Async junction not initialized with a sender".to_string(),
+                })
             }
         } else {
             // Synchronous path
@@ -433,7 +437,7 @@ impl StreamJunction {
                     .get_siddhi_context()
                     .get_error_store()
                 {
-                    store.store(&self.stream_id, &e);
+                    store.store(&self.stream_id, e);
                 } else {
                     eprintln!("[{}] Error store not configured: {}", self.stream_id, e);
                 }

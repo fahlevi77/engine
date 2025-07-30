@@ -1,29 +1,34 @@
 use crate::core::exception::error::SiddhiError;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 pub trait ErrorStore: Send + Sync + std::fmt::Debug {
-    fn store(&self, stream_id: &str, error: &SiddhiError);
+    fn store(&self, stream_id: &str, error: SiddhiError);
 }
 
 #[derive(Default, Debug)]
 pub struct InMemoryErrorStore {
-    inner: Mutex<Vec<(String, SiddhiError)>>,
+    inner: Mutex<Vec<(String, String)>>, // Store error messages as strings
 }
 
 impl InMemoryErrorStore {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn errors(&self) -> Vec<(String, SiddhiError)> {
+    
+    pub fn errors(&self) -> Vec<(String, String)> {
         self.inner.lock().unwrap().clone()
+    }
+    
+    pub fn clear(&mut self) {
+        self.inner.lock().unwrap().clear();
     }
 }
 
 impl ErrorStore for InMemoryErrorStore {
-    fn store(&self, stream_id: &str, error: &SiddhiError) {
+    fn store(&self, stream_id: &str, error: SiddhiError) {
         self.inner
             .lock()
             .unwrap()
-            .push((stream_id.to_string(), error.clone()));
+            .push((stream_id.to_string(), error.to_string()));
     }
 }
