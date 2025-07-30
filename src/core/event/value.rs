@@ -121,11 +121,147 @@ impl<'de> Deserialize<'de> for AttributeValue {
     }
 }
 
-// Potential helper methods for AttributeValue:
 impl AttributeValue {
-    // pub fn as_string(&self) -> Option<&String> { ... }
-    // pub fn as_i32(&self) -> Option<i32> { ... }
-    // ... and so on for other types
+    /// Get string representation for debugging and display
+    pub fn as_string(&self) -> Option<&String> {
+        match self {
+            AttributeValue::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn as_i32(&self) -> Option<i32> {
+        match self {
+            AttributeValue::Int(i) => Some(*i),
+            _ => None,
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            AttributeValue::Long(l) => Some(*l),
+            _ => None,
+        }
+    }
+
+    pub fn as_f32(&self) -> Option<f32> {
+        match self {
+            AttributeValue::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            AttributeValue::Double(d) => Some(*d),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            AttributeValue::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    /// Check if this value is null
+    pub fn is_null(&self) -> bool {
+        matches!(self, AttributeValue::Null)
+    }
+
+    /// Get the type of this value
+    pub fn get_type(&self) -> crate::query_api::definition::attribute::Type {
+        use crate::query_api::definition::attribute::Type;
+        match self {
+            AttributeValue::String(_) => Type::STRING,
+            AttributeValue::Int(_) => Type::INT,
+            AttributeValue::Long(_) => Type::LONG,
+            AttributeValue::Float(_) => Type::FLOAT,
+            AttributeValue::Double(_) => Type::DOUBLE,
+            AttributeValue::Bool(_) => Type::BOOL,
+            AttributeValue::Object(_) => Type::OBJECT,
+            AttributeValue::Null => Type::OBJECT, // Null can be any type
+        }
+    }
+
+    /// Convert to numeric value as f64 (for arithmetic operations)
+    pub fn to_number(&self) -> Option<f64> {
+        match self {
+            AttributeValue::Int(i) => Some(*i as f64),
+            AttributeValue::Long(l) => Some(*l as f64),
+            AttributeValue::Float(f) => Some(*f as f64),
+            AttributeValue::Double(d) => Some(*d),
+            AttributeValue::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+            AttributeValue::String(s) => s.parse::<f64>().ok(),
+            _ => None,
+        }
+    }
+
+    /// Convert to boolean following Java Siddhi rules
+    pub fn to_boolean(&self) -> Option<bool> {
+        match self {
+            AttributeValue::Bool(b) => Some(*b),
+            AttributeValue::Int(i) => Some(*i == 1),
+            AttributeValue::Long(l) => Some(*l == 1),
+            AttributeValue::Float(f) => Some((*f - 1.0).abs() < f32::EPSILON),
+            AttributeValue::Double(d) => Some((*d - 1.0).abs() < f64::EPSILON),
+            AttributeValue::String(s) => {
+                let lower = s.to_lowercase();
+                if lower == "true" {
+                    Some(true)
+                } else if lower == "false" {
+                    Some(false)
+                } else {
+                    None // Invalid string
+                }
+            },
+            _ => None,
+        }
+    }
+
+    /// Convert value to string representation (Java toString() equivalent)
+    pub fn to_string_value(&self) -> String {
+        match self {
+            AttributeValue::String(s) => s.clone(),
+            AttributeValue::Int(i) => i.to_string(),
+            AttributeValue::Long(l) => l.to_string(),
+            AttributeValue::Float(f) => f.to_string(),
+            AttributeValue::Double(d) => d.to_string(),
+            AttributeValue::Bool(b) => b.to_string(),
+            AttributeValue::Object(_) => "<object>".to_string(),
+            AttributeValue::Null => "null".to_string(),
+        }
+    }
+
+    /// Check if this value can be converted to target type
+    pub fn is_convertible_to(&self, target_type: crate::query_api::definition::attribute::Type) -> bool {
+        use crate::query_api::definition::attribute::Type;
+        
+        match (self, target_type) {
+            (AttributeValue::Null, _) => true, // Null can convert to any type
+            (_, Type::OBJECT) => true, // Any value can become object
+            (_, Type::STRING) => true, // Any value can become string
+            (AttributeValue::String(s), Type::INT) => s.parse::<i32>().is_ok(),
+            (AttributeValue::String(s), Type::LONG) => s.parse::<i64>().is_ok(),
+            (AttributeValue::String(s), Type::FLOAT) => s.parse::<f32>().is_ok(),
+            (AttributeValue::String(s), Type::DOUBLE) => s.parse::<f64>().is_ok(),
+            (AttributeValue::String(s), Type::BOOL) => {
+                let lower = s.to_lowercase();
+                lower == "true" || lower == "false"
+            },
+            // Numeric type widening
+            (AttributeValue::Int(_), Type::LONG | Type::FLOAT | Type::DOUBLE) => true,
+            (AttributeValue::Long(_), Type::FLOAT | Type::DOUBLE) => true,
+            (AttributeValue::Float(_), Type::DOUBLE) => true,
+            // Boolean to numeric
+            (AttributeValue::Bool(_), Type::INT | Type::LONG | Type::FLOAT | Type::DOUBLE) => true,
+            // Numeric to boolean (always valid)
+            (AttributeValue::Int(_) | AttributeValue::Long(_) | AttributeValue::Float(_) | AttributeValue::Double(_), Type::BOOL) => true,
+            // Same type
+            (v, target) => v.get_type() == target,
+        }
+    }
 }
 
 impl fmt::Display for AttributeValue {

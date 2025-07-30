@@ -43,10 +43,7 @@ impl ConvertFunctionExecutor {
 impl ExpressionExecutor for ConvertFunctionExecutor {
     fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
         let value = self.value_executor.execute(event)?;
-        match get_property_value(value, self.target_type.clone()) {
-            Ok(v) => Some(v),
-            Err(_) => None,
-        }
+        get_property_value(value, self.target_type.clone())
     }
 
     fn get_return_type(&self) -> ApiAttributeType {

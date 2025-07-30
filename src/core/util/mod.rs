@@ -12,6 +12,9 @@ pub mod serialization;
 pub mod siddhi_constants; // Added siddhi_constants module
 pub mod state_holder;
 pub mod thread_barrier;
+pub mod type_system; // New comprehensive type system
+#[cfg(test)]
+pub mod type_system_tests; // Comprehensive type system tests
 // Potentially other existing util submodules:
 // pub mod cache;
 // pub mod collection;
@@ -26,7 +29,7 @@ pub mod statistics; // This might conflict with core::config::StatisticsConfigur
                     // pub mod timestamp;
                     // pub mod transport;
 
-pub use self::attribute_converter::{get_property_value, get_property_value_from_str};
+pub use self::attribute_converter::{get_property_value, get_property_value_from_str, is_numeric_type};
 pub use self::event_serde::{event_from_bytes, event_to_bytes};
 pub use self::executor_service::{ExecutorService, ExecutorServiceRegistry};
 pub use self::id_generator::IdGenerator;
@@ -41,3 +44,4 @@ pub use self::snapshot::{IncrementalSnapshot, PersistenceReference};
 pub use self::state_holder::StateHolder;
 pub use self::statistics::{DefaultStatisticsManager, StatisticsManager};
 pub use self::thread_barrier::ThreadBarrier;
+pub use self::type_system::{TypeConverter, TypePrecedence, get_arithmetic_result_type};
