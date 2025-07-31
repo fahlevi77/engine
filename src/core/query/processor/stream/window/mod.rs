@@ -18,6 +18,10 @@ use std::sync::{Arc, Mutex};
 mod session_window_processor;
 use session_window_processor::SessionWindowProcessor;
 
+// Import sort window processor  
+mod sort_window_processor;
+use sort_window_processor::SortWindowProcessor;
+
 pub trait WindowProcessor: Processor {}
 
 #[derive(Debug)]
@@ -408,6 +412,9 @@ pub fn create_window_processor(
             ))),
             "session" => Ok(Arc::new(Mutex::new(
                 SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
+            "sort" => Ok(Arc::new(Mutex::new(
+                SortWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
             ))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
@@ -1409,6 +1416,30 @@ impl WindowProcessorFactory for SessionWindowFactory {
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SortWindowFactory;
+
+impl WindowProcessorFactory for SortWindowFactory {
+    fn name(&self) -> &'static str {
+        "sort"
+    }
+
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            SortWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
         )))
     }
 

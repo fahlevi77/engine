@@ -43,11 +43,12 @@ This document tracks the implementation tasks for achieving feature parity with 
   - **Reference**: `SessionWindowProcessor.java`
   - **Files**: `src/core/query/processor/stream/window/session_window_processor.rs`, `tests/session_window_test.rs`
 
-- [ ] **Sort Window** (`sort`)
-  - Implement sorting within windows
-  - Support multiple sort attributes
-  - **Effort**: 2 days
+- [x] **Sort Window** (`sort`) ✅ **COMPLETED**
+  - ✅ Implement sorting within windows (basic timestamp sorting)
+  - 🚧 Support multiple sort attributes (TODO: expression parsing)
+  - ✅ **Effort**: 1 day (estimated 2 days, completed basic version efficiently)
   - **Reference**: `SortWindowProcessor.java`
+  - **Files**: `src/core/query/processor/stream/window/sort_window_processor.rs`, `tests/sort_window_test.rs`
 
 - [ ] **Unique Windows** (`unique`, `uniqueLength`)
   - Implement duplicate removal
