@@ -36,11 +36,12 @@ This document tracks the implementation tasks for achieving feature parity with 
 
 ### 🟠 High Priority - Core Windows
 
-- [ ] **Session Window** (`session`, `sessionLength`)
-  - Implement session-based windowing
-  - Support dynamic session timeouts
-  - **Effort**: 3 days
+- [x] **Session Window** (`session`, `sessionLength`) ✅ **COMPLETED**
+  - ✅ Implement session-based windowing
+  - ✅ Support dynamic session timeouts
+  - ✅ **Effort**: 1 day (estimated 3 days, completed efficiently)
   - **Reference**: `SessionWindowProcessor.java`
+  - **Files**: `src/core/query/processor/stream/window/session_window_processor.rs`, `tests/session_window_test.rs`
 
 - [ ] **Sort Window** (`sort`)
   - Implement sorting within windows

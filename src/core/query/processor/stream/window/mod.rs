@@ -14,6 +14,10 @@ use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression}
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+// Import session window processor
+mod session_window_processor;
+use session_window_processor::SessionWindowProcessor;
+
 pub trait WindowProcessor: Processor {}
 
 #[derive(Debug)]
@@ -401,6 +405,9 @@ pub fn create_window_processor(
             ))),
             "externalTimeBatch" => Ok(Arc::new(Mutex::new(
                 ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+            ))),
+            "session" => Ok(Arc::new(Mutex::new(
+                SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
             ))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
@@ -1379,6 +1386,29 @@ impl WindowProcessorFactory for ExternalTimeBatchWindowFactory {
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
+        )))
+    }
+
+    fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
+        Box::new(Self {})
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionWindowFactory;
+
+impl WindowProcessorFactory for SessionWindowFactory {
+    fn name(&self) -> &'static str {
+        "session"
+    }
+    fn create(
+        &self,
+        handler: &WindowHandler,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Result<Arc<Mutex<dyn Processor>>, String> {
+        Ok(Arc::new(Mutex::new(
+            SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
         )))
     }
 
