@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-/// Thread local flag used to request a full snapshot.
+// Thread local flag used to request a full snapshot.
 thread_local! {
     static REQUEST_FULL: RefCell<bool> = RefCell::new(false);
 }

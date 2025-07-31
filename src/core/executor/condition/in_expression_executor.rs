@@ -4,7 +4,7 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_exec
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::table::{InMemoryCompiledCondition, Table};
+use crate::core::table::InMemoryCompiledCondition;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
 use std::sync::Arc; // For SiddhiAppContext in clone_executor
 

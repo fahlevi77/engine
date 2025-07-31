@@ -7,7 +7,7 @@ use crate::core::event::stream::StreamEvent; // Actual struct for conversion
 use crate::core::exception::SiddhiError;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::stream::input::input_handler::InputProcessor;
-use crate::core::stream::output::error_store::ErrorStore;
+// TODO: ErrorStore will be used for error handling in future implementation
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::metrics::*;
 use crate::query_api::definition::StreamDefinition;
@@ -303,7 +303,7 @@ impl StreamJunction {
         }
         let start = std::time::Instant::now();
         let boxed = Box::new(stream_event);
-        if let Err(e) = self.send_complex_event_chunk(Some(
+        if let Err(_e) = self.send_complex_event_chunk(Some(
             crate::core::event::complex_event::clone_event_chain(boxed.as_ref()),
         )) {
             // error handling already performed inside send_complex_event_chunk

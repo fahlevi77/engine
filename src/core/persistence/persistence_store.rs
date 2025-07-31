@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 /// Trait for simple persistence stores that save full snapshots.
 pub trait PersistenceStore: Send + Sync {

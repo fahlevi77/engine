@@ -8,9 +8,9 @@ use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex}; // Using VecDeque for efficient chunk building
+use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 
 use crate::core::util::state_holder::StateHolder;
@@ -121,7 +121,7 @@ impl OutputRateLimiter {
         if let Some(ref next) = self.next_processor {
             let mut head: Option<Box<dyn ComplexEvent>> = None;
             let mut tail = &mut head;
-            for mut ev in events {
+            for ev in events {
                 *tail = Some(ev);
                 if let Some(ref mut t) = *tail {
                     tail = t.mut_next_ref_option();
@@ -228,7 +228,7 @@ impl Drop for OutputRateLimiter {
         if let Some(ref next) = self.next_processor {
             let mut head: Option<Box<dyn ComplexEvent>> = None;
             let mut tail = &mut head;
-            for mut ev in events {
+            for ev in events {
                 *tail = Some(ev);
                 if let Some(ref mut t) = *tail {
                     tail = t.mut_next_ref_option();
@@ -277,7 +277,7 @@ impl SelectProcessor {
         order_by_comparator: Option<OrderByEventComparator>,
         batching_enabled: Option<bool>,
     ) -> Self {
-        let query_name = siddhi_query_context.name.clone();
+        let _query_name = siddhi_query_context.name.clone();
         let contains_aggregator_flag = output_attribute_processors
             .iter()
             .any(|oap| oap.is_aggregator());
@@ -445,7 +445,7 @@ impl Processor for SelectProcessor {
         // Re-link chain
         let mut head: Option<Box<dyn ComplexEvent>> = None;
         let mut tail_ref = &mut head;
-        for mut ev in final_events {
+        for ev in final_events {
             *tail_ref = Some(ev);
             if let Some(ref mut t) = *tail_ref {
                 tail_ref = t.mut_next_ref_option();

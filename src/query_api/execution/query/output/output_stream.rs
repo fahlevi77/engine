@@ -1,4 +1,4 @@
-use super::stream::{SetAttribute, UpdateSet};
+use super::stream::UpdateSet;
 use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement; // Using UpdateSet
 

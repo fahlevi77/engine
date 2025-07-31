@@ -6,7 +6,7 @@ use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 use crate::query_api::aggregation::within::Within;
 
 use super::incremental_executor::IncrementalExecutor;
-use crate::core::table::{InMemoryTable, Table};
+use crate::core::table::InMemoryTable;
 
 #[derive(Debug)]
 pub struct AggregationRuntime {

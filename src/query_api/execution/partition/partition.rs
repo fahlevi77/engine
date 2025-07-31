@@ -1,7 +1,6 @@
 use super::partition_type::PartitionType;
 use crate::query_api::annotation::Annotation; // Using actual Annotation
 use crate::query_api::execution::query::Query; // Actual Query
-use crate::query_api::siddhi_element::SiddhiElement;
 use std::collections::HashMap;
 
 // For builder methods:

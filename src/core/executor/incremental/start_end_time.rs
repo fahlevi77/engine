@@ -27,7 +27,7 @@ impl IncrementalStartTimeEndTimeFunctionExecutor {
 impl ExpressionExecutor for IncrementalStartTimeEndTimeFunctionExecutor {
     fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
         let s_val = self.start_executor.execute(event)?;
-        let mut start = match s_val {
+        let start = match s_val {
             AttributeValue::Long(v) => v,
             AttributeValue::String(ref st) => IncrementalUnixTimeFunctionExecutor::parse_timestamp(st)?,
             _ => return None,

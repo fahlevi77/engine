@@ -29,7 +29,7 @@ use crate::query_api::execution::query::output::output_stream::{
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::execution::query::input::{
-    InputStream, SingleInputStream, JoinType, StateInputStreamType, StateElement, State,
+    InputStream, SingleInputStream, JoinType, StateElement, State,
 };
 use crate::query_api::execution::query::input::store::{InputStore, Store, ConditionInputStore, AggregationInputStore};
 use crate::query_api::aggregation::Within;

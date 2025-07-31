@@ -4,7 +4,6 @@ use crate::core::event::{
     complex_event::ComplexEvent, state::state_event::StateEvent, stream::stream_event::StreamEvent,
     value::AttributeValue,
 };
-use crate::core::util::siddhi_constants::*;
 
 #[derive(Debug, Clone)]
 pub struct SelectiveComplexEventPopulater {

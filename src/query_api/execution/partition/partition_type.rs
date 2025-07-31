@@ -1,6 +1,5 @@
 use super::range_partition_type::RangePartitionType;
 use super::value_partition_type::ValuePartitionType;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PartitionTypeVariant {

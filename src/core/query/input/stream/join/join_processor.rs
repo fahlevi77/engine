@@ -1,4 +1,4 @@
-use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
+use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -71,7 +71,7 @@ impl JoinProcessor {
         event
     }
 
-    fn forward(&self, mut se: StreamEvent) {
+    fn forward(&self, se: StreamEvent) {
         if let Some(ref next) = self.next_processor {
             next.lock().unwrap().process(Some(Box::new(se)));
         }
@@ -86,7 +86,7 @@ impl JoinProcessor {
                     JoinSide::Left => {
                         let mut matched = false;
                         for r in &self.right_buffer {
-                            let mut joined = self.build_joined_event(Some(&se_clone), Some(r));
+                            let joined = self.build_joined_event(Some(&se_clone), Some(r));
                             if let Some(ref cond) = self.condition_executor {
                                 if let Some(AttributeValue::Bool(true)) =
                                     cond.execute(Some(&joined))
@@ -113,7 +113,7 @@ impl JoinProcessor {
                     JoinSide::Right => {
                         let mut matched = false;
                         for l in &self.left_buffer {
-                            let mut joined = self.build_joined_event(Some(l), Some(&se_clone));
+                            let joined = self.build_joined_event(Some(l), Some(&se_clone));
                             if let Some(ref cond) = self.condition_executor {
                                 if let Some(AttributeValue::Bool(true)) =
                                     cond.execute(Some(&joined))

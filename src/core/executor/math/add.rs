@@ -21,6 +21,7 @@ impl AddExpressionExecutor {
         let right_type = right.get_return_type();
 
         let return_type = match (left_type, right_type) {
+            // Handle error cases first
             (ApiAttributeType::STRING, _) | (_, ApiAttributeType::STRING) => {
                 return Err(format!("String concatenation with '+' is not supported. Use str:concat(). Found input types {:?} and {:?}.", left_type, right_type));
             }
@@ -30,12 +31,14 @@ impl AddExpressionExecutor {
             (ApiAttributeType::OBJECT, _) | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!("Arithmetic addition not supported for OBJECT types. Found input types {:?} and {:?}.", left_type, right_type));
             }
-            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => {
-                ApiAttributeType::DOUBLE
-            }
+            // Handle numeric types in order of precedence
+            (ApiAttributeType::DOUBLE, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::FLOAT, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
-            (ApiAttributeType::LONG, _) | (_, ApiAttributeType::LONG) => ApiAttributeType::LONG,
-            (ApiAttributeType::INT, _) | (_, ApiAttributeType::INT) => ApiAttributeType::INT,
+            (ApiAttributeType::LONG, ApiAttributeType::LONG) => ApiAttributeType::LONG,
+            (ApiAttributeType::LONG, ApiAttributeType::INT) | (ApiAttributeType::INT, ApiAttributeType::LONG) => ApiAttributeType::LONG,
+            (ApiAttributeType::INT, ApiAttributeType::INT) => ApiAttributeType::INT,
         };
         Ok(Self {
             left_executor: left,

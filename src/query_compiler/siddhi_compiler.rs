@@ -12,15 +12,12 @@ use crate::query_api::{
     },
     execution::{
         query::{
-            input::InputStream,
-            output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction},
             output::stream::UpdateSet,
-            selection::Selector,
             OnDemandQuery, Query, StoreQuery,
         },
         ExecutionElement, Partition,
     },
-    expression::{constant::Constant as ExpressionConstant, variable::Variable, Expression},
+    expression::{constant::Constant as ExpressionConstant, Expression},
     SiddhiApp,
 };
 use lalrpop_util::lalrpop_mod;

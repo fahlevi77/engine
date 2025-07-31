@@ -11,12 +11,12 @@ use crate::core::DataSource;
 use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added for data sources
                                                                        // Placeholder for actual persistence store trait/type
 use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder};
-use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
+use crate::core::persistence::PersistenceStore;
 use crate::core::extension;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use libloading::{Library, Symbol};
+use libloading::Library;
 // use rand::Rng; // For generating random app names if not specified
 
 /// Main entry point for managing Siddhi application runtimes.

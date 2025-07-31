@@ -20,7 +20,6 @@ use crate::core::executor::{
 };
 use crate::core::query::processor::ProcessingMode;
 use crate::core::query::selector::attribute::aggregator::*;
-use crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX;
 use crate::query_api::{
     definition::attribute::Type as ApiAttributeType, // Import Type enum
     expression::{
@@ -189,12 +188,12 @@ pub fn parse_expression<'a>(
             let stream_id_opt = api_var.stream_id.as_deref();
 
             let mut found: Option<([i32; 4], ApiAttributeType)> = None;
-            let mut found_id: Option<String> = None;
+            let mut _found_id: Option<String> = None;
 
             // Helper closure to search a meta and record result
             let mut check_meta = |id: &str, meta: &MetaStreamEvent| {
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
-                    if found.is_some() && found_id.as_deref() != Some(id) {
+                    if found.is_some() && _found_id.as_deref() != Some(id) {
                         return Err(ExpressionParseError::new(
                             format!("Attribute '{}' found in multiple sources", attribute_name),
                             &api_var.siddhi_element,
@@ -211,7 +210,7 @@ pub fn parse_expression<'a>(
                         ],
                         t.clone(),
                     ));
-                    found_id = Some(id.to_string());
+                    _found_id = Some(id.to_string());
                 }
                 Ok(())
             };
@@ -238,7 +237,7 @@ pub fn parse_expression<'a>(
                                     ],
                                     t.clone(),
                                 ));
-                                found_id = Some(id.to_string());
+                                _found_id = Some(id.to_string());
                                 break;
                             }
                         }

@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-use crate::core::stream::output::stream_callback::StreamCallback;
 use crate::core::stream::input::mapper::SourceMapper;
 use crate::core::stream::output::mapper::SinkMapper;
 use crate::core::store::Store;
@@ -10,7 +9,6 @@ use crate::core::function::script::Script;
 use crate::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
 };
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::query::processor::Processor;
 use crate::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor;
 use crate::query_api::execution::query::input::handler::WindowHandler;

@@ -34,7 +34,7 @@ impl Source for TimerSource {
             while running.load(Ordering::SeqCst) {
                 let event =
                     Event::new_with_data(0, vec![AttributeValue::String("tick".to_string())]);
-                if let Ok(mut h) = handler.lock() {
+                if let Ok(h) = handler.lock() {
                     let _ = h.send_single_event(event);
                 }
                 thread::sleep(Duration::from_millis(interval));

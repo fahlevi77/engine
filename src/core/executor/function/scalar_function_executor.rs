@@ -1,8 +1,6 @@
 // siddhi_rust/src/core/executor/function/scalar_function_executor.rs
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use std::any::Any;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Trait for implementing user defined scalar functions (UDFs).

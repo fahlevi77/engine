@@ -3,11 +3,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex}; // Added Mutex // If QueryParser needs table_map etc. from builder
 
-use crate::core::aggregation::{AggregationInputProcessor, AggregationRuntime};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
-use crate::core::stream::stream_junction::{OnErrorAction, StreamJunction}; // For creating junctions
+use crate::core::stream::stream_junction::StreamJunction; // For creating junctions
 use crate::core::window::WindowRuntime;
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 use crate::query_api::{
@@ -21,7 +20,7 @@ use crate::core::partition::parser::PartitionParser;
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
 use super::query_parser::QueryParser; // Use the real QueryParser implementation
 use super::trigger_parser::TriggerParser;
-use crate::core::util::SiddhiConstants as CoreSiddhiConstants; // Core constants, if any, vs query_api constants
+ // Core constants, if any, vs query_api constants
 
 pub struct SiddhiAppParser;
 

@@ -40,7 +40,7 @@ impl FilterProcessor {
 }
 
 impl Processor for FilterProcessor {
-    fn process(&self, mut complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
+    fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         // This simplified version processes events one by one from the input chunk
         // and builds a new chunk for the filtered events.
         // More advanced/performant versions might try to modify the chunk in-place
@@ -76,7 +76,7 @@ impl Processor for FilterProcessor {
         // Reconstruct linked list from Vec of passed events
         let mut filtered_chunk_head: Option<Box<dyn ComplexEvent>> = None;
         let mut tail_next_ref: &mut Option<Box<dyn ComplexEvent>> = &mut filtered_chunk_head;
-        for mut event_box in filtered_events {
+        for event_box in filtered_events {
             *tail_next_ref = Some(event_box);
             if let Some(ref mut current_tail) = *tail_next_ref {
                 tail_next_ref = current_tail.mut_next_ref_option();

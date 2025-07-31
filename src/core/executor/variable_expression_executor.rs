@@ -50,10 +50,6 @@ impl VariableExpressionExecutor {
     /// two element array (attribute type and index) for simple stream queries or
     /// a full four element array for state events and table lookups.
     pub fn set_position(&mut self, position: &[i32]) {
-        use crate::core::util::siddhi_constants::{
-            STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
-            STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
-        };
         if position.len() == 2 {
             self.position[STREAM_ATTRIBUTE_TYPE_INDEX] = position[0];
             self.position[STREAM_ATTRIBUTE_INDEX_IN_TYPE] = position[1];
@@ -139,8 +135,7 @@ mod tests {
     use crate::core::event::stream::stream_event::StreamEvent; // Using StreamEvent as a concrete ComplexEvent
     use crate::core::event::value::AttributeValue;
     use crate::core::util::siddhi_constants::{
-        BEFORE_WINDOW_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
-        STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
+        BEFORE_WINDOW_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
     };
     // ApiAttributeType is imported in the outer scope
     use crate::core::config::siddhi_app_context::SiddhiAppContext;

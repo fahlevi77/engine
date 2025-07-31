@@ -69,7 +69,7 @@ impl ExpressionExecutor for ParseDateFunctionExecutor {
         } else {
             NaiveDateTime::parse_from_str(&s, &self.pattern).ok()?
         };
-        let ts = chrono::DateTime::<Utc>::from_utc(ndt, Utc).timestamp_millis();
+        let ts = ndt.and_utc().timestamp_millis();
         Some(AttributeValue::Long(ts))
     }
 

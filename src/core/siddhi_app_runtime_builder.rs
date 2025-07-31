@@ -5,7 +5,7 @@ use crate::core::partition::PartitionRuntime;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
 use crate::core::stream::stream_junction::StreamJunction;
-use crate::core::window::WindowRuntime;
+// use crate::core::window::WindowRuntime; // TODO: Will be used when window runtime is implemented
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg // Added this import
 

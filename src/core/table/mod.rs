@@ -116,7 +116,7 @@ pub trait Table: Debug + Send + Sync {
     fn find_rows_for_join(
         &self,
         stream_event: &StreamEvent,
-        compiled_condition: Option<&dyn CompiledCondition>,
+        _compiled_condition: Option<&dyn CompiledCondition>,
         condition_executor: Option<&dyn ExpressionExecutor>,
     ) -> Vec<Vec<AttributeValue>> {
         let rows = self.all_rows();

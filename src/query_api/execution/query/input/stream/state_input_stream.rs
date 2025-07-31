@@ -1,7 +1,6 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.stream.StateInputStream
 use crate::query_api::execution::query::input::state::{
-    AbsentStreamStateElement, CountStateElement, EveryStateElement, LogicalStateElement,
-    NextStateElement, StateElement, StreamStateElement,
+    StateElement, StreamStateElement,
 };
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
 use crate::query_api::siddhi_element::SiddhiElement;

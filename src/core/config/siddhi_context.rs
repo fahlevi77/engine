@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard}; // For shared, thread-safe components, Added RwLockReadGuard
 
 use super::statistics_configuration::StatisticsConfiguration;
-use crate::core::util::executor_service::{ExecutorService, ExecutorServiceRegistry};
+use crate::core::util::executor_service::ExecutorService;
 
 // --- Placeholders for complex types/trait objects ---
 // These would be defined in their respective modules (e.g., util::persistence, extension, etc.)
@@ -23,7 +23,7 @@ use crate::core::stream::output::error_store::ErrorStore;
 
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
-use crate::query_api::siddhi_app::SiddhiApp;
+// use crate::query_api::siddhi_app::SiddhiApp; // TODO: Will be used when implementing app management
 // pub trait ConfigManager {} // Example
 // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
 pub type ConfigManagerPlaceholder = String; // Simplified

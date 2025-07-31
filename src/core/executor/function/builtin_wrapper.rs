@@ -66,7 +66,7 @@ impl ScalarFunctionExecutor for BuiltinScalarFunction {
         args: &Vec<Box<dyn ExpressionExecutor>>,
         ctx: &Arc<SiddhiAppContext>,
     ) -> Result<(), String> {
-        let mut cloned: Vec<Box<dyn ExpressionExecutor>> =
+        let cloned: Vec<Box<dyn ExpressionExecutor>> =
             args.iter().map(|e| e.clone_executor(ctx)).collect();
         let exec = (self.builder)(cloned)?;
         self.executor = Some(exec);

@@ -6,7 +6,7 @@ use super::input_entry_valve::InputEntryValve;
 use super::input_handler::{InputHandler, InputProcessor};
 use super::table_input_handler::TableInputHandler;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::stream::stream_junction::{Publisher, StreamJunction};
+use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::util::thread_barrier::ThreadBarrier;
 
 #[derive(Debug)]

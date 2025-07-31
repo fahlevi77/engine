@@ -16,7 +16,7 @@ impl ScheduledExecutorService {
     where
         F: FnOnce() + Send + 'static,
     {
-        let exec = Arc::clone(&self.executor);
+        let _exec = Arc::clone(&self.executor);
         self.executor.execute(move || {
             std::thread::sleep(Duration::from_millis(delay_ms));
             task();

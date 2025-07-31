@@ -1,9 +1,8 @@
 // siddhi_rust/src/core/query/output/callback_processor.rs
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
-use crate::core::event::complex_event::{ComplexEvent, ComplexEventType}; // Using ComplexEventType from complex_event module
+use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::event::Event; // For converting back
-use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use std::sync::{Arc, Mutex};

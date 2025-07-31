@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Condvar, Mutex};
 
 /// Coordinates event flow between threads similar to Siddhi's ThreadBarrier.
 #[derive(Debug)]

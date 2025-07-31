@@ -6,7 +6,7 @@ use super::join_input_stream::{
     EventTrigger as JoinEventTrigger, JoinInputStream, Type as JoinType,
 };
 use super::single_input_stream::SingleInputStream;
-use super::state_input_stream::{StateInputStream, Type as StateInputStreamType};
+use super::state_input_stream::StateInputStream;
 // BasicSingleInputStream and AnonymousInputStream were removed and functionality moved into SingleInputStream.
 // Factory methods will now directly use SingleInputStream::new_basic... or SingleInputStream::new_anonymous...
 

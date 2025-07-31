@@ -4,9 +4,6 @@ use crate::core::event::state::state_event::StateEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::util::siddhi_constants::{
-    STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX, STREAM_EVENT_CHAIN_INDEX,
-};
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 use std::sync::Arc;
 

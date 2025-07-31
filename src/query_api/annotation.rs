@@ -1,6 +1,5 @@
 // Corresponds to io.siddhi.query.api.annotation.Annotation & Element.java
 use crate::query_api::siddhi_element::SiddhiElement; // The struct to be composed
-use std::collections::HashMap; // For nested annotations if represented as a map
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Element {

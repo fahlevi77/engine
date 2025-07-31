@@ -2,9 +2,8 @@ use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::query_api::aggregation::time_period::Duration; // maybe not needed
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use chrono::{DateTime, NaiveDateTime};
 use std::sync::Arc;
 
 #[derive(Debug)]

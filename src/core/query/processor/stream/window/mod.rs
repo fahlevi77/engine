@@ -10,7 +10,7 @@ use crate::core::util::scheduler::{Schedulable, Scheduler};
 use crate::core::util::state_holder::StateHolder;
 use crate::core::util::{event_from_bytes, event_to_bytes, from_bytes, to_bytes};
 use crate::query_api::execution::query::input::handler::WindowHandler;
-use crate::query_api::expression::{self, constant::ConstantValueWithFloat, Expression};
+use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
@@ -544,11 +544,10 @@ impl Processor for LengthBatchWindowProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         if let Some(chunk) = complex_event_chunk {
             let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
-            let mut last_ts = 0i64;
             while let Some(ev) = current_opt {
                 if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                     self.buffer.lock().unwrap().push(se.clone_without_next());
-                    last_ts = se.timestamp;
+                    let last_ts = se.timestamp;
                     if self.buffer.lock().unwrap().len() >= self.length {
                         self.flush(last_ts);
                     }
