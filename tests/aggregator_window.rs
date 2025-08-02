@@ -77,10 +77,14 @@ fn test_sum_aggregator() {
 #[test]
 fn test_window_variable_resolution() {
     let mut ctx = make_ctx("win_var");
-    let win_def = Arc::new(StreamDefinition::new("Win".to_string()).attribute("v".to_string(), AttrType::INT));
+    let win_def = Arc::new(
+        StreamDefinition::new("Win".to_string()).attribute("v".to_string(), AttrType::INT),
+    );
     let mut win_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&win_def));
-    win_meta.event_type = siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEventType::WINDOW;
-    ctx.window_meta_map.insert("Win".to_string(), Arc::new(win_meta));
+    win_meta.event_type =
+        siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEventType::WINDOW;
+    ctx.window_meta_map
+        .insert("Win".to_string(), Arc::new(win_meta));
 
     let var = Variable::new("v".to_string()).of_stream("Win".to_string());
     let expr = Expression::Variable(var);
@@ -91,10 +95,14 @@ fn test_window_variable_resolution() {
 #[test]
 fn test_aggregation_variable_resolution() {
     let mut ctx = make_ctx("agg_var");
-    let agg_def = Arc::new(StreamDefinition::new("Agg".to_string()).attribute("total".to_string(), AttrType::LONG));
+    let agg_def = Arc::new(
+        StreamDefinition::new("Agg".to_string()).attribute("total".to_string(), AttrType::LONG),
+    );
     let mut agg_meta = MetaStreamEvent::new_for_single_input(Arc::clone(&agg_def));
-    agg_meta.event_type = siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEventType::AGGREGATE;
-    ctx.aggregation_meta_map.insert("Agg".to_string(), Arc::new(agg_meta));
+    agg_meta.event_type =
+        siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEventType::AGGREGATE;
+    ctx.aggregation_meta_map
+        .insert("Agg".to_string(), Arc::new(agg_meta));
 
     let var = Variable::new("total".to_string()).of_stream("Agg".to_string());
     let expr = Expression::Variable(var);

@@ -1,5 +1,7 @@
 use crate::core::config::siddhi_context::SiddhiContext;
+use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::extension::TableFactory;
 use crate::core::table::Table;
 use crate::core::table::{
@@ -8,8 +10,6 @@ use crate::core::table::{
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::expression::Expression;
-use crate::core::event::stream::stream_event::StreamEvent;
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
@@ -158,19 +158,13 @@ impl Table for CacheTable {
         let stream_attr_count = stream_event.before_window_data.len();
         for row in rows.iter() {
             if let Some(exec) = condition_executor {
-                let mut joined = StreamEvent::new(
-                    stream_event.timestamp,
-                    stream_attr_count + row.len(),
-                    0,
-                    0,
-                );
+                let mut joined =
+                    StreamEvent::new(stream_event.timestamp, stream_attr_count + row.len(), 0, 0);
                 for i in 0..stream_attr_count {
-                    joined.before_window_data[i] =
-                        stream_event.before_window_data[i].clone();
+                    joined.before_window_data[i] = stream_event.before_window_data[i].clone();
                 }
                 for j in 0..row.len() {
-                    joined.before_window_data[stream_attr_count + j] =
-                        row[j].clone();
+                    joined.before_window_data[stream_attr_count + j] = row[j].clone();
                 }
                 if let Some(AttributeValue::Bool(true)) = exec.execute(Some(&joined)) {
                     matched.push(row.clone());

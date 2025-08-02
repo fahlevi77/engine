@@ -4,7 +4,9 @@
 #[cfg(test)]
 mod type_system_tests {
     use crate::core::event::value::AttributeValue;
-    use crate::core::util::type_system::{TypeConverter, get_arithmetic_result_type, TypePrecedence};
+    use crate::core::util::type_system::{
+        get_arithmetic_result_type, TypeConverter, TypePrecedence,
+    };
     use crate::query_api::definition::attribute::Type as AttributeType;
 
     #[test]
@@ -107,25 +109,40 @@ mod type_system_tests {
 
         // String to Boolean (case insensitive)
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("true".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("true".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(true))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("TRUE".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("TRUE".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(true))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("false".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("false".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(false))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("FALSE".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("FALSE".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(false))
         );
 
         // Invalid string to boolean
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("maybe".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("maybe".to_string()),
+                AttributeType::BOOL
+            ),
             None
         );
 
@@ -207,25 +224,40 @@ mod type_system_tests {
             Some(AttributeValue::Int(42))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("42".to_string()), AttributeType::LONG),
+            TypeConverter::convert(
+                AttributeValue::String("42".to_string()),
+                AttributeType::LONG
+            ),
             Some(AttributeValue::Long(42))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("42.5".to_string()), AttributeType::FLOAT),
+            TypeConverter::convert(
+                AttributeValue::String("42.5".to_string()),
+                AttributeType::FLOAT
+            ),
             Some(AttributeValue::Float(42.5))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("42.5".to_string()), AttributeType::DOUBLE),
+            TypeConverter::convert(
+                AttributeValue::String("42.5".to_string()),
+                AttributeType::DOUBLE
+            ),
             Some(AttributeValue::Double(42.5))
         );
 
         // String to numeric (invalid - return None like Java)
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("not_a_number".to_string()), AttributeType::INT),
+            TypeConverter::convert(
+                AttributeValue::String("not_a_number".to_string()),
+                AttributeType::INT
+            ),
             None
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("abc".to_string()), AttributeType::FLOAT),
+            TypeConverter::convert(
+                AttributeValue::String("abc".to_string()),
+                AttributeType::FLOAT
+            ),
             None
         );
 
@@ -270,12 +302,12 @@ mod type_system_tests {
     #[test]
     fn test_object_type_handling() {
         let obj = AttributeValue::Object(None);
-        
+
         // Object to Object (identity) - Note: Objects don't have proper equality, so we just check the type
         let converted = TypeConverter::convert(obj.clone(), AttributeType::OBJECT).unwrap();
         assert!(matches!(converted, AttributeValue::Object(_)));
 
-        // Object to String 
+        // Object to String
         assert_eq!(
             TypeConverter::convert(obj.clone(), AttributeType::STRING),
             Some(AttributeValue::String("<object>".to_string()))
@@ -318,15 +350,15 @@ mod type_system_tests {
         // Non-numeric types - strings should NOT be converted by get_numeric_value
         // (that's for to_number() method on AttributeValue)
         assert_eq!(
-            TypeConverter::get_numeric_value(&AttributeValue::String("42".to_string())), 
-            None  // get_numeric_value only extracts from already-numeric types
+            TypeConverter::get_numeric_value(&AttributeValue::String("42".to_string())),
+            None // get_numeric_value only extracts from already-numeric types
         );
         assert_eq!(
-            TypeConverter::get_numeric_value(&AttributeValue::Bool(true)), 
-            None  // booleans are not considered numeric for arithmetic
+            TypeConverter::get_numeric_value(&AttributeValue::Bool(true)),
+            None // booleans are not considered numeric for arithmetic
         );
         assert_eq!(
-            TypeConverter::get_numeric_value(&AttributeValue::Null), 
+            TypeConverter::get_numeric_value(&AttributeValue::Null),
             None
         );
     }
@@ -337,8 +369,10 @@ mod type_system_tests {
         assert!(TypeConverter::is_numeric(&AttributeValue::Long(42)));
         assert!(TypeConverter::is_numeric(&AttributeValue::Float(42.5)));
         assert!(TypeConverter::is_numeric(&AttributeValue::Double(42.5)));
-        
-        assert!(!TypeConverter::is_numeric(&AttributeValue::String("42".to_string())));
+
+        assert!(!TypeConverter::is_numeric(&AttributeValue::String(
+            "42".to_string()
+        )));
         assert!(!TypeConverter::is_numeric(&AttributeValue::Bool(true)));
         assert!(!TypeConverter::is_numeric(&AttributeValue::Null));
         assert!(!TypeConverter::is_numeric(&AttributeValue::Object(None)));
@@ -367,14 +401,26 @@ mod type_system_tests {
 
         // Test to_number()
         assert_eq!(int_val.to_number(), Some(42.0));
-        assert_eq!(AttributeValue::String("42.5".to_string()).to_number(), Some(42.5));
-        assert_eq!(AttributeValue::String("not_a_number".to_string()).to_number(), None);
+        assert_eq!(
+            AttributeValue::String("42.5".to_string()).to_number(),
+            Some(42.5)
+        );
+        assert_eq!(
+            AttributeValue::String("not_a_number".to_string()).to_number(),
+            None
+        );
 
         // Test to_boolean()
         assert_eq!(AttributeValue::Int(1).to_boolean(), Some(true));
         assert_eq!(AttributeValue::Int(0).to_boolean(), Some(false));
-        assert_eq!(AttributeValue::String("true".to_string()).to_boolean(), Some(true));
-        assert_eq!(AttributeValue::String("maybe".to_string()).to_boolean(), None);
+        assert_eq!(
+            AttributeValue::String("true".to_string()).to_boolean(),
+            Some(true)
+        );
+        assert_eq!(
+            AttributeValue::String("maybe".to_string()).to_boolean(),
+            None
+        );
 
         // Test to_string_value()
         assert_eq!(int_val.to_string_value(), "42");
@@ -392,14 +438,14 @@ mod type_system_tests {
         assert!(int_val.is_convertible_to(AttributeType::DOUBLE));
         assert!(int_val.is_convertible_to(AttributeType::STRING));
         assert!(string_val.is_convertible_to(AttributeType::INT));
-        
+
         // Invalid conversions
         assert!(!invalid_string.is_convertible_to(AttributeType::INT));
-        
+
         // Null is convertible to any type
         assert!(AttributeValue::Null.is_convertible_to(AttributeType::INT));
         assert!(AttributeValue::Null.is_convertible_to(AttributeType::STRING));
-        
+
         // Object type accepts any value
         assert!(int_val.is_convertible_to(AttributeType::OBJECT));
         assert!(string_val.is_convertible_to(AttributeType::OBJECT));
@@ -408,28 +454,36 @@ mod type_system_tests {
     #[test]
     fn test_java_compatibility_edge_cases() {
         // Test specific Java behavior edge cases
-        
+
         // Boolean parsing in Java is case-sensitive and only "true" (case-insensitive) returns true
         // Actually, Java's Boolean.parseBoolean() is case-insensitive for "true" but anything else is false
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("True".to_string()), AttributeType::BOOL),
-            Some(AttributeValue::Bool(true))  // Our implementation should be case-insensitive for "true"
+            TypeConverter::convert(
+                AttributeValue::String("True".to_string()),
+                AttributeType::BOOL
+            ),
+            Some(AttributeValue::Bool(true)) // Our implementation should be case-insensitive for "true"
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("False".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("False".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(false))
         );
-        
+
         // Numeric precision edge cases
         let max_int = AttributeValue::Int(i32::MAX);
         assert_eq!(
             TypeConverter::convert(max_int, AttributeType::LONG),
             Some(AttributeValue::Long(i32::MAX as i64))
         );
-        
+
         // Float precision when converting to double
         let float_val = AttributeValue::Float(0.1);
-        if let Some(AttributeValue::Double(d)) = TypeConverter::convert(float_val, AttributeType::DOUBLE) {
+        if let Some(AttributeValue::Double(d)) =
+            TypeConverter::convert(float_val, AttributeType::DOUBLE)
+        {
             // Due to floating point precision, 0.1f as f64 is not exactly 0.1
             assert!((d - 0.1).abs() < 0.01); // Allow some precision loss
         } else {

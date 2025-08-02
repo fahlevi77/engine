@@ -1,13 +1,13 @@
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::core::config::{
     siddhi_app_context::{MetricsLevelPlaceholder, SiddhiAppContext},
     siddhi_context::SiddhiContext,
 };
 use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::stream::output::InMemoryErrorStore;
 use siddhi_rust::core::query::processor::Processor;
+use siddhi_rust::core::stream::output::InMemoryErrorStore;
 use siddhi_rust::core::stream::stream_junction::{OnErrorAction, StreamJunction};
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
 use std::sync::{Arc, Mutex};
 

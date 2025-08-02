@@ -8,7 +8,8 @@ pub mod window; // Window processors like length, time
 pub use self::filter::FilterProcessor;
 pub use self::join::{JoinProcessor, JoinProcessorSide, JoinSide};
 pub use self::window::{
-    LengthBatchWindowProcessor, LengthWindowProcessor, TimeBatchWindowProcessor, TimeWindowProcessor,
+    LengthBatchWindowProcessor, LengthWindowProcessor, TimeBatchWindowProcessor,
+    TimeWindowProcessor,
 };
 // Other StreamProcessor types would be re-exported here.
 

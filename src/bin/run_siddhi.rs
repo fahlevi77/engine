@@ -54,11 +54,7 @@ fn main() {
     let content = match fs::read_to_string(&cli.siddhi_file) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!(
-                "Failed to read {}: {}",
-                cli.siddhi_file.display(),
-                e
-            );
+            eprintln!("Failed to read {}: {}", cli.siddhi_file.display(), e);
             std::process::exit(1);
         }
     };
@@ -74,10 +70,7 @@ fn main() {
     }
     for lib in cli.extension {
         if let Some(p) = lib.to_str() {
-            let name = lib
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("ext");
+            let name = lib.file_stem().and_then(|s| s.to_str()).unwrap_or("ext");
             if let Err(e) = manager.set_extension(name, p.to_string()) {
                 eprintln!("Failed to load extension {}: {}", p, e);
             }

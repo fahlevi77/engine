@@ -2,12 +2,13 @@
 // Rust implementation of Siddhi SortWindowProcessor
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+    siddhi_query_context::SiddhiQueryContext,
 };
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent;
-use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::query::processor::stream::window::WindowProcessor;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::query::selector::order_by_event_comparator::OrderByEventComparator;
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression};
@@ -50,7 +51,7 @@ impl SortWindowProcessor {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Self, String> {
         let params = handler.get_parameters();
-        
+
         if params.is_empty() {
             return Err("Sort window requires at least a length parameter".to_string());
         }
@@ -75,19 +76,15 @@ impl SortWindowProcessor {
         let ascending = vec![true]; // Default ascending
         let comparator = OrderByEventComparator::new(executors, ascending);
 
-        Ok(Self::new(
-            length_to_keep,
-            comparator,
-            app_ctx,
-            query_ctx,
-        ))
+        Ok(Self::new(length_to_keep, comparator, app_ctx, query_ctx))
     }
 
     /// Process an incoming event
     fn process_event(&self, event: Arc<StreamEvent>) -> Result<Vec<Box<dyn ComplexEvent>>, String> {
-        let mut sorted_buffer = self.sorted_window.lock().map_err(|_| {
-            "Failed to acquire sort window lock".to_string()
-        })?;
+        let mut sorted_buffer = self
+            .sorted_window
+            .lock()
+            .map_err(|_| "Failed to acquire sort window lock".to_string())?;
 
         // Add the new event to the buffer
         sorted_buffer.push(Arc::clone(&event));
@@ -123,7 +120,7 @@ impl Processor for SortWindowProcessor {
             if let Some(chunk) = complex_event_chunk {
                 let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
                 let mut all_events: Vec<Box<dyn ComplexEvent>> = Vec::new();
-                
+
                 while let Some(ev) = current_opt {
                     if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                         match self.process_event(Arc::new(se.clone_without_next())) {
@@ -201,13 +198,26 @@ mod tests {
         let executors = Vec::new();
         let ascending = vec![true];
         let comparator = OrderByEventComparator::new(executors, ascending);
-        
+
         // This test mainly verifies compilation
+        let siddhi_context = Arc::new(SiddhiContext::new());
+        let app = Arc::new(crate::query_api::siddhi_app::SiddhiApp::new(
+            "TestApp".to_string(),
+        ));
+        let app_ctx = Arc::new(SiddhiAppContext::new(
+            siddhi_context,
+            "TestApp".to_string(),
+            app,
+            String::new(),
+        ));
+        let query_ctx = Arc::new(SiddhiQueryContext::new(
+            app_ctx.clone(),
+            "test".to_string(),
+            None,
+        ));
+
         let _processor = SortWindowProcessor {
-            meta: CommonProcessorMeta::new(
-                Arc::new(SiddhiAppContext::new()),
-                Arc::new(SiddhiQueryContext::new("test".to_string())),
-            ),
+            meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length_to_keep: 3,
             sorted_window: Arc::new(Mutex::new(Vec::new())),
             comparator,

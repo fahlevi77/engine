@@ -532,7 +532,14 @@ fn test_table_in_expression_query() {
     let mut table_defs = HashMap::new();
     table_defs.insert("T".to_string(), t_def);
 
-    let res = QueryParser::parse_query(&query, &app_ctx, &junctions, &table_defs, &HashMap::new(), None);
+    let res = QueryParser::parse_query(
+        &query,
+        &app_ctx,
+        &junctions,
+        &table_defs,
+        &HashMap::new(),
+        None,
+    );
     assert!(res.is_ok());
 }
 #[test]
@@ -669,7 +676,10 @@ fn test_app_runner_join_via_app_runner() {
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]
+    );
 }
 
 #[test]
@@ -678,8 +688,8 @@ fn test_app_runner_table_in_lookup() {
     use siddhi_rust::core::event::value::AttributeValue;
     use siddhi_rust::query_api::definition::{StreamDefinition, TableDefinition};
     use siddhi_rust::query_api::execution::execution_element::ExecutionElement;
-    use siddhi_rust::query_api::execution::query::input::stream::SingleInputStream;
     use siddhi_rust::query_api::execution::query::input::stream::InputStream as ApiInputStream;
+    use siddhi_rust::query_api::execution::query::input::stream::SingleInputStream;
     use siddhi_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
     };
@@ -688,11 +698,13 @@ fn test_app_runner_table_in_lookup() {
 
     let s_def = StreamDefinition::new("S".to_string()).attribute("val".to_string(), AttrType::INT);
     let t_def = TableDefinition::new("T".to_string()).attribute("val".to_string(), AttrType::INT);
-    let out_def = StreamDefinition::new("Out".to_string()).attribute("val".to_string(), AttrType::INT);
+    let out_def =
+        StreamDefinition::new("Out".to_string()).attribute("val".to_string(), AttrType::INT);
 
     let insert_q = {
         let si = SingleInputStream::new_basic("S".to_string(), false, false, None, Vec::new());
-        let sel = Selector::new().select_variable(Variable::new("val".to_string()).of_stream("S".to_string()));
+        let sel = Selector::new()
+            .select_variable(Variable::new("val".to_string()).of_stream("S".to_string()));
         let out = OutputStream::new(
             OutputStreamAction::InsertInto(InsertIntoStreamAction {
                 target_id: "T".to_string(),
@@ -701,13 +713,20 @@ fn test_app_runner_table_in_lookup() {
             }),
             None,
         );
-        Query::query().from(ApiInputStream::Single(si)).select(sel).out_stream(out)
+        Query::query()
+            .from(ApiInputStream::Single(si))
+            .select(sel)
+            .out_stream(out)
     };
 
     let filter_q = {
         let si = SingleInputStream::new_basic("S".to_string(), false, false, None, Vec::new())
-            .filter(Expression::in_op(Expression::Variable(Variable::new("val".to_string()).of_stream("S".to_string())), "T".to_string()));
-        let sel = Selector::new().select_variable(Variable::new("val".to_string()).of_stream("S".to_string()));
+            .filter(Expression::in_op(
+                Expression::Variable(Variable::new("val".to_string()).of_stream("S".to_string())),
+                "T".to_string(),
+            ));
+        let sel = Selector::new()
+            .select_variable(Variable::new("val".to_string()).of_stream("S".to_string()));
         let out = OutputStream::new(
             OutputStreamAction::InsertInto(InsertIntoStreamAction {
                 target_id: "Out".to_string(),
@@ -716,7 +735,10 @@ fn test_app_runner_table_in_lookup() {
             }),
             None,
         );
-        Query::query().from(ApiInputStream::Single(si)).select(sel).out_stream(out)
+        Query::query()
+            .from(ApiInputStream::Single(si))
+            .select(sel)
+            .out_stream(out)
     };
 
     let mut app = SiddhiApp::new("app".to_string());
@@ -730,7 +752,10 @@ fn test_app_runner_table_in_lookup() {
     runner.send("S", vec![AttributeValue::Int(1)]);
     runner.send("S", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1)], vec![AttributeValue::Int(1)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1)], vec![AttributeValue::Int(1)]]
+    );
 }
 
 #[test]
@@ -753,7 +778,10 @@ fn test_app_runner_custom_udf() {
     }
 
     impl ExpressionExecutor for PlusOneFn {
-        fn execute(&self, event: Option<&dyn siddhi_rust::core::event::complex_event::ComplexEvent>) -> Option<AttributeValue> {
+        fn execute(
+            &self,
+            event: Option<&dyn siddhi_rust::core::event::complex_event::ComplexEvent>,
+        ) -> Option<AttributeValue> {
             let v = self.arg.as_ref()?.execute(event)?;
             match v {
                 AttributeValue::Int(i) => Some(AttributeValue::Int(i + 1)),
@@ -763,13 +791,20 @@ fn test_app_runner_custom_udf() {
         fn get_return_type(&self) -> siddhi_rust::query_api::definition::attribute::Type {
             siddhi_rust::query_api::definition::attribute::Type::INT
         }
-        fn clone_executor(&self, _ctx: &std::sync::Arc<siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        fn clone_executor(
+            &self,
+            _ctx: &std::sync::Arc<siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext>,
+        ) -> Box<dyn ExpressionExecutor> {
             Box::new(self.clone())
         }
     }
 
     impl ScalarFunctionExecutor for PlusOneFn {
-        fn init(&mut self, args: &Vec<Box<dyn ExpressionExecutor>>, ctx: &std::sync::Arc<siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext>) -> Result<(), String> {
+        fn init(
+            &mut self,
+            args: &Vec<Box<dyn ExpressionExecutor>>,
+            ctx: &std::sync::Arc<siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext>,
+        ) -> Result<(), String> {
             if args.len() != 1 {
                 return Err("plusOne expects one argument".to_string());
             }
@@ -777,8 +812,12 @@ fn test_app_runner_custom_udf() {
             Ok(())
         }
         fn destroy(&mut self) {}
-        fn get_name(&self) -> String { "plusOne".to_string() }
-        fn clone_scalar_function(&self) -> Box<dyn ScalarFunctionExecutor> { Box::new(self.clone()) }
+        fn get_name(&self) -> String {
+            "plusOne".to_string()
+        }
+        fn clone_scalar_function(&self) -> Box<dyn ScalarFunctionExecutor> {
+            Box::new(self.clone())
+        }
     }
 
     let mut manager = SiddhiManager::new();
@@ -809,7 +848,10 @@ fn app_runner_join_variable_resolution() {
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1), AttributeValue::Int(1)]]
+    );
 }
 
 #[test]
@@ -826,5 +868,8 @@ fn app_runner_pattern_variable_resolution() {
     runner.send("A", vec![AttributeValue::Int(1)]);
     runner.send("B", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1), AttributeValue::Int(2)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1), AttributeValue::Int(2)]]
+    );
 }

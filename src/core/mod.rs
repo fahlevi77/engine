@@ -8,17 +8,17 @@ pub mod siddhi_manager; // For SiddhiManager.java // Declare the module
 // Sub-packages, corresponding to Java packages
 pub mod aggregation;
 pub mod config;
+pub mod data_source;
 pub mod debugger;
 pub mod event;
 pub mod exception; // For custom core-specific error types
 pub mod executor;
 pub mod extension;
 pub mod function; // For UDFs like Script.java
-pub mod store;
 pub mod partition;
-pub mod data_source;
 pub mod persistence; // Added
 pub mod query;
+pub mod store;
 pub mod stream;
 pub mod table;
 pub mod trigger;

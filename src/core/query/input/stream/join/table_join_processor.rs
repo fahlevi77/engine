@@ -85,13 +85,11 @@ impl Processor for TableJoinProcessor {
         while let Some(mut ce) = chunk {
             chunk = ce.set_next(None);
             if let Some(se) = ce.as_any().downcast_ref::<StreamEvent>() {
-                let rows = self
-                    .table
-                    .find_rows_for_join(
-                        se,
-                        self.compiled_condition.as_deref(),
-                        self.condition_executor.as_deref(),
-                    );
+                let rows = self.table.find_rows_for_join(
+                    se,
+                    self.compiled_condition.as_deref(),
+                    self.condition_executor.as_deref(),
+                );
                 let mut matched = false;
                 for row in &rows {
                     matched = true;

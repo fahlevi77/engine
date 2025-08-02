@@ -2,7 +2,7 @@
 // Extends SingleInputStream (conceptually) and implements InputStore in Java.
 
 use super::input_store::InputStoreTrait;
- // For new_with_id constructor
+// For new_with_id constructor
 use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
 use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement;

@@ -80,7 +80,7 @@ impl SiddhiAppRuntime {
                         }
                         _ => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
                     },
-                    "buffer.size" | "buffersize" => {
+                    "buffer_size" | "buffersize" => {
                         if let Ok(sz) = el.value.parse::<i32>() {
                             buffer_size = sz;
                         }

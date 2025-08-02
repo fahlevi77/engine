@@ -58,11 +58,7 @@ impl SequenceProcessor {
             next_processor: None,
             first_cloner: None,
             second_cloner: None,
-            event_factory: StreamEventFactory::new(
-                first_attr_count + second_attr_count,
-                0,
-                0,
-            ),
+            event_factory: StreamEventFactory::new(first_attr_count + second_attr_count, 0, 0),
             first_min,
             first_max,
             second_min,

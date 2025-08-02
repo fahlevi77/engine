@@ -2,7 +2,7 @@
 // Corresponds to io.siddhi.core.query.QueryRuntimeImpl
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::query::processor::Processor; // The Processor trait
-// StreamJunction is referenced in comments but not used in implementation
+                                              // StreamJunction is referenced in comments but not used in implementation
 use crate::query_api::execution::query::Query as ApiQuery;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -132,4 +132,3 @@ impl QueryRuntimeTrait for QueryRuntime {
         self.api_query.as_ref().map(Arc::clone)
     }
 }
-

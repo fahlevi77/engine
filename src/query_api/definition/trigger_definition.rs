@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.TriggerDefinition
+use crate::query_api::annotation::Annotation;
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
 use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::annotation::Annotation;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct TriggerDefinition {

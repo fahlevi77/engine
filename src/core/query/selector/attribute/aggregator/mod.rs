@@ -568,7 +568,9 @@ use crate::core::extension::AttributeAggregatorFactory;
 pub struct SumAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for SumAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "sum" }
+    fn name(&self) -> &'static str {
+        "sum"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(SumAttributeAggregatorExecutor::default())
     }
@@ -581,7 +583,9 @@ impl AttributeAggregatorFactory for SumAttributeAggregatorFactory {
 pub struct AvgAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for AvgAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "avg" }
+    fn name(&self) -> &'static str {
+        "avg"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(AvgAttributeAggregatorExecutor::default())
     }
@@ -594,7 +598,9 @@ impl AttributeAggregatorFactory for AvgAttributeAggregatorFactory {
 pub struct CountAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for CountAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "count" }
+    fn name(&self) -> &'static str {
+        "count"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(CountAttributeAggregatorExecutor::default())
     }
@@ -607,7 +613,9 @@ impl AttributeAggregatorFactory for CountAttributeAggregatorFactory {
 pub struct DistinctCountAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for DistinctCountAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "distinctCount" }
+    fn name(&self) -> &'static str {
+        "distinctCount"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(DistinctCountAttributeAggregatorExecutor::default())
     }
@@ -620,7 +628,9 @@ impl AttributeAggregatorFactory for DistinctCountAttributeAggregatorFactory {
 pub struct MinAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for MinAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "min" }
+    fn name(&self) -> &'static str {
+        "min"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(MinAttributeAggregatorExecutor::default())
     }
@@ -633,7 +643,9 @@ impl AttributeAggregatorFactory for MinAttributeAggregatorFactory {
 pub struct MaxAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for MaxAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "max" }
+    fn name(&self) -> &'static str {
+        "max"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(MaxAttributeAggregatorExecutor::default())
     }
@@ -646,7 +658,9 @@ impl AttributeAggregatorFactory for MaxAttributeAggregatorFactory {
 pub struct MinForeverAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for MinForeverAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "minForever" }
+    fn name(&self) -> &'static str {
+        "minForever"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(MinForeverAttributeAggregatorExecutor::default())
     }
@@ -659,7 +673,9 @@ impl AttributeAggregatorFactory for MinForeverAttributeAggregatorFactory {
 pub struct MaxForeverAttributeAggregatorFactory;
 
 impl AttributeAggregatorFactory for MaxForeverAttributeAggregatorFactory {
-    fn name(&self) -> &'static str { "maxForever" }
+    fn name(&self) -> &'static str {
+        "maxForever"
+    }
     fn create(&self) -> Box<dyn AttributeAggregatorExecutor> {
         Box::new(MaxForeverAttributeAggregatorExecutor::default())
     }

@@ -1,10 +1,10 @@
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
+use crate::core::function::script::Script;
+use crate::core::store::Store;
 use crate::core::stream::input::mapper::SourceMapper;
 use crate::core::stream::output::mapper::SinkMapper;
-use crate::core::store::Store;
-use crate::core::function::script::Script;
 
 use crate::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
@@ -126,7 +126,9 @@ impl Clone for Box<dyn ScriptFactory> {
 pub struct TimerSourceFactory;
 
 impl SourceFactory for TimerSourceFactory {
-    fn name(&self) -> &'static str { "timer" }
+    fn name(&self) -> &'static str {
+        "timer"
+    }
     fn create(&self) -> Box<dyn crate::core::stream::input::source::Source> {
         Box::new(crate::core::stream::input::source::timer_source::TimerSource::new(1000))
     }
@@ -139,7 +141,9 @@ impl SourceFactory for TimerSourceFactory {
 pub struct LogSinkFactory;
 
 impl SinkFactory for LogSinkFactory {
-    fn name(&self) -> &'static str { "log" }
+    fn name(&self) -> &'static str {
+        "log"
+    }
     fn create(&self) -> Box<dyn crate::core::stream::output::sink::Sink> {
         Box::new(crate::core::stream::output::sink::LogSink::new())
     }

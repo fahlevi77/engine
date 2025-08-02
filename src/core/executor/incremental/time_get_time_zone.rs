@@ -3,7 +3,7 @@ use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use chrono::{Local, DateTime};
+use chrono::{DateTime, Local};
 use std::sync::Arc;
 
 #[derive(Debug)]

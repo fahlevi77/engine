@@ -1,4 +1,6 @@
-use crate::core::event::stream::{stream_event::StreamEvent, stream_event_factory::StreamEventFactory};
+use crate::core::event::stream::{
+    stream_event::StreamEvent, stream_event_factory::StreamEventFactory,
+};
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::collections::HashMap;

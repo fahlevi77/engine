@@ -11,12 +11,12 @@ use crate::core::DataSource;
 use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added for data sources
                                                                        // Placeholder for actual persistence store trait/type
 use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder};
-use crate::core::persistence::PersistenceStore;
 use crate::core::extension;
+use crate::core::persistence::PersistenceStore;
 
+use libloading::Library;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use libloading::Library;
 // use rand::Rng; // For generating random app names if not specified
 
 /// Main entry point for managing Siddhi application runtimes.
@@ -177,7 +177,10 @@ impl SiddhiManager {
                 .push(std::mem::ManuallyDrop::new(lib));
         }
 
-        println!("[SiddhiManager] dynamically loaded extension '{}' from {}", name, library_path);
+        println!(
+            "[SiddhiManager] dynamically loaded extension '{}' from {}",
+            name, library_path
+        );
         Ok(())
     }
 
@@ -362,7 +365,10 @@ impl std::fmt::Debug for SiddhiManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SiddhiManager")
             .field("siddhi_context", &"SiddhiContext")
-            .field("app_runtimes", &self.siddhi_app_runtime_map.lock().unwrap().len())
+            .field(
+                "app_runtimes",
+                &self.siddhi_app_runtime_map.lock().unwrap().len(),
+            )
             .finish()
     }
 }

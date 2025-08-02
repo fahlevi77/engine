@@ -3,9 +3,7 @@ use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
-use crate::core::query::input::stream::join::{
-    JoinProcessor, JoinSide, TableJoinProcessor,
-};
+use crate::core::query::input::stream::join::{JoinProcessor, JoinSide, TableJoinProcessor};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
 use crate::core::query::processor::stream::filter::FilterProcessor;
 use crate::core::query::processor::stream::window::create_window_processor;
@@ -149,7 +147,6 @@ impl QueryParser {
                 ctx
             }
             ApiInputStream::Join(join_stream) => {
-                
                 let left_id = join_stream
                     .left_input_stream
                     .get_stream_id_str()
@@ -237,11 +234,7 @@ impl QueryParser {
                     };
 
                     let comp_cond = if let Some(expr) = &join_stream.on_compare {
-                        table.compile_join_condition(
-                            expr.clone(),
-                            &stream_id,
-                            &stream_def,
-                        )
+                        table.compile_join_condition(expr.clone(), &stream_id, &stream_def)
                     } else {
                         None
                     };

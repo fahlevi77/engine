@@ -1,14 +1,16 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::core::event::value::AttributeValue;
+use siddhi_rust::core::siddhi_manager::SiddhiManager;
 
 #[test]
 fn test_dynamic_extension_loading() {
     let manager = SiddhiManager::new();
     let lib_path = custom_dyn_ext::library_path();
-    manager.set_extension("dynlib", lib_path.to_str().unwrap().to_string()).unwrap();
+    manager
+        .set_extension("dynlib", lib_path.to_str().unwrap().to_string())
+        .unwrap();
 
     let ctx = manager.siddhi_context();
     assert!(ctx.get_window_factory("dynWindow").is_some());

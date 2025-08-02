@@ -8,10 +8,10 @@ use crate::core::event::value::AttributeValue;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 
 use crate::core::util::state_holder::StateHolder;
 
@@ -189,7 +189,10 @@ impl Processor for OutputRateLimiter {
         self.next_processor = next_processor;
     }
 
-    fn clone_processor(&self, siddhi_query_context: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(
+        &self,
+        siddhi_query_context: &Arc<SiddhiQueryContext>,
+    ) -> Box<dyn Processor> {
         Box::new(OutputRateLimiter::new(
             self.next_processor.as_ref().map(Arc::clone),
             Arc::clone(&self.siddhi_app_context),

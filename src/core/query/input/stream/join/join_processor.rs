@@ -187,7 +187,9 @@ impl Processor for JoinProcessorSide {
     ) -> Arc<crate::core::config::siddhi_app_context::SiddhiAppContext> {
         self.parent.lock().unwrap().meta.siddhi_app_context.clone()
     }
-    fn get_siddhi_query_context(&self) -> Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext> {
+    fn get_siddhi_query_context(
+        &self,
+    ) -> Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext> {
         self.parent.lock().unwrap().meta.get_siddhi_query_context()
     }
 

@@ -9,8 +9,8 @@ pub mod event_timestamp_function_executor;
 pub mod if_then_else_function_executor;
 pub mod instance_of_checkers;
 pub mod math_functions;
-pub mod script_function_executor;
 pub mod scalar_function_executor; // Added
+pub mod script_function_executor;
 pub mod string_functions;
 pub mod uuid_function_executor;
 
@@ -31,8 +31,8 @@ pub use self::math_functions::{
     LogFunctionExecutor, RoundFunctionExecutor, SinFunctionExecutor, SqrtFunctionExecutor,
     TanFunctionExecutor,
 };
-pub use self::script_function_executor::ScriptFunctionExecutor;
 pub use self::scalar_function_executor::ScalarFunctionExecutor; // Added
+pub use self::script_function_executor::ScriptFunctionExecutor;
 pub use self::string_functions::{
     ConcatFunctionExecutor, LengthFunctionExecutor, LowerFunctionExecutor,
     SubstringFunctionExecutor, UpperFunctionExecutor,

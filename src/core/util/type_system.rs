@@ -38,7 +38,10 @@ impl TypePrecedence {
 }
 
 /// Determine the result type for arithmetic operations between two types
-pub fn get_arithmetic_result_type(left: AttributeType, right: AttributeType) -> Result<AttributeType, SiddhiError> {
+pub fn get_arithmetic_result_type(
+    left: AttributeType,
+    right: AttributeType,
+) -> Result<AttributeType, SiddhiError> {
     let left_precedence = TypePrecedence::from_attribute_type(left);
     let right_precedence = TypePrecedence::from_attribute_type(right);
 
@@ -168,7 +171,10 @@ impl TypeConverter {
     }
 
     /// Cast numeric value to target type for arithmetic operations
-    pub fn cast_for_arithmetic(value: &AttributeValue, target_type: AttributeType) -> Option<AttributeValue> {
+    pub fn cast_for_arithmetic(
+        value: &AttributeValue,
+        target_type: AttributeType,
+    ) -> Option<AttributeValue> {
         match target_type {
             AttributeType::INT => match value {
                 AttributeValue::Int(i) => Some(AttributeValue::Int(*i)),
@@ -217,14 +223,20 @@ impl TypeConverter {
     pub fn is_numeric(value: &AttributeValue) -> bool {
         matches!(
             value,
-            AttributeValue::Int(_) | AttributeValue::Long(_) | AttributeValue::Float(_) | AttributeValue::Double(_)
+            AttributeValue::Int(_)
+                | AttributeValue::Long(_)
+                | AttributeValue::Float(_)
+                | AttributeValue::Double(_)
         )
     }
 
     /// Validate type conversion at parse time
-    pub fn validate_conversion(from_type: AttributeType, to_type: AttributeType) -> Result<(), SiddhiError> {
+    pub fn validate_conversion(
+        from_type: AttributeType,
+        to_type: AttributeType,
+    ) -> Result<(), SiddhiError> {
         use AttributeType::*;
-        
+
         // These conversions are always valid
         match (from_type, to_type) {
             // Same type
@@ -280,11 +292,17 @@ mod tests {
 
         // String to boolean
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("true".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("true".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(true))
         );
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("false".to_string()), AttributeType::BOOL),
+            TypeConverter::convert(
+                AttributeValue::String("false".to_string()),
+                AttributeType::BOOL
+            ),
             Some(AttributeValue::Bool(false))
         );
     }
@@ -335,7 +353,10 @@ mod tests {
     fn test_invalid_conversions() {
         // String that can't be parsed as number
         assert_eq!(
-            TypeConverter::convert(AttributeValue::String("not_a_number".to_string()), AttributeType::INT),
+            TypeConverter::convert(
+                AttributeValue::String("not_a_number".to_string()),
+                AttributeType::INT
+            ),
             None
         );
     }

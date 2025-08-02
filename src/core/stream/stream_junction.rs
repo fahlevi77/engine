@@ -93,7 +93,7 @@ pub struct StreamJunction {
     // Subscribers are Processors. Using Arc<Mutex<dyn Processor>> for shared mutable access.
     subscribers: Arc<Mutex<Vec<Arc<Mutex<dyn Processor>>>>>,
 
-    // For async processing with internal buffer (Disruptor in Java)
+    // For async processing with internal buffer (OptimizedStreamJunction with crossbeam pipeline)
     event_sender: Option<Sender<Box<dyn ComplexEvent>>>,
     // The consuming task for async would own the CrossbeamReceiver.
     // For simplicity, not storing the CrossbeamReceiver side of the channel here.
@@ -377,11 +377,17 @@ impl StreamJunction {
                         }
                         Err(TrySendError::Disconnected(event_back)) => {
                             let err = SiddhiError::SendError {
-                                message: format!("Async channel disconnected for stream {}", self.stream_id),
+                                message: format!(
+                                    "Async channel disconnected for stream {}",
+                                    self.stream_id
+                                ),
                             };
                             self.handle_error_with_event(Some(event_back), err);
                             Err(SiddhiError::SendError {
-                                message: format!("Async channel disconnected for stream {}", self.stream_id),
+                                message: format!(
+                                    "Async channel disconnected for stream {}",
+                                    self.stream_id
+                                ),
                             })
                         }
                     }

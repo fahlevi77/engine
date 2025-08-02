@@ -14,11 +14,11 @@ impl InMemoryErrorStore {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub fn errors(&self) -> Vec<(String, String)> {
         self.inner.lock().unwrap().clone()
     }
-    
+
     pub fn clear(&mut self) {
         self.inner.lock().unwrap().clear();
     }

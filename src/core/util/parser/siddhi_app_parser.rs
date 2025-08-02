@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex}; // Added Mutex // If QueryParser needs table_map et
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
-use crate::core::stream::stream_junction::StreamJunction; // For creating junctions
+use crate::core::stream::{junction_factory::JunctionConfig, stream_junction::StreamJunction}; // For creating junctions
 use crate::core::window::WindowRuntime;
 use crate::query_api::execution::query::input::stream::input_stream::InputStreamTrait;
 use crate::query_api::{
@@ -20,7 +20,7 @@ use crate::core::partition::parser::PartitionParser;
 // use super::definition_parser_helpers::*; // For defineStreamDefinitions, defineTableDefinitions etc.
 use super::query_parser::QueryParser; // Use the real QueryParser implementation
 use super::trigger_parser::TriggerParser;
- // Core constants, if any, vs query_api constants
+// Core constants, if any, vs query_api constants
 
 pub struct SiddhiAppParser;
 
@@ -54,21 +54,62 @@ impl SiddhiAppParser {
         for (stream_id, stream_def_arc) in &api_siddhi_app.stream_definition_map {
             builder.add_stream_definition(Arc::clone(stream_def_arc));
 
-            let mut buffer_size = siddhi_app_context.buffer_size as usize;
-            let mut is_async = default_stream_async;
+            let mut config = JunctionConfig::new(stream_id.clone())
+                .with_buffer_size(siddhi_app_context.buffer_size as usize)
+                .with_async(default_stream_async);
             let mut create_fault_stream = false;
+            let mut use_optimized = false;
 
             for ann in &stream_def_arc.abstract_definition.annotations {
                 match ann.name.to_lowercase().as_str() {
-                    "buffersize" | "buffer.size" => {
-                        if let Some(el) = ann.elements.first() {
-                            if let Ok(sz) = el.value.parse::<usize>() {
-                                buffer_size = sz;
+                    "async" => {
+                        use_optimized = true;
+                        config = config.with_async(true);
+
+                        // Parse @Async annotation parameters
+                        for el in &ann.elements {
+                            match el.key.to_lowercase().as_str() {
+                                "buffer_size" | "buffersize" => {
+                                    if let Ok(sz) = el.value.parse::<usize>() {
+                                        config = config.with_buffer_size(sz);
+                                    }
+                                }
+                                "workers" => {
+                                    // Note: workers parameter is handled internally by the pipeline
+                                    // based on CPU cores, but we can use it as a hint for throughput
+                                    if let Ok(workers) = el.value.parse::<u64>() {
+                                        let estimated_throughput = workers * 10000; // 10K events/worker estimate
+                                        config =
+                                            config.with_expected_throughput(estimated_throughput);
+                                    }
+                                }
+                                "batch_size_max" | "batchsizemax" => {
+                                    // Note: batch size is handled internally by the pipeline
+                                    // This is for compatibility with Java Siddhi
+                                }
+                                _ => {}
                             }
                         }
                     }
-                    "async" => {
-                        is_async = true;
+                    "buffersize" | "buffer_size" => {
+                        if let Some(el) = ann.elements.first() {
+                            if let Ok(sz) = el.value.parse::<usize>() {
+                                config = config.with_buffer_size(sz);
+                            }
+                        }
+                    }
+                    "config" => {
+                        for el in &ann.elements {
+                            match el.key.to_lowercase().as_str() {
+                                "async" => {
+                                    if el.value.eq_ignore_ascii_case("true") {
+                                        use_optimized = true;
+                                        config = config.with_async(true);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                     "onerror" => {
                         if ann
@@ -109,14 +150,26 @@ impl SiddhiAppParser {
                 builder.add_stream_definition(Arc::new(fault_def));
             }
 
+            // Create StreamJunction with enhanced async configuration
             let stream_junction = Arc::new(Mutex::new(StreamJunction::new(
                 stream_id.clone(),
                 Arc::clone(stream_def_arc),
                 siddhi_app_context.clone(),
-                buffer_size,
-                is_async,
+                config.buffer_size,
+                config.is_async,
                 None,
             )));
+
+            // If @Async annotation was specified, log the enhanced configuration
+            if use_optimized {
+                println!(
+                    "Created async stream '{}' with buffer_size={}, async={}",
+                    stream_id, config.buffer_size, config.is_async
+                );
+                // TODO: In future versions, replace with OptimizedStreamJunction
+                // when SiddhiAppRuntimeBuilder is updated to support it
+            }
+
             builder.add_stream_junction(stream_id.clone(), stream_junction);
         }
 

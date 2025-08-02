@@ -2,9 +2,9 @@
 mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
+use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::state::state_event::StateEvent;
 use siddhi_rust::core::event::stream::stream_event::StreamEvent;
-use siddhi_rust::core::event::event::Event;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::util::{from_bytes, to_bytes};
 
@@ -82,22 +82,34 @@ fn clone_and_serialize_events() {
     se1.next = Some(Box::new(se2));
     let cloned = clone_event_chain(&se1);
     let se1c = cloned.as_any().downcast_ref::<StreamEvent>().unwrap();
-    assert_eq!(se1c.output_data.as_ref().unwrap()[0], AttributeValue::Int(1));
+    assert_eq!(
+        se1c.output_data.as_ref().unwrap()[0],
+        AttributeValue::Int(1)
+    );
     if let Some(n) = se1c.get_next() {
         let se2c = n.as_any().downcast_ref::<StreamEvent>().unwrap();
-        assert_eq!(se2c.output_data.as_ref().unwrap()[0], AttributeValue::Int(2));
+        assert_eq!(
+            se2c.output_data.as_ref().unwrap()[0],
+            AttributeValue::Int(2)
+        );
     } else {
         panic!("missing next");
     }
     let bytes = to_bytes(se1c).unwrap();
     let deser_se: StreamEvent = from_bytes(&bytes).unwrap();
-    assert_eq!(deser_se.output_data.as_ref().unwrap()[0], AttributeValue::Int(1));
+    assert_eq!(
+        deser_se.output_data.as_ref().unwrap()[0],
+        AttributeValue::Int(1)
+    );
 
     let mut state = StateEvent::new(1, 1);
     state.stream_events[0] = Some(se1.clone_without_next());
     state.output_data = Some(vec![AttributeValue::Int(3)]);
     let bytes = to_bytes(&state).unwrap();
     let deser_state: StateEvent = from_bytes(&bytes).unwrap();
-    assert_eq!(deser_state.output_data.as_ref().unwrap()[0], AttributeValue::Int(3));
+    assert_eq!(
+        deser_state.output_data.as_ref().unwrap()[0],
+        AttributeValue::Int(3)
+    );
     assert!(deser_state.stream_events[0].is_some());
 }

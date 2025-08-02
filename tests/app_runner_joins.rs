@@ -86,7 +86,10 @@ fn right_outer_join_no_match() {
     let runner = AppRunner::new(app, "Out");
     runner.send("R", vec![AttributeValue::Int(5)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Null, AttributeValue::Int(5)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Null, AttributeValue::Int(5)]]
+    );
 }
 
 #[test]

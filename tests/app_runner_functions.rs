@@ -14,6 +14,9 @@ fn app_runner_builtin_functions() {
     let out = runner.shutdown();
     assert_eq!(
         out,
-        vec![vec![AttributeValue::Double(0.0), AttributeValue::String("ABC".to_string())]]
+        vec![vec![
+            AttributeValue::Double(0.0),
+            AttributeValue::String("ABC".to_string())
+        ]]
     );
 }

@@ -1,7 +1,7 @@
 // Corresponds to io.siddhi.query.api.definition.FunctionDefinition
+use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::attribute::Type as AttributeType;
 use crate::query_api::siddhi_element::SiddhiElement;
-use crate::query_api::annotation::Annotation;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct FunctionDefinition {

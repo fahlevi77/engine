@@ -1,6 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use crate::core::event::stream::{stream_event::StreamEvent, stream_event_factory::StreamEventFactory};
+use crate::core::event::stream::{
+    stream_event::StreamEvent, stream_event_factory::StreamEventFactory,
+};
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;
 

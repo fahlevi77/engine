@@ -1,9 +1,9 @@
+use super::unix_time::IncrementalUnixTimeFunctionExecutor;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use super::unix_time::IncrementalUnixTimeFunctionExecutor;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -29,13 +29,17 @@ impl ExpressionExecutor for IncrementalStartTimeEndTimeFunctionExecutor {
         let s_val = self.start_executor.execute(event)?;
         let start = match s_val {
             AttributeValue::Long(v) => v,
-            AttributeValue::String(ref st) => IncrementalUnixTimeFunctionExecutor::parse_timestamp(st)?,
+            AttributeValue::String(ref st) => {
+                IncrementalUnixTimeFunctionExecutor::parse_timestamp(st)?
+            }
             _ => return None,
         };
         let e_val = self.end_executor.execute(event)?;
         let end = match e_val {
             AttributeValue::Long(v) => v,
-            AttributeValue::String(ref st) => IncrementalUnixTimeFunctionExecutor::parse_timestamp(st)?,
+            AttributeValue::String(ref st) => {
+                IncrementalUnixTimeFunctionExecutor::parse_timestamp(st)?
+            }
             _ => return None,
         };
         if start >= end {

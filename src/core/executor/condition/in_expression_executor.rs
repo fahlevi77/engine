@@ -56,7 +56,9 @@ impl ExpressionExecutor for InExpressionExecutor {
             .get_table(&self.table_id);
 
         if let Some(table) = table_opt {
-            let key = InMemoryCompiledCondition { values: vec![value.clone()] };
+            let key = InMemoryCompiledCondition {
+                values: vec![value.clone()],
+            };
             let contains = table.contains(&key);
             Some(AttributeValue::Bool(contains))
         } else {

@@ -33,7 +33,9 @@ impl Processor for UpdateTableProcessor {
                 let old = se.before_window_data.clone();
                 if let Some(new) = se.get_output_data() {
                     let cond = InMemoryCompiledCondition { values: old };
-                    let us = InMemoryCompiledUpdateSet { values: new.to_vec() };
+                    let us = InMemoryCompiledUpdateSet {
+                        values: new.to_vec(),
+                    };
                     self.table.update(&cond, &us);
                 }
             }

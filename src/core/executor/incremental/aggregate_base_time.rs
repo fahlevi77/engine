@@ -4,7 +4,7 @@ use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::aggregation::time_period::Duration;
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
-use chrono::{Datelike, Timelike, Utc, TimeZone};
+use chrono::{Datelike, TimeZone, Timelike, Utc};
 use std::sync::Arc;
 
 #[derive(Debug)]

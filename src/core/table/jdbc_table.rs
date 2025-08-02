@@ -1,13 +1,13 @@
 use crate::core::config::siddhi_context::SiddhiContext;
+use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
+use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::table::{
     constant_to_av, CompiledCondition, CompiledUpdateSet, InMemoryCompiledCondition,
     InMemoryCompiledUpdateSet, Table,
 };
 use crate::query_api::execution::query::output::stream::UpdateSet;
 use crate::query_api::expression::Expression;
-use crate::core::event::stream::stream_event::StreamEvent;
-use crate::core::executor::expression_executor::ExpressionExecutor;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{params_from_iter, Connection};
 use std::sync::{Arc, Mutex};
@@ -365,20 +365,24 @@ impl Table for JdbcTable {
         compiled_condition: Option<&dyn CompiledCondition>,
         condition_executor: Option<&dyn ExpressionExecutor>,
     ) -> Vec<Vec<AttributeValue>> {
-        if let Some(cond) = compiled_condition
-            .and_then(|c| c.as_any().downcast_ref::<JdbcJoinCompiledCondition>())
+        if let Some(cond) =
+            compiled_condition.and_then(|c| c.as_any().downcast_ref::<JdbcJoinCompiledCondition>())
         {
             let sql = if cond.where_clause.is_empty() {
                 format!("SELECT * FROM {}", self.table_name)
             } else {
-                format!("SELECT * FROM {} WHERE {}", self.table_name, cond.where_clause)
+                format!(
+                    "SELECT * FROM {} WHERE {}",
+                    self.table_name, cond.where_clause
+                )
             };
             let mut params: Vec<Value> = Vec::new();
             for p in &cond.params {
                 match p {
                     JoinParamSource::Constant(av) => params.push(Self::av_to_val(av)),
-                    JoinParamSource::StreamAttr(idx) => params
-                        .push(Self::av_to_val(&stream_event.before_window_data[*idx])),
+                    JoinParamSource::StreamAttr(idx) => {
+                        params.push(Self::av_to_val(&stream_event.before_window_data[*idx]))
+                    }
                 }
             }
             let conn = self.conn.lock().unwrap();
@@ -401,15 +405,10 @@ impl Table for JdbcTable {
         while let Some(row) = rows_iter.next().unwrap() {
             let vals = Self::row_to_attr(row);
             if let Some(exec) = condition_executor {
-                let mut joined = StreamEvent::new(
-                    stream_event.timestamp,
-                    stream_attr_count + vals.len(),
-                    0,
-                    0,
-                );
+                let mut joined =
+                    StreamEvent::new(stream_event.timestamp, stream_attr_count + vals.len(), 0, 0);
                 for i in 0..stream_attr_count {
-                    joined.before_window_data[i] =
-                        stream_event.before_window_data[i].clone();
+                    joined.before_window_data[i] = stream_event.before_window_data[i].clone();
                 }
                 for j in 0..vals.len() {
                     joined.before_window_data[stream_attr_count + j] = vals[j].clone();
@@ -454,7 +453,10 @@ impl Table for JdbcTable {
     ) -> Option<Box<dyn CompiledCondition>> {
         let mut params = Vec::new();
         let where_clause = expression_to_sql_join(&cond, stream_id, stream_def, &mut params);
-        Some(Box::new(JdbcJoinCompiledCondition { where_clause, params }))
+        Some(Box::new(JdbcJoinCompiledCondition {
+            where_clause,
+            params,
+        }))
     }
 
     fn clone_table(&self) -> Box<dyn Table> {

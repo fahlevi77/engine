@@ -59,12 +59,11 @@ fn setup_table(ctx: &Arc<SiddhiContext>) {
 #[test]
 fn test_jdbc_table_crud() {
     let ctx = Arc::new(SiddhiContext::new());
-    ctx
-        .add_data_source(
-            "DS1".to_string(),
-            Arc::new(SqliteDataSource::new(":memory:")),
-        )
-        .unwrap();
+    ctx.add_data_source(
+        "DS1".to_string(),
+        Arc::new(SqliteDataSource::new(":memory:")),
+    )
+    .unwrap();
     setup_table(&ctx);
 
     let table = JdbcTable::new("test".to_string(), "DS1".to_string(), Arc::clone(&ctx)).unwrap();
@@ -73,18 +72,28 @@ fn test_jdbc_table_crud() {
         AttributeValue::String("b".into()),
     ];
     table.insert(&row1);
-    assert!(table.contains(&InMemoryCompiledCondition { values: row1.clone() }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: row1.clone()
+    }));
 
     let row2 = vec![
         AttributeValue::String("x".into()),
         AttributeValue::String("y".into()),
     ];
-    let cond = InMemoryCompiledCondition { values: row1.clone() };
-    let us = InMemoryCompiledUpdateSet { values: row2.clone() };
+    let cond = InMemoryCompiledCondition {
+        values: row1.clone(),
+    };
+    let us = InMemoryCompiledUpdateSet {
+        values: row2.clone(),
+    };
     assert!(table.update(&cond, &us));
     assert!(!table.contains(&InMemoryCompiledCondition { values: row1 }));
-    assert!(table.contains(&InMemoryCompiledCondition { values: row2.clone() }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: row2.clone()
+    }));
 
-    assert!(table.delete(&InMemoryCompiledCondition { values: row2.clone() }));
+    assert!(table.delete(&InMemoryCompiledCondition {
+        values: row2.clone()
+    }));
     assert!(!table.contains(&InMemoryCompiledCondition { values: row2 }));
 }

@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex};
 mod session_window_processor;
 use session_window_processor::SessionWindowProcessor;
 
-// Import sort window processor  
+// Import sort window processor
 mod sort_window_processor;
 use sort_window_processor::SortWindowProcessor;
 
@@ -410,12 +410,12 @@ pub fn create_window_processor(
             "externalTimeBatch" => Ok(Arc::new(Mutex::new(
                 ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
             ))),
-            "session" => Ok(Arc::new(Mutex::new(
-                SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
-            ))),
-            "sort" => Ok(Arc::new(Mutex::new(
-                SortWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
-            ))),
+            "session" => Ok(Arc::new(Mutex::new(SessionWindowProcessor::from_handler(
+                handler, app_ctx, query_ctx,
+            )?))),
+            "sort" => Ok(Arc::new(Mutex::new(SortWindowProcessor::from_handler(
+                handler, app_ctx, query_ctx,
+            )?))),
             other => Err(format!("Unsupported window type '{}'", other)),
         }
     }
@@ -1210,7 +1210,11 @@ pub struct CronWindowProcessor {
 }
 
 impl CronWindowProcessor {
-    pub fn new(cron: String, app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
+    pub fn new(
+        cron: String,
+        app_ctx: Arc<SiddhiAppContext>,
+        query_ctx: Arc<SiddhiQueryContext>,
+    ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -1368,9 +1372,9 @@ impl WindowProcessorFactory for CronWindowFactory {
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-        Ok(Arc::new(Mutex::new(
-            CronWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
-        )))
+        Ok(Arc::new(Mutex::new(CronWindowProcessor::from_handler(
+            handler, app_ctx, query_ctx,
+        )?)))
     }
 
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
@@ -1414,9 +1418,9 @@ impl WindowProcessorFactory for SessionWindowFactory {
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-        Ok(Arc::new(Mutex::new(
-            SessionWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
-        )))
+        Ok(Arc::new(Mutex::new(SessionWindowProcessor::from_handler(
+            handler, app_ctx, query_ctx,
+        )?)))
     }
 
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {
@@ -1438,9 +1442,9 @@ impl WindowProcessorFactory for SortWindowFactory {
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
-        Ok(Arc::new(Mutex::new(
-            SortWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
-        )))
+        Ok(Arc::new(Mutex::new(SortWindowProcessor::from_handler(
+            handler, app_ctx, query_ctx,
+        )?)))
     }
 
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> {

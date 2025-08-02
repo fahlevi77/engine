@@ -75,7 +75,9 @@ impl WindowProcessor for DummyWindowProcessor {}
 #[derive(Debug, Clone)]
 struct DummyWindowFactory;
 impl WindowProcessorFactory for DummyWindowFactory {
-    fn name(&self) -> &'static str { "dummy" }
+    fn name(&self) -> &'static str {
+        "dummy"
+    }
     fn create(
         &self,
         _h: &WindowHandler,
@@ -96,7 +98,9 @@ struct ConstAggFactory;
 #[derive(Debug, Default)]
 struct ConstAggExec;
 impl AttributeAggregatorFactory for ConstAggFactory {
-    fn name(&self) -> &'static str { "constAgg" }
+    fn name(&self) -> &'static str {
+        "constAgg"
+    }
     fn create(
         &self,
     ) -> Box<
@@ -322,7 +326,9 @@ fn test_table_factory_invoked() {
     #[derive(Debug, Clone)]
     struct RecordingFactory;
     impl siddhi_rust::core::extension::TableFactory for RecordingFactory {
-        fn name(&self) -> &'static str { "rec" }
+        fn name(&self) -> &'static str {
+            "rec"
+        }
         fn create(
             &self,
             _n: String,

@@ -3,8 +3,8 @@ use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::persistence::PersistenceStore;
 use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
 use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
+use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
 use siddhi_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 
@@ -46,7 +46,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn new_from_api(
@@ -67,7 +71,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn new_from_api_with_store(
@@ -90,7 +98,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn new_from_api_with_manager(
@@ -111,7 +123,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
@@ -129,7 +145,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn new_with_store(
@@ -153,7 +173,11 @@ impl AppRunner {
             )
             .expect("add cb");
         runtime.start();
-        Self { runtime, collected, _manager: manager }
+        Self {
+            runtime,
+            collected,
+            _manager: manager,
+        }
     }
 
     pub fn send(&self, stream_id: &str, data: Vec<AttributeValue>) {

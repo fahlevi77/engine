@@ -134,20 +134,30 @@ fn build_join_query(join_type: JoinType) -> Query {
 fn test_parse_inner_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
-    assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
-            .is_ok()
-    );
+    assert!(QueryParser::parse_query(
+        &q,
+        &app_ctx,
+        &junctions,
+        &HashMap::new(),
+        &HashMap::new(),
+        None
+    )
+    .is_ok());
 }
 
 #[test]
 fn test_parse_left_outer_join() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
-    assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
-            .is_ok()
-    );
+    assert!(QueryParser::parse_query(
+        &q,
+        &app_ctx,
+        &junctions,
+        &HashMap::new(),
+        &HashMap::new(),
+        None
+    )
+    .is_ok());
 }
 
 #[derive(Debug)]
@@ -192,10 +202,15 @@ fn collect_from_out_stream(
 fn test_inner_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::InnerJoin);
-    assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
-            .is_ok()
-    );
+    assert!(QueryParser::parse_query(
+        &q,
+        &app_ctx,
+        &junctions,
+        &HashMap::new(),
+        &HashMap::new(),
+        None
+    )
+    .is_ok());
     let collected = collect_from_out_stream(&app_ctx, &junctions);
 
     {
@@ -223,10 +238,15 @@ fn test_inner_join_runtime() {
 fn test_left_outer_join_runtime() {
     let (app_ctx, junctions) = setup_context();
     let q = build_join_query(JoinType::LeftOuterJoin);
-    assert!(
-        QueryParser::parse_query(&q, &app_ctx, &junctions, &HashMap::new(), &HashMap::new(), None)
-            .is_ok()
-    );
+    assert!(QueryParser::parse_query(
+        &q,
+        &app_ctx,
+        &junctions,
+        &HashMap::new(),
+        &HashMap::new(),
+        None
+    )
+    .is_ok());
     let collected = collect_from_out_stream(&app_ctx, &junctions);
 
     {

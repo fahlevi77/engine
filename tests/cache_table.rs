@@ -29,7 +29,12 @@ fn test_cache_update_delete_find() {
     assert!(table.update(&cond, &us));
     assert!(!table.contains(&InMemoryCompiledCondition { values: r1 }));
     assert!(table.contains(&InMemoryCompiledCondition { values: r2.clone() }));
-    assert_eq!(table.find(&InMemoryCompiledCondition { values: r2.clone() }), Some(r2.clone()));
+    assert_eq!(
+        table.find(&InMemoryCompiledCondition { values: r2.clone() }),
+        Some(r2.clone())
+    );
     assert!(table.delete(&InMemoryCompiledCondition { values: r2.clone() }));
-    assert!(table.find(&InMemoryCompiledCondition { values: r2 }).is_none());
+    assert!(table
+        .find(&InMemoryCompiledCondition { values: r2 })
+        .is_none());
 }

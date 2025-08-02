@@ -16,7 +16,6 @@ fn variable_from_window() {
     assert_eq!(out, vec![vec![AttributeValue::Int(5)]]);
 }
 
-
 #[test]
 fn variable_from_aggregation() {
     let app = "\
@@ -47,7 +46,10 @@ fn window_variable_access() {
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
-    assert_eq!(out, vec![vec![AttributeValue::Int(1)], vec![AttributeValue::Int(2)]]);
+    assert_eq!(
+        out,
+        vec![vec![AttributeValue::Int(1)], vec![AttributeValue::Int(2)]]
+    );
 }
 
 #[test]

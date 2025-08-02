@@ -193,10 +193,7 @@ impl SiddhiAppContext {
     }
 
     /// Lookup a registered script function placeholder by name.
-    pub fn get_script_function(
-        &self,
-        name: &str,
-    ) -> Option<&ScriptFunctionPlaceholder> {
+    pub fn get_script_function(&self, name: &str) -> Option<&ScriptFunctionPlaceholder> {
         self.script_function_map.get(name)
     }
 

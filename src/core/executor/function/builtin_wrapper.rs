@@ -222,7 +222,10 @@ fn build_parse_date(
     }
     let pattern_exec = args.remove(1);
     let date_exec = args.remove(0);
-    Ok(Box::new(ParseDateFunctionExecutor::new(date_exec, pattern_exec)?))
+    Ok(Box::new(ParseDateFunctionExecutor::new(
+        date_exec,
+        pattern_exec,
+    )?))
 }
 
 fn build_date_add(
@@ -234,7 +237,9 @@ fn build_date_add(
     let unit_exec = args.remove(2);
     let inc_exec = args.remove(1);
     let ts_exec = args.remove(0);
-    Ok(Box::new(DateAddFunctionExecutor::new(ts_exec, inc_exec, unit_exec)?))
+    Ok(Box::new(DateAddFunctionExecutor::new(
+        ts_exec, inc_exec, unit_exec,
+    )?))
 }
 
 fn build_round(
@@ -399,7 +404,10 @@ pub fn register_builtin_scalar_functions(ctx: &crate::core::config::siddhi_conte
     );
     ctx.add_scalar_function_factory(
         "time:parseDate".to_string(),
-        Box::new(BuiltinScalarFunction::new("time:parseDate", build_parse_date)),
+        Box::new(BuiltinScalarFunction::new(
+            "time:parseDate",
+            build_parse_date,
+        )),
     );
     ctx.add_scalar_function_factory(
         "dateAdd".to_string(),

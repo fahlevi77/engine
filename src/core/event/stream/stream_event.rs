@@ -40,7 +40,6 @@ impl Clone for StreamEvent {
     }
 }
 
-
 impl StreamEvent {
     pub fn new(
         timestamp: i64,
@@ -61,6 +60,19 @@ impl StreamEvent {
             next: None,
         }
     }
+
+    /// Create a new StreamEvent with specific data
+    pub fn new_with_data(timestamp: i64, data: Vec<AttributeValue>) -> Self {
+        StreamEvent {
+            timestamp,
+            output_data: None,
+            event_type: ComplexEventType::Current,
+            before_window_data: data,
+            on_after_window_data: Vec::new(),
+            next: None,
+        }
+    }
+
     /// Retrieve an attribute using the Siddhi position array convention.
     /// Only `position[STREAM_ATTRIBUTE_TYPE_INDEX]` and
     /// `position[STREAM_ATTRIBUTE_INDEX_IN_TYPE]` are respected.

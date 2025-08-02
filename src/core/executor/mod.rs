@@ -3,10 +3,10 @@ pub mod constant_expression_executor;
 pub mod event_variable_function_executor;
 pub mod expression_executor;
 pub mod function; // Added for function executors
+pub mod incremental;
 pub mod math;
 pub mod multi_value_variable_function_executor;
-pub mod variable_expression_executor;
-pub mod incremental; // For incremental aggregation executors
+pub mod variable_expression_executor; // For incremental aggregation executors
 
 pub use self::condition::*;
 pub use self::constant_expression_executor::ConstantExpressionExecutor;

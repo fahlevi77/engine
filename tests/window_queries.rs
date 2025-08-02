@@ -245,10 +245,26 @@ fn test_length_batch_window_runtime() {
         .unwrap();
     runtime.start();
     let handler = runtime.get_input_handler("In").unwrap();
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(1)]).unwrap();
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(2)]).unwrap();
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(3)]).unwrap();
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(4)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(1)])
+        .unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(2)])
+        .unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(3)])
+        .unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(4)])
+        .unwrap();
     std::thread::sleep(Duration::from_millis(50));
     runtime.shutdown();
     let out = collected.lock().unwrap().clone();
@@ -283,9 +299,17 @@ fn test_time_batch_window_runtime() {
         .unwrap();
     runtime.start();
     let handler = runtime.get_input_handler("In").unwrap();
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(1)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(1)])
+        .unwrap();
     std::thread::sleep(Duration::from_millis(120));
-    handler.lock().unwrap().send_data(vec![AttributeValue::Int(2)]).unwrap();
+    handler
+        .lock()
+        .unwrap()
+        .send_data(vec![AttributeValue::Int(2)])
+        .unwrap();
     std::thread::sleep(Duration::from_millis(120));
     runtime.shutdown();
     let out = collected.lock().unwrap().clone();

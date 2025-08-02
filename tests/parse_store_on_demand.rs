@@ -1,10 +1,10 @@
 use siddhi_rust::query_api::execution::query::input::store::InputStore;
+use siddhi_rust::query_api::execution::query::output::stream::UpdateSet;
 use siddhi_rust::query_api::execution::query::selection::Selector;
 use siddhi_rust::query_api::execution::query::{OnDemandQuery, OnDemandQueryType, StoreQuery};
-use siddhi_rust::query_api::expression::variable::Variable;
 use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOperator;
+use siddhi_rust::query_api::expression::variable::Variable;
 use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_api::execution::query::output::stream::UpdateSet;
 use siddhi_rust::query_compiler::{parse_on_demand_query, parse_store_query};
 
 #[test]
@@ -48,9 +48,13 @@ fn test_parse_on_demand_delete() {
 
 #[test]
 fn test_parse_on_demand_update_set() {
-    let parsed = parse_on_demand_query("update StockTable set price = 0 on symbol == 'IBM'").unwrap();
+    let parsed =
+        parse_on_demand_query("update StockTable set price = 0 on symbol == 'IBM'").unwrap();
     let mut set = UpdateSet::new();
-    set = set.add_set_attribute(Variable::new("price".to_string()), Expression::value_long(0));
+    set = set.add_set_attribute(
+        Variable::new("price".to_string()),
+        Expression::value_long(0),
+    );
     let cond = Expression::compare(
         Expression::variable("symbol".to_string()),
         CompareOperator::Equal,

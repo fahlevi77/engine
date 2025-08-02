@@ -215,7 +215,7 @@ impl AttributeValue {
                 } else {
                     None // Invalid string
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -235,13 +235,16 @@ impl AttributeValue {
     }
 
     /// Check if this value can be converted to target type
-    pub fn is_convertible_to(&self, target_type: crate::query_api::definition::attribute::Type) -> bool {
+    pub fn is_convertible_to(
+        &self,
+        target_type: crate::query_api::definition::attribute::Type,
+    ) -> bool {
         use crate::query_api::definition::attribute::Type;
-        
+
         match (self, target_type) {
             (AttributeValue::Null, _) => true, // Null can convert to any type
-            (_, Type::OBJECT) => true, // Any value can become object
-            (_, Type::STRING) => true, // Any value can become string
+            (_, Type::OBJECT) => true,         // Any value can become object
+            (_, Type::STRING) => true,         // Any value can become string
             (AttributeValue::String(s), Type::INT) => s.parse::<i32>().is_ok(),
             (AttributeValue::String(s), Type::LONG) => s.parse::<i64>().is_ok(),
             (AttributeValue::String(s), Type::FLOAT) => s.parse::<f32>().is_ok(),
@@ -249,7 +252,7 @@ impl AttributeValue {
             (AttributeValue::String(s), Type::BOOL) => {
                 let lower = s.to_lowercase();
                 lower == "true" || lower == "false"
-            },
+            }
             // Numeric type widening
             (AttributeValue::Int(_), Type::LONG | Type::FLOAT | Type::DOUBLE) => true,
             (AttributeValue::Long(_), Type::FLOAT | Type::DOUBLE) => true,
@@ -257,7 +260,13 @@ impl AttributeValue {
             // Boolean to numeric
             (AttributeValue::Bool(_), Type::INT | Type::LONG | Type::FLOAT | Type::DOUBLE) => true,
             // Numeric to boolean (always valid)
-            (AttributeValue::Int(_) | AttributeValue::Long(_) | AttributeValue::Float(_) | AttributeValue::Double(_), Type::BOOL) => true,
+            (
+                AttributeValue::Int(_)
+                | AttributeValue::Long(_)
+                | AttributeValue::Float(_)
+                | AttributeValue::Double(_),
+                Type::BOOL,
+            ) => true,
             // Same type
             (v, target) => v.get_type() == target,
         }

@@ -167,6 +167,211 @@ impl Processor for SessionWindowProcessor {
    }
    ```
 
+## Grammar Extension Patterns
+
+### Adding New Annotation Support
+
+#### @Async Annotation Implementation Pattern
+
+The @Async annotation implementation demonstrates the complete pattern for adding annotation support to Siddhi Rust. This includes grammar rules, parser integration, and runtime configuration.
+
+**Grammar Pattern for Minimal and Parameterized Annotations:**
+```lalrpop
+// Support both minimal and parameterized annotations
+pub AnnotationStmt: Annotation = {
+    "@" <name:Ident> "(" <pairs:KeyValuePairs> ")" => {
+        let mut a = Annotation::new(name);
+        for (k, v) in pairs { a = a.element(Some(k), v); }
+        a
+    },
+    "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
+        Annotation::new(name).element(Some(key), val)
+    },
+    "@" <name:Ident> => {
+        Annotation::new(name)  // Minimal annotation support (e.g., @Async)
+    }
+};
+
+// Use underscore notation to avoid grammar conflicts
+KeyValue: (String, String) = { <k:Ident> "=" <v:STRING> => (k, v) };
+```
+
+**Parser Integration Pattern:**
+```rust
+// In siddhi_app_parser.rs - Complete @Async annotation processing
+for ann in &stream_def_arc.abstract_definition.annotations {
+    match ann.name.to_lowercase().as_str() {
+        "async" => {
+            use_optimized = true;
+            config = config.with_async(true);
+            
+            // Parse @Async annotation parameters with underscore notation
+            for el in &ann.elements {
+                match el.key.to_lowercase().as_str() {
+                    "buffer_size" | "buffersize" => {
+                        if let Ok(sz) = el.value.parse::<usize>() {
+                            config = config.with_buffer_size(sz);
+                        }
+                    }
+                    "workers" => {
+                        if let Ok(workers) = el.value.parse::<u64>() {
+                            let estimated_throughput = workers * 10000; // 10K events/worker estimate
+                            config = config.with_expected_throughput(estimated_throughput);
+                        }
+                    }
+                    "batch_size_max" | "batchsizemax" => {
+                        // Note: batch size is handled internally by the pipeline
+                        // This is for compatibility with Java Siddhi
+                    }
+                    _ => {}
+                }
+            }
+        }
+        "config" => {
+            // Support @config(async='true') for global configuration
+            for el in &ann.elements {
+                match el.key.to_lowercase().as_str() {
+                    "async" => {
+                        if el.value.eq_ignore_ascii_case("true") {
+                            use_optimized = true;
+                            config = config.with_async(true);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+// Enhanced StreamJunction creation with async configuration
+if use_optimized {
+    println!(
+        "Created async stream '{}' with buffer_size={}, async={}", 
+        stream_id, config.buffer_size, config.is_async
+    );
+    // TODO: In future versions, replace with OptimizedStreamJunction
+    // when SiddhiAppRuntimeBuilder is updated to support it
+}
+```
+
+**Global Configuration Pattern:**
+```rust
+// In siddhi_app_runtime.rs - App-level annotation processing
+let mut default_stream_async = siddhi_app_context
+    .get_siddhi_context()
+    .get_default_async_mode();
+
+for ann in &api_siddhi_app.annotations {
+    if ann.name.eq_ignore_ascii_case("app") {
+        for el in &ann.elements {
+            match el.key.to_lowercase().as_str() {
+                "async" => {
+                    default_stream_async = el.value.eq_ignore_ascii_case("true");
+                }
+                _ => {}
+            }
+        }
+    }
+}
+```
+
+**Testing Pattern for Grammar Extensions:**
+```rust
+// Complete test suite for @Async annotation functionality
+#[test]
+fn test_async_annotation_with_parameters() {
+    let mut manager = SiddhiManager::new();
+    let siddhi_app_string = r#"
+        @Async(buffer_size='1024', workers='2', batch_size_max='10')
+        define stream TestStream (id int, value string);
+    "#;
+    
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    assert!(result.is_ok(), "Failed to parse @Async annotation: {:?}", result.err());
+    
+    // Verify annotation parameters are parsed correctly
+    let app_runtime = result.unwrap();
+    let stream_def = app_runtime.siddhi_app.stream_definition_map
+        .get("TestStream").unwrap();
+        
+    let async_annotation = stream_def.abstract_definition.annotations
+        .iter()
+        .find(|ann| ann.name.eq_ignore_ascii_case("async"))
+        .unwrap();
+        
+    // Test underscore notation parameter parsing
+    let buffer_size = async_annotation.elements
+        .iter()
+        .find(|el| el.key.eq_ignore_ascii_case("buffer_size"))
+        .unwrap();
+    assert_eq!(buffer_size.value, "1024");
+    
+    let workers = async_annotation.elements
+        .iter()
+        .find(|el| el.key.eq_ignore_ascii_case("workers"))
+        .unwrap();
+    assert_eq!(workers.value, "2");
+}
+
+#[test]
+fn test_minimal_async_annotation() {
+    let mut manager = SiddhiManager::new();
+    let siddhi_app_string = r#"
+        @Async
+        define stream MinimalAsyncStream (id int, value string);
+    "#;
+    
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    assert!(result.is_ok(), "Failed to parse minimal @Async annotation");
+}
+
+#[test]
+fn test_global_async_configuration() {
+    let mut manager = SiddhiManager::new();
+    let siddhi_app_string = r#"
+        @app(async='true')
+        
+        define stream AutoAsyncStream (id int, value string);
+        define stream RegularStream (name string, count int);
+    "#;
+    
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    assert!(result.is_ok(), "Failed to parse app-level @app annotation");
+}
+
+#[test]
+fn test_async_with_query_processing() {
+    let mut manager = SiddhiManager::new();
+    let siddhi_app_string = r#"
+        @Async(buffer_size='1024')
+        define stream InputStream (symbol string, price float, volume long);
+        
+        define stream OutputStream (symbol string, avgPrice float);
+        
+        from InputStream#time(10 sec)
+        select symbol, avg(price) as avgPrice
+        insert into OutputStream;
+    "#;
+    
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    assert!(result.is_ok(), "Failed to parse async stream with query");
+}
+```
+
+#### Grammar Debugging Guidelines
+
+**Common Grammar Conflicts:**
+1. **Dot Notation Conflicts**: Avoid using dots in annotation parameters when they conflict with join syntax
+2. **Keyword Conflicts**: Handle reserved keywords like `window` in specific contexts
+3. **Ambiguous Parsing**: Use specific rule ordering to resolve conflicts
+
+**Resolution Strategies:**
+1. **Use underscore notation** for parameter names (`buffer_size` vs `buffer.size`)
+2. **Add specific keyword rules** for context-sensitive parsing (`window.time` → separate rules)
+3. **Test incrementally** with minimal examples before complex queries
+
 ## Testing Patterns
 
 ### Integration Test Template

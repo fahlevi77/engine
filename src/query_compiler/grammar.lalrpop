@@ -51,6 +51,9 @@ pub AnnotationStmt: Annotation = {
     },
     "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
         Annotation::new(name).element(Some(key), val)
+    },
+    "@" <name:Ident> => {
+        Annotation::new(name)
     }
 };
 
@@ -235,6 +238,16 @@ InputStreamRule: InputStream = {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
         InputStream::Single(si)
     },
+    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("window.{}", wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+        InputStream::Single(si)
+    },
+    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("{}.{}", wfirst, wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+        InputStream::Single(si)
+    },
     <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
         InputStream::Single(si)
@@ -332,6 +345,16 @@ BasicUnit: StateElement = {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond).as_ref(alias);
         State::stream_element(si)
     },
+    <alias:Ident> "=" <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("window.{}", wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
+        State::stream_element(si)
+    },
+    <alias:Ident> "=" <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("{}.{}", wfirst, wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
+        State::stream_element(si)
+    },
     <alias:Ident> "=" <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
         State::stream_element(si)
@@ -342,6 +365,16 @@ BasicUnit: StateElement = {
     },
     <id:Ident> "[" <cond:Expression> "]" => {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
+        State::stream_element(si)
+    },
+    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("window.{}", wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+        State::stream_element(si)
+    },
+    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let wname = format!("{}.{}", wfirst, wsecond);
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
         State::stream_element(si)
     },
     <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {

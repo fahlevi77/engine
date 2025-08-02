@@ -68,7 +68,8 @@ mod tests {
         ));
         let exec = IncrementalUnixTimeFunctionExecutor::new(arg).unwrap();
         let res = exec.execute(None);
-        let dt = chrono::NaiveDateTime::parse_from_str("2017-06-01 04:05:50", "%Y-%m-%d %H:%M:%S").unwrap();
+        let dt = chrono::NaiveDateTime::parse_from_str("2017-06-01 04:05:50", "%Y-%m-%d %H:%M:%S")
+            .unwrap();
         let expected = dt.and_utc().timestamp_millis();
         assert_eq!(res, Some(AttributeValue::Long(expected)));
     }
@@ -83,7 +84,8 @@ mod tests {
         let ctx = Arc::new(SiddhiAppContext::default_for_testing());
         let cloned = exec.clone_executor(&ctx);
         let res = cloned.execute(None);
-        let dt = chrono::NaiveDateTime::parse_from_str("2017-06-01 04:05:50", "%Y-%m-%d %H:%M:%S").unwrap();
+        let dt = chrono::NaiveDateTime::parse_from_str("2017-06-01 04:05:50", "%Y-%m-%d %H:%M:%S")
+            .unwrap();
         let expected = dt.and_utc().timestamp_millis();
         assert_eq!(res, Some(AttributeValue::Long(expected)));
     }

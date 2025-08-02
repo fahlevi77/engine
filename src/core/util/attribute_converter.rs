@@ -50,25 +50,23 @@ pub fn get_validated_property_value(
     value: AttributeValue,
     attribute_type: AttributeType,
 ) -> Result<AttributeValue, crate::core::exception::SiddhiError> {
-    use crate::core::util::type_system::TypeConverter;
     use crate::core::exception::SiddhiError;
-    
+    use crate::core::util::type_system::TypeConverter;
+
     // Store the type before moving the value
     let value_type = value.get_type();
-    
+
     // Validate conversion is possible
-    crate::core::util::type_system::TypeConverter::validate_conversion(
-        value_type,
-        attribute_type,
-    )?;
-    
+    crate::core::util::type_system::TypeConverter::validate_conversion(value_type, attribute_type)?;
+
     // Perform conversion
-    TypeConverter::convert(value, attribute_type)
-        .ok_or_else(|| SiddhiError::type_error(
+    TypeConverter::convert(value, attribute_type).ok_or_else(|| {
+        SiddhiError::type_error(
             "Type conversion failed at runtime",
             format!("{:?}", value_type),
-            format!("{:?}", attribute_type)
-        ))
+            format!("{:?}", attribute_type),
+        )
+    })
 }
 
 /// Helper function for getting numeric value for arithmetic operations
@@ -77,7 +75,10 @@ pub fn get_numeric_value_for_arithmetic(value: &AttributeValue) -> Option<f64> {
 }
 
 /// Helper function to cast value for arithmetic operations
-pub fn cast_for_arithmetic(value: &AttributeValue, target_type: AttributeType) -> Option<AttributeValue> {
+pub fn cast_for_arithmetic(
+    value: &AttributeValue,
+    target_type: AttributeType,
+) -> Option<AttributeValue> {
     crate::core::util::type_system::TypeConverter::cast_for_arithmetic(value, target_type)
 }
 
@@ -87,7 +88,10 @@ pub fn is_numeric_type(value: &AttributeValue) -> bool {
 }
 
 /// Get the arithmetic result type for two operand types
-pub fn get_arithmetic_result_type(left: AttributeType, right: AttributeType) -> Result<AttributeType, crate::core::exception::SiddhiError> {
+pub fn get_arithmetic_result_type(
+    left: AttributeType,
+    right: AttributeType,
+) -> Result<AttributeType, crate::core::exception::SiddhiError> {
     crate::core::util::type_system::get_arithmetic_result_type(left, right)
 }
 
@@ -112,11 +116,15 @@ mod tests {
         // Test Java-style boolean conversion
         let v = get_property_value(AttributeValue::Int(1), AttributeType::BOOL).unwrap();
         assert!(matches!(v, AttributeValue::Bool(true)));
-        
+
         let v = get_property_value(AttributeValue::Int(0), AttributeType::BOOL).unwrap();
         assert!(matches!(v, AttributeValue::Bool(false)));
-        
-        let v = get_property_value(AttributeValue::String("true".to_string()), AttributeType::BOOL).unwrap();
+
+        let v = get_property_value(
+            AttributeValue::String("true".to_string()),
+            AttributeType::BOOL,
+        )
+        .unwrap();
         assert!(matches!(v, AttributeValue::Bool(true)));
     }
 
@@ -124,7 +132,7 @@ mod tests {
     fn test_null_conversion() {
         let v = get_property_value(AttributeValue::Null, AttributeType::STRING).unwrap();
         assert!(matches!(v, AttributeValue::String(s) if s == "null"));
-        
+
         let v = get_property_value(AttributeValue::Null, AttributeType::INT).unwrap();
         assert!(matches!(v, AttributeValue::Null));
     }
@@ -132,7 +140,10 @@ mod tests {
     #[test]
     fn test_invalid_conversion() {
         // Test that invalid conversions return None (Java behavior)
-        let v = get_property_value(AttributeValue::String("not_a_number".to_string()), AttributeType::INT);
+        let v = get_property_value(
+            AttributeValue::String("not_a_number".to_string()),
+            AttributeType::INT,
+        );
         assert!(v.is_none());
     }
 

@@ -2,19 +2,11 @@
 // Ensure these paths are correct based on query_api module structure and re-exports.
 use crate::query_api::{
     definition::{
-        attribute::Type as AttributeType,
-        AggregationDefinition,
-        FunctionDefinition,
-        StreamDefinition,
-        TableDefinition,
-        TriggerDefinition,
-        WindowDefinition,
+        attribute::Type as AttributeType, AggregationDefinition, FunctionDefinition,
+        StreamDefinition, TableDefinition, TriggerDefinition, WindowDefinition,
     },
     execution::{
-        query::{
-            output::stream::UpdateSet,
-            OnDemandQuery, Query, StoreQuery,
-        },
+        query::{output::stream::UpdateSet, OnDemandQuery, Query, StoreQuery},
         ExecutionElement, Partition,
     },
     expression::{constant::Constant as ExpressionConstant, Expression},

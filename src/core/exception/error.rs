@@ -35,15 +35,11 @@ pub enum SiddhiError {
 
     /// Errors in on-demand query creation
     #[error("On-demand query creation error: {message}")]
-    OnDemandQueryCreation {
-        message: String,
-    },
+    OnDemandQueryCreation { message: String },
 
     /// Runtime errors in on-demand query execution
     #[error("On-demand query runtime error: {message}")]
-    OnDemandQueryRuntime {
-        message: String,
-    },
+    OnDemandQueryRuntime { message: String },
 
     /// Store query errors
     #[error("Store query error: {message}")]
@@ -61,17 +57,11 @@ pub enum SiddhiError {
 
     /// Query not found errors
     #[error("Query '{name}' does not exist in Siddhi app '{app_name}'")]
-    QueryNotExist {
-        name: String,
-        app_name: String,
-    },
+    QueryNotExist { name: String, app_name: String },
 
     /// Attribute not found errors
     #[error("Attribute '{attribute}' does not exist in {context}")]
-    NoSuchAttribute {
-        attribute: String,
-        context: String,
-    },
+    NoSuchAttribute { attribute: String, context: String },
 
     /// Extension not found errors
     #[error("{extension_type} extension '{name}' not found")]
@@ -199,9 +189,7 @@ pub enum SiddhiError {
 
     /// Send errors for channels
     #[error("Send error: {message}")]
-    SendError {
-        message: String,
-    },
+    SendError { message: String },
 
     /// Processor errors
     #[error("Processor error: {message}")]
@@ -236,7 +224,11 @@ impl SiddhiError {
     }
 
     /// Create a new TypeError
-    pub fn type_error(message: impl Into<String>, expected: impl Into<String>, actual: impl Into<String>) -> Self {
+    pub fn type_error(
+        message: impl Into<String>,
+        expected: impl Into<String>,
+        actual: impl Into<String>,
+    ) -> Self {
         SiddhiError::TypeError {
             message: message.into(),
             expected: Some(expected.into()),
@@ -262,7 +254,10 @@ impl SiddhiError {
     }
 
     /// Create a new DefinitionNotExist error
-    pub fn definition_not_exist(definition_type: impl Into<String>, name: impl Into<String>) -> Self {
+    pub fn definition_not_exist(
+        definition_type: impl Into<String>,
+        name: impl Into<String>,
+    ) -> Self {
         SiddhiError::DefinitionNotExist {
             definition_type: definition_type.into(),
             name: name.into(),
@@ -272,12 +267,12 @@ impl SiddhiError {
     /// Add source error context
     pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
         match &mut self {
-            SiddhiError::SiddhiAppCreation { source: src, .. } |
-            SiddhiError::SiddhiAppRuntime { source: src, .. } |
-            SiddhiError::ConnectionUnavailable { source: src, .. } |
-            SiddhiError::DatabaseRuntime { source: src, .. } |
-            SiddhiError::PersistenceStore { source: src, .. } |
-            SiddhiError::MappingFailed { source: src, .. } => {
+            SiddhiError::SiddhiAppCreation { source: src, .. }
+            | SiddhiError::SiddhiAppRuntime { source: src, .. }
+            | SiddhiError::ConnectionUnavailable { source: src, .. }
+            | SiddhiError::DatabaseRuntime { source: src, .. }
+            | SiddhiError::PersistenceStore { source: src, .. }
+            | SiddhiError::MappingFailed { source: src, .. } => {
                 *src = Some(Box::new(source));
             }
             _ => {}

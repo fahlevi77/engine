@@ -1,3 +1,4 @@
+use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
 };
@@ -7,7 +8,6 @@ use siddhi_rust::core::event::stream::StreamEvent;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::query::processor::Processor;
 use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
 use siddhi_rust::query_api::definition::attribute::Type as AttrType;
 use siddhi_rust::query_api::definition::StreamDefinition;
 use std::sync::{Arc, Mutex};

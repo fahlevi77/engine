@@ -29,7 +29,9 @@ impl Processor for DeleteTableProcessor {
         while let Some(mut event) = chunk {
             let next = event.set_next(None);
             if let Some(data) = event.get_output_data() {
-                let cond = InMemoryCompiledCondition { values: data.to_vec() };
+                let cond = InMemoryCompiledCondition {
+                    values: data.to_vec(),
+                };
                 self.table.delete(&cond);
             }
             chunk = next;

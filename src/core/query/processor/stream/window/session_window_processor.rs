@@ -8,8 +8,8 @@ use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::query::processor::stream::window::WindowProcessor;
+use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::util::scheduler::{Schedulable, Scheduler};
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression};
@@ -89,7 +89,7 @@ impl SessionWindowProcessor {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Result<Self, String> {
         let params = handler.get_parameters();
-        
+
         // First parameter: session gap (required)
         let session_gap = match params.first() {
             Some(Expression::Constant(c)) => match &c.value {
@@ -159,10 +159,14 @@ impl SessionWindowProcessor {
     }
 
     /// Process events and maintain sessions
-    fn process_event(&self, event: Box<dyn ComplexEvent>) -> Result<Vec<Box<dyn ComplexEvent>>, String> {
-        let mut state = self.state.lock().map_err(|_| {
-            "Failed to acquire session window state lock".to_string()
-        })?;
+    fn process_event(
+        &self,
+        event: Box<dyn ComplexEvent>,
+    ) -> Result<Vec<Box<dyn ComplexEvent>>, String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Failed to acquire session window state lock".to_string())?;
 
         let event_timestamp = event.get_timestamp();
         let session_key = self.get_session_key(event.as_ref());
@@ -189,15 +193,27 @@ impl SessionWindowProcessor {
 
         if is_empty {
             // First event in session
-            session_container.current_session.add_event(Arc::clone(&stream_event));
-            session_container.current_session.set_timestamps(event_timestamp, max_timestamp, alive_timestamp);
+            session_container
+                .current_session
+                .add_event(Arc::clone(&stream_event));
+            session_container.current_session.set_timestamps(
+                event_timestamp,
+                max_timestamp,
+                alive_timestamp,
+            );
             self.schedule_timeout(max_timestamp)?;
         } else if event_timestamp >= current_start {
             // Event is not late relative to current session start
             if event_timestamp <= current_end {
                 // Event extends current session
-                session_container.current_session.add_event(Arc::clone(&stream_event));
-                session_container.current_session.set_timestamps(current_start, max_timestamp, alive_timestamp);
+                session_container
+                    .current_session
+                    .add_event(Arc::clone(&stream_event));
+                session_container.current_session.set_timestamps(
+                    current_start,
+                    max_timestamp,
+                    alive_timestamp,
+                );
                 self.schedule_timeout(max_timestamp)?;
             } else {
                 // Event starts a new session
@@ -205,14 +221,24 @@ impl SessionWindowProcessor {
                     // Move current to previous session
                     session_container.move_current_to_previous();
                     session_container.current_session.clear();
-                    session_container.current_session.add_event(Arc::clone(&stream_event));
-                    session_container.current_session.set_timestamps(event_timestamp, max_timestamp, alive_timestamp);
+                    session_container
+                        .current_session
+                        .add_event(Arc::clone(&stream_event));
+                    session_container.current_session.set_timestamps(
+                        event_timestamp,
+                        max_timestamp,
+                        alive_timestamp,
+                    );
                     self.schedule_timeout(max_timestamp)?;
                 }
             }
         } else {
             // Late event - try to add to appropriate session
-            self.handle_late_event(event_timestamp, Arc::clone(&stream_event), session_container)?;
+            self.handle_late_event(
+                event_timestamp,
+                Arc::clone(&stream_event),
+                session_container,
+            )?;
         }
 
         // Process any session timeouts
@@ -246,22 +272,29 @@ impl SessionWindowProcessor {
 
             // Check if event can extend current session backwards
             if event_timestamp >= (current_start - self.session_gap) {
-                session_container.current_session.add_event_at_start(Arc::clone(&event));
+                session_container
+                    .current_session
+                    .add_event_at_start(Arc::clone(&event));
                 session_container.current_session.start_timestamp = event_timestamp;
                 // Merge sessions if needed
                 self.merge_sessions_in_container(session_container);
-            } else if !previous_empty &&
-                event_timestamp >= (previous_start - self.session_gap) {
+            } else if !previous_empty && event_timestamp >= (previous_start - self.session_gap) {
                 // Event belongs to previous session
-                session_container.previous_session.add_event(Arc::clone(&event));
-                
+                session_container
+                    .previous_session
+                    .add_event(Arc::clone(&event));
+
                 if event_timestamp < previous_start {
                     session_container.previous_session.start_timestamp = event_timestamp;
                 } else {
                     // Event might extend previous session
                     let new_end = event_timestamp + self.session_gap;
                     let new_alive = new_end + self.allowed_latency;
-                    session_container.previous_session.set_timestamps(previous_start, new_end, new_alive);
+                    session_container.previous_session.set_timestamps(
+                        previous_start,
+                        new_end,
+                        new_alive,
+                    );
                     self.merge_sessions_in_container(session_container);
                 }
             } else {
@@ -272,7 +305,9 @@ impl SessionWindowProcessor {
             // No latency allowed - check only current session
             let current_start = session_container.current_session.start_timestamp;
             if event_timestamp >= (current_start - self.session_gap) {
-                session_container.current_session.add_event_at_start(Arc::clone(&event));
+                session_container
+                    .current_session
+                    .add_event_at_start(Arc::clone(&event));
                 session_container.current_session.start_timestamp = event_timestamp;
             } else {
                 println!("Event {} is too late for current session", event_timestamp);
@@ -282,25 +317,33 @@ impl SessionWindowProcessor {
         Ok(())
     }
 
-
     /// Merge sessions within a container
     fn merge_sessions_in_container(&self, container: &mut SessionContainer) {
-        if !container.previous_session.is_empty() && 
-           container.previous_session.end_timestamp >= (container.current_session.start_timestamp - self.session_gap) {
+        if !container.previous_session.is_empty()
+            && container.previous_session.end_timestamp
+                >= (container.current_session.start_timestamp - self.session_gap)
+        {
             // Sessions should be merged
-            container.current_session.merge_from(&mut container.previous_session);
+            container
+                .current_session
+                .merge_from(&mut container.previous_session);
             container.previous_session.clear();
         }
     }
 
     /// Process expired sessions based on current timestamp
-    fn process_session_timeouts(&self, current_time: i64, state: &mut SessionWindowState) -> Result<(), String> {
+    fn process_session_timeouts(
+        &self,
+        current_time: i64,
+        state: &mut SessionWindowState,
+    ) -> Result<(), String> {
         // Find all current sessions that have expired
         let mut expired_sessions = Vec::new();
-        
+
         for (key, container) in &state.session_map {
-            if !container.current_session.is_empty() && 
-               current_time >= container.current_session.end_timestamp {
+            if !container.current_session.is_empty()
+                && current_time >= container.current_session.end_timestamp
+            {
                 expired_sessions.push(key.clone());
             }
         }
@@ -314,7 +357,9 @@ impl SessionWindowProcessor {
                     self.schedule_timeout(container.previous_session.alive_timestamp)?;
                 } else {
                     // Expire immediately
-                    state.expired_event_chunk.add_session_events(&container.current_session);
+                    state
+                        .expired_event_chunk
+                        .add_session_events(&container.current_session);
                     container.current_session.clear();
                 }
             }
@@ -323,17 +368,20 @@ impl SessionWindowProcessor {
         // Process expired previous sessions (if latency allowed)
         if self.allowed_latency > 0 {
             let mut expired_previous = Vec::new();
-            
+
             for (key, container) in &state.session_map {
-                if !container.previous_session.is_empty() && 
-                   current_time >= container.previous_session.alive_timestamp {
+                if !container.previous_session.is_empty()
+                    && current_time >= container.previous_session.alive_timestamp
+                {
                     expired_previous.push(key.clone());
                 }
             }
 
             for key in expired_previous {
                 if let Some(container) = state.session_map.get_mut(&key) {
-                    state.expired_event_chunk.add_session_events(&container.previous_session);
+                    state
+                        .expired_event_chunk
+                        .add_session_events(&container.previous_session);
                     container.previous_session.clear();
                 }
             }
@@ -359,7 +407,7 @@ impl Processor for SessionWindowProcessor {
             if let Some(chunk) = complex_event_chunk {
                 let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
                 let mut all_expired: Vec<Box<dyn ComplexEvent>> = Vec::new();
-                
+
                 while let Some(ev) = current_opt {
                     if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                         match self.process_event(Box::new(se.clone_without_next())) {
@@ -555,7 +603,7 @@ mod tests {
         assert_eq!(chunk.start_timestamp, -1);
     }
 
-    #[test] 
+    #[test]
     fn test_session_container() {
         let container = SessionContainer::new();
         assert!(container.current_session.is_empty());

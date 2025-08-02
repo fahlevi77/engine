@@ -1,7 +1,6 @@
 // Corresponds to io.siddhi.query.api.expression.Expression (the abstract class)
 // In Rust, this is represented as an enum.
 
-
 // Import all the specific expression types
 use super::attribute_function::AttributeFunction;
 use super::condition::{And, Compare, CompareOperator, InOp, IsNull, Not, Or};

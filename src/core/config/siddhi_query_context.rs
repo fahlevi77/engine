@@ -2,8 +2,8 @@
 use super::siddhi_app_context::SiddhiAppContext;
 use crate::core::util::id_generator::IdGenerator;
 use crate::core::util::state_holder::StateHolder;
-use std::sync::atomic::{AtomicBool, Ordering};
 use crate::query_api::execution::query::output::OutputEventType;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc; // From query_api, as Java uses it.
                     // use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
                     // use crate::core::util::IdGenerator; // TODO: Define IdGenerator

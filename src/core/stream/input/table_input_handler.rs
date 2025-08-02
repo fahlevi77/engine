@@ -1,9 +1,7 @@
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::event::event::Event;
 use crate::core::event::value::AttributeValue;
-use crate::core::table::{
-    InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table,
-};
+use crate::core::table::{InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]

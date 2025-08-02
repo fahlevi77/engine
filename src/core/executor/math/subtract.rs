@@ -35,11 +35,14 @@ impl SubtractExpressionExecutor {
             }
             // Handle numeric types in order of precedence
             (ApiAttributeType::DOUBLE, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
-            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => ApiAttributeType::DOUBLE,
+            (ApiAttributeType::DOUBLE, _) | (_, ApiAttributeType::DOUBLE) => {
+                ApiAttributeType::DOUBLE
+            }
             (ApiAttributeType::FLOAT, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::FLOAT, _) | (_, ApiAttributeType::FLOAT) => ApiAttributeType::FLOAT,
             (ApiAttributeType::LONG, ApiAttributeType::LONG) => ApiAttributeType::LONG,
-            (ApiAttributeType::LONG, ApiAttributeType::INT) | (ApiAttributeType::INT, ApiAttributeType::LONG) => ApiAttributeType::LONG,
+            (ApiAttributeType::LONG, ApiAttributeType::INT)
+            | (ApiAttributeType::INT, ApiAttributeType::LONG) => ApiAttributeType::LONG,
             (ApiAttributeType::INT, ApiAttributeType::INT) => ApiAttributeType::INT,
         };
         Ok(Self {

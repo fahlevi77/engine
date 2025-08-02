@@ -28,8 +28,8 @@ use crate::query_api::{
 };
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::fmt;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionParseError {
@@ -40,7 +40,11 @@ pub struct ExpressionParseError {
 }
 
 impl ExpressionParseError {
-    pub fn new(message: String, element: &crate::query_api::siddhi_element::SiddhiElement, query: &str) -> Self {
+    pub fn new(
+        message: String,
+        element: &crate::query_api::siddhi_element::SiddhiElement,
+        query: &str,
+    ) -> Self {
         let (line, column) = element
             .query_context_start_index
             .map(|(l, c)| (Some(l), Some(c)))
@@ -57,7 +61,11 @@ impl ExpressionParseError {
 impl fmt::Display for ExpressionParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match (self.line, self.column) {
-            (Some(l), Some(c)) => write!(f, "{} at line {}, column {} in query '{}'", self.message, l, c, self.query_name),
+            (Some(l), Some(c)) => write!(
+                f,
+                "{} at line {}, column {} in query '{}'",
+                self.message, l, c, self.query_name
+            ),
             _ => write!(f, "{} in query '{}'", self.message, self.query_name),
         }
     }
@@ -338,19 +346,18 @@ pub fn parse_expression<'a>(
         }
         ApiExpression::Not(api_op) => {
             let exec = parse_expression(&api_op.expression, context)?;
-            Ok(Box::new(
-                NotExpressionExecutor::new(exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
-                })?,
-            ))
+            Ok(Box::new(NotExpressionExecutor::new(exec).map_err(|e| {
+                ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+            })?))
         }
         ApiExpression::Compare(api_op) => {
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
             Ok(Box::new(
-                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone()).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
-                })?,
+                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    })?,
             ))
         }
         ApiExpression::IsNull(api_op) => {
@@ -418,44 +425,80 @@ pub fn parse_expression<'a>(
                 }
                 (None | Some(""), name) if name == "instanceOfBoolean" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfBooleanExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), name) if name == "instanceOfString" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfStringExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), name) if name == "instanceOfInteger" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfIntegerExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), name) if name == "instanceOfLong" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfLongExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), name) if name == "instanceOfFloat" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfFloatExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), name) if name == "instanceOfDouble" && arg_execs.len() == 1 => {
                     Ok(Box::new(
-                        InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(|e| {
-                            ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
-                        })?,
+                        InstanceOfDoubleExpressionExecutor::new(arg_execs.remove(0)).map_err(
+                            |e| {
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
+                            },
+                        )?,
                     ))
                 }
                 (None | Some(""), "sum") => {
@@ -465,7 +508,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "avg") => {
@@ -475,7 +521,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "count") => {
@@ -485,7 +534,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "distinctCount") => {
@@ -495,7 +547,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "min") => {
@@ -505,7 +560,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "max") => {
@@ -515,7 +573,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "minForever") => {
@@ -525,7 +586,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 (None | Some(""), "maxForever") => {
@@ -535,7 +599,10 @@ pub fn parse_expression<'a>(
                         ProcessingMode::BATCH,
                         false,
                         &context.siddhi_query_context,
-                    ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                    )
+                    .map_err(|e| {
+                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                    })?;
                     Ok(Box::new(exec))
                 }
                 _ => {
@@ -550,7 +617,14 @@ pub fn parse_expression<'a>(
                             ProcessingMode::BATCH,
                             false,
                             &context.siddhi_query_context,
-                        ).map_err(|e| ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name))?;
+                        )
+                        .map_err(|e| {
+                            ExpressionParseError::new(
+                                e,
+                                &api_func.siddhi_element,
+                                context.query_name,
+                            )
+                        })?;
                         Ok(exec)
                     } else if let Some(scalar_fn_factory) = context
                         .siddhi_app_context
@@ -564,7 +638,11 @@ pub fn parse_expression<'a>(
                                 Arc::clone(&context.siddhi_app_context),
                             )
                             .map_err(|e| {
-                                ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
                             })?,
                         ))
                     } else if let Some(script_fn) = context
@@ -581,7 +659,11 @@ pub fn parse_expression<'a>(
                                 Arc::clone(&context.siddhi_app_context),
                             )
                             .map_err(|e| {
-                                ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                                ExpressionParseError::new(
+                                    e,
+                                    &api_func.siddhi_element,
+                                    context.query_name,
+                                )
                             })?,
                         ))
                     } else {

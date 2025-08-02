@@ -1,7 +1,5 @@
 // Corresponds to io.siddhi.query.api.execution.query.input.stream.StateInputStream
-use crate::query_api::execution::query::input::state::{
-    StateElement, StreamStateElement,
-};
+use crate::query_api::execution::query::input::state::{StateElement, StreamStateElement};
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
 use crate::query_api::siddhi_element::SiddhiElement;
 // StreamHandler is not directly used by StateInputStream itself, but by its contained BasicSingleInputStreams.

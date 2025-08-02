@@ -5,7 +5,9 @@ use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore};
 use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
 use siddhi_rust::query_api::execution::query::input::InputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction};
+use siddhi_rust::query_api::execution::query::output::output_stream::{
+    InsertIntoStreamAction, OutputStream, OutputStreamAction,
+};
 use siddhi_rust::query_api::execution::query::output::ratelimit::{OutputRate, OutputRateBehavior};
 use siddhi_rust::query_api::execution::query::selection::Selector;
 use siddhi_rust::query_api::execution::query::Query;
@@ -16,14 +18,26 @@ use std::sync::Arc;
 
 fn make_app() -> SiddhiApp {
     let mut app = SiddhiApp::new("RateApp".to_string());
-    app.add_stream_definition(StreamDefinition::new("In".to_string()).attribute("v".to_string(), AttrType::INT));
-    app.add_stream_definition(StreamDefinition::new("Out".to_string()).attribute("v".to_string(), AttrType::INT));
+    app.add_stream_definition(
+        StreamDefinition::new("In".to_string()).attribute("v".to_string(), AttrType::INT),
+    );
+    app.add_stream_definition(
+        StreamDefinition::new("Out".to_string()).attribute("v".to_string(), AttrType::INT),
+    );
     let input = InputStream::stream("In".to_string());
     let selector = Selector::new().select_variable(Variable::new("v".to_string()));
-    let out_action = InsertIntoStreamAction { target_id: "Out".to_string(), is_inner_stream: false, is_fault_stream: false };
+    let out_action = InsertIntoStreamAction {
+        target_id: "Out".to_string(),
+        is_inner_stream: false,
+        is_fault_stream: false,
+    };
     let out_stream = OutputStream::new(OutputStreamAction::InsertInto(out_action), None);
     let rate = OutputRate::per_events(Constant::int(2), OutputRateBehavior::All).unwrap();
-    let query = Query::query().from(input).select(selector).out_stream(out_stream).output(rate);
+    let query = Query::query()
+        .from(input)
+        .select(selector)
+        .out_stream(out_stream)
+        .output(rate);
     app.add_execution_element(ExecutionElement::Query(query));
     app
 }

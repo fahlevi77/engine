@@ -172,7 +172,10 @@ fn stream_table_join_basic() {
 fn stream_table_join_jdbc() {
     let mut manager = SiddhiManager::new();
     manager
-        .add_data_source("DS1".to_string(), Arc::new(SqliteDataSource::new(":memory:")))
+        .add_data_source(
+            "DS1".to_string(),
+            Arc::new(SqliteDataSource::new(":memory:")),
+        )
         .unwrap();
     let ctx = manager.siddhi_context();
     setup_sqlite_table(&ctx, "J2");
@@ -210,7 +213,10 @@ fn stream_table_join_jdbc() {
 fn cache_and_jdbc_tables_eviction_and_queries() {
     let mut manager = SiddhiManager::new();
     manager
-        .add_data_source("DS1".to_string(), Arc::new(SqliteDataSource::new(":memory:")))
+        .add_data_source(
+            "DS1".to_string(),
+            Arc::new(SqliteDataSource::new(":memory:")),
+        )
         .unwrap();
     let ctx = manager.siddhi_context();
     setup_sqlite_table(&ctx, "J3");
@@ -247,7 +253,10 @@ fn cache_and_jdbc_tables_eviction_and_queries() {
     let us_y = jdbc.compile_update_set(parse_set_clause("set v = 'y'").unwrap());
     assert!(jdbc.update(&*cond_b_j, &*us_y));
     let cond_y = jdbc.compile_condition(parse_expression("v == 'y'").unwrap());
-    assert_eq!(jdbc.find(&*cond_y), Some(vec![AttributeValue::String("y".into())]));
+    assert_eq!(
+        jdbc.find(&*cond_y),
+        Some(vec![AttributeValue::String("y".into())])
+    );
 
     runner.send("In", vec![AttributeValue::String("c".into())]);
     std::thread::sleep(std::time::Duration::from_millis(50));

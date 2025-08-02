@@ -80,11 +80,11 @@ fn test_table_input_handler_add() {
         .add_table("T1".to_string(), table.clone());
     let handler = TableInputHandler::new(table, Arc::clone(&ctx));
     handler.add(vec![Event::new_with_data(0, vec![AttributeValue::Int(5)])]);
-    assert!(ctx
-        .get_siddhi_context()
-        .get_table("T1")
-        .unwrap()
-        .contains(&InMemoryCompiledCondition { values: vec![AttributeValue::Int(5)] }));
+    assert!(ctx.get_siddhi_context().get_table("T1").unwrap().contains(
+        &InMemoryCompiledCondition {
+            values: vec![AttributeValue::Int(5)]
+        }
+    ));
 }
 
 #[test]
@@ -114,7 +114,9 @@ fn test_insert_into_table_processor() {
         .get_siddhi_context()
         .get_table("T2")
         .unwrap()
-        .contains(&InMemoryCompiledCondition { values: vec![AttributeValue::Int(7)] }));
+        .contains(&InMemoryCompiledCondition {
+            values: vec![AttributeValue::Int(7)]
+        }));
 }
 
 #[test]
@@ -135,20 +137,28 @@ fn test_table_input_handler_update_delete_find() {
         0,
         vec![AttributeValue::String("a".into())],
     )]);
-    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("a".into())] }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("a".into())]
+    }));
     assert!(handler.update(
         vec![AttributeValue::String("a".into())],
         vec![AttributeValue::String("b".into())]
     ));
-    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("b".into())]
+    }));
     assert!(handler.delete(vec![AttributeValue::String("b".into())]));
-    assert!(!table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
+    assert!(!table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("b".into())]
+    }));
     handler.add(vec![Event::new_with_data(
         0,
         vec![AttributeValue::String("x".into())],
     )]);
     assert_eq!(
-        table.find(&InMemoryCompiledCondition { values: vec![AttributeValue::String("x".into())] }),
+        table.find(&InMemoryCompiledCondition {
+            values: vec![AttributeValue::String("x".into())]
+        }),
         Some(vec![AttributeValue::String("x".into())])
     );
 }
@@ -156,12 +166,11 @@ fn test_table_input_handler_update_delete_find() {
 #[test]
 fn test_table_input_handler_jdbc() {
     let ctx = Arc::new(SiddhiContext::new());
-    ctx
-        .add_data_source(
-            "DS1".to_string(),
-            Arc::new(SqliteDataSource::new(":memory:")),
-        )
-        .unwrap();
+    ctx.add_data_source(
+        "DS1".to_string(),
+        Arc::new(SqliteDataSource::new(":memory:")),
+    )
+    .unwrap();
     setup_jdbc_table(&ctx, "test2");
 
     let app_ctx = Arc::new(SiddhiAppContext::new(
@@ -183,14 +192,20 @@ fn test_table_input_handler_jdbc() {
         0,
         vec![AttributeValue::String("a".into())],
     )]);
-    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("a".into())] }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("a".into())]
+    }));
     assert!(handler.update(
         vec![AttributeValue::String("a".into())],
         vec![AttributeValue::String("b".into())]
     ));
-    assert!(table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
+    assert!(table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("b".into())]
+    }));
     assert!(handler.delete(vec![AttributeValue::String("b".into())]));
-    assert!(!table.contains(&InMemoryCompiledCondition { values: vec![AttributeValue::String("b".into())] }));
+    assert!(!table.contains(&InMemoryCompiledCondition {
+        values: vec![AttributeValue::String("b".into())]
+    }));
 }
 
 #[test]

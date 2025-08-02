@@ -23,9 +23,9 @@ use crate::core::stream::output::error_store::ErrorStore;
 
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
-// use crate::query_api::siddhi_app::SiddhiApp; // TODO: Will be used when implementing app management
-// pub trait ConfigManager {} // Example
-// pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
+                                                                           // use crate::query_api::siddhi_app::SiddhiApp; // TODO: Will be used when implementing app management
+                                                                           // pub trait ConfigManager {} // Example
+                                                                           // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
 pub type ConfigManagerPlaceholder = String; // Simplified
 
 // pub trait SinkHandlerManager {} // Example
