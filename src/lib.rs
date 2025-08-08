@@ -35,10 +35,10 @@ mod tests {
     use crate::core::config::siddhi_context::SiddhiContext;
     // SiddhiAppContext is created inside SiddhiAppRuntime::new currently
     // use crate::core::config::siddhi_app_context::SiddhiAppContext;
-    use crate::core::event::event::Event as CoreEvent;
+    use crate::core::event::event::Event;
     use crate::core::event::value::AttributeValue as CoreAttributeValue;
     use crate::core::siddhi_app_runtime::SiddhiAppRuntime;
-    use crate::core::stream::output::stream_callback::{LogStreamCallback, StreamCallback}; // Assuming LogStreamCallback is here
+    use crate::core::stream::output::stream_callback::LogStreamCallback; // Assuming LogStreamCallback is here
 
     #[test]
     fn test_simple_filter_projection_query() {

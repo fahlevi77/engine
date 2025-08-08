@@ -1,6 +1,5 @@
 #[path = "common/mod.rs"]
 mod common;
-use common::AppRunner;
 use siddhi_rust::core::config::{
     siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
 };
@@ -106,7 +105,7 @@ impl AttributeAggregatorFactory for ConstAggFactory {
     ) -> Box<
         dyn siddhi_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor,
     > {
-        Box::new(ConstAggExec::default())
+        Box::new(ConstAggExec)
     }
     fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> {
         Box::new(Self)
@@ -134,7 +133,7 @@ impl AttributeAggregatorExecutor for ConstAggExec {
         Some(AttributeValue::Int(42))
     }
     fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> {
-        Box::new(ConstAggExec::default())
+        Box::new(ConstAggExec)
     }
 }
 impl ExpressionExecutor for ConstAggExec {
@@ -145,7 +144,7 @@ impl ExpressionExecutor for ConstAggExec {
         AttrType::INT
     }
     fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
-        Box::new(ConstAggExec::default())
+        Box::new(ConstAggExec)
     }
     fn is_attribute_aggregator(&self) -> bool {
         true
@@ -307,7 +306,7 @@ fn test_query_parser_uses_custom_window_factory() {
 
 #[test]
 fn app_runner_custom_window() {
-    let mut manager = SiddhiManager::new();
+    let manager = SiddhiManager::new();
     manager.add_window_factory("ptWin".to_string(), Box::new(DummyWindowFactory));
     let app = "\
         define stream In (v int);\n\

@@ -52,7 +52,7 @@ impl InputManager {
         let junction = self
             .stream_junction_map
             .get(stream_id)
-            .ok_or_else(|| format!("StreamJunction '{}' not found", stream_id))?
+            .ok_or_else(|| format!("StreamJunction '{stream_id}' not found"))?
             .clone();
         let publisher = junction
             .lock()
@@ -97,7 +97,7 @@ impl InputManager {
             .siddhi_app_context
             .get_siddhi_context()
             .get_table(table_id)
-            .ok_or_else(|| format!("Table '{}' not found", table_id))?;
+            .ok_or_else(|| format!("Table '{table_id}' not found"))?;
         let handler = TableInputHandler::new(table, Arc::clone(&self.siddhi_app_context));
         self.table_input_handlers
             .lock()

@@ -31,8 +31,7 @@ impl ModExpressionExecutor {
             | (ApiAttributeType::OBJECT, _)
             | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!(
-                    "Modulo not supported for input types {:?} and {:?}",
-                    left_type, right_type
+                    "Modulo not supported for input types {left_type:?} and {right_type:?}"
                 ));
             }
             // Handle numeric types in order of precedence

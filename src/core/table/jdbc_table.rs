@@ -28,7 +28,7 @@ impl JdbcTable {
     ) -> Result<Self, String> {
         let ds = siddhi_context
             .get_data_source(&data_source_name)
-            .ok_or_else(|| format!("DataSource '{}' not found", data_source_name))?;
+            .ok_or_else(|| format!("DataSource '{data_source_name}' not found"))?;
         let conn_any = ds.get_connection()?;
         let conn_arc = match conn_any.downcast::<Arc<Mutex<Connection>>>() {
             Ok(c) => *c,
@@ -272,11 +272,11 @@ impl Table for JdbcTable {
             None => return false,
         };
         let set_clause = (0..us_vals.len())
-            .map(|i| format!("c{}=?", i))
+            .map(|i| format!("c{i}=?"))
             .collect::<Vec<_>>()
             .join(",");
         let where_clause = (0..cond_vals.len())
-            .map(|i| format!("c{}=?", i))
+            .map(|i| format!("c{i}=?"))
             .collect::<Vec<_>>()
             .join(" AND ");
         let sql = format!(
@@ -310,7 +310,7 @@ impl Table for JdbcTable {
             None => return false,
         };
         let where_clause = (0..values.len())
-            .map(|i| format!("c{}=?", i))
+            .map(|i| format!("c{i}=?"))
             .collect::<Vec<_>>()
             .join(" AND ");
         let sql = format!("DELETE FROM {} WHERE {}", self.table_name, where_clause);
@@ -341,7 +341,7 @@ impl Table for JdbcTable {
             None => return None,
         };
         let where_clause = (0..values.len())
-            .map(|i| format!("c{}=?", i))
+            .map(|i| format!("c{i}=?"))
             .collect::<Vec<_>>()
             .join(" AND ");
         let sql = format!(

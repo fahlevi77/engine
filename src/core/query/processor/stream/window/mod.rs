@@ -7,12 +7,17 @@ use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::extension::WindowProcessorFactory;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
 use crate::core::util::scheduler::{Schedulable, Scheduler};
-use crate::core::util::state_holder::StateHolder;
-use crate::core::util::{event_from_bytes, event_to_bytes, from_bytes, to_bytes};
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+use std::fmt::Debug;
+
+// Import StateHolder trait and related types
+use crate::core::persistence::state_holder::{
+    StateHolder as NewStateHolder, StateSnapshot, StateError, StateSize, AccessPattern, 
+    SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata
+};
 
 // Import session window processor
 mod session_window_processor;
@@ -21,6 +26,25 @@ use session_window_processor::SessionWindowProcessor;
 // Import sort window processor
 mod sort_window_processor;
 use sort_window_processor::SortWindowProcessor;
+
+// Import enhanced length window state holder
+mod length_window_state_holder;
+use length_window_state_holder::LengthWindowStateHolder;
+
+// Import enhanced time window state holder
+mod time_window_state_holder;
+use time_window_state_holder::TimeWindowStateHolder;
+
+// Import enhanced length batch window state holder
+mod length_batch_window_state_holder;
+use length_batch_window_state_holder::LengthBatchWindowStateHolder;
+
+// Import enhanced time batch window state holder
+mod time_batch_window_state_holder;
+use time_batch_window_state_holder::TimeBatchWindowStateHolder;
+
+// Import enhanced external time window state holder
+mod external_time_window_state_holder;
 
 pub trait WindowProcessor: Processor {}
 
@@ -31,47 +55,6 @@ pub struct LengthWindowProcessor {
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
 }
 
-#[derive(Debug)]
-struct LengthWindowStateHolder {
-    buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
-}
-
-impl StateHolder for LengthWindowStateHolder {
-    fn snapshot_state(&self) -> Vec<u8> {
-        let buf = self.buffer.lock().unwrap();
-        let events: Vec<Vec<u8>> = buf
-            .iter()
-            .map(|e| {
-                let mut ev = crate::core::event::event::Event::new_with_data(
-                    e.timestamp,
-                    e.before_window_data.clone(),
-                );
-                ev.is_expired = e.event_type == ComplexEventType::Expired;
-                event_to_bytes(&ev).unwrap_or_default()
-            })
-            .collect();
-        to_bytes(&events).unwrap_or_default()
-    }
-
-    fn restore_state(&self, snapshot: &[u8]) {
-        if let Ok(ev_bytes) = from_bytes::<Vec<Vec<u8>>>(snapshot) {
-            let mut buf = self.buffer.lock().unwrap();
-            buf.clear();
-            for b in ev_bytes {
-                if let Ok(ev) = event_from_bytes(&b) {
-                    let mut se = StreamEvent::new(ev.timestamp, ev.data.len(), 0, 0);
-                    se.before_window_data = ev.data;
-                    se.event_type = if ev.is_expired {
-                        ComplexEventType::Expired
-                    } else {
-                        ComplexEventType::Current
-                    };
-                    buf.push_back(Arc::new(se));
-                }
-            }
-        }
-    }
-}
 
 impl LengthWindowProcessor {
     pub fn new(
@@ -80,10 +63,17 @@ impl LengthWindowProcessor {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        let holder = Arc::new(LengthWindowStateHolder {
-            buffer: Arc::clone(&buffer),
-        });
-        query_ctx.register_state_holder("length_window".to_string(), holder);
+        
+        // Create enhanced StateHolder (for demonstration and future integration)
+        let component_id = format!("length_window_{}", uuid::Uuid::new_v4());
+        let _state_holder = Arc::new(LengthWindowStateHolder::new(
+            Arc::clone(&buffer),
+            component_id,
+            length,
+        ));
+        
+        // State registry integration available through enhanced state holders
+        
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length,
@@ -191,6 +181,7 @@ pub struct TimeWindowProcessor {
     pub duration_ms: i64,
     scheduler: Option<Arc<Scheduler>>,
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
+    state_holder: Option<TimeWindowStateHolder>,
 }
 
 impl TimeWindowProcessor {
@@ -200,11 +191,21 @@ impl TimeWindowProcessor {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
+        let buffer = Arc::new(Mutex::new(VecDeque::new()));
+        let component_id = format!("time_window_{}_{}", query_ctx.get_name(), duration_ms);
+        
+        let state_holder = Some(TimeWindowStateHolder::new(
+            Arc::clone(&buffer),
+            component_id,
+            duration_ms,
+        ));
+        
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             duration_ms,
             scheduler,
-            buffer: Arc::new(Mutex::new(VecDeque::new())),
+            buffer,
+            state_holder,
         }
     }
 
@@ -230,11 +231,12 @@ impl TimeWindowProcessor {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ExpireTask {
     event: Arc<StreamEvent>,
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
     next: Option<Arc<Mutex<dyn Processor>>>,
+    state_holder: Option<TimeWindowStateHolder>,
 }
 
 impl Schedulable for ExpireTask {
@@ -251,6 +253,12 @@ impl Schedulable for ExpireTask {
             let mut ev = ev_arc.as_ref().clone_without_next();
             ev.set_event_type(ComplexEventType::Expired);
             ev.set_timestamp(timestamp);
+            
+            // Track state change
+            if let Some(ref state_holder) = self.state_holder {
+                state_holder.record_event_expired(&ev);
+            }
+            
             if let Some(ref next) = self.next {
                 next.lock().unwrap().process(Some(Box::new(ev)));
             }
@@ -331,10 +339,17 @@ impl Processor for TimeWindowProcessor {
                                 let mut buf = self.buffer.lock().unwrap();
                                 buf.push_back(Arc::clone(&arc));
                             }
+                            
+                            // Track state change
+                            if let Some(ref state_holder) = self.state_holder {
+                                state_holder.record_event_added(se);
+                            }
+                            
                             let task = ExpireTask {
                                 event: Arc::clone(&arc),
                                 buffer: Arc::clone(&self.buffer),
                                 next: Some(Arc::clone(next)),
+                                state_holder: self.state_holder.as_ref().cloned(),
                             };
                             scheduler.notify_at(se.timestamp + self.duration_ms, Arc::new(task));
                         }
@@ -380,6 +395,87 @@ impl Processor for TimeWindowProcessor {
 
 impl WindowProcessor for TimeWindowProcessor {}
 
+impl NewStateHolder for TimeWindowProcessor {
+    fn schema_version(&self) -> crate::core::persistence::state_holder::SchemaVersion {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.schema_version()
+        } else {
+            crate::core::persistence::state_holder::SchemaVersion::new(1, 0, 0)
+        }
+    }
+    
+    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.serialize_state(hints)
+        } else {
+            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
+                message: "StateHolder not initialized".to_string(),
+            })
+        }
+    }
+    
+    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.deserialize_state(snapshot)
+        } else {
+            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
+                message: "StateHolder not initialized".to_string(),
+            })
+        }
+    }
+    
+    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.get_changelog(since)
+        } else {
+            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
+                message: "StateHolder not initialized".to_string(),
+            })
+        }
+    }
+    
+    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.apply_changelog(changes)
+        } else {
+            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
+                message: "StateHolder not initialized".to_string(),
+            })
+        }
+    }
+    
+    fn estimate_size(&self) -> crate::core::persistence::state_holder::StateSize {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.estimate_size()
+        } else {
+            crate::core::persistence::state_holder::StateSize {
+                bytes: 0,
+                entries: 0,
+                estimated_growth_rate: 0.0,
+            }
+        }
+    }
+    
+    fn access_pattern(&self) -> crate::core::persistence::state_holder::AccessPattern {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.access_pattern()
+        } else {
+            crate::core::persistence::state_holder::AccessPattern::Sequential
+        }
+    }
+    
+    fn component_metadata(&self) -> crate::core::persistence::state_holder::StateMetadata {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.component_metadata()
+        } else {
+            crate::core::persistence::state_holder::StateMetadata::new(
+                format!("time_window_{}", self.duration_ms),
+                "TimeWindowProcessor".to_string(),
+            )
+        }
+    }
+}
+
 pub fn create_window_processor(
     handler: &WindowHandler,
     app_ctx: Arc<SiddhiAppContext>,
@@ -416,7 +512,7 @@ pub fn create_window_processor(
             "sort" => Ok(Arc::new(Mutex::new(SortWindowProcessor::from_handler(
                 handler, app_ctx, query_ctx,
             )?))),
-            other => Err(format!("Unsupported window type '{}'", other)),
+            other => Err(format!("Unsupported window type '{other}'")),
         }
     }
 }
@@ -475,6 +571,7 @@ pub struct LengthBatchWindowProcessor {
     pub length: usize,
     buffer: Arc<Mutex<Vec<StreamEvent>>>,
     expired: Arc<Mutex<Vec<StreamEvent>>>,
+    state_holder: Option<LengthBatchWindowStateHolder>,
 }
 
 impl LengthBatchWindowProcessor {
@@ -483,11 +580,24 @@ impl LengthBatchWindowProcessor {
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let expired = Arc::new(Mutex::new(Vec::new()));
+        
+        // Create enhanced StateHolder
+        let component_id = format!("length_batch_window_{}", uuid::Uuid::new_v4());
+        let state_holder = LengthBatchWindowStateHolder::new(
+            Arc::clone(&buffer),
+            Arc::clone(&expired),
+            component_id,
+            length,
+        );
+        
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length,
-            buffer: Arc::new(Mutex::new(Vec::new())),
-            expired: Arc::new(Mutex::new(Vec::new())),
+            buffer,
+            expired,
+            state_holder: Some(state_holder),
         }
     }
 
@@ -527,6 +637,11 @@ impl LengthBatchWindowProcessor {
                 return;
             }
 
+            // Record batch flush for incremental checkpointing
+            if let Some(ref state_holder) = self.state_holder {
+                state_holder.record_batch_flushed(&current_batch, &expired_batch);
+            }
+
             let mut head: Option<Box<dyn ComplexEvent>> = None;
             let mut tail = &mut head;
 
@@ -560,7 +675,14 @@ impl Processor for LengthBatchWindowProcessor {
             let mut current_opt = Some(chunk.as_ref() as &dyn ComplexEvent);
             while let Some(ev) = current_opt {
                 if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
-                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                    let se_clone = se.clone_without_next();
+                    
+                    // Record state change for incremental checkpointing
+                    if let Some(ref state_holder) = self.state_holder {
+                        state_holder.record_event_added(&se_clone);
+                    }
+                    
+                    self.buffer.lock().unwrap().push(se_clone);
                     let last_ts = se.timestamp;
                     if self.buffer.lock().unwrap().len() >= self.length {
                         self.flush(last_ts);
@@ -605,6 +727,87 @@ impl Processor for LengthBatchWindowProcessor {
 
 impl WindowProcessor for LengthBatchWindowProcessor {}
 
+impl NewStateHolder for LengthBatchWindowProcessor {
+    fn schema_version(&self) -> SchemaVersion {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.schema_version()
+        } else {
+            SchemaVersion::new(1, 0, 0)
+        }
+    }
+    
+    fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.serialize_state(hints)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for serialization".to_string(),
+            })
+        }
+    }
+    
+    fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.deserialize_state(snapshot)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for deserialization".to_string(),
+            })
+        }
+    }
+    
+    fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.get_changelog(since)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for changelog".to_string(),
+            })
+        }
+    }
+    
+    fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.apply_changelog(changes)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for changelog application".to_string(),
+            })
+        }
+    }
+    
+    fn estimate_size(&self) -> StateSize {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.estimate_size()
+        } else {
+            StateSize {
+                bytes: 0,
+                entries: 0,
+                estimated_growth_rate: 0.0,
+            }
+        }
+    }
+    
+    fn access_pattern(&self) -> AccessPattern {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.access_pattern()
+        } else {
+            AccessPattern::Sequential
+        }
+    }
+    
+    fn component_metadata(&self) -> StateMetadata {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.component_metadata()
+        } else {
+            StateMetadata::new(
+                "unknown_length_batch_window".to_string(),
+                "LengthBatchWindowProcessor".to_string()
+            )
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct LengthBatchWindowFactory;
 
@@ -638,6 +841,7 @@ pub struct TimeBatchWindowProcessor {
     buffer: Arc<Mutex<Vec<StreamEvent>>>,
     expired: Arc<Mutex<Vec<StreamEvent>>>,
     start_time: Arc<Mutex<Option<i64>>>,
+    state_holder: Option<TimeBatchWindowStateHolder>,
 }
 
 impl TimeBatchWindowProcessor {
@@ -647,13 +851,28 @@ impl TimeBatchWindowProcessor {
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let expired = Arc::new(Mutex::new(Vec::new()));
+        let start_time = Arc::new(Mutex::new(None));
+        
+        // Create enhanced StateHolder
+        let component_id = format!("time_batch_window_{}", uuid::Uuid::new_v4());
+        let state_holder = TimeBatchWindowStateHolder::new(
+            Arc::clone(&buffer),
+            Arc::clone(&expired),
+            Arc::clone(&start_time),
+            component_id,
+            duration_ms,
+        );
+        
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             duration_ms,
             scheduler,
-            buffer: Arc::new(Mutex::new(Vec::new())),
-            expired: Arc::new(Mutex::new(Vec::new())),
-            start_time: Arc::new(Mutex::new(None)),
+            buffer,
+            expired,
+            start_time,
+            state_holder: Some(state_holder),
         }
     }
 
@@ -691,6 +910,11 @@ impl TimeBatchWindowProcessor {
 
             if expired_batch.is_empty() && current_batch.is_empty() {
                 return;
+            }
+
+            // Record batch flush for incremental checkpointing
+            if let Some(ref state_holder) = self.state_holder {
+                state_holder.record_batch_flushed(&current_batch, &expired_batch, timestamp);
             }
 
             let mut head: Option<Box<dyn ComplexEvent>> = None;
@@ -739,8 +963,16 @@ impl Processor for TimeBatchWindowProcessor {
             while let Some(ev) = current_opt {
                 if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                     let mut start = self.start_time.lock().unwrap();
+                    let old_start_time = *start;
+                    
                     if start.is_none() {
                         *start = Some(se.timestamp);
+                        
+                        // Record start time change for incremental checkpointing
+                        if let Some(ref state_holder) = self.state_holder {
+                            state_holder.record_start_time_updated(old_start_time, Some(se.timestamp));
+                        }
+                        
                         if let Some(ref scheduler) = self.scheduler {
                             let task = BatchFlushTask {
                                 buffer: Arc::clone(&self.buffer),
@@ -757,7 +989,15 @@ impl Processor for TimeBatchWindowProcessor {
                         drop(start);
                         self.flush(ts);
                     }
-                    self.buffer.lock().unwrap().push(se.clone_without_next());
+                    
+                    let se_clone = se.clone_without_next();
+                    
+                    // Record state change for incremental checkpointing
+                    if let Some(ref state_holder) = self.state_holder {
+                        state_holder.record_event_added(&se_clone);
+                    }
+                    
+                    self.buffer.lock().unwrap().push(se_clone);
                 }
                 current_opt = ev.get_next();
             }
@@ -797,6 +1037,87 @@ impl Processor for TimeBatchWindowProcessor {
 }
 
 impl WindowProcessor for TimeBatchWindowProcessor {}
+
+impl NewStateHolder for TimeBatchWindowProcessor {
+    fn schema_version(&self) -> SchemaVersion {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.schema_version()
+        } else {
+            SchemaVersion::new(1, 0, 0)
+        }
+    }
+    
+    fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.serialize_state(hints)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for serialization".to_string(),
+            })
+        }
+    }
+    
+    fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.deserialize_state(snapshot)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for deserialization".to_string(),
+            })
+        }
+    }
+    
+    fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.get_changelog(since)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for changelog".to_string(),
+            })
+        }
+    }
+    
+    fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
+        if let Some(ref mut state_holder) = self.state_holder {
+            state_holder.apply_changelog(changes)
+        } else {
+            Err(StateError::InvalidStateData {
+                message: "No state holder available for changelog application".to_string(),
+            })
+        }
+    }
+    
+    fn estimate_size(&self) -> StateSize {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.estimate_size()
+        } else {
+            StateSize {
+                bytes: 0,
+                entries: 0,
+                estimated_growth_rate: 0.0,
+            }
+        }
+    }
+    
+    fn access_pattern(&self) -> AccessPattern {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.access_pattern()
+        } else {
+            AccessPattern::Sequential
+        }
+    }
+    
+    fn component_metadata(&self) -> StateMetadata {
+        if let Some(ref state_holder) = self.state_holder {
+            state_holder.component_metadata()
+        } else {
+            StateMetadata::new(
+                "unknown_time_batch_window".to_string(),
+                "TimeBatchWindowProcessor".to_string()
+            )
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct TimeBatchWindowFactory;

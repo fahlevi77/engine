@@ -3,6 +3,7 @@ use crate::query_api::siddhi_element::SiddhiElement;
 
 /// Defines the data type of an attribute.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)] // Added Copy for easier usage
+#[derive(Default)]
 pub enum Type {
     STRING,
     INT,
@@ -10,14 +11,10 @@ pub enum Type {
     FLOAT,
     DOUBLE,
     BOOL,
+    #[default]
     OBJECT,
 }
 
-impl Default for Type {
-    fn default() -> Self {
-        Type::OBJECT
-    } // Default type as per From<SiddhiElement> impl
-}
 
 /// Represents an attribute with a name and a type.
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default

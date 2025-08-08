@@ -104,12 +104,11 @@ impl SequenceProcessor {
             }
             let second = self.second_buffer.remove(0);
 
-            if self.first_min == 0 {
-                if self.within_time.is_none() || self.first_buffer.is_empty() {
+            if self.first_min == 0
+                && (self.within_time.is_none() || self.first_buffer.is_empty()) {
                     let joined = self.build_joined_event(None, Some(&second));
                     self.forward(joined);
                 }
-            }
 
             let max = if self.first_max < 0 {
                 self.first_buffer.len()

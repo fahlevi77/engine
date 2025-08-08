@@ -36,8 +36,7 @@ impl IfThenElseFunctionExecutor {
         // Sticking to stricter Java logic for now.
         if then_type != else_type {
             return Err(format!(
-                "Then/Else branches in IfThenElseFunctionExecutor must have the same type, found {:?} and {:?}",
-                then_type, else_type
+                "Then/Else branches in IfThenElseFunctionExecutor must have the same type, found {then_type:?} and {else_type:?}"
             ));
         }
         let return_type = then_type; // Since they must be equal

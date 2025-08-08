@@ -2,18 +2,16 @@ use crate::query_api::expression::Variable;
 use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum Order {
+    #[default]
     Asc,
     Desc,
 }
 
-impl Default for Order {
-    fn default() -> Self {
-        Order::Asc
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)] // Default requires Variable to be Default
+#[derive(Default)]
 pub struct OrderByAttribute {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
@@ -48,12 +46,3 @@ impl OrderByAttribute {
 
 // If Variable is Default, OrderByAttribute can derive Default.
 // Variable's Default requires attribute_name to be String::default().
-impl Default for OrderByAttribute {
-    fn default() -> Self {
-        Self {
-            siddhi_element: SiddhiElement::default(),
-            variable: Variable::default(),
-            order: Order::default(),
-        }
-    }
-}

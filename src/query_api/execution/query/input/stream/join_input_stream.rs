@@ -6,7 +6,9 @@ use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement; // Using the actual Within struct
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum Type {
+    #[default]
     Join,
     InnerJoin,
     LeftOuterJoin,
@@ -14,26 +16,19 @@ pub enum Type {
     FullOuterJoin,
 }
 
-impl Default for Type {
-    fn default() -> Self {
-        Type::Join
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum EventTrigger {
     Left,
     Right,
+    #[default]
     All,
 }
 
-impl Default for EventTrigger {
-    fn default() -> Self {
-        EventTrigger::All
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
+#[derive(Default)]
 pub struct JoinInputStream {
     pub siddhi_element: SiddhiElement, // Composed SiddhiElement
 
@@ -70,21 +65,6 @@ impl JoinInputStream {
     }
 }
 
-impl Default for JoinInputStream {
-    fn default() -> Self {
-        JoinInputStream {
-            siddhi_element: SiddhiElement::default(),
-            // Defaulting to Box::default() which is Box::new(SingleInputStream::default())
-            left_input_stream: Box::default(),
-            join_type: Type::default(),
-            right_input_stream: Box::default(),
-            on_compare: None,
-            trigger: EventTrigger::default(),
-            within: None,
-            per: None,
-        }
-    }
-}
 
 impl InputStreamTrait for JoinInputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

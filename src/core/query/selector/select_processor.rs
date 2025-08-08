@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-use crate::core::util::state_holder::StateHolder;
+use crate::core::persistence::StateHolder;
 
 use super::{GroupByKeyGenerator, OrderByEventComparator};
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -55,7 +55,11 @@ struct LimiterSnapshot {
 }
 
 impl StateHolder for OutputRateLimiterStateHolder {
-    fn snapshot_state(&self) -> Vec<u8> {
+    fn schema_version(&self) -> crate::core::persistence::SchemaVersion {
+        crate::core::persistence::SchemaVersion::new(1, 0, 0)
+    }
+    
+    fn serialize_state(&self, _hints: &crate::core::persistence::SerializationHints) -> Result<crate::core::persistence::StateSnapshot, crate::core::persistence::StateError> {
         let count = *self.counter.lock().unwrap();
         let events = self
             .buffer
@@ -69,25 +73,79 @@ impl StateHolder for OutputRateLimiterStateHolder {
             })
             .collect();
         let snap = LimiterSnapshot { count, events };
-        crate::core::util::to_bytes(&snap).unwrap_or_default()
+        let data = crate::core::util::to_bytes(&snap).map_err(|e| crate::core::persistence::StateError::SerializationError {
+            message: format!("Failed to serialize OutputRateLimiter state: {e}"),
+        })?;
+        
+        let checksum = crate::core::persistence::StateSnapshot::calculate_checksum(&data);
+        
+        Ok(crate::core::persistence::StateSnapshot {
+            version: self.schema_version(),
+            checkpoint_id: 0,
+            data,
+            compression: crate::core::persistence::CompressionType::None,
+            checksum,
+            metadata: self.component_metadata(),
+        })
     }
-
-    fn restore_state(&self, snapshot: &[u8]) {
-        if let Ok(snap) = crate::core::util::from_bytes::<LimiterSnapshot>(snapshot) {
-            *self.counter.lock().unwrap() = snap.count;
-            let mut buf = self.buffer.lock().unwrap();
-            buf.clear();
-            for ev in snap.events {
-                let mut se = StreamEvent::new(ev.ts, 0, 0, ev.data.len());
-                se.output_data = Some(ev.data);
-                se.event_type = if ev.expired {
-                    ComplexEventType::Expired
-                } else {
-                    ComplexEventType::Current
-                };
-                buf.push(Box::new(se));
-            }
+    
+    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::StateSnapshot) -> Result<(), crate::core::persistence::StateError> {
+        if !snapshot.verify_integrity() {
+            return Err(crate::core::persistence::StateError::ChecksumMismatch);
         }
+        
+        let snap: LimiterSnapshot = crate::core::util::from_bytes(&snapshot.data).map_err(|e| crate::core::persistence::StateError::DeserializationError {
+            message: format!("Failed to deserialize OutputRateLimiter state: {e}"),
+        })?;
+        
+        *self.counter.lock().unwrap() = snap.count;
+        let mut buf = self.buffer.lock().unwrap();
+        buf.clear();
+        for ev in snap.events {
+            let mut se = StreamEvent::new(ev.ts, 0, 0, ev.data.len());
+            se.output_data = Some(ev.data);
+            se.event_type = if ev.expired {
+                ComplexEventType::Expired
+            } else {
+                ComplexEventType::Current
+            };
+            buf.push(Box::new(se));
+        }
+        Ok(())
+    }
+    
+    fn get_changelog(&self, _since: crate::core::persistence::CheckpointId) -> Result<crate::core::persistence::ChangeLog, crate::core::persistence::StateError> {
+        // OutputRateLimiter doesn't support incremental changes
+        Err(crate::core::persistence::StateError::SerializationError {
+            message: "OutputRateLimiter doesn't support incremental checkpointing".to_string(),
+        })
+    }
+    
+    fn apply_changelog(&mut self, _changes: &crate::core::persistence::ChangeLog) -> Result<(), crate::core::persistence::StateError> {
+        // OutputRateLimiter doesn't support incremental changes
+        Err(crate::core::persistence::StateError::DeserializationError {
+            message: "OutputRateLimiter doesn't support incremental changes".to_string(),
+        })
+    }
+    
+    fn estimate_size(&self) -> crate::core::persistence::StateSize {
+        let buffer_size = self.buffer.lock().unwrap().len();
+        crate::core::persistence::StateSize {
+            bytes: buffer_size * std::mem::size_of::<StoredEvent>() + std::mem::size_of::<usize>(),
+            entries: buffer_size + 1, // events + counter
+            estimated_growth_rate: 0.0,
+        }
+    }
+    
+    fn access_pattern(&self) -> crate::core::persistence::AccessPattern {
+        crate::core::persistence::AccessPattern::Hot // Rate limiter is frequently accessed
+    }
+    
+    fn component_metadata(&self) -> crate::core::persistence::StateMetadata {
+        crate::core::persistence::StateMetadata::new(
+            "output_rate_limiter".to_string(),
+            "OutputRateLimiter".to_string(),
+        )
     }
 }
 
@@ -101,10 +159,10 @@ impl OutputRateLimiter {
     ) -> Self {
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let counter = Arc::new(Mutex::new(0usize));
-        let holder = Arc::new(OutputRateLimiterStateHolder {
+        let holder = Arc::new(Mutex::new(OutputRateLimiterStateHolder {
             buffer: Arc::clone(&buffer),
             counter: Arc::clone(&counter),
-        });
+        }));
         siddhi_query_context.register_state_holder("output_rate_limiter".into(), holder);
         Self {
             next_processor,
@@ -368,7 +426,7 @@ impl Processor for SelectProcessor {
                     .group_by_key_generator
                     .as_ref()
                     .and_then(|g| g.construct_event_key(event_box.as_ref()))
-                    .unwrap_or_else(|| "".to_string());
+                    .unwrap_or_default();
                 let state = map.entry(key.clone()).or_insert_with(|| GroupState {
                     oaps: self
                         .output_attribute_processors
@@ -421,7 +479,7 @@ impl Processor for SelectProcessor {
                         .group_by_key_generator
                         .as_ref()
                         .and_then(|g| g.construct_event_key(event_box.as_ref()))
-                        .unwrap_or_else(|| "".to_string());
+                        .unwrap_or_default();
                     group_map.insert(key, event_box);
                 } else {
                     collected.push(event_box);

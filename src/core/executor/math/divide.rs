@@ -33,8 +33,7 @@ impl DivideExpressionExecutor {
             | (ApiAttributeType::OBJECT, _)
             | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!(
-                    "Division not supported for input types {:?} and {:?}",
-                    left_type, right_type
+                    "Division not supported for input types {left_type:?} and {right_type:?}"
                 ));
             }
             // Any division involving numbers results in DOUBLE for safety and precision by default

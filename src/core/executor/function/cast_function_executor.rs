@@ -34,7 +34,7 @@ impl CastFunctionExecutor {
             "double" => ApiAttributeType::DOUBLE,
             "bool" | "boolean" => ApiAttributeType::BOOL,
             "object" => ApiAttributeType::OBJECT,
-            _ => return Err(format!("Unsupported cast target type: {}", type_val)),
+            _ => return Err(format!("Unsupported cast target type: {type_val}")),
         };
         Ok(Self {
             value_executor,

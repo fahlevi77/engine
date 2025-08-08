@@ -52,8 +52,8 @@ pub struct DisruptorExceptionHandlerPlaceholder {}
 pub struct ExceptionListenerPlaceholder {}
 
 thread_local! {
-    static GROUP_BY_KEY: RefCell<Option<String>> = RefCell::new(None);
-    static PARTITION_KEY: RefCell<Option<String>> = RefCell::new(None);
+    static GROUP_BY_KEY: RefCell<Option<String>> = const { RefCell::new(None) };
+    static PARTITION_KEY: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 // Placeholder for stats Level enum
@@ -130,7 +130,7 @@ impl SiddhiAppContext {
     pub fn get_current_flow_id() -> String {
         let partition = PARTITION_KEY.with(|k| k.borrow().clone().unwrap_or_default());
         let group_by = GROUP_BY_KEY.with(|k| k.borrow().clone().unwrap_or_default());
-        format!("{}--{}", partition, group_by)
+        format!("{partition}--{group_by}")
     }
 
     pub fn get_partition_flow_id() -> Option<String> {

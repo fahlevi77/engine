@@ -3,7 +3,9 @@ use crate::query_api::siddhi_element::SiddhiElement;
 // However, Java's TimePeriod.Duration is just an enum.
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Default)]
 pub enum Duration {
+    #[default]
     Seconds,
     Minutes,
     Hours,
@@ -36,23 +38,15 @@ impl Duration {
     }
 }
 
-impl Default for Duration {
-    fn default() -> Self {
-        Duration::Seconds
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Default)]
 pub enum Operator {
     Range,
+    #[default]
     Interval,
 }
 
-impl Default for Operator {
-    fn default() -> Self {
-        Operator::Interval
-    } // Or Range, depending on common usage
-}
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct TimePeriod {

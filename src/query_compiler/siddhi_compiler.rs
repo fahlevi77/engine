@@ -47,8 +47,7 @@ pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
                 // For now, returning a simpler error.
                 // TODO: Enhance error reporting with line numbers if possible without full parser.
                 return Err(format!(
-                    "No system or environmental variable found for '${{{}}}'",
-                    var_name
+                    "No system or environmental variable found for '${{{var_name}}}'"
                 ));
             }
         }
@@ -67,7 +66,7 @@ fn parse_attribute_type(t: &str) -> Result<AttributeType, String> {
         "double" => Ok(AttributeType::DOUBLE),
         "bool" | "boolean" => Ok(AttributeType::BOOL),
         "object" => Ok(AttributeType::OBJECT),
-        _ => Err(format!("Unknown attribute type: {}", t)),
+        _ => Err(format!("Unknown attribute type: {t}")),
     }
 }
 
@@ -157,56 +156,56 @@ pub fn parse_stream_definition(stream_def_string: &str) -> Result<StreamDefiniti
     let s = update_variables(stream_def_string)?;
     grammar::StreamDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_table_definition(table_def_string: &str) -> Result<TableDefinition, String> {
     let s = update_variables(table_def_string)?;
     grammar::TableDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_window_definition(window_def_string: &str) -> Result<WindowDefinition, String> {
     let s = update_variables(window_def_string)?;
     grammar::WindowDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_aggregation_definition(agg_def_string: &str) -> Result<AggregationDefinition, String> {
     let s = update_variables(agg_def_string)?;
     grammar::AggDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_partition(partition_string: &str) -> Result<Partition, String> {
     let s = update_variables(partition_string)?;
     grammar::PartitionStmtParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_query(query_string: &str) -> Result<Query, String> {
     let s = update_variables(query_string)?;
     grammar::QueryStmtParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_function_definition(func_def_string: &str) -> Result<FunctionDefinition, String> {
     let s = update_variables(func_def_string)?;
     grammar::FunctionDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_trigger_definition(trig_def_string: &str) -> Result<TriggerDefinition, String> {
     let s = update_variables(trig_def_string)?;
     grammar::TriggerDefParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 // Renamed from parseTimeConstantDefinition to align with type name
@@ -216,14 +215,14 @@ pub fn parse_time_constant(time_const_string: &str) -> Result<ExpressionConstant
     let s = update_variables(time_const_string)?;
     grammar::TimeConstantParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_on_demand_query(query_string: &str) -> Result<OnDemandQuery, String> {
     let s = update_variables(query_string)?;
     grammar::OnDemandQueryStmtParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 // parseStoreQuery in Java calls parseOnDemandQuery.
@@ -231,21 +230,21 @@ pub fn parse_store_query(store_query_string: &str) -> Result<StoreQuery, String>
     let s = update_variables(store_query_string)?;
     grammar::StoreQueryStmtParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_expression(expr_string: &str) -> Result<Expression, String> {
     let s = update_variables(expr_string)?;
     grammar::ExpressionParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 pub fn parse_set_clause(set_clause_string: &str) -> Result<UpdateSet, String> {
     let s = update_variables(set_clause_string)?;
     grammar::SetClauseParser::new()
         .parse(&s)
-        .map_err(|e| format!("{:?}", e))
+        .map_err(|e| format!("{e:?}"))
 }
 
 // The problematic comments and `pub use` below are removed.

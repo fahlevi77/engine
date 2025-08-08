@@ -84,8 +84,7 @@ impl SiddhiManager {
             .contains_key(&app_name)
         {
             return Err(format!(
-                "SiddhiApp with name '{}' already exists.",
-                app_name
+                "SiddhiApp with name '{app_name}' already exists."
             ));
         }
 
@@ -178,8 +177,7 @@ impl SiddhiManager {
         }
 
         println!(
-            "[SiddhiManager] dynamically loaded extension '{}' from {}",
-            name, library_path
+            "[SiddhiManager] dynamically loaded extension '{name}' from {library_path}"
         );
         Ok(())
     }
@@ -314,7 +312,7 @@ impl SiddhiManager {
         let map = self.siddhi_app_runtime_map.lock().expect("Mutex poisoned");
         let rt = map
             .get(app_name)
-            .ok_or_else(|| format!("SiddhiApp '{}' not found", app_name))?;
+            .ok_or_else(|| format!("SiddhiApp '{app_name}' not found"))?;
         rt.persist()
     }
 
@@ -322,7 +320,7 @@ impl SiddhiManager {
         let map = self.siddhi_app_runtime_map.lock().expect("Mutex poisoned");
         let rt = map
             .get(app_name)
-            .ok_or_else(|| format!("SiddhiApp '{}' not found", app_name))?;
+            .ok_or_else(|| format!("SiddhiApp '{app_name}' not found"))?;
         rt.restore_revision(revision)
     }
 

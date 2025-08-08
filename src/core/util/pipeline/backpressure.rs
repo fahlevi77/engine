@@ -10,8 +10,10 @@ use std::time::{Duration, Instant};
 
 /// Backpressure strategies for handling pipeline overload
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum BackpressureStrategy {
     /// Drop new events when pipeline is full (fire-and-forget)
+    #[default]
     Drop,
     /// Block producers until space is available (guaranteed delivery)
     Block,
@@ -26,11 +28,6 @@ pub enum BackpressureStrategy {
     },
 }
 
-impl Default for BackpressureStrategy {
-    fn default() -> Self {
-        BackpressureStrategy::Drop
-    }
-}
 
 /// Backpressure handler that implements various strategies
 pub struct BackpressureHandler {

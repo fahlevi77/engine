@@ -7,7 +7,7 @@ use crossbeam_queue::ArrayQueue;
 use crossbeam_utils::CachePadded;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use super::{BackpressureHandler, BackpressureStrategy, EventPool, PipelineMetrics, PooledEvent};
 use crate::core::event::stream::StreamEvent;
@@ -189,8 +189,7 @@ impl EventPipeline {
                         Err(e) => {
                             self.metrics.increment_processing_errors();
                             return Err(format!(
-                                "Processing error at sequence {}: {}",
-                                sequence, e
+                                "Processing error at sequence {sequence}: {e}"
                             ));
                         }
                     }
@@ -247,7 +246,7 @@ impl EventPipeline {
                     }
                     Err(e) => {
                         self.metrics.increment_processing_errors();
-                        return Err(format!("Batch processing error: {}", e));
+                        return Err(format!("Batch processing error: {e}"));
                     }
                 }
 

@@ -25,12 +25,12 @@ pub enum AttributeValue {
 impl fmt::Debug for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AttributeValue::String(s) => write!(f, "String({:?})", s),
-            AttributeValue::Int(i) => write!(f, "Int({:?})", i),
-            AttributeValue::Long(l) => write!(f, "Long({:?})", l),
-            AttributeValue::Float(fl) => write!(f, "Float({:?})", fl),
-            AttributeValue::Double(d) => write!(f, "Double({:?})", d),
-            AttributeValue::Bool(b) => write!(f, "Bool({:?})", b),
+            AttributeValue::String(s) => write!(f, "String({s:?})"),
+            AttributeValue::Int(i) => write!(f, "Int({i:?})"),
+            AttributeValue::Long(l) => write!(f, "Long({l:?})"),
+            AttributeValue::Float(fl) => write!(f, "Float({fl:?})"),
+            AttributeValue::Double(d) => write!(f, "Double({d:?})"),
+            AttributeValue::Bool(b) => write!(f, "Bool({b:?})"),
             AttributeValue::Object(_) => write!(f, "Object(<opaque>)"), // Cannot inspect Box<dyn Any> easily
             AttributeValue::Null => write!(f, "Null"),
         }
@@ -276,12 +276,12 @@ impl AttributeValue {
 impl fmt::Display for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AttributeValue::String(s) => write!(f, "{}", s),
-            AttributeValue::Int(i) => write!(f, "{}", i),
-            AttributeValue::Long(l) => write!(f, "{}", l),
-            AttributeValue::Float(v) => write!(f, "{}", v),
-            AttributeValue::Double(v) => write!(f, "{}", v),
-            AttributeValue::Bool(b) => write!(f, "{}", b),
+            AttributeValue::String(s) => write!(f, "{s}"),
+            AttributeValue::Int(i) => write!(f, "{i}"),
+            AttributeValue::Long(l) => write!(f, "{l}"),
+            AttributeValue::Float(v) => write!(f, "{v}"),
+            AttributeValue::Double(v) => write!(f, "{v}"),
+            AttributeValue::Bool(b) => write!(f, "{b}"),
             AttributeValue::Object(_) => write!(f, "<object>"),
             AttributeValue::Null => write!(f, "null"),
         }

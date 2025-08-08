@@ -2,7 +2,8 @@
 // Rust implementation of Siddhi SortWindowProcessor
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+    siddhi_app_context::SiddhiAppContext,
+    siddhi_context::SiddhiContext,
     siddhi_query_context::SiddhiQueryContext,
 };
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
@@ -128,7 +129,7 @@ impl Processor for SortWindowProcessor {
                                 all_events.extend(events);
                             }
                             Err(e) => {
-                                eprintln!("Error processing sort window event: {}", e);
+                                eprintln!("Error processing sort window event: {e}");
                             }
                         }
                     }

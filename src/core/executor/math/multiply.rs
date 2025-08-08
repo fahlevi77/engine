@@ -31,8 +31,7 @@ impl MultiplyExpressionExecutor {
             | (ApiAttributeType::OBJECT, _)
             | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!(
-                    "Multiplication not supported for input types {:?} and {:?}",
-                    left_type, right_type
+                    "Multiplication not supported for input types {left_type:?} and {right_type:?}"
                 ));
             }
             // Handle numeric types in order of precedence

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::core::util::state_holder::StateHolder;
+use crate::core::persistence::StateHolder;
 use crate::core::util::{from_bytes, to_bytes};
 
 use super::persistence_store::PersistenceStore;
@@ -14,7 +14,7 @@ pub struct SnapshotService {
     state: Mutex<Vec<u8>>, // serialized runtime state
     pub persistence_store: Option<Arc<dyn PersistenceStore>>,
     pub siddhi_app_id: String,
-    state_holders: Mutex<HashMap<String, Arc<dyn StateHolder>>>,
+    state_holders: Mutex<HashMap<String, Arc<Mutex<dyn StateHolder>>>>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -47,7 +47,7 @@ impl SnapshotService {
     }
 
     /// Register a state holder to be included in snapshots.
-    pub fn register_state_holder(&self, id: String, holder: Arc<dyn StateHolder>) {
+    pub fn register_state_holder(&self, id: String, holder: Arc<Mutex<dyn StateHolder>>) {
         self.state_holders.lock().unwrap().insert(id, holder);
     }
 
@@ -59,8 +59,17 @@ impl SnapshotService {
     /// Persist the current state via the configured store.
     pub fn persist(&self) -> Result<String, String> {
         let mut holders = HashMap::new();
+        let hints = crate::core::persistence::SerializationHints::default();
         for (id, holder) in self.state_holders.lock().unwrap().iter() {
-            holders.insert(id.clone(), holder.snapshot_state());
+            match holder.lock().unwrap().serialize_state(&hints) {
+                Ok(snapshot) => {
+                    holders.insert(id.clone(), snapshot.data);
+                }
+                Err(e) => {
+                    eprintln!("Failed to serialize state for {id}: {e:?}");
+                    continue;
+                }
+            }
         }
         let snapshot = SnapshotData {
             main: self.snapshot(),
@@ -87,7 +96,22 @@ impl SnapshotService {
             self.set_state(snap.main);
             for (id, bytes) in snap.holders {
                 if let Some(holder) = self.state_holders.lock().unwrap().get(&id) {
-                    holder.restore_state(&bytes);
+                    // Create a temporary snapshot for deserialization
+                    let checksum = crate::core::persistence::StateSnapshot::calculate_checksum(&bytes);
+                    let temp_snapshot = crate::core::persistence::StateSnapshot {
+                        version: crate::core::persistence::SchemaVersion::new(1, 0, 0),
+                        checkpoint_id: 0,
+                        data: bytes,
+                        compression: crate::core::persistence::CompressionType::None,
+                        checksum,
+                        metadata: crate::core::persistence::StateMetadata::new(
+                            id.clone(),
+                            "LegacyComponent".to_string(),
+                        ),
+                    };
+                    if let Err(e) = holder.lock().unwrap().deserialize_state(&temp_snapshot) {
+                        eprintln!("Failed to restore state for {id}: {e:?}");
+                    }
                 }
             }
             Ok(())

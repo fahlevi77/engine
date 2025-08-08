@@ -22,9 +22,9 @@ pub fn get_property_value_result(
     value: AttributeValue,
     attribute_type: AttributeType,
 ) -> Result<AttributeValue, String> {
-    let value_debug = format!("{:?}", value);
+    let value_debug = format!("{value:?}");
     TypeConverter::convert(value, attribute_type)
-        .ok_or_else(|| format!("Cannot convert {} to {:?}", value_debug, attribute_type))
+        .ok_or_else(|| format!("Cannot convert {value_debug} to {attribute_type:?}"))
 }
 
 /// Parse a string and convert it directly to an `AttributeValue` of the given type.
@@ -42,7 +42,7 @@ pub fn get_property_value_from_str_result(
     attribute_type: AttributeType,
 ) -> Result<AttributeValue, String> {
     get_property_value_from_str(text, attribute_type)
-        .ok_or_else(|| format!("Cannot convert string '{}' to {:?}", text, attribute_type))
+        .ok_or_else(|| format!("Cannot convert string '{text}' to {attribute_type:?}"))
 }
 
 /// Get property value with type validation
@@ -63,8 +63,8 @@ pub fn get_validated_property_value(
     TypeConverter::convert(value, attribute_type).ok_or_else(|| {
         SiddhiError::type_error(
             "Type conversion failed at runtime",
-            format!("{:?}", value_type),
-            format!("{:?}", attribute_type),
+            format!("{value_type:?}"),
+            format!("{attribute_type:?}"),
         )
     })
 }

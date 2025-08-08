@@ -53,8 +53,8 @@ pub fn get_arithmetic_result_type(
         }
         _ => Err(SiddhiError::type_error(
             "Arithmetic operations only supported on numeric types",
-            format!("{:?}", left),
-            format!("{:?}", right),
+            format!("{left:?}"),
+            format!("{right:?}"),
         )),
     }
 }
@@ -255,8 +255,8 @@ impl TypeConverter {
             // Invalid conversions
             _ => Err(SiddhiError::type_error(
                 "Invalid type conversion",
-                format!("{:?}", from_type),
-                format!("{:?}", to_type),
+                format!("{from_type:?}"),
+                format!("{to_type:?}"),
             )),
         }
     }

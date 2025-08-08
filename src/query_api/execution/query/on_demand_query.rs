@@ -11,20 +11,17 @@ use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum OnDemandQueryType {
     Insert,
     Delete,
     Update,
+    #[default]
     Select,
     UpdateOrInsert,
     Find,
 }
 
-impl Default for OnDemandQueryType {
-    fn default() -> Self {
-        OnDemandQueryType::Select
-    } // Defaulting to Select/Find
-}
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom via new()
 pub struct OnDemandQuery {

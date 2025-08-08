@@ -40,11 +40,8 @@ impl SiddhiAppParser {
         for ann in &api_siddhi_app.annotations {
             if ann.name.eq_ignore_ascii_case("app") {
                 for el in &ann.elements {
-                    match el.key.to_lowercase().as_str() {
-                        "async" => {
-                            default_stream_async = el.value.eq_ignore_ascii_case("true");
-                        }
-                        _ => {}
+                    if el.key.to_lowercase().as_str() == "async" {
+                        default_stream_async = el.value.eq_ignore_ascii_case("true");
                     }
                 }
             }
@@ -100,14 +97,11 @@ impl SiddhiAppParser {
                     }
                     "config" => {
                         for el in &ann.elements {
-                            match el.key.to_lowercase().as_str() {
-                                "async" => {
-                                    if el.value.eq_ignore_ascii_case("true") {
-                                        use_optimized = true;
-                                        config = config.with_async(true);
-                                    }
+                            if el.key.to_lowercase().as_str() == "async" {
+                                if el.value.eq_ignore_ascii_case("true") {
+                                    use_optimized = true;
+                                    config = config.with_async(true);
                                 }
-                                _ => {}
                             }
                         }
                     }
@@ -233,7 +227,7 @@ impl SiddhiAppParser {
             if let Some(handler) = &window_def.window_handler {
                 let qctx = Arc::new(SiddhiQueryContext::new(
                     Arc::clone(&siddhi_app_context),
-                    format!("__window_{}", window_id),
+                    format!("__window_{window_id}"),
                     None,
                 ));
                 if let Ok(proc) =
@@ -262,7 +256,7 @@ impl SiddhiAppParser {
                 if let Some(junction) = builder.stream_junction_map.get(&input_id) {
                     let qctx = Arc::new(SiddhiQueryContext::new(
                         Arc::clone(&siddhi_app_context),
-                        format!("__aggregation_{}", agg_id),
+                        format!("__aggregation_{agg_id}"),
                         None,
                     ));
                     let proc = Arc::new(Mutex::new(
@@ -278,7 +272,7 @@ impl SiddhiAppParser {
         }
 
         // Initialize Windows after tables and streams are ready
-        for (_id, win_rt) in &builder.window_map {
+        for win_rt in builder.window_map.values() {
             win_rt.lock().unwrap().initialize();
         }
 
@@ -307,7 +301,7 @@ impl SiddhiAppParser {
             }
         }
 
-        for (_id, trig_def) in &api_siddhi_app.trigger_definition_map {
+        for trig_def in api_siddhi_app.trigger_definition_map.values() {
             let runtime = TriggerParser::parse(&mut builder, trig_def, &siddhi_app_context)?;
             builder.add_trigger_runtime(Arc::new(runtime));
         }

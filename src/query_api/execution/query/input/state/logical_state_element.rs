@@ -3,17 +3,14 @@ use super::state_element::StateElement;
 use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum Type {
+    #[default]
     And,
     Or,
     // NOT is not part of Java's LogicalStateElement.Type; it's handled by AbsentStreamStateElement.
 }
 
-impl Default for Type {
-    fn default() -> Self {
-        Type::And
-    } // Defaulting to AND
-}
 
 #[derive(Clone, Debug, PartialEq)] // Default is complex due to Box<StateElement>
 pub struct LogicalStateElement {

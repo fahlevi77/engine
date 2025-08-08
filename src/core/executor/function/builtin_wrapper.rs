@@ -200,7 +200,7 @@ fn build_uuid(
 fn build_current_timestamp(
     _args: Vec<Box<dyn ExpressionExecutor>>,
 ) -> Result<Box<dyn ExpressionExecutor>, String> {
-    Ok(Box::new(CurrentTimestampFunctionExecutor::default()))
+    Ok(Box::new(CurrentTimestampFunctionExecutor))
 }
 
 fn build_format_date(

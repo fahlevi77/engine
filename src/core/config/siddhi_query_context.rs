@@ -1,10 +1,10 @@
 // Corresponds to io.siddhi.core.config.SiddhiQueryContext
 use super::siddhi_app_context::SiddhiAppContext;
 use crate::core::util::id_generator::IdGenerator;
-use crate::core::util::state_holder::StateHolder;
+use crate::core::persistence::StateHolder;
 use crate::query_api::execution::query::output::OutputEventType;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc; // From query_api, as Java uses it.
+use std::sync::{Arc, Mutex}; // From query_api, as Java uses it.
                     // use crate::core::util::statistics::LatencyTracker; // TODO: Define LatencyTracker
                     // use crate::core::util::IdGenerator; // TODO: Define IdGenerator
 
@@ -114,7 +114,7 @@ impl SiddhiQueryContext {
 
     /// Register a state holder with the application's `SnapshotService`.
     /// The provided `name` is namespaced by the query name to ensure uniqueness.
-    pub fn register_state_holder(&self, name: String, holder: Arc<dyn StateHolder>) {
+    pub fn register_state_holder(&self, name: String, holder: Arc<Mutex<dyn StateHolder>>) {
         if let Some(service) = self.siddhi_app_context.get_snapshot_service() {
             let key = format!("{}::{}", self.name, name);
             service.register_state_holder(key, holder);

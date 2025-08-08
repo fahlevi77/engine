@@ -2,6 +2,7 @@ use crate::query_api::expression::Expression;
 use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Default is tricky due to required fields
+#[derive(Default)]
 pub struct Within {
     pub siddhi_element: SiddhiElement,
     // In Java, timeRange can hold one (pattern) or two (start, end) expressions.
@@ -52,20 +53,3 @@ impl Within {
 
 // Default might not be very useful as either pattern or start/end is required.
 // However, if needed for Default derive on other structs that contain Option<Within>:
-impl Default for Within {
-    fn default() -> Self {
-        // Represents an empty/undefined Within clause, which might not be valid in Siddhi.
-        // Or, default to a pattern variant with a default (placeholder) expression if Expression had a default.
-        // Since Expression does not have Default, this is problematic.
-        // For now, let's assume a truly "empty" Within is not a concept.
-        // If it were, it would mean:
-        Self {
-            siddhi_element: SiddhiElement::default(),
-            pattern_expression: None,
-            start_expression: None,
-            end_expression: None, // This state (all None) should ideally not occur if constructed via new_ methods.
-        }
-        // A better default might be to panic or make `new_` methods the only way.
-        // For now, allowing this potentially invalid state if `default()` is called directly.
-    }
-}

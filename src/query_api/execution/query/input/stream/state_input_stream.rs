@@ -8,16 +8,13 @@ use super::input_stream::InputStreamTrait; // For get_all_stream_ids, get_unique
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum Type {
+    #[default]
     Pattern,
     Sequence,
 }
 
-impl Default for Type {
-    fn default() -> Self {
-        Type::Pattern
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
 pub struct StateInputStream {

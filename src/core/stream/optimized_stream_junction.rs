@@ -23,7 +23,6 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     Arc, Mutex,
 };
-use std::time::Duration;
 
 /// Error handling strategies for StreamJunction
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -330,7 +329,7 @@ impl OptimizedStreamJunction {
                 Ok(())
             } else {
                 Err(SiddhiError::SendError {
-                    message: format!("Failed to process {} events", event_count),
+                    message: format!("Failed to process {event_count} events"),
                 })
             }
         } else {
@@ -396,7 +395,7 @@ impl OptimizedStreamJunction {
                         }
                         Err(_) => {
                             error_counter_clone.fetch_add(1, Ordering::Relaxed);
-                            eprintln!("[{}] Failed to lock subscriber processor", stream_id_clone);
+                            eprintln!("[{stream_id_clone}] Failed to lock subscriber processor");
                         }
                     });
                 }
@@ -409,13 +408,12 @@ impl OptimizedStreamJunction {
             match result {
                 Ok(processed_count) => {
                     println!(
-                        "[{}] Consumer completed after processing {} events",
-                        stream_id_for_completion, processed_count
+                        "[{stream_id_for_completion}] Consumer completed after processing {processed_count} events"
                     );
                 }
                 Err(e) => {
                     error_counter_for_completion.fetch_add(1, Ordering::Relaxed);
-                    eprintln!("[{}] Consumer error: {}", stream_id_for_completion, e);
+                    eprintln!("[{stream_id_for_completion}] Consumer error: {e}");
                 }
             }
         });
@@ -669,13 +667,13 @@ impl InputProcessor for OptimizedPublisher {
         let event = Event::new_with_data(timestamp, data);
         self.get_junction()
             .send_event(event)
-            .map_err(|e| format!("Send error: {}", e))
+            .map_err(|e| format!("Send error: {e}"))
     }
 
     fn send_single_event(&mut self, event: Event, _stream_index: usize) -> Result<(), String> {
         self.get_junction()
             .send_event(event)
-            .map_err(|e| format!("Send error: {}", e))
+            .map_err(|e| format!("Send error: {e}"))
     }
 
     fn send_multiple_events(
@@ -685,7 +683,7 @@ impl InputProcessor for OptimizedPublisher {
     ) -> Result<(), String> {
         self.get_junction()
             .send_events(events)
-            .map_err(|e| format!("Send error: {}", e))
+            .map_err(|e| format!("Send error: {e}"))
     }
 }
 

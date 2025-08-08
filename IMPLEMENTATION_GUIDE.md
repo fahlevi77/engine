@@ -44,6 +44,8 @@ impl Processor for SessionWindowProcessor {
    let holder = Arc::new(MyStateHolder { buffer: Arc::clone(&buffer) });
    query_ctx.register_state_holder("my_window".to_string(), holder);
    ```
+   
+   **📋 NEW**: See [STATE_MANAGEMENT_DESIGN.md](STATE_MANAGEMENT_DESIGN.md) for the comprehensive enterprise-grade state management design that will replace the current basic StateHolder trait.
 
 2. **Factory Pattern**
    ```rust

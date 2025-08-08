@@ -137,7 +137,7 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
             Ok(exec) => Box::new(exec),
             Err(e) => {
                 // If cloning fails log the error and fall back to a constant NULL executor
-                eprintln!("Failed to clone AttributeFunctionExpressionExecutor: {}", e);
+                eprintln!("Failed to clone AttributeFunctionExpressionExecutor: {e}");
                 Box::new(ConstantExpressionExecutor::new(
                     CoreAttributeValue::Null,
                     ApiAttributeType::OBJECT,
@@ -203,7 +203,7 @@ pub fn parse_expression<'a>(
                 if let Some((idx, t)) = meta.find_attribute_info(attribute_name) {
                     if found.is_some() && _found_id.as_deref() != Some(id) {
                         return Err(ExpressionParseError::new(
-                            format!("Attribute '{}' found in multiple sources", attribute_name),
+                            format!("Attribute '{attribute_name}' found in multiple sources"),
                             &api_var.siddhi_element,
                             context.query_name,
                         ));
@@ -216,7 +216,7 @@ pub fn parse_expression<'a>(
                             crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
                             *idx as i32,
                         ],
-                        t.clone(),
+                        *t,
                     ));
                     _found_id = Some(id.to_string());
                 }
@@ -243,7 +243,7 @@ pub fn parse_expression<'a>(
                                         crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
                                         *idx as i32,
                                     ],
-                                    t.clone(),
+                                    *t,
                                 ));
                                 _found_id = Some(id.to_string());
                                 break;
@@ -276,7 +276,7 @@ pub fn parse_expression<'a>(
 
             let stream_name = stream_id_opt.unwrap_or(&context.default_source);
             Err(ExpressionParseError::new(
-                format!("Variable '{}.{}' not found", stream_name, attribute_name),
+                format!("Variable '{stream_name}.{attribute_name}' not found"),
                 &api_var.siddhi_element,
                 context.query_name,
             ))
@@ -354,7 +354,7 @@ pub fn parse_expression<'a>(
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
             Ok(Box::new(
-                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator.clone())
+                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator)
                     .map_err(|e| {
                         ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
                     })?,
@@ -677,8 +677,7 @@ pub fn parse_expression<'a>(
                             .join(", ");
                         Err(ExpressionParseError::new(
                             format!(
-                                "Unsupported or unknown function: {}. Known scalar functions: [{}]. Known aggregators: [{}]",
-                                function_lookup_name, scalars, aggs
+                                "Unsupported or unknown function: {function_lookup_name}. Known scalar functions: [{scalars}]. Known aggregators: [{aggs}]"
                             ),
                             &api_func.siddhi_element,
                             context.query_name,

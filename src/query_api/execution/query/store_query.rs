@@ -5,20 +5,17 @@ use crate::query_api::execution::query::selection::Selector;
 use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
+#[derive(Default)]
 pub enum StoreQueryType {
     Insert,
     Delete,
     Update,
+    #[default]
     Select,
     UpdateOrInsert,
     Find,
 }
 
-impl Default for StoreQueryType {
-    fn default() -> Self {
-        StoreQueryType::Select
-    } // Defaulting to Select/Find
-}
 
 // Removed: impl From<java_sys::StoreQueryType> for StoreQueryType { ... }
 // Removed: mod java_sys { ... }

@@ -115,8 +115,8 @@ impl EventPool {
 
         // Pool is empty - create new if under capacity
         let current = self.current_size.load(Ordering::Relaxed);
-        if current < self.capacity as u64 {
-            if self
+        if current < self.capacity as u64
+            && self
                 .current_size
                 .compare_exchange_weak(current, current + 1, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
@@ -130,7 +130,6 @@ impl EventPool {
                 };
                 return Some(pooled_event);
             }
-        }
 
         // Pool exhausted
         None

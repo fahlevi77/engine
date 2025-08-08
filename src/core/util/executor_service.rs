@@ -28,7 +28,7 @@ impl ExecutorService {
         let name_str = name.to_string();
         let pool = ThreadPoolBuilder::new()
             .num_threads(threads)
-            .thread_name(move |i| format!("{}-{}", name_str, i))
+            .thread_name(move |i| format!("{name_str}-{i}"))
             .build()
             .expect("failed to build thread pool");
         Self { pool, threads }

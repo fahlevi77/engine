@@ -31,7 +31,7 @@ impl ConvertFunctionExecutor {
             "float" => ApiAttributeType::FLOAT,
             "double" => ApiAttributeType::DOUBLE,
             "bool" | "boolean" => ApiAttributeType::BOOL,
-            _ => return Err(format!("Unsupported convert target type: {}", type_val)),
+            _ => return Err(format!("Unsupported convert target type: {type_val}")),
         };
         Ok(Self {
             value_executor,
@@ -43,7 +43,7 @@ impl ConvertFunctionExecutor {
 impl ExpressionExecutor for ConvertFunctionExecutor {
     fn execute(&self, event: Option<&dyn ComplexEvent>) -> Option<AttributeValue> {
         let value = self.value_executor.execute(event)?;
-        get_property_value(value, self.target_type.clone())
+        get_property_value(value, self.target_type)
     }
 
     fn get_return_type(&self) -> ApiAttributeType {

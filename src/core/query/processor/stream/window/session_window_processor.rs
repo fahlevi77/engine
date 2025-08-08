@@ -177,7 +177,7 @@ impl SessionWindowProcessor {
         let session_container = state
             .session_map
             .entry(session_key.clone())
-            .or_insert_with(|| SessionContainer::new());
+            .or_insert_with(SessionContainer::new);
 
         // Convert event to StreamEvent for storage
         let stream_event = if let Some(se) = event.as_any().downcast_ref::<StreamEvent>() {
@@ -299,7 +299,7 @@ impl SessionWindowProcessor {
                 }
             } else {
                 // Event is too late - log and discard
-                println!("Event {} is too late for any session", event_timestamp);
+                println!("Event {event_timestamp} is too late for any session");
             }
         } else {
             // No latency allowed - check only current session
@@ -310,7 +310,7 @@ impl SessionWindowProcessor {
                     .add_event_at_start(Arc::clone(&event));
                 session_container.current_session.start_timestamp = event_timestamp;
             } else {
-                println!("Event {} is too late for current session", event_timestamp);
+                println!("Event {event_timestamp} is too late for current session");
             }
         }
 
@@ -395,7 +395,7 @@ impl SessionWindowProcessor {
         if let Some(ref _scheduler) = self.scheduler {
             // For now, we'll handle timeouts in the main processing loop
             // TODO: Implement proper schedulable task
-            println!("Session timeout scheduled for timestamp: {}", timestamp);
+            println!("Session timeout scheduled for timestamp: {timestamp}");
         }
         Ok(())
     }
@@ -415,7 +415,7 @@ impl Processor for SessionWindowProcessor {
                                 all_expired.extend(expired_events);
                             }
                             Err(e) => {
-                                eprintln!("Error processing session window event: {}", e);
+                                eprintln!("Error processing session window event: {e}");
                             }
                         }
                     }
@@ -493,7 +493,7 @@ impl Schedulable for SessionWindowProcessor {
         };
 
         if let Err(e) = self.process_session_timeouts(timestamp, &mut state) {
-            eprintln!("Error processing scheduled session timeout: {}", e);
+            eprintln!("Error processing scheduled session timeout: {e}");
         }
     }
 }

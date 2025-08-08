@@ -29,8 +29,7 @@ impl SubtractExpressionExecutor {
             | (ApiAttributeType::OBJECT, _)
             | (_, ApiAttributeType::OBJECT) => {
                 return Err(format!(
-                    "Subtraction not supported for input types {:?} and {:?}",
-                    left_type, right_type
+                    "Subtraction not supported for input types {left_type:?} and {right_type:?}"
                 ));
             }
             // Handle numeric types in order of precedence

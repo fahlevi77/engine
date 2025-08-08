@@ -90,7 +90,7 @@ fn test_udf_in_query() {
     use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
     use siddhi_rust::core::siddhi_manager::SiddhiManager;
     use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-    use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+    
     use siddhi_rust::query_compiler::parse;
     use std::sync::Arc;
 

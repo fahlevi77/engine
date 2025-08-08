@@ -251,13 +251,9 @@ impl Table for InMemoryTable {
     }
 
     fn find(&self, condition: &dyn CompiledCondition) -> Option<Vec<AttributeValue>> {
-        let cond = match condition
+        let cond = condition
             .as_any()
-            .downcast_ref::<InMemoryCompiledCondition>()
-        {
-            Some(c) => c,
-            None => return None,
-        };
+            .downcast_ref::<InMemoryCompiledCondition>()?;
         self.rows
             .read()
             .unwrap()

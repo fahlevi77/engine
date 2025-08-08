@@ -12,7 +12,7 @@ use siddhi_rust::core::query::processor::Processor;
 use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
 use siddhi_rust::core::table::JdbcTable;
 use siddhi_rust::core::table::{
-    InMemoryCompiledCondition, InMemoryCompiledUpdateSet, InMemoryTable, Table,
+    InMemoryCompiledCondition, InMemoryTable, Table,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -60,8 +60,8 @@ fn setup_jdbc_table(ctx: &Arc<SiddhiContext>, table_name: &str) {
     let ds = ctx.get_data_source("DS1").unwrap();
     let conn_any = ds.get_connection().unwrap();
     let conn_arc = conn_any.downcast::<Arc<Mutex<Connection>>>().unwrap();
-    let mut conn = conn_arc.lock().unwrap();
-    let sql = format!("CREATE TABLE {} (c0 TEXT)", table_name);
+    let conn = conn_arc.lock().unwrap();
+    let sql = format!("CREATE TABLE {table_name} (c0 TEXT)");
     conn.execute(&sql, []).unwrap();
 }
 

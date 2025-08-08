@@ -151,7 +151,7 @@ impl SiddhiAppRuntime {
         let output_junction = self
             .stream_junction_map
             .get(stream_id)
-            .ok_or_else(|| format!("StreamJunction '{}' not found to add callback", stream_id))?
+            .ok_or_else(|| format!("StreamJunction '{stream_id}' not found to add callback"))?
             .clone();
 
         let query_name_for_callback = format!(

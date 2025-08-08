@@ -10,20 +10,17 @@ use std::sync::{Arc, Mutex};
 
 /// Performance optimization levels for StreamJunction selection
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum PerformanceLevel {
     /// Use original crossbeam_channel implementation
     Standard,
     /// Use optimized crossbeam pipeline implementation  
     HighPerformance,
     /// Automatically select based on workload characteristics
+    #[default]
     Auto,
 }
 
-impl Default for PerformanceLevel {
-    fn default() -> Self {
-        PerformanceLevel::Auto
-    }
-}
 
 /// Configuration for StreamJunction creation
 #[derive(Debug, Clone)]
@@ -346,7 +343,7 @@ impl JunctionBenchmark {
                                 i as i64,
                                 vec![AttributeValue::Int(thread_id as i32 * 1000 + i as i32)],
                             );
-                            let _ = junction_clone.lock().unwrap().send_event(event);
+                            junction_clone.lock().unwrap().send_event(event);
                         }
                     }));
                 }

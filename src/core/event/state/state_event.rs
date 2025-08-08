@@ -125,9 +125,7 @@ impl StateEvent {
                 stream_event = current.as_any().downcast_ref::<StreamEvent>()?;
             }
         } else if idx == LAST {
-            if current.get_next().is_none() {
-                return None;
-            }
+            current.get_next()?;
             while let Some(next_next) = current.get_next().and_then(|n| n.get_next()) {
                 current = current.get_next()?;
                 stream_event = current.as_any().downcast_ref::<StreamEvent>()?;
@@ -180,15 +178,13 @@ impl StateEvent {
                     data.len()
                 ))
             }
+        } else if index == 0 {
+            let mut new_data = vec![AttributeValue::default(); index + 1];
+            new_data[index] = value;
+            self.output_data = Some(new_data);
+            Ok(())
         } else {
-            if index == 0 {
-                let mut new_data = vec![AttributeValue::default(); index + 1];
-                new_data[index] = value;
-                self.output_data = Some(new_data);
-                Ok(())
-            } else {
-                Err("output_data is None and index is not 0, cannot set value".to_string())
-            }
+            Err("output_data is None and index is not 0, cannot set value".to_string())
         }
     }
 

@@ -136,8 +136,7 @@ impl CompareExpressionExecutor {
             }
             (OBJECT, _) | (_, OBJECT) | (STRING, _) | (_, STRING) | (BOOL, _) | (_, BOOL) => {
                 return Err(format!(
-                    "Cannot compare values of types {:?} and {:?}",
-                    left_type, right_type
+                    "Cannot compare values of types {left_type:?} and {right_type:?}"
                 ));
             }
             _ => {

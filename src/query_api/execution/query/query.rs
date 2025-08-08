@@ -59,7 +59,7 @@ impl Query {
 
     fn update_output_event_type(&mut self) {
         if self.output_stream.get_output_event_type().is_none() {
-            let is_snapshot_rate = self.output_rate.as_ref().map_or(false, |r| r.is_snapshot());
+            let is_snapshot_rate = self.output_rate.as_ref().is_some_and(|r| r.is_snapshot());
 
             let event_type = if is_snapshot_rate {
                 OutputEventType::AllEvents

@@ -110,7 +110,7 @@ impl PersistenceStore for FilePersistenceStore {
     fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
         let dir = self.base.join(siddhi_app_id);
         if let Err(e) = fs::create_dir_all(&dir) {
-            eprintln!("FilePersistenceStore: cannot create dir: {}", e);
+            eprintln!("FilePersistenceStore: cannot create dir: {e}");
             return;
         }
         let path = self.file_path(siddhi_app_id, revision);
@@ -122,7 +122,7 @@ impl PersistenceStore for FilePersistenceStore {
                     .insert(siddhi_app_id.to_string(), revision.to_string());
             }
             Err(e) => {
-                eprintln!("FilePersistenceStore: write failed: {}", e);
+                eprintln!("FilePersistenceStore: write failed: {e}");
             }
         }
     }
@@ -173,7 +173,7 @@ impl PersistenceStore for SqlitePersistenceStore {
             "INSERT OR REPLACE INTO snapshots(app, rev, data) VALUES (?1, ?2, ?3)",
             params![siddhi_app_id, revision, snapshot],
         ) {
-            eprintln!("SqlitePersistenceStore: write failed: {}", e);
+            eprintln!("SqlitePersistenceStore: write failed: {e}");
         }
     }
 

@@ -2,6 +2,7 @@
 
 pub mod attribute_converter;
 pub mod event_serde;
+pub mod event_serialization; // Advanced event serialization with proper AttributeValue handling
 pub mod executor_service;
 pub mod id_generator;
 pub mod metrics;
@@ -11,7 +12,6 @@ pub mod scheduled_executor_service;
 pub mod scheduler; // new scheduler module
 pub mod serialization;
 pub mod siddhi_constants; // Added siddhi_constants module
-pub mod state_holder;
 pub mod thread_barrier;
 pub mod type_system; // New comprehensive type system
 #[cfg(test)]
@@ -34,6 +34,9 @@ pub use self::attribute_converter::{
     get_property_value, get_property_value_from_str, is_numeric_type,
 };
 pub use self::event_serde::{event_from_bytes, event_to_bytes};
+pub use self::event_serialization::{
+    EventSerializationService, SerializableEventData, StorageStrategy
+}; // Advanced event serialization
 pub use self::executor_service::{ExecutorService, ExecutorServiceRegistry};
 pub use self::id_generator::IdGenerator;
 pub use self::lock::{LockSynchronizer, LockWrapper};
@@ -48,7 +51,7 @@ pub use self::scheduler::{Schedulable, Scheduler};
 pub use self::serialization::{from_bytes, to_bytes};
 pub use self::siddhi_constants::SiddhiConstants; // Re-export SiddhiConstants
 pub use self::snapshot::{IncrementalSnapshot, PersistenceReference};
-pub use self::state_holder::StateHolder;
+pub use crate::core::persistence::StateHolder;
 pub use self::statistics::{DefaultStatisticsManager, StatisticsManager};
 pub use self::thread_barrier::ThreadBarrier;
 pub use self::type_system::{get_arithmetic_result_type, TypeConverter, TypePrecedence};

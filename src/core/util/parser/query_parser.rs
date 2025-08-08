@@ -58,7 +58,7 @@ impl QueryParser {
         let input_stream_api = api_query
             .input_stream
             .as_ref()
-            .ok_or_else(|| format!("Query '{}' has no input stream defined.", query_name))?;
+            .ok_or_else(|| format!("Query '{query_name}' has no input stream defined."))?;
 
         let mut processor_chain_head: Option<Arc<Mutex<dyn Processor>>> = None;
         let mut last_processor_in_chain: Option<Arc<Mutex<dyn Processor>>> = None;
@@ -85,8 +85,7 @@ impl QueryParser {
                     .get(&input_stream_id)
                     .ok_or_else(|| {
                         format!(
-                            "Input stream '{}' not found for query '{}'",
-                            input_stream_id, query_name
+                            "Input stream '{input_stream_id}' not found for query '{query_name}'"
                         )
                     })?
                     .clone();
@@ -167,17 +166,17 @@ impl QueryParser {
                     };
                     let stream_junction = stream_junction_map
                         .get(&stream_id)
-                        .ok_or_else(|| format!("Input stream '{}' not found", stream_id))?
+                        .ok_or_else(|| format!("Input stream '{stream_id}' not found"))?
                         .clone();
                     let stream_def = stream_junction.lock().unwrap().get_stream_definition();
                     let table_def = table_def_map
                         .get(&table_id)
-                        .ok_or_else(|| format!("Table definition '{}' not found", table_id))?
+                        .ok_or_else(|| format!("Table definition '{table_id}' not found"))?
                         .clone();
                     let table = siddhi_app_context
                         .get_siddhi_context()
                         .get_table(&table_id)
-                        .ok_or_else(|| format!("Table '{}' not found", table_id))?;
+                        .ok_or_else(|| format!("Table '{table_id}' not found"))?;
 
                     let stream_len = stream_def.abstract_definition.attribute_list.len();
                     let table_len = table_def.abstract_definition.attribute_list.len();
@@ -251,7 +250,8 @@ impl QueryParser {
                     stream_junction.lock().unwrap().subscribe(join_proc.clone());
                     link_processor(join_proc.clone());
 
-                    let ctx = ExpressionParserContext {
+                    
+                    ExpressionParserContext {
                         siddhi_app_context: Arc::clone(siddhi_app_context),
                         siddhi_query_context: Arc::clone(&siddhi_query_context),
                         stream_meta_map,
@@ -272,16 +272,15 @@ impl QueryParser {
                         },
                         default_source: stream_id.clone(),
                         query_name: &query_name,
-                    };
-                    ctx
+                    }
                 } else {
                     let left_junction = stream_junction_map
                         .get(&left_id)
-                        .ok_or_else(|| format!("Input stream '{}' not found", left_id))?
+                        .ok_or_else(|| format!("Input stream '{left_id}' not found"))?
                         .clone();
                     let right_junction = stream_junction_map
                         .get(&right_id)
-                        .ok_or_else(|| format!("Input stream '{}' not found", right_id))?
+                        .ok_or_else(|| format!("Input stream '{right_id}' not found"))?
                         .clone();
 
                     let left_def = left_junction.lock().unwrap().get_stream_definition();
@@ -344,7 +343,8 @@ impl QueryParser {
 
                     link_processor(left_side.clone());
 
-                    let ctx = ExpressionParserContext {
+                    
+                    ExpressionParserContext {
                         siddhi_app_context: Arc::clone(siddhi_app_context),
                         siddhi_query_context: Arc::clone(&siddhi_query_context),
                         stream_meta_map,
@@ -360,8 +360,7 @@ impl QueryParser {
                         },
                         default_source: left_id.clone(),
                         query_name: &query_name,
-                    };
-                    ctx
+                    }
                 }
             }
             ApiInputStream::State(state_stream) => {
@@ -371,10 +370,10 @@ impl QueryParser {
                 use crate::query_api::execution::query::input::state::logical_state_element::Type as ApiLogicalType;
                 use crate::query_api::execution::query::input::state::state_element::StateElement;
 
-                fn extract_stream_state_with_count<'a>(
-                    se: &'a StateElement,
+                fn extract_stream_state_with_count(
+                    se: &StateElement,
                 ) -> Option<(
-                    &'a crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement,
+                    &crate::query_api::execution::query::input::state::stream_state_element::StreamStateElement,
                     i32,
                     i32,
                 )>{
@@ -414,14 +413,13 @@ impl QueryParser {
                             &next_elem.state_element,
                         )
                         .ok_or_else(|| {
-                            format!("Query '{}': Unsupported Next pattern structure", query_name)
+                            format!("Query '{query_name}': Unsupported Next pattern structure")
                         })?;
                         let (s2, smin, smax) =
                             extract_stream_state_with_count(&next_elem.next_state_element)
                                 .ok_or_else(|| {
                                     format!(
-                                        "Query '{}': Unsupported Next pattern structure",
-                                        query_name
+                                        "Query '{query_name}': Unsupported Next pattern structure"
                                     )
                                 })?;
                         let seq_type = match state_stream.state_type {
@@ -453,16 +451,14 @@ impl QueryParser {
                             extract_stream_state_with_count(&log_elem.stream_state_element_1)
                                 .ok_or_else(|| {
                                     format!(
-                                        "Query '{}': Unsupported Logical pattern structure",
-                                        query_name
+                                        "Query '{query_name}': Unsupported Logical pattern structure"
                                     )
                                 })?;
                         let (s2, _, _) =
                             extract_stream_state_with_count(&log_elem.stream_state_element_2)
                                 .ok_or_else(|| {
                                     format!(
-                                        "Query '{}': Unsupported Logical pattern structure",
-                                        query_name
+                                        "Query '{query_name}': Unsupported Logical pattern structure"
                                     )
                                 })?;
                         let logical_type = match log_elem.logical_type {
@@ -476,7 +472,7 @@ impl QueryParser {
                         }
                     }
                     _ => {
-                        return Err(format!("Query '{}': Unsupported state element", query_name));
+                        return Err(format!("Query '{query_name}': Unsupported state element"));
                     }
                 };
 
@@ -500,11 +496,11 @@ impl QueryParser {
 
                     let first_junction = stream_junction_map
                         .get(fid_str)
-                        .ok_or_else(|| format!("Input stream '{}' not found", fid_str))?
+                        .ok_or_else(|| format!("Input stream '{fid_str}' not found"))?
                         .clone();
                     let second_junction = stream_junction_map
                         .get(sid_str)
-                        .ok_or_else(|| format!("Input stream '{}' not found", sid_str))?
+                        .ok_or_else(|| format!("Input stream '{sid_str}' not found"))?
                         .clone();
 
                     let first_def = first_junction.lock().unwrap().get_stream_definition();
@@ -661,7 +657,7 @@ impl QueryParser {
                 if let ApiExpression::Variable(v) = &api_out_attr.expression {
                     v.attribute_name.clone()
                 } else {
-                    format!("_col_{}", idx)
+                    format!("_col_{idx}")
                 }
             });
             output_attributes_for_def.push(ApiAttribute::new(attr_name, oap.get_return_type()));
@@ -674,13 +670,12 @@ impl QueryParser {
             .get_target_id() // output_stream is not Option
             .ok_or_else(|| {
                 format!(
-                    "Query '{}' must have a target output stream for INSERT INTO",
-                    query_name
+                    "Query '{query_name}' must have a target output stream for INSERT INTO"
                 )
             })?;
 
         let mut temp_def =
-            ApiStreamDefinition::new(format!("_internal_{}_select_output", query_name));
+            ApiStreamDefinition::new(format!("_internal_{query_name}_select_output"));
         for attr in output_attributes_for_def {
             temp_def.abstract_definition.attribute_list.push(attr);
         }
@@ -816,7 +811,7 @@ impl QueryParser {
                     ));
                 }
             }
-            _ => return Err(format!("Query '{}': Only INSERT INTO, UPDATE, DELETE outputs supported for now.", query_name)),
+            _ => return Err(format!("Query '{query_name}': Only INSERT INTO, UPDATE, DELETE outputs supported for now.")),
         }
 
         // 7. Create QueryRuntime

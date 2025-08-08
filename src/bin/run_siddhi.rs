@@ -42,12 +42,12 @@ fn main() {
     if let Some(dir) = cli.persistence_dir {
         match FilePersistenceStore::new(dir.to_str().unwrap()) {
             Ok(s) => store = Some(Arc::new(s)),
-            Err(e) => eprintln!("Failed to initialize file store: {}", e),
+            Err(e) => eprintln!("Failed to initialize file store: {e}"),
         }
     } else if let Some(db) = cli.sqlite {
         match SqlitePersistenceStore::new(db.to_str().unwrap()) {
             Ok(s) => store = Some(Arc::new(s)),
-            Err(e) => eprintln!("Failed to initialize sqlite store: {}", e),
+            Err(e) => eprintln!("Failed to initialize sqlite store: {e}"),
         }
     }
 
@@ -65,21 +65,21 @@ fn main() {
     }
     if let Some(cfg) = cli.config {
         if let Err(e) = manager.set_config_manager(cfg) {
-            eprintln!("Failed to apply config: {}", e);
+            eprintln!("Failed to apply config: {e}");
         }
     }
     for lib in cli.extension {
         if let Some(p) = lib.to_str() {
             let name = lib.file_stem().and_then(|s| s.to_str()).unwrap_or("ext");
             if let Err(e) = manager.set_extension(name, p.to_string()) {
-                eprintln!("Failed to load extension {}: {}", p, e);
+                eprintln!("Failed to load extension {p}: {e}");
             }
         }
     }
     let runtime = match manager.create_siddhi_app_runtime_from_string(&content) {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("Failed to create runtime: {}", e);
+            eprintln!("Failed to create runtime: {e}");
             std::process::exit(1);
         }
     };
