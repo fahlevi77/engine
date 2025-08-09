@@ -39,27 +39,27 @@ pub struct SessionWindowProcessor {
 
 /// Internal state for the session window
 #[derive(Debug)]
-struct SessionWindowState {
+pub(super) struct SessionWindowState {
     /// Map of session key -> session container
-    session_map: HashMap<String, SessionContainer>,
+    pub(super) session_map: HashMap<String, SessionContainer>,
     /// Chunk to collect expired events
-    expired_event_chunk: SessionEventChunk,
+    pub(super) expired_event_chunk: SessionEventChunk,
 }
 
 /// Container for managing current and previous sessions for a session key
 #[derive(Debug)]
-struct SessionContainer {
-    current_session: SessionEventChunk,
-    previous_session: SessionEventChunk,
+pub(super) struct SessionContainer {
+    pub(super) current_session: SessionEventChunk,
+    pub(super) previous_session: SessionEventChunk,
 }
 
 /// Event chunk with session-specific timestamps
 #[derive(Debug)]
-struct SessionEventChunk {
-    events: Vec<Arc<StreamEvent>>,
-    start_timestamp: i64,
-    end_timestamp: i64,
-    alive_timestamp: i64,
+pub(super) struct SessionEventChunk {
+    pub(super) events: Vec<Arc<StreamEvent>>,
+    pub(super) start_timestamp: i64,
+    pub(super) end_timestamp: i64,
+    pub(super) alive_timestamp: i64,
 }
 
 impl SessionWindowProcessor {
@@ -499,7 +499,7 @@ impl Schedulable for SessionWindowProcessor {
 }
 
 impl SessionWindowState {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         SessionWindowState {
             session_map: HashMap::new(),
             expired_event_chunk: SessionEventChunk::new(),
@@ -508,14 +508,14 @@ impl SessionWindowState {
 }
 
 impl SessionContainer {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         SessionContainer {
             current_session: SessionEventChunk::new(),
             previous_session: SessionEventChunk::new(),
         }
     }
 
-    fn move_current_to_previous(&mut self) {
+    pub(super) fn move_current_to_previous(&mut self) {
         // Move current session to previous, clearing current
         std::mem::swap(&mut self.current_session, &mut self.previous_session);
         self.current_session.clear();
@@ -523,7 +523,7 @@ impl SessionContainer {
 }
 
 impl SessionEventChunk {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         SessionEventChunk {
             events: Vec::new(),
             start_timestamp: -1,
@@ -532,32 +532,32 @@ impl SessionEventChunk {
         }
     }
 
-    fn is_empty(&self) -> bool {
+    pub(super) fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
 
-    fn add_event(&mut self, event: Arc<StreamEvent>) {
+    pub(super) fn add_event(&mut self, event: Arc<StreamEvent>) {
         self.events.push(event);
     }
 
-    fn add_event_at_start(&mut self, event: Arc<StreamEvent>) {
+    pub(super) fn add_event_at_start(&mut self, event: Arc<StreamEvent>) {
         self.events.insert(0, event);
     }
 
-    fn set_timestamps(&mut self, start: i64, end: i64, alive: i64) {
+    pub(super) fn set_timestamps(&mut self, start: i64, end: i64, alive: i64) {
         self.start_timestamp = start;
         self.end_timestamp = end;
         self.alive_timestamp = alive;
     }
 
-    fn clear(&mut self) {
+    pub(super) fn clear(&mut self) {
         self.events.clear();
         self.start_timestamp = -1;
         self.end_timestamp = -1;
         self.alive_timestamp = -1;
     }
 
-    fn merge_from(&mut self, other: &mut SessionEventChunk) {
+    pub(super) fn merge_from(&mut self, other: &mut SessionEventChunk) {
         // Insert other's events at the beginning and update start timestamp
         let mut other_events = std::mem::take(&mut other.events);
         other_events.extend(std::mem::take(&mut self.events));
@@ -565,13 +565,13 @@ impl SessionEventChunk {
         self.start_timestamp = other.start_timestamp;
     }
 
-    fn add_session_events(&mut self, session: &SessionEventChunk) {
+    pub(super) fn add_session_events(&mut self, session: &SessionEventChunk) {
         for event in &session.events {
             self.events.push(Arc::clone(event));
         }
     }
 
-    fn drain_events(&mut self) -> Vec<Arc<StreamEvent>> {
+    pub(super) fn drain_events(&mut self) -> Vec<Arc<StreamEvent>> {
         std::mem::take(&mut self.events)
     }
 }
