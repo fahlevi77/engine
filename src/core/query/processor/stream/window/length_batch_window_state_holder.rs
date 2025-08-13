@@ -13,6 +13,7 @@ use crate::core::persistence::state_holder::{
     SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
     CompressionType, StateOperation
 };
+use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
 use crate::core::util::event_serialization::{
     EventSerializationService, StorageStrategy
 };
@@ -219,8 +220,21 @@ impl StateHolder for LengthBatchWindowStateHolder {
         })?;
         
         // Apply compression if requested
-        let compression = hints.prefer_compression.clone().unwrap_or(CompressionType::None);
-        data = self.apply_compression(data, &compression)?;
+        // Apply compression if requested using the shared compression utility
+        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
+            match self.compress_state_data(&data, Some(compression.clone())) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => (data, CompressionType::None)
+            }
+        } else {
+            match self.compress_state_data(&data, None) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => (data, CompressionType::None)
+            }
+        };
+        
+        let data = compressed_data;
+        let compression = compression_type;
         
         let checksum = StateSnapshot::calculate_checksum(&data);
         
@@ -242,8 +256,8 @@ impl StateHolder for LengthBatchWindowStateHolder {
             return Err(StateError::ChecksumMismatch);
         }
         
-        // Decompress data if needed
-        let data = self.decompress_data(&snapshot.data, &snapshot.compression)?;
+        // Decompress data if needed using the shared compression utility
+        let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
         
         // Deserialize state data
         let state_data: LengthBatchWindowStateData = from_bytes(&data).map_err(|e| {
@@ -313,7 +327,7 @@ impl StateHolder for LengthBatchWindowStateHolder {
     fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
         // For length batch windows, we could apply incremental changes
         // For now, this is a simplified implementation
-        println!("Applying {} state operations to length batch window", changes.operations.len());
+        // Note: Applying state operations to length batch window
         
         // In a full implementation, we would:
         // 1. Parse each operation
@@ -379,49 +393,15 @@ impl StateHolder for LengthBatchWindowStateHolder {
     }
 }
 
-impl LengthBatchWindowStateHolder {
-    /// Apply compression to data
-    fn apply_compression(&self, data: Vec<u8>, compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data),
-            CompressionType::LZ4 => {
-                // In a real implementation, we'd use lz4 compression
-                // For now, return the data as-is
-                println!("LZ4 compression not implemented, returning uncompressed data");
-                Ok(data)
-            }
-            CompressionType::Snappy => {
-                // In a real implementation, we'd use snappy compression
-                println!("Snappy compression not implemented, returning uncompressed data");
-                Ok(data)
-            }
-            CompressionType::Zstd => {
-                // In a real implementation, we'd use zstd compression
-                println!("Zstd compression not implemented, returning uncompressed data");
-                Ok(data)
-            }
-        }
-    }
-
-    /// Decompress data
-    fn decompress_data(&self, data: &[u8], compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data.to_vec()),
-            CompressionType::LZ4 => {
-                // In a real implementation, we'd decompress with lz4
-                println!("LZ4 decompression not implemented, returning data as-is");
-                Ok(data.to_vec())
-            }
-            CompressionType::Snappy => {
-                // In a real implementation, we'd decompress with snappy
-                println!("Snappy decompression not implemented, returning data as-is");
-                Ok(data.to_vec())
-            }
-            CompressionType::Zstd => {
-                // In a real implementation, we'd decompress with zstd
-                println!("Zstd decompression not implemented, returning data as-is");
-                Ok(data.to_vec())
-            }
+impl CompressibleStateHolder for LengthBatchWindowStateHolder {
+    fn compression_hints(&self) -> CompressionHints {
+        CompressionHints {
+            prefer_speed: true, // Batch windows process many events, need speed
+            prefer_ratio: false,
+            data_type: DataCharacteristics::ModeratelyRepetitive, // Batch event streams
+            target_latency_ms: Some(2), // Target < 2ms for batch processing
+            min_compression_ratio: Some(0.4), // At least 40% space savings for batches
+            expected_size_range: DataSizeRange::Large, // Batches can be large
         }
     }
 }

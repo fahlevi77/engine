@@ -12,6 +12,7 @@ use crate::core::persistence::state_holder::{
     SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
     CompressionType, StateOperation
 };
+use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
 
 /// Enhanced state holder for MaxAttributeAggregatorExecutor with StateHolder capabilities
@@ -133,9 +134,25 @@ impl StateHolder for MaxAggregatorStateHolder {
             message: format!("Failed to serialize max aggregator state: {e}"),
         })?;
         
-        // Apply compression if requested
-        let compression = hints.prefer_compression.clone().unwrap_or(CompressionType::None);
-        data = self.apply_compression(data, &compression)?;
+        // Apply compression if requested using the shared compression utility
+        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
+            match self.compress_state_data(&data, Some(compression.clone())) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => {
+                    // Fall back to no compression if compression fails
+                    (data, CompressionType::None)
+                }
+            }
+        } else {
+            // Use intelligent compression selection
+            match self.compress_state_data(&data, None) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => (data, CompressionType::None)
+            }
+        };
+        
+        let data = compressed_data;
+        let compression = compression_type;
         
         let checksum = StateSnapshot::calculate_checksum(&data);
         
@@ -157,8 +174,8 @@ impl StateHolder for MaxAggregatorStateHolder {
             return Err(StateError::ChecksumMismatch);
         }
         
-        // Decompress data if needed
-        let data = self.decompress_data(&snapshot.data, &snapshot.compression)?;
+        // Decompress data if needed using the shared compression utility
+        let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
         
         // Deserialize state data
         let state_data: MaxAggregatorStateData = from_bytes(&data).map_err(|e| {
@@ -196,7 +213,7 @@ impl StateHolder for MaxAggregatorStateHolder {
     fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
         // For max aggregators, we could apply incremental changes
         // For now, this is a simplified implementation
-        println!("Applying {} state operations to max aggregator", changes.operations.len());
+        // Note: Applying {} state operations to max aggregator
         
         // In a full implementation, we would:
         // 1. Parse each operation (update/reset)
@@ -246,26 +263,15 @@ impl StateHolder for MaxAggregatorStateHolder {
     }
 }
 
-impl MaxAggregatorStateHolder {
-    /// Apply compression to data
-    fn apply_compression(&self, data: Vec<u8>, compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data),
-            _ => {
-                println!("{compression:?} compression not implemented, returning uncompressed data");
-                Ok(data)
-            }
-        }
-    }
-
-    /// Decompress data
-    fn decompress_data(&self, data: &[u8], compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data.to_vec()),
-            _ => {
-                println!("{compression:?} decompression not implemented, returning data as-is");
-                Ok(data.to_vec())
-            }
+impl CompressibleStateHolder for MaxAggregatorStateHolder {
+    fn compression_hints(&self) -> CompressionHints {
+        CompressionHints {
+            prefer_speed: true, // Aggregators need low latency for real-time processing
+            prefer_ratio: false,
+            data_type: DataCharacteristics::Numeric, // Max aggregators work with numeric data
+            target_latency_ms: Some(1), // Target < 1ms compression time
+            min_compression_ratio: Some(0.2), // At least 20% space savings to be worthwhile
+            expected_size_range: DataSizeRange::Small, // Aggregator state is very small
         }
     }
 }

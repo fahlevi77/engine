@@ -43,11 +43,11 @@ pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
         match env::var(var_name) {
             Ok(value) => updated_siddhi_app.push_str(&value),
             Err(_) => {
-                // The Java code throws SiddhiParserException with context.
-                // For now, returning a simpler error.
-                // TODO: Enhance error reporting with line numbers if possible without full parser.
+                // Enhanced error reporting with position information
+                let line_pos = calculate_line_position(&siddhi_app_string, full_match.start());
                 return Err(format!(
-                    "No system or environmental variable found for '${{{var_name}}}'"
+                    "No system or environmental variable found for '${{{var_name}}}' at line {} column {}",
+                    line_pos.0, line_pos.1
                 ));
             }
         }
@@ -55,6 +55,26 @@ pub fn update_variables(siddhi_app_string: &str) -> Result<String, String> {
     }
     updated_siddhi_app.push_str(&siddhi_app_string[last_match_end..]);
     Ok(updated_siddhi_app)
+}
+
+// Helper function to calculate line and column position
+fn calculate_line_position(text: &str, position: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+    
+    for (i, ch) in text.char_indices() {
+        if i >= position {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    
+    (line, column)
 }
 
 fn parse_attribute_type(t: &str) -> Result<AttributeType, String> {

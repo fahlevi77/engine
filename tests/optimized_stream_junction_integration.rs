@@ -382,7 +382,6 @@ fn test_junction_factory_auto_selection() {
 }
 
 #[test]
-#[ignore] // Temporarily disable due to hanging - benchmark needs consumer setup
 fn test_optimized_vs_standard_performance() {
     let (app_ctx, stream_def) = setup_test_context();
     let num_events = 50000;

@@ -216,7 +216,10 @@ pub AggDef: AggregationDefinition = {
     <ann:Annotations> "define" "aggregation" <id:Ident> "from" <in_id:Ident> "select" <sel:SelectList> "group" "by" <grp:Ident> "aggregate" "every" <durs:DurationList> => {
         let mut agg = AggregationDefinition::new(id);
         let input_stream = crate::query_api::execution::query::input::InputStream::stream(in_id.clone());
-        let single = match input_stream { crate::query_api::execution::query::input::InputStream::Single(s) => s, _ => unreachable!() };
+        let single = match input_stream { 
+            crate::query_api::execution::query::input::InputStream::Single(s) => s, 
+            _ => panic!("Expected single input stream for aggregation") 
+        };
         let mut selector = Selector::new();
         for (expr, alias) in sel {
             match alias {
@@ -801,7 +804,7 @@ pub TimeConstant: Constant = {
             "week" | "weeks" => TimeUtil::week_val(n),
             "month" | "months" => TimeUtil::month_val(n),
             "year" | "years" => TimeUtil::year_val(n),
-            _ => unreachable!(),
+            _ => panic!("Unknown time unit: {}", u),
         };
         Constant::time(millis)
     }

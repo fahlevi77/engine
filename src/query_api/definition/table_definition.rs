@@ -25,7 +25,11 @@ impl TableDefinition {
 
     // Builder-style methods, specific to TableDefinition
     pub fn attribute(mut self, attribute_name: String, attribute_type: AttributeType) -> Self {
-        // TODO: Implement checkAttribute logic from AbstractDefinition or call a method on it.
+        // Check for duplicate attribute names and warn
+        if self.abstract_definition.attribute_list.iter().any(|attr| attr.get_name() == &attribute_name) {
+            eprintln!("Warning: Duplicate attribute '{}' in table definition", attribute_name);
+        }
+        
         self.abstract_definition
             .attribute_list
             .push(Attribute::new(attribute_name, attribute_type));

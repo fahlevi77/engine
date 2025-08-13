@@ -37,24 +37,58 @@ impl Selector {
         Self::new()
     }
 
-    // Builder methods
+    // Builder methods with validation
     pub fn select(mut self, rename: String, expression: Expression) -> Self {
-        // TODO: Add checkSelection logic from Java (duplicate rename check)
+        // Check for duplicate rename and print warning
+        if self.selection_list.iter().any(|attr| {
+            attr.get_rename().as_ref().map_or(false, |r| r == &rename)
+        }) {
+            eprintln!("Warning: Duplicate column name '{}' in select clause", rename);
+        }
+        
         self.selection_list
-            .push(OutputAttribute::new(Some(rename), expression)); // rename is Option<String>
+            .push(OutputAttribute::new(Some(rename), expression));
         self
     }
 
     pub fn select_variable(mut self, variable: Variable) -> Self {
-        // TODO: Add checkSelection logic
+        // Check for duplicate variable names and print warning
+        let var_name = variable.get_attribute_name();
+        if self.selection_list.iter().any(|attr| {
+            match attr.get_expression() {
+                Expression::Variable(var) => var.get_attribute_name() == var_name,
+                _ => false,
+            }
+        }) {
+            eprintln!("Warning: Duplicate variable '{}' in select clause", var_name);
+        }
+        
         self.selection_list
             .push(OutputAttribute::new_from_variable(variable));
         self
     }
 
-    pub fn add_selection_list(mut self, mut projection_list: Vec<OutputAttribute>) -> Self {
-        // TODO: Add checkSelection logic for each item
-        self.selection_list.append(&mut projection_list);
+    pub fn add_selection_list(mut self, projection_list: Vec<OutputAttribute>) -> Self {
+        // Check for duplicates and print warnings
+        for new_attr in &projection_list {
+            if let Some(new_rename) = new_attr.get_rename() {
+                // Check against existing selections
+                if self.selection_list.iter().any(|attr| {
+                    attr.get_rename().as_ref().map_or(false, |r| r == new_rename)
+                }) {
+                    eprintln!("Warning: Duplicate column name '{}' in select clause", new_rename);
+                }
+                
+                // Check against other items in the same list
+                if projection_list.iter().filter(|attr| {
+                    attr.get_rename().as_ref().map_or(false, |r| r == new_rename)
+                }).count() > 1 {
+                    eprintln!("Warning: Duplicate column name '{}' in select clause", new_rename);
+                }
+            }
+        }
+        
+        self.selection_list.extend(projection_list);
         self
     }
 
@@ -304,5 +338,28 @@ mod tests {
             s_err.unwrap_err(),
             "'offset' only supports int or long constants"
         );
+    }
+
+    #[test]
+    fn test_selector_duplicate_detection() {
+        // Test duplicate column name detection - now just warns
+        let expr1 = Expression::Constant(Constant::string("val1".to_string()));
+        let expr2 = Expression::Constant(Constant::string("val2".to_string()));
+        
+        let result = Selector::selector()
+            .select("col1".to_string(), expr1.clone())
+            .select("col1".to_string(), expr2.clone()); // This will warn
+        
+        assert_eq!(result.get_selection_list().len(), 2); // Both added but warned
+
+        // Test duplicate variable detection - now just warns
+        let var1 = Variable::new("attr1".to_string());
+        let var2 = Variable::new("attr1".to_string());
+        
+        let result = Selector::selector()
+            .select_variable(var1)
+            .select_variable(var2); // This will warn
+        
+        assert_eq!(result.get_selection_list().len(), 2); // Both added but warned
     }
 }

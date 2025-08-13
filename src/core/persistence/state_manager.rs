@@ -280,7 +280,7 @@ impl UnifiedStateManager {
         mode: CheckpointMode,
     ) -> Result<CheckpointMetadata, StateError> {
         let start_time = Instant::now();
-        let component_ids = self.registry.get_all_component_ids();
+        let _component_ids = self.registry.get_all_component_ids();
         let mut component_snapshots = HashMap::new();
         let mut total_size = 0;
         let mut uncompressed_size = 0;

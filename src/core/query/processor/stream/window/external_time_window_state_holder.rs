@@ -14,6 +14,7 @@ use crate::core::persistence::state_holder::{
     SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
     CompressionType, StateOperation
 };
+use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
 
 /// Enhanced state holder for ExternalTimpleWindowProcessor with StateHolder capabilities
 #[derive(Debug, Clone)]
@@ -172,9 +173,25 @@ impl StateHolder for ExternalTimeWindowStateHolder {
             message: format!("Failed to serialize external time window state: {e}"),
         })?;
         
-        // Apply compression if requested
-        let compression = hints.prefer_compression.clone().unwrap_or(CompressionType::None);
-        data = self.apply_compression(data, &compression)?;
+        // Apply compression if requested using the shared compression utility
+        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
+            match self.compress_state_data(&data, Some(compression.clone())) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => {
+                    // Fall back to no compression if compression fails
+                    (data, CompressionType::None)
+                }
+            }
+        } else {
+            // Use intelligent compression selection
+            match self.compress_state_data(&data, None) {
+                Ok((compressed, comp_type)) => (compressed, comp_type),
+                Err(_) => (data, CompressionType::None)
+            }
+        };
+        
+        let data = compressed_data;
+        let compression = compression_type;
         
         let checksum = StateSnapshot::calculate_checksum(&data);
         
@@ -196,8 +213,8 @@ impl StateHolder for ExternalTimeWindowStateHolder {
             return Err(StateError::ChecksumMismatch);
         }
         
-        // Decompress data if needed
-        let data = self.decompress_data(&snapshot.data, &snapshot.compression)?;
+        // Decompress data if needed using the shared compression utility
+        let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
         
         // Deserialize state data
         let state_data: ExternalTimeWindowStateData = from_bytes(&data).map_err(|e| {
@@ -213,8 +230,8 @@ impl StateHolder for ExternalTimeWindowStateHolder {
         for event_data in &state_data.events {
             match self.deserialize_event(event_data) {
                 Ok(event) => buffer.push_back(Arc::new(event)),
-                Err(e) => {
-                    eprintln!("Warning: Failed to deserialize event: {e}");
+                Err(_e) => {
+                    // Warning: Failed to deserialize event, skipping
                 }
             }
         }
@@ -246,7 +263,7 @@ impl StateHolder for ExternalTimeWindowStateHolder {
     }
 
     fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
-        println!("Applying {} state operations to external time window", changes.operations.len());
+        // Note: Applying {} state operations to external time window
         Ok(())
     }
 
@@ -281,26 +298,15 @@ impl StateHolder for ExternalTimeWindowStateHolder {
     }
 }
 
-impl ExternalTimeWindowStateHolder {
-    /// Apply compression to data
-    fn apply_compression(&self, data: Vec<u8>, compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data),
-            _ => {
-                println!("{compression:?} compression not implemented, returning uncompressed data");
-                Ok(data)
-            }
-        }
-    }
-
-    /// Decompress data
-    fn decompress_data(&self, data: &[u8], compression: &CompressionType) -> Result<Vec<u8>, StateError> {
-        match compression {
-            CompressionType::None => Ok(data.to_vec()),
-            _ => {
-                println!("{compression:?} decompression not implemented, returning data as-is");
-                Ok(data.to_vec())
-            }
+impl CompressibleStateHolder for ExternalTimeWindowStateHolder {
+    fn compression_hints(&self) -> CompressionHints {
+        CompressionHints {
+            prefer_speed: true, // External time windows need low latency for real-time processing
+            prefer_ratio: false,
+            data_type: DataCharacteristics::ModeratelyRepetitive, // Event streams have moderate patterns
+            target_latency_ms: Some(1), // Target < 1ms compression time
+            min_compression_ratio: Some(0.3), // At least 30% space savings to be worthwhile
+            expected_size_range: DataSizeRange::Small, // External time windows typically have small state
         }
     }
 }

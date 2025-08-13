@@ -1,6 +1,7 @@
 // siddhi_rust/src/core/util/mod.rs
 
 pub mod attribute_converter;
+pub mod compression; // High-performance shared compression utility
 pub mod event_serde;
 pub mod event_serialization; // Advanced event serialization with proper AttributeValue handling
 pub mod executor_service;
@@ -33,9 +34,13 @@ pub mod statistics; // This might conflict with core::config::StatisticsConfigur
 pub use self::attribute_converter::{
     get_property_value, get_property_value_from_str, is_numeric_type,
 };
+pub use self::compression::{
+    CompressibleStateHolder, CompressionEngine, CompressionHints, DataCharacteristics,
+    DataSizeRange, GLOBAL_COMPRESSION_ENGINE,
+}; // High-performance compression utilities
 pub use self::event_serde::{event_from_bytes, event_to_bytes};
 pub use self::event_serialization::{
-    EventSerializationService, SerializableEventData, StorageStrategy
+    EventSerializationService, SerializableEventData, SerializableAttributeValue, StorageStrategy
 }; // Advanced event serialization
 pub use self::executor_service::{ExecutorService, ExecutorServiceRegistry};
 pub use self::id_generator::IdGenerator;
