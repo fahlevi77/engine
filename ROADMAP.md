@@ -108,6 +108,78 @@ This document tracks the implementation tasks for achieving **enterprise-grade C
 
 - **Files**: `src/core/distributed/`, `src/core/extensions/`, `src/core/runtime/`
 
+#### **2.1 Critical Extension Implementations** 🔴 **MUST COMPLETE**
+- **Status**: 🔴 **BLOCKER** - Core framework ready but non-functional without real implementations
+- **Priority**: **IMMEDIATE** - Required for any distributed deployment
+- **Target**: Production-ready default implementations for each extension point
+
+**A. Transport Layer Implementation** (Choose & Implement Defaults):
+- [ ] **TCP Transport** (Recommended Default)
+  - Native Rust async TCP with Tokio
+  - Connection pooling and multiplexing
+  - Automatic reconnection and circuit breaking
+  - TLS support for secure communication
+- [ ] **gRPC Transport** (Alternative Default)
+  - Tonic-based implementation
+  - Protocol buffers for efficient serialization
+  - Built-in load balancing and health checks
+  - HTTP/2 multiplexing
+  
+**Decision Required**: TCP for simplicity vs gRPC for features
+
+**B. State Backend Implementation** (Choose & Implement Defaults):
+- [ ] **Redis Backend** (Recommended Default)
+  - Most mature, widely deployed
+  - Built-in clustering support
+  - Excellent performance for hot state
+  - redis-rs integration
+- [ ] **Apache Ignite Backend** (Alternative)
+  - Better for large state (TB+)
+  - SQL support for complex queries
+  - Native compute grid capabilities
+  
+**Decision Required**: Redis for ease vs Ignite for scale
+
+**C. Coordination Service** (Choose & Implement Default):
+- [ ] **Built-in Raft** (Recommended Default)
+  - No external dependencies
+  - Rust-native implementation (raft-rs)
+  - Simplified deployment
+  - Good enough for <100 nodes
+- [ ] **Etcd Integration** (Alternative)
+  - Battle-tested in Kubernetes
+  - External dependency but reliable
+  - Better for large clusters
+  
+**Decision Required**: Built-in Raft for simplicity vs Etcd for production maturity
+
+**D. Message Broker** (Optional but Recommended):
+- [ ] **Kafka Integration** (Industry Standard)
+  - rdkafka bindings
+  - Exactly-once semantics
+  - Best ecosystem integration
+- [ ] **NATS Integration** (Lightweight Alternative)
+  - Better for edge deployments
+  - Lower operational overhead
+  
+**Implementation Timeline**: 
+- Week 1-2: Transport layer (TCP or gRPC)
+- Week 2-3: State backend (Redis)
+- Week 3-4: Coordination (Raft)
+- Week 4-5: Message broker (Kafka)
+- Week 5-6: Integration testing
+
+**Success Criteria**:
+- [ ] At least ONE production-ready implementation per extension point
+- [ ] Comprehensive testing with failure scenarios
+- [ ] Performance benchmarks for each implementation
+- [ ] Clear documentation on when to use which option
+- [ ] Docker Compose setup for testing distributed mode
+
+**Why This is Critical**: Without these implementations, the distributed framework is just scaffolding. These are the **minimum viable implementations** needed for any real distributed deployment.
+
+- **Files**: `src/core/distributed/`, `src/core/extensions/`, `src/core/runtime/`
+
 #### **3. Query Optimization Engine**
 - **Status**: 🔴 **PERFORMANCE BLOCKER** - 5-10x performance penalty for complex queries
 - **Current**: Direct AST execution with no optimization

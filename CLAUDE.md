@@ -240,6 +240,19 @@ Input → OptimizedStreamJunction → Processors → Output
 
 ## Development Guidelines
 
+### 🎯 **IMPORTANT: Task Prioritization**
+
+**When determining next tasks or implementation priorities, ALWAYS consult [ROADMAP.md](ROADMAP.md) first.**
+
+The ROADMAP.md file contains:
+- Current priority levels and critical blockers
+- Detailed implementation status for each component
+- Strategic decisions needed for extension implementations
+- Timeline and success criteria for all initiatives
+- Future vision and platform evolution plans
+
+**Do not guess or assume priorities - the roadmap is the single source of truth for what needs to be done next.**
+
 ### Performance-First Approach
 
 1. **Benchmark Everything**: Create benchmarks before optimization
