@@ -10,6 +10,7 @@ pub mod aggregation;
 pub mod config;
 pub mod data_source;
 pub mod debugger;
+pub mod distributed; // Added for distributed processing
 pub mod event;
 pub mod exception; // For custom core-specific error types
 pub mod executor;
