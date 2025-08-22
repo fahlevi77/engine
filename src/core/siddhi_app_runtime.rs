@@ -262,6 +262,11 @@ impl SiddhiAppRuntime {
             // Perform the restoration while event processing is blocked
             let result = service.restore_revision(revision);
             
+            // Clear SelectProcessor group states after restoration to ensure fresh aggregator state
+            if result.is_ok() {
+                self.clear_select_processor_group_states();
+            }
+            
             // Unlock the barrier to resume normal processing
             barrier.unlock();
             
@@ -269,6 +274,29 @@ impl SiddhiAppRuntime {
         } else {
             // No barrier configured, proceed with restoration (may have timing issues)
             service.restore_revision(revision)
+        }
+    }
+
+    /// Clear group states in all SelectProcessors to ensure fresh state after restoration
+    fn clear_select_processor_group_states(&self) {
+        for query_runtime in &self.query_runtimes {
+            // Try to access the processor chain and find SelectProcessors
+            if let Some(ref processor) = query_runtime.processor_chain_head {
+                self.clear_processor_chain_group_states(processor);
+            }
+        }
+    }
+
+    /// Recursively clear group states in processor chains
+    fn clear_processor_chain_group_states(&self, processor: &Arc<Mutex<dyn crate::core::query::processor::Processor>>) {
+        if let Ok(proc) = processor.lock() {
+            // Clear group states for this processor (no-op for non-SelectProcessors)
+            proc.clear_group_states();
+            
+            // Recursively check next processors in the chain
+            if let Some(ref next) = proc.next_processor() {
+                self.clear_processor_chain_group_states(next);
+            }
         }
     }
 

@@ -61,9 +61,11 @@ impl SnapshotService {
         let mut holders = HashMap::new();
         let hints = crate::core::persistence::SerializationHints::default();
         for (id, holder) in self.state_holders.lock().unwrap().iter() {
+            println!("Persisting state for component: {}", id);
             match holder.lock().unwrap().serialize_state(&hints) {
                 Ok(snapshot) => {
                     holders.insert(id.clone(), snapshot.data);
+                    println!("Successfully persisted state for: {}", id);
                 }
                 Err(e) => {
                     eprintln!("Failed to serialize state for {id}: {e:?}");
@@ -95,6 +97,7 @@ impl SnapshotService {
             let snap: SnapshotData = from_bytes(&data).map_err(|e| e.to_string())?;
             self.set_state(snap.main);
             for (id, bytes) in snap.holders {
+                println!("Restoring state for component: {}", id);
                 if let Some(holder) = self.state_holders.lock().unwrap().get(&id) {
                     // Create a temporary snapshot for deserialization
                     let checksum = crate::core::persistence::StateSnapshot::calculate_checksum(&bytes);
@@ -109,9 +112,15 @@ impl SnapshotService {
                             "LegacyComponent".to_string(),
                         ),
                     };
-                    if let Err(e) = holder.lock().unwrap().deserialize_state(&temp_snapshot) {
-                        eprintln!("Failed to restore state for {id}: {e:?}");
+                    match holder.lock().unwrap().deserialize_state(&temp_snapshot) {
+                        Ok(_) => println!("Successfully restored state for: {}", id),
+                        Err(e) => {
+                            eprintln!("Failed to restore state for {id}: {e:?}");
+                            eprintln!("Component ID: {}, Error details: {}", id, e);
+                        }
                     }
+                } else {
+                    println!("No state holder found for component: {}", id);
                 }
             }
             Ok(())

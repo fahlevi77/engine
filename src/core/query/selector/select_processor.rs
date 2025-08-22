@@ -368,6 +368,13 @@ impl SelectProcessor {
         }
     }
 
+    /// Clear group states - called during state restoration to ensure clean state
+    pub fn clear_group_states(&self) {
+        if let Ok(mut group_states) = self.group_states.lock() {
+            group_states.clear();
+        }
+    }
+
     fn apply_limit_offset(&self, events: Vec<Box<dyn ComplexEvent>>) -> Vec<Box<dyn ComplexEvent>> {
         let mut final_events = Vec::new();
         let mut seen = 0u64;
@@ -393,6 +400,7 @@ impl SelectProcessor {
         final_events
     }
 }
+
 
 impl Processor for SelectProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
@@ -427,16 +435,18 @@ impl Processor for SelectProcessor {
                     .as_ref()
                     .and_then(|g| g.construct_event_key(event_box.as_ref()))
                     .unwrap_or_default();
-                let state = map.entry(key.clone()).or_insert_with(|| GroupState {
-                    oaps: self
-                        .output_attribute_processors
-                        .iter()
-                        .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
-                        .collect(),
-                    having_exec: self
-                        .having_condition_executor
-                        .as_ref()
-                        .map(|e| e.clone_executor(&self.meta.siddhi_app_context)),
+                let state = map.entry(key.clone()).or_insert_with(|| {
+                    GroupState {
+                        oaps: self
+                            .output_attribute_processors
+                            .iter()
+                            .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
+                            .collect(),
+                        having_exec: self
+                            .having_condition_executor
+                            .as_ref()
+                            .map(|e| e.clone_executor(&self.meta.siddhi_app_context)),
+                    }
                 });
                 for oap in &state.oaps {
                     out.push(oap.process(Some(event_box.as_ref())));
@@ -585,6 +595,13 @@ impl Processor for SelectProcessor {
 
     fn is_stateful(&self) -> bool {
         self.contains_aggregator || self.is_group_by // Simplified
+    }
+    
+    fn clear_group_states(&self) {
+        // Clear group states for SelectProcessor
+        if let Ok(mut group_states) = self.group_states.lock() {
+            group_states.clear();
+        }
     }
 }
 

@@ -56,6 +56,11 @@ pub trait Processor: Debug + Send + Sync {
     fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext>;
     fn get_processing_mode(&self) -> ProcessingMode;
     fn is_stateful(&self) -> bool;
+    
+    /// Clear group states if this processor supports it (e.g., SelectProcessor)
+    fn clear_group_states(&self) {
+        // Default implementation does nothing
+    }
 }
 
 // Declare submodules within processor directory

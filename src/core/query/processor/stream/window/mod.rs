@@ -68,15 +68,21 @@ impl LengthWindowProcessor {
     ) -> Self {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
         
-        // Create enhanced StateHolder (for demonstration and future integration)
-        let component_id = format!("length_window_{}", uuid::Uuid::new_v4());
-        let _state_holder = Arc::new(LengthWindowStateHolder::new(
+        // Create enhanced StateHolder and register it for persistence
+        let component_id = format!("length_window_{}_{}", query_ctx.get_name(), length);
+        let state_holder = Arc::new(LengthWindowStateHolder::new(
             Arc::clone(&buffer),
-            component_id,
+            component_id.clone(),
             length,
         ));
         
-        // State registry integration available through enhanced state holders
+        // Register state holder with SnapshotService for persistence  
+        let state_holder_clone = (*state_holder).clone();
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+            Arc::new(Mutex::new(state_holder_clone));
+        if let Some(snapshot_service) = app_ctx.get_snapshot_service() {
+            snapshot_service.register_state_holder(component_id, state_holder_arc);
+        }
         
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -587,14 +593,22 @@ impl LengthBatchWindowProcessor {
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let expired = Arc::new(Mutex::new(Vec::new()));
         
-        // Create enhanced StateHolder
-        let component_id = format!("length_batch_window_{}", uuid::Uuid::new_v4());
+        // Create enhanced StateHolder and register it  
+        let component_id = format!("length_batch_window_{}_{}", query_ctx.get_name(), length);
         let state_holder = LengthBatchWindowStateHolder::new(
             Arc::clone(&buffer),
             Arc::clone(&expired),
-            component_id,
+            component_id.clone(),
             length,
         );
+        
+        // Register state holder with SnapshotService for persistence
+        let state_holder_clone = state_holder.clone();
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+            Arc::new(Mutex::new(state_holder_clone));
+        if let Some(snapshot_service) = app_ctx.get_snapshot_service() {
+            snapshot_service.register_state_holder(component_id, state_holder_arc);
+        }
         
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),

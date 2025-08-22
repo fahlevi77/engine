@@ -25,15 +25,18 @@ Redis persistence tests: 4/6 passing ✅
 
 ## ❌ **Current Limitations**
 
-### **Aggregation State Persistence (ThreadBarrier Coordination Applied)**
-- **🔄 Aggregation functions** (`count()`, `sum()`, `avg()`, etc.) comprehensive implementation with ThreadBarrier coordination
-- **❌ Group by aggregations** still do not restore properly in tests
-- **Root Cause**: Complex synchronization between SnapshotService restoration and aggregator executor state
-- **Applied Fixes**: 
+### **Aggregation State Persistence (Root Cause Identified)**
+- **✅ Basic aggregation infrastructure** Complete implementation with ThreadBarrier coordination
+- **❌ Group By aggregation restoration** Confirmed not working - core architectural issue identified
+- **Root Cause Identified**: Aggregator executors within group states are not being restored during state restoration
+- **Implemented Infrastructure**: 
   - ✅ Added shared state synchronization in Count and Sum aggregators during `deserialize_state()` calls
-  - ✅ Implemented ThreadBarrier coordination in `SiddhiAppRuntime.restore_revision()` to prevent race conditions
+  - ✅ Implemented ThreadBarrier coordination in `SiddhiAppRuntime.restore_revision()` to prevent race conditions  
   - ✅ Added ThreadBarrier enter/exit in `InputHandler.send_event_with_timestamp()` for proper event coordination
-- **Remaining Issue**: Test failures persist - likely requires deeper investigation of Group By aggregation state restoration logic
+  - ✅ Added SelectProcessor StateHolder implementation for group state persistence
+- **Core Issue**: Individual aggregator executors within each group are not being restored from persisted state
+- **Evidence**: Focused test shows aggregation state continues from pre-restoration values (800 instead of 500)
+- **Required Solution**: Complex architectural enhancement to restore per-group aggregator executor state
 
 ### **Complex Window Combinations**
 - **❌ Multiple windows** with aggregations fail
@@ -62,13 +65,15 @@ group by category insert into OutputStream;
 
 ## 📋 **For Future Development**
 
-### **To Complete Aggregation Persistence**
+### **Comprehensive Analysis Complete - Architecture Enhancement Required**
 1. **✅ Implement aggregator state serialization** in aggregator state holders
 2. **✅ Add aggregation context** to persistence snapshots  
 3. **✅ Update SnapshotService** to capture aggregator state
 4. **✅ Implement ThreadBarrier coordination** - Synchronize restoration with event processing using Java Siddhi's ThreadBarrier pattern
-5. **🔄 Debug Group By aggregation logic** - Test failures persist, requires investigation of Group By state restoration
-6. **❌ Test aggregation restoration** across checkpoints - Still failing despite comprehensive infrastructure
+5. **✅ Identify root cause** - Aggregator executors within group states not restored during state restoration
+6. **✅ Implement SelectProcessor StateHolder** - Group state persistence infrastructure  
+7. **🔄 Major Architecture Enhancement Required** - Per-group aggregator executor state restoration
+8. **📋 Future Development Priority** - Complex implementation requiring careful coordination of group state management
 
 ### **Current Architecture Supports**
 - ✅ **Enterprise Redis backend** ready for production

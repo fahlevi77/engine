@@ -97,7 +97,7 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         // Initialize state holder for enterprise state management
         let sum_arc = Arc::new(Mutex::new(0.0f64));
         let count_arc = Arc::new(Mutex::new(0u64));
-        let component_id = format!("sum_aggregator_{}", ctx.name.as_str());
+        let component_id = format!("sum_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
         
         let state_holder = SumAggregatorStateHolder::new(
             sum_arc.clone(),
@@ -121,12 +121,27 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
 
     fn process_add(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
-            // Update internal state
+            // Update internal state with sync check for post-restoration scenarios
             let mut st = self.state.lock().unwrap();
+            
+            
+            // Sync internal state with shared state before processing (only for non-group aggregators)
+            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+                let shared_sum_val = *shared_sum.lock().unwrap();
+                let shared_count_val = *shared_count.lock().unwrap();
+                
+                // Only sync if there's a significant difference (indicating restoration happened)
+                if (st.sum - shared_sum_val).abs() > 0.0001 || st.count != shared_count_val {
+                    st.sum = shared_sum_val;
+                    st.count = shared_count_val;
+                }
+            }
+            
             st.sum += v;
             st.count += 1;
+            
 
-            // Update shared state for persistence
+            // Update shared state for persistence (only for non-group aggregators)
             if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
                 *shared_sum.lock().unwrap() = st.sum;
                 *shared_count.lock().unwrap() = st.count;
@@ -138,23 +153,37 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
             }
         }
         let st = self.state.lock().unwrap();
-        match self.return_type {
+        let result = match self.return_type {
             ApiAttributeType::LONG => Some(AttributeValue::Long(st.sum as i64)),
             ApiAttributeType::DOUBLE => Some(AttributeValue::Double(st.sum)),
             _ => None,
-        }
+        };
+        result
     }
 
     fn process_remove(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
-            // Update internal state
+            // Update internal state with sync check for post-restoration scenarios
             let mut st = self.state.lock().unwrap();
+            
+            // Sync internal state with shared state before processing (only for non-group aggregators)
+            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+                let shared_sum_val = *shared_sum.lock().unwrap();
+                let shared_count_val = *shared_count.lock().unwrap();
+                
+                // Only sync if there's a significant difference (indicating restoration happened)
+                if (st.sum - shared_sum_val).abs() > 0.0001 || st.count != shared_count_val {
+                    st.sum = shared_sum_val;
+                    st.count = shared_count_val;
+                }
+            }
+            
             st.sum -= v;
             if st.count > 0 {
                 st.count -= 1;
             }
 
-            // Update shared state for persistence
+            // Update shared state for persistence (only for non-group aggregators)
             if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
                 *shared_sum.lock().unwrap() = st.sum;
                 *shared_count.lock().unwrap() = st.count;
@@ -198,14 +227,32 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
 
     fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> {
         let ctx = self.app_ctx.as_ref().unwrap();
+        
+        // Always sync internal state with shared state before cloning to ensure consistency
+        let synchronized_state = if let (Some(shared_sum), Some(shared_count)) = (&self.shared_sum, &self.shared_count) {
+            let shared_sum_val = *shared_sum.lock().unwrap();
+            let shared_count_val = *shared_count.lock().unwrap();
+            SumState {
+                sum: shared_sum_val,
+                count: shared_count_val,
+            }
+        } else {
+            let current_state = self.state.lock().unwrap().clone();
+            current_state
+        };
+        
+        // Create independent shared state for each group to prevent cross-group interference
+        let group_shared_sum = Arc::new(Mutex::new(synchronized_state.sum));
+        let group_shared_count = Arc::new(Mutex::new(synchronized_state.count));
+        
         Box::new(SumAttributeAggregatorExecutor {
             arg_exec: self.arg_exec.as_ref().map(|e| e.clone_executor(ctx)),
             return_type: self.return_type,
-            state: Mutex::new(self.state.lock().unwrap().clone()),
+            state: Mutex::new(synchronized_state),
             app_ctx: Some(Arc::clone(ctx)),
-            state_holder: self.state_holder.clone(),
-            shared_sum: self.shared_sum.clone(),
-            shared_count: self.shared_count.clone(),
+            state_holder: None, // Group aggregators don't need individual state holders
+            shared_sum: Some(group_shared_sum),   // Independent shared state per group
+            shared_count: Some(group_shared_count), // Independent shared state per group
         })
     }
 }
@@ -381,7 +428,7 @@ impl AttributeAggregatorExecutor for AvgAttributeAggregatorExecutor {
         // Initialize state holder for enterprise state management
         let sum_arc = Arc::new(Mutex::new(0.0f64));
         let count_arc = Arc::new(Mutex::new(0u64));
-        let component_id = format!("avg_aggregator_{}", ctx.name.as_str());
+        let component_id = format!("avg_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
         
         let state_holder = AvgAggregatorStateHolder::new(
             sum_arc,
@@ -608,7 +655,7 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
 
         // Initialize state holder for enterprise state management
         let count_arc = Arc::new(Mutex::new(0i64));
-        let component_id = format!("count_aggregator_{}", ctx.name.as_str());
+        let component_id = format!("count_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
         
         let state_holder = CountAggregatorStateHolder::new(
             count_arc.clone(),
@@ -629,6 +676,17 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
 
     fn process_add(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
+        
+        // Sync internal state with shared state before processing (for post-restoration scenarios)
+        if let Some(ref shared_count) = self.shared_count {
+            let shared_count_val = *shared_count.lock().unwrap();
+            
+            // Only sync if there's a significant difference (indicating restoration happened)
+            if st.count != shared_count_val {
+                st.count = shared_count_val;
+            }
+        }
+        
         st.count += 1;
         let new_count = st.count;
         
@@ -648,6 +706,17 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
     }
     fn process_remove(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
+        
+        // Sync internal state with shared state before processing (for post-restoration scenarios)
+        if let Some(ref shared_count) = self.shared_count {
+            let shared_count_val = *shared_count.lock().unwrap();
+            
+            // Only sync if there's a significant difference (indicating restoration happened)
+            if st.count != shared_count_val {
+                st.count = shared_count_val;
+            }
+        }
+        
         st.count -= 1;
         let new_count = st.count;
         
@@ -685,11 +754,23 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
         Some(AttributeValue::Long(0))
     }
     fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> {
+        // Sync internal state with shared state before cloning
+        let synchronized_state = if let Some(shared_count) = &self.shared_count {
+            CountState {
+                count: *shared_count.lock().unwrap(),
+            }
+        } else {
+            self.state.lock().unwrap().clone()
+        };
+        
+        // Create independent shared state for each group to prevent cross-group interference
+        let group_shared_count = Arc::new(Mutex::new(synchronized_state.count));
+        
         Box::new(CountAttributeAggregatorExecutor {
-            state: Mutex::new(self.state.lock().unwrap().clone()),
+            state: Mutex::new(synchronized_state),
             app_ctx: self.app_ctx.as_ref().cloned(),
-            state_holder: self.state_holder.clone(),
-            shared_count: self.shared_count.clone(),
+            state_holder: None, // Group aggregators don't need individual state holders
+            shared_count: Some(group_shared_count), // Independent shared state per group
         })
     }
 }
@@ -855,7 +936,7 @@ impl AttributeAggregatorExecutor for DistinctCountAttributeAggregatorExecutor {
         
         // Initialize StateHolder
         let map_ref = Arc::new(Mutex::new(HashMap::new()));
-        let component_id = format!("distinctcount_aggregator_{}", ctx.name.as_str());
+        let component_id = format!("distinctcount_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
         self.state_holder = Some(DistinctCountAggregatorStateHolder::new(
             map_ref.clone(),
             component_id,

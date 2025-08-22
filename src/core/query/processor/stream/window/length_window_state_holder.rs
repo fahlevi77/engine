@@ -13,12 +13,12 @@ use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::persistence::state_holder::{
     StateHolder, StateSnapshot, StateError, StateSize, AccessPattern,
     SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
-    CompressionType, StateOperation
+    StateOperation
 };
 use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
 
 /// Enhanced state holder for LengthWindowProcessor with StateHolder capabilities
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LengthWindowStateHolder {
     /// Window buffer containing events
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
@@ -187,27 +187,14 @@ impl StateHolder for LengthWindowStateHolder {
             total_events_processed: total_events,
         };
         
+        
         // Serialize to bytes
         let data = to_bytes(&state_data).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize length window state: {e}"),
         })?;
         
-        // Apply compression if requested using the shared compression utility
-        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
-            match self.compress_state_data(&data, Some(compression.clone())) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => {
-                    // Fall back to no compression if compression fails
-                    (data, CompressionType::None)
-                }
-            }
-        } else {
-            // Use intelligent compression selection
-            match self.compress_state_data(&data, None) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => (data, CompressionType::None)
-            }
-        };
+        
+        let (compressed_data, compression_type) = self.compress_state_data(&data, hints.prefer_compression.clone())?;
         
         let data = compressed_data;
         let compression = compression_type;
