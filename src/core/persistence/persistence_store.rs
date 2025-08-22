@@ -202,3 +202,134 @@ impl PersistenceStore for SqlitePersistenceStore {
         let _ = conn.execute("DELETE FROM snapshots WHERE app=?1", params![siddhi_app_id]);
     }
 }
+
+/// Redis-backed persistence store for distributed state management
+pub struct RedisPersistenceStore {
+    backend: Arc<tokio::sync::Mutex<crate::core::distributed::RedisBackend>>,
+    runtime: Arc<tokio::runtime::Runtime>,
+}
+
+impl RedisPersistenceStore {
+    /// Create a new Redis persistence store with default configuration
+    pub fn new() -> Result<Self, String> {
+        let backend = crate::core::distributed::RedisBackend::new();
+        Self::new_with_backend(backend)
+    }
+    
+    /// Create a new Redis persistence store with custom Redis configuration
+    pub fn new_with_config(config: crate::core::distributed::RedisConfig) -> Result<Self, String> {
+        let backend = crate::core::distributed::RedisBackend::with_config(config);
+        Self::new_with_backend(backend)
+    }
+    
+    fn new_with_backend(mut backend: crate::core::distributed::RedisBackend) -> Result<Self, String> {
+        // Create a dedicated runtime for Redis operations
+        let runtime = Arc::new(
+            tokio::runtime::Runtime::new()
+                .map_err(|e| format!("Failed to create async runtime: {}", e))?
+        );
+        
+        // Initialize the backend
+        runtime.block_on(async {
+            backend.initialize().await
+                .map_err(|e| format!("Failed to initialize Redis backend: {}", e))
+        })?;
+        
+        Ok(Self {
+            backend: Arc::new(tokio::sync::Mutex::new(backend)),
+            runtime,
+        })
+    }
+    
+    /// Get the revision key for Redis
+    fn revision_key(siddhi_app_id: &str, revision: &str) -> String {
+        format!("siddhi:app:{}:revision:{}", siddhi_app_id, revision)
+    }
+    
+    /// Get the last revision key for Redis  
+    fn last_revision_key(siddhi_app_id: &str) -> String {
+        format!("siddhi:app:{}:last_revision", siddhi_app_id)
+    }
+}
+
+impl PersistenceStore for RedisPersistenceStore {
+    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
+        let backend = Arc::clone(&self.backend);
+        let revision_key = Self::revision_key(siddhi_app_id, revision);
+        let last_rev_key = Self::last_revision_key(siddhi_app_id);
+        let snapshot = snapshot.to_vec();
+        let revision = revision.to_string();
+        
+        self.runtime.block_on(async move {
+            let backend = backend.lock().await;
+            
+            // Store the snapshot
+            if let Err(e) = backend.set(&revision_key, snapshot).await {
+                eprintln!("Failed to save snapshot to Redis: {}", e);
+                return;
+            }
+            
+            // Update last revision pointer
+            if let Err(e) = backend.set(&last_rev_key, revision.into_bytes()).await {
+                eprintln!("Failed to update last revision in Redis: {}", e);
+            }
+        });
+    }
+    
+    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
+        let backend = Arc::clone(&self.backend);
+        let revision_key = Self::revision_key(siddhi_app_id, revision);
+        
+        self.runtime.block_on(async move {
+            let backend = backend.lock().await;
+            
+            match backend.get(&revision_key).await {
+                Ok(data) => data,
+                Err(e) => {
+                    eprintln!("Failed to load snapshot from Redis: {}", e);
+                    None
+                }
+            }
+        })
+    }
+    
+    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
+        let backend = Arc::clone(&self.backend);
+        let last_rev_key = Self::last_revision_key(siddhi_app_id);
+        
+        self.runtime.block_on(async move {
+            let backend = backend.lock().await;
+            
+            match backend.get(&last_rev_key).await {
+                Ok(Some(data)) => String::from_utf8(data).ok(),
+                Ok(None) => None,
+                Err(e) => {
+                    eprintln!("Failed to get last revision from Redis: {}", e);
+                    None
+                }
+            }
+        })
+    }
+    
+    fn clear_all_revisions(&self, siddhi_app_id: &str) {
+        let backend = Arc::clone(&self.backend);
+        let app_pattern = format!("siddhi:app:{}:*", siddhi_app_id);
+        
+        self.runtime.block_on(async move {
+            let backend = backend.lock().await;
+            
+            // Note: This is a simplified implementation
+            // In production, you'd want to use Redis SCAN for better performance
+            let last_rev_key = Self::last_revision_key(siddhi_app_id);
+            if let Err(e) = backend.delete(&last_rev_key).await {
+                eprintln!("Failed to delete last revision from Redis: {}", e);
+            }
+            
+            // TODO: Implement pattern-based deletion for all revisions
+            // This would require iterating through keys matching the pattern
+        });
+    }
+}
+
+use std::sync::Arc;
+use crate::core::distributed::StateBackend;

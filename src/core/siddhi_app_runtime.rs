@@ -106,6 +106,11 @@ impl SiddhiAppRuntime {
             ctx.set_buffer_size(buffer_size);
         }
         ctx.set_transport_channel_creation_enabled(transport_creation);
+        
+        // Initialize ThreadBarrier if enforce_order is enabled or for persistence coordination
+        let thread_barrier = Arc::new(crate::core::util::thread_barrier::ThreadBarrier::new());
+        ctx.set_thread_barrier(thread_barrier);
+        
         let scheduler = if let Some(exec) = ctx.get_scheduled_executor_service() {
             Arc::new(crate::core::util::Scheduler::new(Arc::clone(
                 &exec.executor,
@@ -243,7 +248,28 @@ impl SiddhiAppRuntime {
             .siddhi_app_context
             .get_snapshot_service()
             .ok_or("SnapshotService not set")?;
-        service.restore_revision(revision)
+        
+        // Use ThreadBarrier to coordinate with event processing threads
+        if let Some(barrier) = self.siddhi_app_context.get_thread_barrier() {
+            // Lock the barrier to prevent new events from entering
+            barrier.lock();
+            
+            // Wait for all active threads to complete their current processing
+            while barrier.get_active_threads() > 0 {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            
+            // Perform the restoration while event processing is blocked
+            let result = service.restore_revision(revision);
+            
+            // Unlock the barrier to resume normal processing
+            barrier.unlock();
+            
+            result
+        } else {
+            // No barrier configured, proceed with restoration (may have timing issues)
+            service.restore_revision(revision)
+        }
     }
 
     /// Query an aggregation runtime using optional `within` and `per` clauses.

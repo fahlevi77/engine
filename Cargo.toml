@@ -48,3 +48,4 @@ tonic-build = "0.11"
 [dev-dependencies]
 tempfile = "3"
 custom_dyn_ext = { path = "tests/custom_dyn_ext" }
+

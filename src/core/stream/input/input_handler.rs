@@ -78,10 +78,22 @@ impl InputHandler {
         if self.siddhi_app_context.is_playback {
             // TODO: timestamp generator
         }
-        self.ensure_processor()?
-            .lock()
-            .map_err(|_| "processor mutex poisoned".to_string())?
-            .send_event_with_data(timestamp, data, self.stream_index)
+        
+        // Use ThreadBarrier to coordinate with restoration operations
+        if let Some(barrier) = self.siddhi_app_context.get_thread_barrier() {
+            barrier.enter();
+            let result = self.ensure_processor()?
+                .lock()
+                .map_err(|_| "processor mutex poisoned".to_string())?
+                .send_event_with_data(timestamp, data, self.stream_index);
+            barrier.exit();
+            result
+        } else {
+            self.ensure_processor()?
+                .lock()
+                .map_err(|_| "processor mutex poisoned".to_string())?
+                .send_event_with_data(timestamp, data, self.stream_index)
+        }
     }
 
     pub fn send_single_event(&self, event: Event) -> Result<(), String> {

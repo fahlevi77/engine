@@ -13,6 +13,7 @@ pub mod distributed_runtime;
 pub mod transport;
 pub mod grpc;
 pub mod state_backend;
+pub use state_backend::{StateBackend, InMemoryBackend, RedisBackend, RedisConfig};
 pub mod coordinator;
 pub mod message_broker;
 
@@ -552,4 +553,7 @@ pub enum DistributedError {
     
     #[error("Broker error: {message}")]
     BrokerError { message: String },
+    
+    #[error("State error: {message}")]
+    StateError { message: String },
 }

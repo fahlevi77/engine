@@ -54,6 +54,9 @@ pub struct SumAttributeAggregatorExecutor {
     state: Mutex<SumState>,
     app_ctx: Option<Arc<SiddhiAppContext>>,
     state_holder: Option<SumAggregatorStateHolder>,
+    // Shared state for persistence (same as used by state holder)
+    shared_sum: Option<Arc<Mutex<f64>>>,
+    shared_count: Option<Arc<Mutex<u64>>>,
 }
 
 impl Default for SumAttributeAggregatorExecutor {
@@ -64,6 +67,8 @@ impl Default for SumAttributeAggregatorExecutor {
             state: Mutex::new(SumState::default()),
             app_ctx: None,
             state_holder: None,
+            shared_sum: None,
+            shared_count: None,
         }
     }
 }
@@ -94,21 +99,38 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         let count_arc = Arc::new(Mutex::new(0u64));
         let component_id = format!("sum_aggregator_{}", ctx.name.as_str());
         
-        self.state_holder = Some(SumAggregatorStateHolder::new(
-            sum_arc,
-            count_arc,
-            component_id,
+        let state_holder = SumAggregatorStateHolder::new(
+            sum_arc.clone(),
+            count_arc.clone(),
+            component_id.clone(),
             rtype,
-        ));
+        );
+        
+        // Register state holder with SnapshotService for persistence
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+            Arc::new(Mutex::new(state_holder.clone()));
+        ctx.register_state_holder(component_id, state_holder_arc);
+        
+        // Store shared state references for synchronized updates
+        self.shared_sum = Some(sum_arc);
+        self.shared_count = Some(count_arc);
+        self.state_holder = Some(state_holder);
 
         Ok(())
     }
 
     fn process_add(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
+            // Update internal state
             let mut st = self.state.lock().unwrap();
             st.sum += v;
             st.count += 1;
+
+            // Update shared state for persistence
+            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+                *shared_sum.lock().unwrap() = st.sum;
+                *shared_count.lock().unwrap() = st.count;
+            }
 
             // Record state change for incremental checkpointing
             if let Some(ref state_holder) = self.state_holder {
@@ -125,10 +147,17 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
 
     fn process_remove(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
+            // Update internal state
             let mut st = self.state.lock().unwrap();
             st.sum -= v;
             if st.count > 0 {
                 st.count -= 1;
+            }
+
+            // Update shared state for persistence
+            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+                *shared_sum.lock().unwrap() = st.sum;
+                *shared_count.lock().unwrap() = st.count;
             }
 
             // Record state change for incremental checkpointing
@@ -145,12 +174,19 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
     }
 
     fn reset(&self) -> Option<AttributeValue> {
+        // Update internal state
         let mut st = self.state.lock().unwrap();
         let old_sum = st.sum;
         let old_count = st.count;
         
         st.sum = 0.0;
         st.count = 0;
+
+        // Update shared state for persistence
+        if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+            *shared_sum.lock().unwrap() = 0.0;
+            *shared_count.lock().unwrap() = 0;
+        }
 
         // Record state reset for incremental checkpointing
         if let Some(ref state_holder) = self.state_holder {
@@ -168,6 +204,8 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
             state: Mutex::new(self.state.lock().unwrap().clone()),
             app_ctx: Some(Arc::clone(ctx)),
             state_holder: self.state_holder.clone(),
+            shared_sum: self.shared_sum.clone(),
+            shared_count: self.shared_count.clone(),
         })
     }
 }
@@ -219,7 +257,31 @@ impl crate::core::persistence::state_holder::StateHolder for SumAttributeAggrega
 
     fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
-            state_holder.deserialize_state(snapshot)
+            // First restore the state holder
+            let result = state_holder.deserialize_state(snapshot);
+            
+            // Then synchronize the executor's internal state with the restored state holder
+            if result.is_ok() {
+                let restored_sum = state_holder.get_sum();
+                let restored_count = state_holder.get_count();
+                let mut st = self.state.lock().unwrap();
+                st.sum = restored_sum;
+                st.count = restored_count;
+                
+                // Also synchronize shared state if available
+                if let Some(ref shared_sum) = self.shared_sum {
+                    if let Ok(mut shared) = shared_sum.try_lock() {
+                        *shared = restored_sum;
+                    }
+                }
+                if let Some(ref shared_count) = self.shared_count {
+                    if let Ok(mut shared) = shared_count.try_lock() {
+                        *shared = restored_count;
+                    }
+                }
+            }
+            
+            result
         } else {
             Err(crate::core::persistence::state_holder::StateError::DeserializationError {
                 message: "No state holder available".to_string(),
@@ -321,11 +383,18 @@ impl AttributeAggregatorExecutor for AvgAttributeAggregatorExecutor {
         let count_arc = Arc::new(Mutex::new(0u64));
         let component_id = format!("avg_aggregator_{}", ctx.name.as_str());
         
-        self.state_holder = Some(AvgAggregatorStateHolder::new(
+        let state_holder = AvgAggregatorStateHolder::new(
             sum_arc,
             count_arc,
-            component_id,
-        ));
+            component_id.clone(),
+        );
+        
+        // Register state holder with SnapshotService for persistence
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+            Arc::new(Mutex::new(state_holder.clone()));
+        ctx.register_state_holder(component_id, state_holder_arc);
+        
+        self.state_holder = Some(state_holder);
 
         Ok(())
     }
@@ -512,6 +581,8 @@ pub struct CountAttributeAggregatorExecutor {
     state: Mutex<CountState>,
     app_ctx: Option<Arc<SiddhiAppContext>>,
     state_holder: Option<CountAggregatorStateHolder>,
+    // Shared state for persistence (same as used by state holder)
+    shared_count: Option<Arc<Mutex<i64>>>,
 }
 
 impl Default for CountAttributeAggregatorExecutor {
@@ -520,6 +591,7 @@ impl Default for CountAttributeAggregatorExecutor {
             state: Mutex::new(CountState::default()),
             app_ctx: None,
             state_holder: None,
+            shared_count: None,
         }
     }
 }
@@ -538,10 +610,19 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
         let count_arc = Arc::new(Mutex::new(0i64));
         let component_id = format!("count_aggregator_{}", ctx.name.as_str());
         
-        self.state_holder = Some(CountAggregatorStateHolder::new(
-            count_arc,
-            component_id,
-        ));
+        let state_holder = CountAggregatorStateHolder::new(
+            count_arc.clone(),
+            component_id.clone(),
+        );
+        
+        // Register state holder with SnapshotService for persistence
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+            Arc::new(Mutex::new(state_holder.clone()));
+        ctx.register_state_holder(component_id, state_holder_arc);
+        
+        // Store shared state reference for synchronized updates
+        self.shared_count = Some(count_arc);
+        self.state_holder = Some(state_holder);
 
         Ok(())
     }
@@ -549,29 +630,52 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
     fn process_add(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
         st.count += 1;
+        let new_count = st.count;
+        
+        // Synchronize with shared state for persistence
+        if let Some(ref shared_count) = self.shared_count {
+            if let Ok(mut shared) = shared_count.try_lock() {
+                *shared = new_count;
+            }
+        }
 
         // Record state change for incremental checkpointing
         if let Some(ref state_holder) = self.state_holder {
             state_holder.record_increment();
         }
 
-        Some(AttributeValue::Long(st.count))
+        Some(AttributeValue::Long(new_count))
     }
     fn process_remove(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
         st.count -= 1;
+        let new_count = st.count;
+        
+        // Synchronize with shared state for persistence
+        if let Some(ref shared_count) = self.shared_count {
+            if let Ok(mut shared) = shared_count.try_lock() {
+                *shared = new_count;
+            }
+        }
 
         // Record state change for incremental checkpointing
         if let Some(ref state_holder) = self.state_holder {
             state_holder.record_decrement();
         }
 
-        Some(AttributeValue::Long(st.count))
+        Some(AttributeValue::Long(new_count))
     }
     fn reset(&self) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
         let old_count = st.count;
         st.count = 0;
+        
+        // Synchronize with shared state for persistence
+        if let Some(ref shared_count) = self.shared_count {
+            if let Ok(mut shared) = shared_count.try_lock() {
+                *shared = 0;
+            }
+        }
 
         // Record state reset for incremental checkpointing
         if let Some(ref state_holder) = self.state_holder {
@@ -585,6 +689,7 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
             state: Mutex::new(self.state.lock().unwrap().clone()),
             app_ctx: self.app_ctx.as_ref().cloned(),
             state_holder: self.state_holder.clone(),
+            shared_count: self.shared_count.clone(),
         })
     }
 }
@@ -635,7 +740,24 @@ impl crate::core::persistence::state_holder::StateHolder for CountAttributeAggre
 
     fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
-            state_holder.deserialize_state(snapshot)
+            // First restore the state holder
+            let result = state_holder.deserialize_state(snapshot);
+            
+            // Then synchronize the executor's internal state with the restored state holder
+            if result.is_ok() {
+                let restored_count = state_holder.get_count();
+                let mut st = self.state.lock().unwrap();
+                st.count = restored_count;
+                
+                // Also synchronize shared state if available
+                if let Some(ref shared_count) = self.shared_count {
+                    if let Ok(mut shared) = shared_count.try_lock() {
+                        *shared = restored_count;
+                    }
+                }
+            }
+            
+            result
         } else {
             Err(crate::core::persistence::state_holder::StateError::DeserializationError {
                 message: "No state holder available".to_string(),

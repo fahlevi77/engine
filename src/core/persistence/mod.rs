@@ -15,7 +15,7 @@ pub mod incremental;
 pub use self::data_source::{DataSource, DataSourceConfig, SqliteDataSource};
 pub use self::persistence_store::{
     FilePersistenceStore, InMemoryPersistenceStore, IncrementalPersistenceStore, PersistenceStore,
-    SqlitePersistenceStore,
+    SqlitePersistenceStore, RedisPersistenceStore,
 };
 pub use self::snapshot_service::SnapshotService;
 
