@@ -52,7 +52,9 @@ pub struct Connection {
 #[derive(Debug)]
 pub(crate) enum ConnectionHandle {
     Tcp(TcpStream),
-    // Future: gRPC, RDMA, etc.
+    // Placeholder for gRPC - actual implementation in grpc module
+    Grpc(String),
+    // Future: RDMA, etc.
 }
 
 /// Connection state
@@ -79,6 +81,7 @@ impl Listener {
                 ListenerHandle::Tcp(tcp_listener) => {
                     tcp_listener.local_addr().ok().map(|addr| addr.to_string())
                 }
+                ListenerHandle::Grpc(addr) => Some(addr.clone()),
             }
         } else {
             None
@@ -89,7 +92,9 @@ impl Listener {
 /// Internal listener handle
 pub(crate) enum ListenerHandle {
     Tcp(TcpListener),
-    // Future: gRPC, RDMA, etc.
+    // Placeholder for gRPC - actual implementation in grpc module  
+    Grpc(String),
+    // Future: RDMA, etc.
 }
 
 /// Message for transport
@@ -341,6 +346,11 @@ impl Transport for TcpTransport {
                 tokio::time::timeout(timeout, self.write_message(stream, &message)).await
                     .map_err(|_| DistributedError::TransportError { message: "Write timeout".to_string() })?
             }
+            ConnectionHandle::Grpc(_) => {
+                return Err(DistributedError::TransportError { 
+                    message: "gRPC connection send not implemented in unified interface".to_string() 
+                });
+            }
         }
     }
     
@@ -355,6 +365,11 @@ impl Transport for TcpTransport {
                 let timeout = tokio::time::Duration::from_millis(self.config.read_timeout_ms);
                 tokio::time::timeout(timeout, self.read_message(stream)).await
                     .map_err(|_| DistributedError::TransportError { message: "Read timeout".to_string() })?
+            }
+            ConnectionHandle::Grpc(_) => {
+                return Err(DistributedError::TransportError { 
+                    message: "gRPC connection receive not implemented in unified interface".to_string() 
+                });
             }
         }
     }
@@ -399,6 +414,11 @@ impl Transport for TcpTransport {
                     handle: Some(connection_handle),
                 })
             }
+            ListenerHandle::Grpc(_) => {
+                Err(DistributedError::TransportError { 
+                    message: "gRPC listener accept not implemented in unified interface".to_string() 
+                })
+            }
         }
     }
 }
@@ -411,7 +431,13 @@ impl TransportFactory {
     pub fn create(transport_type: &str) -> DistributedResult<Arc<dyn Transport>> {
         match transport_type.to_lowercase().as_str() {
             "tcp" => Ok(Arc::new(TcpTransport::new())),
-            // Future: "grpc" => Ok(Arc::new(GrpcTransport::new())),
+            "grpc" => {
+                // Note: gRPC transport is implemented in the grpc module
+                // For now, return TCP as fallback - full gRPC integration requires more work
+                Err(DistributedError::TransportError { 
+                    message: "gRPC transport integration with unified interface is pending. Use grpc::transport::GrpcTransport directly.".to_string() 
+                })
+            },
             // Future: "rdma" => Ok(Arc::new(RdmaTransport::new())),
             _ => Err(DistributedError::TransportError { message: format!("Unknown transport type: {}", transport_type) }),
         }
@@ -442,6 +468,7 @@ mod tests {
                 ListenerHandle::Tcp(tcp_listener) => {
                     tcp_listener.local_addr().unwrap().to_string()
                 }
+                ListenerHandle::Grpc(addr) => addr.clone(),
             }
         };
         
@@ -509,7 +536,7 @@ mod tests {
     
     #[test]
     fn test_transport_factory() {
-        let transport = TransportFactory::create("tcp").unwrap();
+        let _transport = TransportFactory::create("tcp").unwrap();
         // Transport created successfully
         
         let result = TransportFactory::create("unknown");

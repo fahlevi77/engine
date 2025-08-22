@@ -11,6 +11,7 @@ pub mod runtime_mode;
 pub mod processing_engine;
 pub mod distributed_runtime;
 pub mod transport;
+pub mod grpc;
 pub mod state_backend;
 pub mod coordinator;
 pub mod message_broker;

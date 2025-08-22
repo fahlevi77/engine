@@ -1,0 +1,219 @@
+syntax = "proto3";
+
+package siddhi.transport;
+
+// Transport service definition
+service Transport {
+  // Send a message to the server and get a response
+  rpc SendMessage(TransportMessage) returns (TransportMessage);
+  
+  // Bidirectional streaming for persistent connections
+  rpc StreamMessages(stream TransportMessage) returns (stream TransportMessage);
+  
+  // Server streaming for events/broadcasts
+  rpc StreamEvents(EventRequest) returns (stream TransportMessage);
+  
+  // Heartbeat/health check
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+// Main transport message
+message TransportMessage {
+  // Message identifier
+  string id = 1;
+  
+  // Message type
+  MessageType message_type = 2;
+  
+  // Message payload (serialized data)
+  bytes payload = 3;
+  
+  // Headers as key-value pairs
+  map<string, string> headers = 4;
+  
+  // Timestamp (milliseconds since epoch)
+  int64 timestamp = 5;
+  
+  // Source node identifier
+  string source_node = 6;
+  
+  // Target node identifier (empty for broadcast)
+  string target_node = 7;
+  
+  // Message priority (0 = highest, 9 = lowest)
+  int32 priority = 8;
+  
+  // Compression type used for payload
+  CompressionType compression = 9;
+}
+
+// Message types
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_EVENT = 1;
+  MESSAGE_TYPE_QUERY = 2;
+  MESSAGE_TYPE_STATE = 3;
+  MESSAGE_TYPE_CONTROL = 4;
+  MESSAGE_TYPE_HEARTBEAT = 5;
+  MESSAGE_TYPE_CHECKPOINT = 6;
+  MESSAGE_TYPE_METADATA = 7;
+  MESSAGE_TYPE_ACKNOWLEDGMENT = 8;
+}
+
+// Compression types
+enum CompressionType {
+  COMPRESSION_TYPE_NONE = 0;
+  COMPRESSION_TYPE_LZ4 = 1;
+  COMPRESSION_TYPE_SNAPPY = 2;
+  COMPRESSION_TYPE_ZSTD = 3;
+}
+
+// Event request for streaming
+message EventRequest {
+  // Node identifier requesting events
+  string node_id = 1;
+  
+  // Event filter criteria
+  EventFilter filter = 2;
+  
+  // Maximum events per batch
+  int32 batch_size = 3;
+}
+
+// Event filter criteria
+message EventFilter {
+  // Stream names to include (empty = all streams)
+  repeated string stream_names = 1;
+  
+  // Message types to include (empty = all types)
+  repeated MessageType message_types = 2;
+  
+  // Start timestamp (milliseconds since epoch)
+  int64 start_timestamp = 3;
+  
+  // End timestamp (milliseconds since epoch, 0 = no end)
+  int64 end_timestamp = 4;
+}
+
+// Heartbeat request
+message HeartbeatRequest {
+  // Node identifier sending heartbeat
+  string node_id = 1;
+  
+  // Current timestamp
+  int64 timestamp = 2;
+  
+  // Node status information
+  NodeStatus status = 3;
+}
+
+// Heartbeat response
+message HeartbeatResponse {
+  // Server timestamp
+  int64 server_timestamp = 1;
+  
+  // Server node identifier
+  string server_node_id = 2;
+  
+  // Server status
+  NodeStatus server_status = 3;
+  
+  // Cluster information
+  ClusterInfo cluster_info = 4;
+}
+
+// Node status information
+message NodeStatus {
+  // Node health state
+  NodeHealth health = 1;
+  
+  // CPU usage percentage (0-100)
+  float cpu_usage = 2;
+  
+  // Memory usage percentage (0-100)  
+  float memory_usage = 3;
+  
+  // Active connections count
+  int32 active_connections = 4;
+  
+  // Events processed per second
+  int64 events_per_second = 5;
+  
+  // Node version
+  string version = 6;
+  
+  // Additional metadata
+  map<string, string> metadata = 7;
+}
+
+// Node health states
+enum NodeHealth {
+  NODE_HEALTH_UNKNOWN = 0;
+  NODE_HEALTH_HEALTHY = 1;
+  NODE_HEALTH_DEGRADED = 2;
+  NODE_HEALTH_UNHEALTHY = 3;
+  NODE_HEALTH_OFFLINE = 4;
+}
+
+// Cluster information
+message ClusterInfo {
+  // Cluster identifier
+  string cluster_id = 1;
+  
+  // Total nodes in cluster
+  int32 total_nodes = 2;
+  
+  // Healthy nodes count
+  int32 healthy_nodes = 3;
+  
+  // Current leader node
+  string leader_node = 4;
+  
+  // Cluster version
+  string cluster_version = 5;
+}
+
+// Connection configuration
+message ConnectionConfig {
+  // Connection timeout in milliseconds
+  int32 connection_timeout_ms = 1;
+  
+  // Request timeout in milliseconds
+  int32 request_timeout_ms = 2;
+  
+  // Keep-alive interval in seconds
+  int32 keep_alive_interval_secs = 3;
+  
+  // Maximum message size in bytes
+  int32 max_message_size = 4;
+  
+  // Enable compression
+  bool enable_compression = 5;
+  
+  // Preferred compression type
+  CompressionType preferred_compression = 6;
+  
+  // TLS configuration
+  TlsConfig tls_config = 7;
+}
+
+// TLS configuration
+message TlsConfig {
+  // Enable TLS
+  bool enabled = 1;
+  
+  // Certificate file path
+  string cert_file = 2;
+  
+  // Private key file path
+  string key_file = 3;
+  
+  // CA certificate file path
+  string ca_file = 4;
+  
+  // Server name for verification
+  string server_name = 5;
+  
+  // Skip certificate verification (for testing)
+  bool insecure_skip_verify = 6;
+}
