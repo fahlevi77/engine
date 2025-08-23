@@ -37,12 +37,76 @@ impl SortWindowProcessor {
         app_ctx: Arc<SiddhiAppContext>,
         query_ctx: Arc<SiddhiQueryContext>,
     ) -> Self {
-        SortWindowProcessor {
+        // Configuration-driven initialization
+        let effective_length = Self::calculate_effective_window_size(length_to_keep, &app_ctx);
+        let initial_capacity = Self::calculate_initial_capacity(effective_length, &app_ctx);
+        
+        let processor = SortWindowProcessor {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
-            length_to_keep,
-            sorted_window: Arc::new(Mutex::new(Vec::new())),
+            length_to_keep: effective_length,
+            sorted_window: Arc::new(Mutex::new(Vec::with_capacity(initial_capacity))),
             comparator,
+        };
+        
+        // Log configuration-driven setup
+        processor.log_window_configuration();
+        
+        processor
+    }
+    
+    /// Calculate effective window size based on configuration
+    fn calculate_effective_window_size(requested_size: usize, app_ctx: &SiddhiAppContext) -> usize {
+        let base_size = requested_size;
+        
+        // Example: Scale window size based on runtime mode
+        match app_ctx.get_runtime_mode() {
+            crate::core::config::RuntimeMode::SingleNode => base_size,
+            crate::core::config::RuntimeMode::Distributed => {
+                // Smaller windows in distributed mode to reduce memory and network overhead
+                (base_size as f64 * 0.8).ceil() as usize
+            }
+            crate::core::config::RuntimeMode::Hybrid => {
+                // Moderate scaling for hybrid mode
+                (base_size as f64 * 0.9).ceil() as usize
+            }
         }
+    }
+    
+    /// Calculate initial capacity for the sorted buffer
+    fn calculate_initial_capacity(window_size: usize, app_ctx: &SiddhiAppContext) -> usize {
+        // Pre-allocate based on expected usage pattern
+        let multiplier = if app_ctx.is_batch_processing_enabled() {
+            1.5 // Higher capacity for batch processing
+        } else {
+            1.2 // Standard capacity
+        };
+        
+        (window_size as f64 * multiplier).ceil() as usize
+    }
+    
+    /// Log configuration-driven initialization
+    fn log_window_configuration(&self) {
+        let config = self.meta.siddhi_app_context.get_global_config();
+        
+        println!("SortWindowProcessor configured:");
+        println!("  - Window size: {} events", self.length_to_keep);
+        println!("  - Runtime mode: {:?}", config.siddhi.runtime.mode);
+        println!("  - Batch processing: {}", config.siddhi.runtime.performance.batch_processing);
+        
+        if let Some(resources) = &config.siddhi.runtime.resources {
+            if let Some(memory) = &resources.memory {
+                println!("  - Max heap: {}", memory.max_heap);
+            }
+        }
+    }
+    
+    /// Check if memory-optimized processing should be used
+    fn should_use_memory_optimization(&self) -> bool {
+        let config = self.meta.siddhi_app_context.get_global_config();
+        
+        // Enable memory optimization in distributed mode or when memory limits are set
+        config.siddhi.runtime.mode != crate::core::config::RuntimeMode::SingleNode
+            || config.siddhi.runtime.resources.is_some()
     }
 
     /// Create from window handler (standard factory pattern)

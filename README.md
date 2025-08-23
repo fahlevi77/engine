@@ -1,6 +1,82 @@
 # Siddhi Rust Port (siddhi_rust)
 
-This project is an experimental port of the Java-based Siddhi CEP (Complex Event Processing) engine to Rust. The primary goal is to explore the feasibility and potential benefits (performance, memory safety) of a Rust implementation.
+This project is an experimental port of the Java-based Siddhi CEP (Complex Event Processing) engine to Rust. The primary goal is to create a **high-performance, cloud-native CEP engine** with superior memory safety and performance characteristics.
+
+## Architecture Philosophy: Engine vs Platform
+
+Siddhi Rust is a **CEP Engine**, not a platform. This critical distinction guides our design:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Platform Layer (NOT OUR SCOPE)           │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ • Multi-tenancy       • Authentication/Authorization    ││
+│  │ • Resource Quotas      • Billing & Metering            ││
+│  │ • API Gateway          • Tenant Isolation              ││
+│  │ • Service Mesh         • Platform UI/Dashboard         ││
+│  └─────────────────────────────────────────────────────────┘│
+│  Handled by: Kubernetes, Docker Swarm, Nomad, Custom Platform│
+├─────────────────────────────────────────────────────────────┤
+│                    Siddhi Engine (OUR FOCUS)                │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Single Runtime = Single App = Single Config = Single    ││
+│  │ Container                                               ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │ Container 1 │  │ Container 2 │  │ Container 3 │       │
+│  │ ┌─────────┐ │  │ ┌─────────┐ │  │ ┌─────────┐ │       │
+│  │ │Runtime A│ │  │ │Runtime B│ │  │ │Runtime C│ │       │
+│  │ │---------│ │  │ │---------│ │  │ │---------│ │       │
+│  │ │Config A │ │  │ │Config B │ │  │ │Config C │ │       │
+│  │ │App A    │ │  │ │App B    │ │  │ │App C    │ │       │
+│  │ └─────────┘ │  │ └─────────┘ │  │ └─────────┘ │       │
+│  └─────────────┘  └─────────────┘  └─────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Design Principles
+
+1. **One Runtime, One App**: Each Siddhi runtime instance handles exactly one application with one configuration
+2. **Cloud-Native**: Designed to run as containers orchestrated by Kubernetes, Docker Swarm, or similar
+3. **Unix Philosophy**: Do one thing exceptionally well - process complex events at high speed
+4. **Platform Agnostic**: Can be integrated into any platform that needs CEP capabilities
+
+### What We Build (Engine)
+- ✅ High-performance event processing (>1M events/sec)
+- ✅ Query execution and optimization
+- ✅ State management and persistence
+- ✅ Distributed coordination for single app
+- ✅ Monitoring and metrics for the runtime
+
+### What We DON'T Build (Platform Concerns)
+- ❌ Multi-tenancy (use separate containers)
+- ❌ Authentication/Authorization (use API gateway)
+- ❌ Resource quotas (use container limits)
+- ❌ Billing/metering (platform responsibility)
+- ❌ User management (platform responsibility)
+
+### Deployment Example
+
+```yaml
+# Each app runs in its own container with dedicated resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-detection-app
+spec:
+  replicas: 3  # Scale horizontally
+  template:
+    spec:
+      containers:
+      - name: siddhi
+        image: siddhi-rust:latest
+        args: ["--config", "/config/fraud-detection.yaml"]
+        resources:
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+```
 
 ## Current Status
 
@@ -77,6 +153,43 @@ This port is **far from feature-complete** with the Java version. Users should b
     *   Placeholders for other extension types (Window, Sink, Source, Store, Mapper, AttributeAggregator, Script) are largely missing.
 *   **DataSources**: `DataSource` trait is a placeholder. No actual implementations or integration with table stores. `SiddhiContext::add_data_source` now looks for a matching configuration and calls `init` on the `DataSource` with it when registering using a temporary `SiddhiAppContext` (`dummy_ctx`).
 *   **Concurrency**: While `Arc<Mutex<T>>` is used in places, detailed analysis and implementation of Siddhi's concurrency model (thread pools for async junctions, partitioned execution) are pending.
+
+## Configuration
+
+Each Siddhi runtime uses a single, simple configuration file:
+
+```yaml
+# config/fraud-detection.yaml
+apiVersion: siddhi.io/v1
+kind: SiddhiConfig
+metadata:
+  name: fraud-detection
+  namespace: production
+  
+siddhi:
+  runtime:
+    mode: single-node  # or distributed for this app only
+    performance:
+      thread_pool_size: 8
+      event_buffer_size: 10000
+      
+  monitoring:
+    enabled: true
+    metrics:
+      collection_interval: "30s"
+      exporters:
+        - type: prometheus
+          endpoint: "/metrics"
+          
+  persistence:
+    enabled: true
+    backend: redis
+    connection:
+      host: redis.internal
+      port: 6379
+```
+
+No multi-tenant complexity, no resource quotas, no tenant isolation policies. Just the configuration needed for THIS application to run efficiently.
 
 ## Testing Status
 

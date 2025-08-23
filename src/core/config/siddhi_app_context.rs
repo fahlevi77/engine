@@ -1,5 +1,6 @@
 // Corresponds to io.siddhi.core.config.SiddhiAppContext
 use super::siddhi_context::SiddhiContext;
+use crate::core::config::{SiddhiConfig, ApplicationConfig, ConfigManager};
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::id_generator::IdGenerator;
 use crate::core::util::Scheduler;
@@ -107,6 +108,14 @@ pub struct SiddhiAppContext {
     /// Placeholder storage for script functions keyed by name.
     pub script_function_map: HashMap<String, ScriptFunctionPlaceholder>,
     _schedulers_placeholder: Vec<String>,
+    
+    // Configuration system integration
+    /// Global Siddhi configuration
+    pub global_config: Arc<SiddhiConfig>,
+    /// Application-specific configuration
+    pub app_config: Option<ApplicationConfig>,
+    /// Configuration manager for dynamic updates
+    pub config_manager: Option<Arc<ConfigManager>>,
 }
 
 impl SiddhiAppContext {
@@ -148,6 +157,27 @@ impl SiddhiAppContext {
         siddhi_app_definition: Arc<SiddhiApp>, // Renamed from siddhi_app to avoid confusion with field
         siddhi_app_string: String,
     ) -> Self {
+        Self::new_with_config(
+            siddhi_context, 
+            name, 
+            siddhi_app_definition, 
+            siddhi_app_string, 
+            Arc::new(SiddhiConfig::default()),
+            None,
+            None
+        )
+    }
+
+    /// Constructor with configuration support
+    pub fn new_with_config(
+        siddhi_context: Arc<SiddhiContext>,
+        name: String,
+        siddhi_app_definition: Arc<SiddhiApp>,
+        siddhi_app_string: String,
+        global_config: Arc<SiddhiConfig>,
+        app_config: Option<ApplicationConfig>,
+        config_manager: Option<Arc<ConfigManager>>,
+    ) -> Self {
         // Default values from Java SiddhiAppContext() constructor and field initializers
         let default_buffer = siddhi_context.get_default_junction_buffer_size() as i32;
         Self {
@@ -179,6 +209,11 @@ impl SiddhiAppContext {
             _triggers_placeholder: Vec::new(),
             script_function_map: HashMap::new(),
             _schedulers_placeholder: Vec::new(),
+            
+            // Configuration system integration
+            global_config,
+            app_config,
+            config_manager,
         }
     }
 
@@ -322,6 +357,98 @@ impl SiddhiAppContext {
     pub fn set_id_generator(&mut self, id_gen: IdGenerator) {
         self.id_generator = Some(id_gen);
     }
+
+    // ---- Configuration system methods ----
+    
+    /// Get the global Siddhi configuration
+    pub fn get_global_config(&self) -> &SiddhiConfig {
+        &self.global_config
+    }
+    
+    /// Get application-specific configuration if available
+    pub fn get_app_config(&self) -> Option<&ApplicationConfig> {
+        self.app_config.as_ref()
+    }
+    
+    /// Get configuration manager for dynamic updates
+    pub fn get_config_manager(&self) -> Option<&ConfigManager> {
+        self.config_manager.as_ref().map(|m| m.as_ref())
+    }
+    
+    /// Update the global configuration
+    pub fn update_global_config(&mut self, config: Arc<SiddhiConfig>) {
+        self.global_config = config;
+    }
+    
+    /// Update the application-specific configuration
+    pub fn update_app_config(&mut self, config: Option<ApplicationConfig>) {
+        self.app_config = config;
+    }
+    
+    /// Set the configuration manager
+    pub fn set_config_manager(&mut self, manager: Option<Arc<ConfigManager>>) {
+        self.config_manager = manager;
+    }
+    
+    /// Get a configuration value from the global config using a dot-notation path
+    /// Example: "siddhi.runtime.performance.thread_pool_size"
+    pub fn get_config_value<T>(&self, path: &str) -> Option<T> 
+    where 
+        T: serde::de::DeserializeOwned + std::fmt::Debug + Clone,
+    {
+        // This is a simplified implementation - in a full implementation you would
+        // walk the configuration structure using the path to find the specific value
+        // For now, we'll implement basic commonly used configuration values
+        
+        match path {
+            "siddhi.runtime.performance.thread_pool_size" => {
+                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.thread_pool_size)).ok()?)
+            }
+            "siddhi.runtime.performance.event_buffer_size" => {
+                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.event_buffer_size)).ok()?)
+            }
+            "siddhi.runtime.performance.batch_processing" => {
+                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.batch_processing)).ok()?)
+            }
+            "siddhi.runtime.performance.async_processing" => {
+                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.async_processing)).ok()?)
+            }
+            _ => {
+                // For unsupported paths, return None
+                None
+            }
+        }
+    }
+    
+    /// Get the thread pool size from configuration
+    pub fn get_configured_thread_pool_size(&self) -> usize {
+        self.global_config.siddhi.runtime.performance.thread_pool_size
+    }
+    
+    /// Get the event buffer size from configuration
+    pub fn get_configured_event_buffer_size(&self) -> usize {
+        self.global_config.siddhi.runtime.performance.event_buffer_size
+    }
+    
+    /// Check if batch processing is enabled
+    pub fn is_batch_processing_enabled(&self) -> bool {
+        self.global_config.siddhi.runtime.performance.batch_processing
+    }
+    
+    /// Check if async processing is enabled
+    pub fn is_async_processing_enabled(&self) -> bool {
+        self.global_config.siddhi.runtime.performance.async_processing
+    }
+    
+    /// Get the runtime mode
+    pub fn get_runtime_mode(&self) -> &crate::core::config::RuntimeMode {
+        &self.global_config.siddhi.runtime.mode
+    }
+    
+    /// Check if the application is running in distributed mode
+    pub fn is_distributed_mode(&self) -> bool {
+        self.global_config.is_distributed_mode()
+    }
 }
 
 #[cfg(test)]
@@ -333,11 +460,14 @@ impl SiddhiAppContext {
     pub fn default_for_testing() -> Self {
         use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
 
-        Self::new(
+        Self::new_with_config(
             Arc::new(SiddhiContext::default()),
             "test_app_ctx".to_string(),
             Arc::new(ApiSiddhiApp::new("test_api_app".to_string())),
             String::new(),
+            Arc::new(SiddhiConfig::default()),
+            None,
+            None,
         )
     }
 }
