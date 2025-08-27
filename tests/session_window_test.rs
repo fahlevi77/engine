@@ -3,14 +3,14 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn test_basic_session_window() {
+#[tokio::test]
+async fn test_basic_session_window() {
     let app = "\
         define stream In (user string, value int);\n\
         define stream Out (user string, total int);\n\
         from In#session(5000, user) select user, sum(value) as total group by user insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // Send events for alice within session gap
     runner.send(
@@ -55,14 +55,14 @@ fn test_basic_session_window() {
     assert!(!output.is_empty(), "Should have session output");
 }
 
-#[test]
-fn test_default_session_key() {
+#[tokio::test]
+async fn test_default_session_key() {
     let app = "\
         define stream In (value int);\n\
         define stream Out (total int, count long);\n\
         from In#session(3000) select sum(value) as total, count() as count insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // All events should go to the same default session
     runner.send("In", vec![AttributeValue::Int(10)]);
@@ -76,15 +76,15 @@ fn test_default_session_key() {
     assert!(!output.is_empty(), "Should have session output");
 }
 
-#[test]
-fn test_session_window_gap_validation() {
+#[tokio::test]
+async fn test_session_window_gap_validation() {
     // Test that we can create a valid session window
     let app = "\
         define stream In (id string, data int);\n\
         define stream Out (id string, count long);\n\
         from In#session(1000) select id, count() as count group by id insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // Send some events
     runner.send(

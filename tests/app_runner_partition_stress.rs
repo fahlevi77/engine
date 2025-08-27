@@ -6,15 +6,15 @@ use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use std::thread;
 use std::time::Duration;
 
-#[test]
-fn partition_async_ordered() {
+#[tokio::test]
+async fn partition_async_ordered() {
     // Simplified test without partition for now - just basic stream processing
     let app = "\
         define stream In (v int, p string);\n\
         define stream Out (v int, p string);\n\
         from In select v, p insert into Out;\n";
     let manager = SiddhiManager::new();
-    let runner = AppRunner::new_with_manager(manager, app, "Out");
+    let runner = AppRunner::new_with_manager(manager, app, "Out").await;
     for i in 0..10 { // Reduced to 10 for simpler test
         let p = if i % 2 == 0 { "a" } else { "b" };
         runner.send(

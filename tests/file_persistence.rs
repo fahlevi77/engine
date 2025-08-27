@@ -8,8 +8,8 @@ use siddhi_rust::core::persistence::{
 use std::sync::Arc;
 use tempfile::tempdir;
 
-#[test]
-fn persist_restore_file_store() {
+#[tokio::test]
+async fn persist_restore_file_store() {
     let dir = tempdir().unwrap();
     let store: Arc<dyn PersistenceStore> = Arc::new(FilePersistenceStore::new(dir.path()).unwrap());
     let app = "\
@@ -17,7 +17,7 @@ fn persist_restore_file_store() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -26,8 +26,8 @@ fn persist_restore_file_store() {
     assert!(!rev.is_empty());
 }
 
-#[test]
-fn persist_restore_sqlite_store() {
+#[tokio::test]
+async fn persist_restore_sqlite_store() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let store: Arc<dyn PersistenceStore> =
         Arc::new(SqlitePersistenceStore::new(file.path()).unwrap());
@@ -36,7 +36,7 @@ fn persist_restore_sqlite_store() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
     runner.send("In", vec![AttributeValue::Int(2)]);

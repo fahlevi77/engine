@@ -10,7 +10,11 @@ use super::{duration_serde, optional_duration_serde};
 /// Application-specific configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ApplicationConfig {
-    /// Per-definition configuration (streams, tables, windows, etc.)
+    /// Per-stream configuration (input/output streams with sources/sinks)
+    #[serde(default)]
+    pub streams: HashMap<String, StreamConfig>,
+    
+    /// Per-definition configuration (tables, windows, etc.)
     #[serde(default)]
     pub definitions: HashMap<String, DefinitionConfig>,
     
@@ -35,6 +39,7 @@ pub struct ApplicationConfig {
 impl Default for ApplicationConfig {
     fn default() -> Self {
         Self {
+            streams: HashMap::new(),
             definitions: HashMap::new(),
             queries: HashMap::new(),
             persistence: None,

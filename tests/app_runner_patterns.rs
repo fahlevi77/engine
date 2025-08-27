@@ -3,14 +3,14 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn sequence_basic() {
+#[tokio::test]
+async fn sequence_basic() {
     let app = "\
         define stream AStream (val int);\n\
         define stream BStream (val int);\n\
         define stream OutStream (aval int, bval int);\n\
         from AStream -> BStream select AStream.val as aval, BStream.val as bval insert into OutStream;\n";
-    let runner = AppRunner::new(app, "OutStream");
+    let runner = AppRunner::new(app, "OutStream").await;
     runner.send("AStream", vec![AttributeValue::Int(1)]);
     runner.send("BStream", vec![AttributeValue::Int(2)]);
     runner.send("AStream", vec![AttributeValue::Int(3)]);
@@ -25,14 +25,14 @@ fn sequence_basic() {
     );
 }
 
-#[test]
-fn every_sequence() {
+#[tokio::test]
+async fn every_sequence() {
     let app = "\
         define stream A (val int);\n\
         define stream B (val int);\n\
         define stream Out (aval int, bval int);\n\
         from every A -> B select A.val as aval, B.val as bval insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("A", vec![AttributeValue::Int(1)]);
     runner.send("B", vec![AttributeValue::Int(2)]);
     runner.send("B", vec![AttributeValue::Int(3)]);
@@ -63,8 +63,8 @@ use siddhi_rust::query_api::execution::ExecutionElement;
 use siddhi_rust::query_api::expression::{constant::TimeUtil, variable::Variable, Expression};
 use std::sync::Arc;
 
-#[test]
-fn kleene_star_pattern() {
+#[tokio::test]
+async fn kleene_star_pattern() {
     let mut app = siddhi_rust::query_api::siddhi_app::SiddhiApp::new("Kleene".to_string());
     let a_def = StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT);
     let b_def = StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT);
@@ -111,7 +111,7 @@ fn kleene_star_pattern() {
     app.execution_element_list
         .push(ExecutionElement::Query(query));
 
-    let runner = AppRunner::new_from_api(app, "Out");
+    let runner = AppRunner::new_from_api(app, "Out").await;
     runner.send("B", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
     assert_eq!(
@@ -120,8 +120,8 @@ fn kleene_star_pattern() {
     );
 }
 
-#[test]
-fn sequence_with_timeout() {
+#[tokio::test]
+async fn sequence_with_timeout() {
     let mut app = siddhi_rust::query_api::siddhi_app::SiddhiApp::new("Timeout".to_string());
     let a_def = StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT);
     let b_def = StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT);
@@ -165,7 +165,7 @@ fn sequence_with_timeout() {
     app.execution_element_list
         .push(ExecutionElement::Query(query));
 
-    let runner = AppRunner::new_from_api(app, "Out");
+    let runner = AppRunner::new_from_api(app, "Out").await;
     runner.send_with_ts("A", 0, vec![AttributeValue::Int(1)]);
     runner.send_with_ts("B", 500, vec![AttributeValue::Int(2)]);
     runner.send_with_ts("A", 2000, vec![AttributeValue::Int(3)]);
@@ -177,8 +177,8 @@ fn sequence_with_timeout() {
     );
 }
 
-#[test]
-fn sequence_api() {
+#[tokio::test]
+async fn sequence_api() {
     use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
     use siddhi_rust::query_api::execution::query::input::state::State;
     use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
@@ -233,7 +233,7 @@ fn sequence_api() {
     app.execution_element_list
         .push(ExecutionElement::Query(query));
 
-    let runner = AppRunner::new_from_api(app, "Out");
+    let runner = AppRunner::new_from_api(app, "Out").await;
     runner.send("A", vec![AttributeValue::Int(1)]);
     runner.send("B", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();

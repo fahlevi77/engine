@@ -6,13 +6,13 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-#[test]
-fn async_junction_concurrent_dispatch() {
+#[tokio::test]
+async fn async_junction_concurrent_dispatch() {
     let app = "@app:async('true')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In select v insert into Out;\n";
-    let runner = Arc::new(AppRunner::new(app, "Out"));
+    let runner = Arc::new(AppRunner::new(app, "Out").await);
     let mut handles = Vec::new();
     for i in 0..4 {
         let r = Arc::clone(&runner);

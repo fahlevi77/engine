@@ -37,8 +37,8 @@ fn ensure_redis_available() -> Result<Arc<dyn PersistenceStore>, String> {
     create_redis_store()
 }
 
-#[test]
-fn test_redis_persistence_basic() {
+#[tokio::test]
+async fn test_redis_persistence_basic() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {
@@ -53,7 +53,7 @@ fn test_redis_persistence_basic() {
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -64,8 +64,8 @@ fn test_redis_persistence_basic() {
     assert!(!rev.is_empty());
 }
 
-#[test]
-fn test_redis_length_window_state_persistence() {
+#[tokio::test]
+async fn test_redis_length_window_state_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {
@@ -81,14 +81,14 @@ fn test_redis_length_window_state_persistence() {
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
     let rev = runner.persist();
     runner.send("In", vec![AttributeValue::Int(3)]);
     let _ = runner.shutdown();
     
-    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner2.restore_revision(&rev);
     runner2.send("In", vec![AttributeValue::Int(4)]);
     let out = runner2.shutdown();
@@ -97,8 +97,8 @@ fn test_redis_length_window_state_persistence() {
     assert_eq!(out.last().unwrap(), &vec![AttributeValue::Int(4)]);
 }
 
-#[test]
-fn test_redis_persist_across_app_restarts() {
+#[tokio::test]
+async fn test_redis_persist_across_app_restarts() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {
@@ -115,7 +115,7 @@ fn test_redis_persist_across_app_restarts() {
         from In#length(2) select v insert into Out;\n";
     
     // First app instance
-    let runner1 = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner1 = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner1.send("In", vec![AttributeValue::Int(1)]);
     runner1.send("In", vec![AttributeValue::Int(2)]);
     let rev = runner1.persist();
@@ -123,7 +123,7 @@ fn test_redis_persist_across_app_restarts() {
     let _ = runner1.shutdown();
     
     // Second app instance (simulating restart)
-    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner2.restore_revision(&rev);
     runner2.send("In", vec![AttributeValue::Int(4)]);
     let out = runner2.shutdown();
@@ -132,8 +132,8 @@ fn test_redis_persist_across_app_restarts() {
     assert_eq!(out.last().unwrap(), &vec![AttributeValue::Int(4)]);
 }
 
-#[test]
-fn test_redis_multiple_windows_persistence() {
+#[tokio::test]
+async fn test_redis_multiple_windows_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {
@@ -151,7 +151,7 @@ fn test_redis_multiple_windows_persistence() {
         from In#length(2) select id, value, count() as count insert into Out1;\n\
         from In#lengthBatch(3) select sum(value) as total, avg(value) as avg insert into Out2;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out1", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out1", Arc::clone(&store)).await;
     
     // Build up state in both windows
     runner.send("In", vec![AttributeValue::Int(1), AttributeValue::Double(10.0)]);
@@ -181,8 +181,8 @@ fn test_redis_multiple_windows_persistence() {
     }
 }
 
-#[test]
-fn test_redis_aggregation_state_persistence() {
+#[tokio::test]
+async fn test_redis_aggregation_state_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {
@@ -201,7 +201,7 @@ fn test_redis_aggregation_state_persistence() {
         group by category \n\
         insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     
     // Build up aggregation state for different categories
     runner.send("In", vec![AttributeValue::String("A".to_string()), AttributeValue::Double(100.0)]);
@@ -251,8 +251,8 @@ fn test_redis_aggregation_state_persistence() {
     }
 }
 
-#[test]
-fn test_redis_persistence_store_interface() {
+#[tokio::test]
+async fn test_redis_persistence_store_interface() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
         Err(_) => {

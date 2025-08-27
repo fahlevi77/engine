@@ -817,7 +817,7 @@ This milestone establishes Siddhi Rust as having **enterprise-grade state manage
   - [ ] **WebAssembly UDF Support**
     - WASM runtime for sandboxed UDFs
     - Language-agnostic UDF development
-    - Hot-reload without restart
+    - Dynamic loading (restart required for updates)
     - Resource limits and security
   - [ ] **Python UDF Bridge**
     - PyO3 integration for Python UDFs

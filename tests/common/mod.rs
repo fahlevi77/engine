@@ -30,11 +30,12 @@ pub struct AppRunner {
 }
 
 impl AppRunner {
-    pub fn new(app_string: &str, out_stream: &str) -> Self {
+    pub async fn new(app_string: &str, out_stream: &str) -> Self {
         let manager = SiddhiManager::new();
         let app = parse(app_string).expect("parse");
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
@@ -53,13 +54,14 @@ impl AppRunner {
         }
     }
 
-    pub fn new_from_api(
+    pub async fn new_from_api(
         app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
         out_stream: &str,
     ) -> Self {
         let manager = SiddhiManager::new();
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
@@ -78,7 +80,7 @@ impl AppRunner {
         }
     }
 
-    pub fn new_from_api_with_store(
+    pub async fn new_from_api_with_store(
         app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
         out_stream: &str,
         store: Arc<dyn PersistenceStore>,
@@ -87,6 +89,7 @@ impl AppRunner {
         manager.set_persistence_store(store);
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
@@ -105,13 +108,14 @@ impl AppRunner {
         }
     }
 
-    pub fn new_from_api_with_manager(
+    pub async fn new_from_api_with_manager(
         manager: SiddhiManager,
         app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
         out_stream: &str,
     ) -> Self {
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
@@ -130,10 +134,11 @@ impl AppRunner {
         }
     }
 
-    pub fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
+    pub async fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
         let app = parse(app_string).expect("parse");
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime
@@ -152,7 +157,7 @@ impl AppRunner {
         }
     }
 
-    pub fn new_with_store(
+    pub async fn new_with_store(
         app_string: &str,
         out_stream: &str,
         store: Arc<dyn PersistenceStore>,
@@ -162,6 +167,7 @@ impl AppRunner {
         let app = parse(app_string).expect("parse");
         let runtime = manager
             .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
         runtime

@@ -63,8 +63,8 @@ impl ScalarFunctionExecutor for PlusOneFn {
     }
 }
 
-#[test]
-fn udf_invoked_in_query() {
+#[tokio::test]
+async fn udf_invoked_in_query() {
     let mut manager = SiddhiManager::new();
     manager.add_scalar_function_factory("plusOne".to_string(), Box::new(PlusOneFn::default()));
 
@@ -72,7 +72,7 @@ fn udf_invoked_in_query() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In select plusOne(v) as v insert into Out;\n";
-    let runner = AppRunner::new_with_manager(manager, app, "Out");
+    let runner = AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(2)]]);

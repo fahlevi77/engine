@@ -3,8 +3,8 @@ use siddhi_rust::core::config::siddhi_context::SiddhiContext;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::query_api::definition::attribute::Type as AttributeType;
 
-#[test]
-fn test_async_annotation_basic() {
+#[tokio::test]
+async fn test_async_annotation_basic() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -12,11 +12,11 @@ fn test_async_annotation_basic() {
         define stream StockStream (symbol string, price float, volume long);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse @Async annotation: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();
@@ -62,8 +62,8 @@ fn test_async_annotation_basic() {
     assert_eq!(batch_size_element.unwrap().value, "10");
 }
 
-#[test]
-fn test_async_annotation_minimal() {
+#[tokio::test]
+async fn test_async_annotation_minimal() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -71,11 +71,11 @@ fn test_async_annotation_minimal() {
         define stream MinimalAsyncStream (id int, value string);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse minimal @Async annotation: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();
@@ -97,8 +97,8 @@ fn test_async_annotation_minimal() {
     );
 }
 
-#[test]
-fn test_config_annotation_async() {
+#[tokio::test]
+async fn test_config_annotation_async() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -106,11 +106,11 @@ fn test_config_annotation_async() {
         define stream ConfigAsyncStream (symbol string, price float);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse @config annotation: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();
@@ -140,8 +140,8 @@ fn test_config_annotation_async() {
     assert_eq!(async_element.unwrap().value, "true");
 }
 
-#[test]
-fn test_app_level_async_annotation() {
+#[tokio::test]
+async fn test_app_level_async_annotation() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -152,11 +152,11 @@ fn test_app_level_async_annotation() {
         define stream RegularStream (name string, count int);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse app-level @app annotation: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();
@@ -167,8 +167,8 @@ fn test_app_level_async_annotation() {
     assert!(stream_definitions.contains_key("RegularStream"));
 }
 
-#[test]
-fn test_multiple_async_streams() {
+#[tokio::test]
+async fn test_multiple_async_streams() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -181,11 +181,11 @@ fn test_multiple_async_streams() {
         define stream Stream3 (value float);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse multiple async streams: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();
@@ -240,8 +240,8 @@ fn test_multiple_async_streams() {
     );
 }
 
-#[test]
-fn test_async_annotation_with_query() {
+#[tokio::test]
+async fn test_async_annotation_with_query() {
     let mut manager = SiddhiManager::new();
 
     let siddhi_app_string = r#"
@@ -255,11 +255,11 @@ fn test_async_annotation_with_query() {
         insert into OutputStream;
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
     assert!(
         result.is_ok(),
         "Failed to parse async stream with query: {:?}",
-        result.err()
+        result.as_ref().err()
     );
 
     let app_runtime = result.unwrap();

@@ -18,8 +18,8 @@ impl StreamCallback for CollectCallback {
     }
 }
 
-#[test]
-fn test_time_window_expiry() {
+#[tokio::test]
+async fn test_time_window_expiry() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
@@ -28,6 +28,7 @@ fn test_time_window_expiry() {
     let api = parse(app).expect("parse");
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime

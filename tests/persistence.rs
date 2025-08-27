@@ -60,8 +60,8 @@ impl StreamCallback for CountingCallback {
     }
 }
 
-#[test]
-fn test_runtime_persist_restore() {
+#[tokio::test]
+async fn test_runtime_persist_restore() {
     let store = Arc::new(InMemoryPersistenceStore::new());
     let manager = SiddhiManager::new();
     let store_arc: Arc<dyn PersistenceStore> = store.clone();
@@ -101,6 +101,7 @@ fn test_runtime_persist_restore() {
     let app = Arc::new(app);
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::clone(&app), None)
+        .await
         .unwrap();
     let svc = runtime.siddhi_app_context.get_snapshot_service().unwrap();
     let count = Arc::new(Mutex::new(0u32));

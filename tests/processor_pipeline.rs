@@ -3,21 +3,21 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn test_processor_pipeline() {
+#[tokio::test]
+async fn test_processor_pipeline() {
     let app = "\
         define stream InputStream (a int);\n\
         define stream OutStream (a int);\n\
         from InputStream[a > 10] select a insert into OutStream;\n";
-    let runner = AppRunner::new(app, "OutStream");
+    let runner = AppRunner::new(app, "OutStream").await;
     runner.send("InputStream", vec![AttributeValue::Int(5)]);
     runner.send("InputStream", vec![AttributeValue::Int(20)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(20)]]);
 }
 
-#[test]
-fn test_order_by_limit_offset() {
+#[tokio::test]
+async fn test_order_by_limit_offset() {
     use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
     use siddhi_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
@@ -57,7 +57,7 @@ fn test_order_by_limit_offset() {
         .out_stream(out_stream);
     app.add_execution_element(ExecutionElement::Query(query));
 
-    let runner = AppRunner::new_from_api(app, "OutStream");
+    let runner = AppRunner::new_from_api(app, "OutStream").await;
     runner.send_batch(
         "InputStream",
         vec![
@@ -72,8 +72,8 @@ fn test_order_by_limit_offset() {
     assert_eq!(out, expected);
 }
 
-#[test]
-fn test_group_by_order_by() {
+#[tokio::test]
+async fn test_group_by_order_by() {
     use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
     use siddhi_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
@@ -110,7 +110,7 @@ fn test_group_by_order_by() {
         .out_stream(out_stream);
     app.add_execution_element(ExecutionElement::Query(query));
 
-    let runner = AppRunner::new_from_api(app, "OutStream");
+    let runner = AppRunner::new_from_api(app, "OutStream").await;
     runner.send_batch(
         "InputStream",
         vec![

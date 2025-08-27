@@ -140,8 +140,8 @@ fn test_time_window_query_parse() {
     assert!(res.is_ok());
 }
 
-#[test]
-fn test_length_window_runtime() {
+#[tokio::test]
+async fn test_length_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
@@ -150,6 +150,7 @@ fn test_length_window_runtime() {
     let api = parse(app).expect("parse");
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
@@ -188,8 +189,8 @@ fn test_length_window_runtime() {
     assert_eq!(out[3].data, vec![AttributeValue::Int(3)]);
 }
 
-#[test]
-fn test_time_window_runtime() {
+#[tokio::test]
+async fn test_time_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
@@ -198,6 +199,7 @@ fn test_time_window_runtime() {
     let api = parse(app).expect("parse");
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
@@ -223,8 +225,8 @@ fn test_time_window_runtime() {
     assert!(out.iter().any(|e| e.is_expired));
 }
 
-#[test]
-fn test_length_batch_window_runtime() {
+#[tokio::test]
+async fn test_length_batch_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
@@ -233,6 +235,7 @@ fn test_length_batch_window_runtime() {
     let api = parse(app).expect("parse");
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
@@ -277,8 +280,8 @@ fn test_length_batch_window_runtime() {
     assert_eq!(out[5].data, vec![AttributeValue::Int(4)]);
 }
 
-#[test]
-fn test_time_batch_window_runtime() {
+#[tokio::test]
+async fn test_time_batch_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
@@ -287,6 +290,7 @@ fn test_time_batch_window_runtime() {
     let api = parse(app).expect("parse");
     let runtime = manager
         .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime

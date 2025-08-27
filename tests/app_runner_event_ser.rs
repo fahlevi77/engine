@@ -8,10 +8,10 @@ use siddhi_rust::core::event::stream::stream_event::StreamEvent;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::util::{from_bytes, to_bytes};
 
-#[test]
-fn test_clone_and_serialize_stream_event() {
+#[tokio::test]
+async fn test_clone_and_serialize_stream_event() {
     let app = "define stream InStream (a int); define stream OutStream (a int); from InStream select a as a insert into OutStream;";
-    let runner = AppRunner::new(app, "OutStream");
+    let runner = AppRunner::new(app, "OutStream").await;
     runner.send("InStream", vec![AttributeValue::Int(1)]);
     runner.send("InStream", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
@@ -40,8 +40,8 @@ fn test_clone_and_serialize_stream_event() {
     assert_eq!(de.output_data.as_ref().unwrap()[0], AttributeValue::Int(1));
 }
 
-#[test]
-fn test_serialize_state_event() {
+#[tokio::test]
+async fn test_serialize_state_event() {
     let mut se = StreamEvent::new(0, 0, 0, 1);
     se.output_data.as_mut().unwrap()[0] = AttributeValue::Int(3);
     let mut state = StateEvent::new(1, 1);
@@ -59,13 +59,13 @@ fn test_serialize_state_event() {
     );
 }
 
-#[test]
-fn clone_and_serialize_events() {
+#[tokio::test]
+async fn clone_and_serialize_events() {
     let app = "\
         define stream In (a int);\n\
         define stream Out (a int);\n\
         from In select a insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(42)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(42)]]);

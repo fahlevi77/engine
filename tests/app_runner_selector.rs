@@ -3,13 +3,13 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn group_by_having_order_limit_offset() {
+#[tokio::test]
+async fn group_by_having_order_limit_offset() {
     let app = "\
         define stream In (a int, b int);\n\
         define stream Out (b int, s long);\n\
         from In select b, sum(a) as s group by b having sum(a) > 5 order by b desc limit 2 offset 1 insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
         vec![
@@ -26,13 +26,13 @@ fn group_by_having_order_limit_offset() {
     );
 }
 
-#[test]
-fn group_by_having_order_asc() {
+#[tokio::test]
+async fn group_by_having_order_asc() {
     let app = "\
         define stream In (a int, b int);\n\
         define stream Out (b int, s long);\n\
         from In select b, sum(a) as s group by b having sum(a) >= 3 order by b asc insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
         vec![
@@ -50,13 +50,13 @@ fn group_by_having_order_asc() {
     assert_eq!(out, expected);
 }
 
-#[test]
-fn order_by_desc_limit_offset() {
+#[tokio::test]
+async fn order_by_desc_limit_offset() {
     let app = "\
         define stream In (a int);\n\
         define stream Out (a int);\n\
         from In select a order by a desc limit 2 offset 1 insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
         vec![

@@ -609,7 +609,6 @@ pub struct ConfigManager {
     resolver: VariableResolver,
     validator: ConfigValidator,
     secret_resolver: SecretResolver,
-    hot_reload: HotReloadManager,
 }
 
 pub struct ConfigLoader {
@@ -668,34 +667,18 @@ impl WindowProcessor for TimeWindowProcessor {
 }
 ```
 
-### 3. Hot Reload & Dynamic Configuration
+### 3. Configuration Updates Strategy
 
-```rust
-// Hot reload capability for cloud environments
-pub struct HotReloadManager {
-    watcher: ConfigWatcher,
-    reload_channel: mpsc::Receiver<ConfigChange>,
-}
+**Configuration Change Approach**: This implementation does not support hot reload functionality.
+For configuration updates:
 
-impl HotReloadManager {
-    pub async fn watch_config_changes(&self) -> Result<(), ConfigError> {
-        while let Some(change) = self.reload_channel.recv().await {
-            match change.change_type {
-                ConfigChangeType::ApplicationConfig => {
-                    self.reload_application_config(change).await?;
-                }
-                ConfigChangeType::GlobalConfig => {
-                    self.reload_global_config(change).await?;
-                }
-                ConfigChangeType::SecurityConfig => {
-                    self.reload_security_config(change).await?;
-                }
-            }
-        }
-        Ok(())
-    }
-}
-```
+1. **State Persistence**: Enable state persistence before configuration changes
+2. **Graceful Shutdown**: Stop the current Siddhi runtime gracefully
+3. **Configuration Update**: Modify configuration files or environment variables
+4. **Application Restart**: Start new runtime with updated configuration
+5. **State Recovery**: Application automatically restores from persisted state
+
+This approach ensures data consistency and reliable state recovery across configuration changes.
 
 ## Cloud-Native Best Practices
 
@@ -890,7 +873,7 @@ pub async fn update_application_config(
         return Err(ConfigError::ValidationFailed(validation_result.errors));
     }
     
-    // Apply configuration with hot reload
+    // Apply configuration update
     let update_result = apply_config_update(&app_name, config).await?;
     
     Ok(Json(ConfigUpdateResponse {
@@ -966,9 +949,9 @@ impl ConfigurationHistory {
    - Logging configuration management
 
 ### Phase 3: Advanced Features (1 week)
-1. **Hot Reload**
-   - Configuration change detection
-   - Safe configuration updates
+1. **Configuration Updates** (Not Implemented - Use State Persistence)
+   - Configuration changes require restart
+   - State persistence ensures continuity
    - Rollback capabilities
 
 2. **Configuration API**
@@ -1257,7 +1240,6 @@ src/core/config/
 ├── validator.rs              # ConfigValidator - comprehensive validation
 ├── resolver.rs               # VariableResolver - environment variable resolution
 ├── security.rs               # SecretResolver - secure credential management
-├── hot_reload.rs             # HotReloadManager - dynamic configuration updates
 ├── types/
 │   ├── mod.rs               # Configuration type definitions
 │   ├── siddhi_config.rs     # Main SiddhiConfig struct
@@ -1318,9 +1300,6 @@ pub enum ConfigError {
     
     #[error("Configuration incompatible with current version")]
     VersionMismatch,
-    
-    #[error("Hot reload failed: {reason}")]
-    HotReloadFailed { reason: String },
 }
 ```
 
@@ -1364,5 +1343,5 @@ The phased implementation approach ensures rapid delivery of core functionality 
 **Success Criteria**: 
 - Zero-config local development maintained
 - Production Kubernetes deployment with external secrets
-- Hot reload capability for production operations
+- State persistence for configuration changes (no hot reload)
 - Comprehensive validation and monitoring

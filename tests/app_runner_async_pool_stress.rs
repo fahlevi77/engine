@@ -6,14 +6,14 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 
-#[test]
-fn async_partition_pool_order() {
+#[tokio::test]
+async fn async_partition_pool_order() {
     // Simplified test without partition for now - just basic stream processing
     let app = "\
         define stream In (v int, p string);\n\
         define stream Out (v int, p string);\n\
         from In select v, p insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     for i in 0..10 { // Reduced to 10 for simpler test
         let part = match i % 4 {
             0 => "a",

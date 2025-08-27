@@ -51,13 +51,13 @@ impl SinkMapper for ConcatSinkMapper {
     }
 }
 
-#[test]
-fn test_source_and_sink_mapper_usage() {
+#[tokio::test]
+async fn test_source_and_sink_mapper_usage() {
     let app = "\
         define stream In (a int, b int);\n\
         define stream Out (a int, b int);\n\
         from In select a, b insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     let src_mapper = CsvSourceMapper;
     let events = src_mapper.map(b"1,2\n3,4");

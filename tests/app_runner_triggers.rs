@@ -7,56 +7,56 @@ use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use std::thread::sleep;
 use std::time::Duration;
 
-#[test]
-fn start_trigger_emits_once() {
+#[tokio::test]
+async fn start_trigger_emits_once() {
     let mut app = SiddhiApp::new("T1".to_string());
     app.add_trigger_definition(
         TriggerDefinition::id("TrigStream".to_string()).at("start".to_string()),
     );
-    let runner = AppRunner::new_from_api(app, "TrigStream");
+    let runner = AppRunner::new_from_api(app, "TrigStream").await;
     sleep(Duration::from_millis(50));
     let out = runner.shutdown();
     assert_eq!(out.len(), 1);
 }
 
-#[test]
-fn periodic_trigger_emits() {
+#[tokio::test]
+async fn periodic_trigger_emits() {
     let mut app = SiddhiApp::new("T2".to_string());
     let trig = TriggerDefinition::id("PTStream".to_string())
         .at_every_time_constant(TimeUtil::millisec(50))
         .unwrap();
     app.add_trigger_definition(trig);
-    let runner = AppRunner::new_from_api(app, "PTStream");
+    let runner = AppRunner::new_from_api(app, "PTStream").await;
     sleep(Duration::from_millis(130));
     let out = runner.shutdown();
     assert!(out.len() >= 2);
 }
 
-#[test]
-fn cron_trigger_emits() {
+#[tokio::test]
+async fn cron_trigger_emits() {
     let mut app = SiddhiApp::new("T3".to_string());
     app.add_trigger_definition(
         TriggerDefinition::id("CronStream".to_string()).at("*/1 * * * * *".to_string()),
     );
-    let runner = AppRunner::new_from_api(app, "CronStream");
+    let runner = AppRunner::new_from_api(app, "CronStream").await;
     sleep(Duration::from_millis(2200));
     let out = runner.shutdown();
     assert!(out.len() >= 2);
 }
 
-#[test]
-fn parse_periodic_trigger_emits() {
+#[tokio::test]
+async fn parse_periodic_trigger_emits() {
     let app = "define trigger PT at every 50 ms;";
-    let runner = AppRunner::new(app, "PT");
+    let runner = AppRunner::new(app, "PT").await;
     sleep(Duration::from_millis(130));
     let out = runner.shutdown();
     assert!(out.len() >= 2);
 }
 
-#[test]
-fn parse_cron_trigger_emits() {
+#[tokio::test]
+async fn parse_cron_trigger_emits() {
     let app = "define trigger CronStr at '*/1 * * * * *';";
-    let runner = AppRunner::new(app, "CronStr");
+    let runner = AppRunner::new(app, "CronStr").await;
     sleep(Duration::from_millis(2200));
     let out = runner.shutdown();
     assert!(out.len() >= 2);

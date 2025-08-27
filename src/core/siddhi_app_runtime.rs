@@ -3,6 +3,7 @@
 
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For add_callback
+use crate::core::config::{ApplicationConfig, SiddhiConfig};
 use crate::core::partition::PartitionRuntime;
 use crate::core::persistence::SnapshotService;
 use crate::core::query::output::callback_processor::CallbackProcessor; // To be created
@@ -13,7 +14,7 @@ use crate::core::stream::input::input_manager::InputManager;
 use crate::core::stream::output::stream_callback::StreamCallback; // The trait
 use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::trigger::TriggerRuntime;
-use crate::core::util::parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
+use crate::core::util::parser::siddhi_app_parser::SiddhiAppParser; // For SiddhiAppParser::parse_siddhi_app_runtime_builder
 use crate::core::window::WindowRuntime;
 use crate::query_api::SiddhiApp as ApiSiddhiApp; // From query_api
 use std::sync::{Arc, Mutex};
@@ -131,10 +132,141 @@ impl SiddhiAppRuntime {
 
         // 2. Parse the ApiSiddhiApp into a builder
         let builder =
-            SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context)?;
+            SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context, None)?;
 
         // 3. Build the SiddhiAppRuntime from the builder
         builder.build(api_siddhi_app) // Pass the Arc<ApiSiddhiApp> again
+    }
+
+    /// Create a new SiddhiAppRuntime with specific application configuration
+    pub fn new_with_config(
+        api_siddhi_app: Arc<ApiSiddhiApp>,
+        siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>,
+        siddhi_app_string: Option<String>,
+        app_config: Option<ApplicationConfig>,
+    ) -> Result<Self, String> {
+        // If we have application configuration, apply it before creating the runtime
+        if let Some(config) = app_config {
+            // Apply global configuration from app config to the runtime
+            Self::new_with_applied_config(
+                api_siddhi_app,
+                siddhi_context,
+                siddhi_app_string,
+                &config,
+            )
+        } else {
+            // Fall back to standard creation if no config provided
+            Self::new(api_siddhi_app, siddhi_context, siddhi_app_string)
+        }
+    }
+
+    /// Internal method to create runtime with applied configuration
+    fn new_with_applied_config(
+        api_siddhi_app: Arc<ApiSiddhiApp>,
+        siddhi_context: Arc<crate::core::config::siddhi_context::SiddhiContext>,
+        siddhi_app_string: Option<String>,
+        app_config: &ApplicationConfig,
+    ) -> Result<Self, String> {
+        // 1. Create SiddhiAppContext using @app level annotations when present
+        let mut name = api_siddhi_app.name.clone();
+        let mut is_playback = false;
+        let mut enforce_order = false;
+        let mut root_metrics =
+            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF;
+        let mut buffer_size = 0i32;
+        let mut transport_creation = false;
+
+        // Apply configuration-based settings from monitoring
+        if let Some(ref monitoring) = app_config.monitoring {
+            if monitoring.metrics_enabled {
+                root_metrics = crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC;
+            }
+            // Note: ApplicationConfig::MonitoringConfig doesn't have detailed_metrics
+            // This would be a global configuration setting
+        }
+
+        // Then apply @app level annotations (which override config)
+        if let Some(app_ann) = api_siddhi_app
+            .annotations
+            .iter()
+            .find(|a| a.name.eq_ignore_ascii_case("app"))
+        {
+            for el in &app_ann.elements {
+                match el.key.to_lowercase().as_str() {
+                    "name" => name = el.value.clone(),
+                    "playback" => is_playback = el.value.eq_ignore_ascii_case("true"),
+                    "enforce.order" | "enforceorder" => {
+                        enforce_order = el.value.eq_ignore_ascii_case("true")
+                    }
+                    "statistics" | "stats" => root_metrics = match el.value.to_lowercase().as_str()
+                    {
+                        "true" | "basic" => {
+                            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC
+                        }
+                        "detail" | "detailed" => {
+                            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::DETAIL
+                        }
+                        _ => crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
+                    },
+                    "buffer_size" | "buffersize" => {
+                        if let Ok(sz) = el.value.parse::<i32>() {
+                            buffer_size = sz;
+                        }
+                    }
+                    "transport.channel.creation" => {
+                        transport_creation = el.value.eq_ignore_ascii_case("true");
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let mut ctx = SiddhiAppContext::new_with_config(
+            siddhi_context,
+            name.clone(),
+            Arc::clone(&api_siddhi_app),
+            String::new(), // siddhi_app_string
+            Arc::new(SiddhiConfig::default()), // global_config
+            Some(app_config.clone()), // app_config
+            None, // config_manager
+        );
+        
+        ctx.set_root_metrics_level(root_metrics);
+        if buffer_size > 0 {
+            ctx.set_buffer_size(buffer_size);
+        }
+        ctx.set_transport_channel_creation_enabled(transport_creation);
+        
+        // Apply additional configuration settings to context
+        if let Some(ref _error_handling) = app_config.error_handling {
+            // Error handling configuration would be applied here
+            // Future implementation will configure error handling strategies
+        }
+        
+        // Initialize ThreadBarrier if enforce_order is enabled or for persistence coordination
+        let thread_barrier = Arc::new(crate::core::util::ThreadBarrier::new());
+        ctx.set_thread_barrier(Arc::clone(&thread_barrier));
+
+        // 2. Create SnapshotService and configure it
+        let mut ss = SnapshotService::new(name.clone());
+        if let Some(store) = ctx.siddhi_context.get_persistence_store() {
+            ss.persistence_store = Some(store);
+        }
+        let snapshot_service = Arc::new(ss);
+        ctx.set_snapshot_service(Arc::clone(&snapshot_service));
+        let siddhi_app_context = Arc::new(ctx);
+
+        // 2. Parse the ApiSiddhiApp into a builder with configuration
+        let builder =
+            SiddhiAppParser::parse_siddhi_app_runtime_builder(&api_siddhi_app, siddhi_app_context, Some(app_config.clone()))?;
+
+        // 3. Build the SiddhiAppRuntime from the builder
+        let runtime = builder.build(api_siddhi_app)?; // Pass the Arc<ApiSiddhiApp> again
+        
+        // 4. Auto-attach sinks from configuration
+        runtime.auto_attach_sinks_from_config(app_config)?;
+        
+        Ok(runtime)
     }
 
     pub fn get_input_handler(&self, stream_id: &str) -> Option<Arc<Mutex<InputHandler>>> {
@@ -312,5 +444,41 @@ impl SiddhiAppRuntime {
         } else {
             Vec::new()
         }
+    }
+    
+    /// Auto-attach sinks from configuration
+    fn auto_attach_sinks_from_config(&self, app_config: &ApplicationConfig) -> Result<(), String> {
+        use crate::core::stream::output::sink::SinkFactoryRegistry;
+        use crate::core::config::ProcessorConfigReader;
+        
+        // Create a ProcessorConfigReader with the application configuration
+        let config_reader = Arc::new(ProcessorConfigReader::new(
+            Some(app_config.clone()),
+            None, // Global config would be passed here if available
+        ));
+        
+        // Create a sink factory registry
+        let registry = SinkFactoryRegistry::new();
+        
+        // Iterate through all configured streams
+        for (stream_name, stream_config) in &app_config.streams {
+            // Check if this stream has a sink configuration
+            if let Some(ref sink_config) = stream_config.sink {
+                // Create the sink using the factory
+                let sink = registry.create_sink(
+                    sink_config,
+                    Some(Arc::clone(&config_reader)),
+                    stream_name,
+                )?;
+                
+                // Attach the sink to the stream
+                self.add_callback(stream_name, sink)?;
+                
+                println!("[SiddhiAppRuntime] Auto-attached sink '{}' to stream '{}'", 
+                    sink_config.sink_type, stream_name);
+            }
+        }
+        
+        Ok(())
     }
 }

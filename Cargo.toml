@@ -50,7 +50,6 @@ kube = { version = "0.87", features = ["runtime", "derive"], optional = true }
 k8s-openapi = { version = "0.20", features = ["v1_28"], optional = true }
 vault = { version = "10.1", optional = true }
 base64 = { version = "0.22", optional = true }
-notify = { version = "6.1", optional = true }
 
 [build-dependencies]
 lalrpop = "0.20"
@@ -60,6 +59,7 @@ tonic-build = "0.11"
 tempfile = "3"
 custom_dyn_ext = { path = "tests/custom_dyn_ext" }
 serial_test = "3.0"
+tokio = { version = "1", features = ["full", "test-util"] }
 
 [features]
 default = []
@@ -67,6 +67,5 @@ kubernetes = ["kube", "k8s-openapi", "base64"]
 consul = ["dep:consul"]
 etcd = ["etcd-rs"]
 vault = ["dep:vault"]
-hot-reload = ["dep:notify"]
 cloud-native = ["kubernetes", "consul", "etcd", "vault"]
 

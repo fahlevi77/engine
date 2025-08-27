@@ -1,3 +1,20 @@
+//! # Configuration Management
+//! 
+//! This module provides comprehensive configuration management for Siddhi applications.
+//! 
+//! ## Configuration Reload Policy
+//! 
+//! **Note**: Hot reload functionality is not supported in this implementation. 
+//! 
+//! To apply configuration changes:
+//! 1. Enable state persistence in your Siddhi application
+//! 2. Gracefully shutdown the current runtime 
+//! 3. Update configuration files or environment variables
+//! 4. Restart the application with new configuration
+//! 5. State will be automatically restored, ensuring continuity
+//! 
+//! This approach maintains data consistency and reliable state recovery.
+
 // Legacy context modules
 pub mod siddhi_app_context;
 pub mod siddhi_context;
@@ -14,9 +31,10 @@ pub mod resolver;
 pub mod security;
 pub mod service_discovery;
 pub mod monitoring;
-pub mod hot_reload;
 pub mod validation_api;
 pub mod error;
+pub mod processor_config_reader;
+
 
 // Re-export legacy context types for backward compatibility
 pub use self::siddhi_app_context::SiddhiAppContext;
@@ -29,6 +47,7 @@ pub use self::statistics_configuration::StatisticsConfiguration;
 pub use types::*;
 pub use manager::ConfigManager;
 pub use error::{ConfigError, ConfigResult, ValidationResult, ValidationError};
+pub use processor_config_reader::{ProcessorConfigReader, ConfigValue};
 
 // Main configuration loading functions for simple usage
 use std::path::Path;

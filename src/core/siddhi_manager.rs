@@ -10,7 +10,8 @@ use crate::core::executor::ScalarFunctionExecutor; // Added for UDFs
 use crate::core::DataSource;
 use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added for data sources
                                                                        // Placeholder for actual persistence store trait/type
-use crate::core::config::siddhi_context::{ConfigManagerPlaceholder, ExtensionClassPlaceholder};
+use crate::core::config::{ConfigManager, SiddhiConfig, ApplicationConfig};
+use crate::core::config::siddhi_context::ExtensionClassPlaceholder;
 use crate::core::extension;
 use crate::core::persistence::PersistenceStore;
 
@@ -25,6 +26,8 @@ pub struct SiddhiManager {
     siddhi_context: Arc<SiddhiContext>,
     siddhi_app_runtime_map: Arc<Mutex<HashMap<String, Arc<SiddhiAppRuntime>>>>,
     loaded_libraries: Arc<Mutex<Vec<std::mem::ManuallyDrop<libloading::Library>>>>,
+    config_manager: Option<Arc<ConfigManager>>,
+    cached_config: Arc<Mutex<Option<SiddhiConfig>>>,
 }
 
 impl SiddhiManager {
@@ -33,6 +36,26 @@ impl SiddhiManager {
             siddhi_context: Arc::new(SiddhiContext::new()), // SiddhiContext::new() provides defaults
             siddhi_app_runtime_map: Arc::new(Mutex::new(HashMap::new())),
             loaded_libraries: Arc::new(Mutex::new(Vec::new())),
+            config_manager: None,
+            cached_config: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Create SiddhiManager with a specific configuration
+    pub fn new_with_config(config: SiddhiConfig) -> Self {
+        let manager = Self::new();
+        *manager.cached_config.lock().expect("Mutex poisoned") = Some(config);
+        manager
+    }
+
+    /// Create SiddhiManager with ConfigManager for dynamic configuration loading
+    pub fn new_with_config_manager(config_manager: ConfigManager) -> Self {
+        Self {
+            siddhi_context: Arc::new(SiddhiContext::new()),
+            siddhi_app_runtime_map: Arc::new(Mutex::new(HashMap::new())),
+            loaded_libraries: Arc::new(Mutex::new(Vec::new())),
+            config_manager: Some(Arc::new(config_manager)),
+            cached_config: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -40,7 +63,7 @@ impl SiddhiManager {
         Arc::clone(&self.siddhi_context)
     }
 
-    pub fn create_siddhi_app_runtime_from_string(
+    pub async fn create_siddhi_app_runtime_from_string(
         &self,
         siddhi_app_string: &str,
     ) -> Result<Arc<SiddhiAppRuntime>, String> {
@@ -53,11 +76,12 @@ impl SiddhiManager {
             api_siddhi_app_arc,
             Some(siddhi_app_string.to_string()),
         )
+        .await
     }
 
     // Added siddhi_app_str_opt for cases where it's available (from string parsing)
     // or not (when an ApiSiddhiApp is provided directly).
-    pub fn create_siddhi_app_runtime_from_api(
+    pub async fn create_siddhi_app_runtime_from_api(
         &self,
         api_siddhi_app: Arc<ApiSiddhiApp>,
         siddhi_app_str_opt: Option<String>,
@@ -88,11 +112,15 @@ impl SiddhiManager {
             ));
         }
 
+        // Get application-specific configuration
+        let app_config = self.get_application_config(&app_name).await?;
+        
         // SiddhiAppRuntime::new now handles creation of SiddhiAppContext and parsing
-        let runtime = Arc::new(SiddhiAppRuntime::new(
+        let runtime = Arc::new(SiddhiAppRuntime::new_with_config(
             Arc::clone(&api_siddhi_app),
             Arc::clone(&self.siddhi_context),
             siddhi_app_str_opt.clone(),
+            app_config,
         )?);
         runtime.start();
 
@@ -273,12 +301,47 @@ impl SiddhiManager {
         self.siddhi_context.set_persistence_store(store);
     }
 
-    pub fn set_config_manager(
-        &self,
-        _cm_placeholder: ConfigManagerPlaceholder,
-    ) -> Result<(), String> {
-        println!("[SiddhiManager] set_config_manager called (Placeholder)");
+    /// Set the configuration manager for dynamic configuration loading
+    pub fn set_config_manager(&mut self, config_manager: ConfigManager) -> Result<(), String> {
+        self.config_manager = Some(Arc::new(config_manager));
+        // Clear cached config to force reload on next access
+        *self.cached_config.lock().map_err(|e| format!("Mutex poisoned: {}", e))? = None;
         Ok(())
+    }
+
+    /// Get the current configuration, loading it if necessary
+    pub async fn get_config(&self) -> Result<SiddhiConfig, String> {
+        // Check if we have a cached config
+        {
+            let cached = self.cached_config.lock().map_err(|e| format!("Mutex poisoned: {}", e))?;
+            if let Some(ref config) = *cached {
+                return Ok(config.clone());
+            }
+        }
+
+        // Load configuration using ConfigManager if available
+        if let Some(ref config_manager) = self.config_manager {
+            let config = config_manager
+                .load_unified_config()
+                .await
+                .map_err(|e| format!("Failed to load configuration: {}", e))?;
+            
+            // Cache the loaded configuration
+            *self.cached_config.lock().map_err(|e| format!("Mutex poisoned: {}", e))? = Some(config.clone());
+            
+            Ok(config)
+        } else {
+            // Return default configuration if no ConfigManager is set
+            let default_config = SiddhiConfig::default();
+            *self.cached_config.lock().map_err(|e| format!("Mutex poisoned: {}", e))? = Some(default_config.clone());
+            Ok(default_config)
+        }
+    }
+
+    /// Get application-specific configuration by name
+    pub async fn get_application_config(&self, app_name: &str) -> Result<Option<ApplicationConfig>, String> {
+        let config = self.get_config().await?;
+        Ok(config.applications.get(app_name).cloned())
     }
 
     // --- Validation ---

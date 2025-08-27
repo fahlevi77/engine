@@ -205,35 +205,3 @@ fn test_application_usage_pattern() {
     println!("  - Event buffer size: {}", app_context.get_configured_event_buffer_size());
     println!("  - Distributed mode: {}", app_context.is_distributed_mode());
 }
-
-/// Test demonstrating configuration hot reload in Kubernetes
-#[tokio::test]
-#[cfg(feature = "kubernetes")]
-async fn test_kubernetes_hot_reload() {
-    // This test demonstrates the hot reload pattern
-    // In a real environment, this would watch for ConfigMap changes
-    
-    let manager = ConfigManager::builder()
-        .with_kubernetes_configmap("siddhi-config")
-        .with_environment_vars()
-        .hot_reload_enabled(true)
-        .build();
-    
-    // Simulate initial configuration load
-    // (Would normally load from actual ConfigMap)
-    let initial_config = SiddhiConfig::default();
-    println!("Initial config - thread pool size: {}", 
-            initial_config.siddhi.runtime.performance.thread_pool_size);
-    
-    // Simulate configuration change detection
-    // In real implementation, this would be triggered by K8s watch events
-    let _updated_config = manager.reload_config().await;
-    
-    // The reload mechanism is demonstrated, actual implementation would:
-    // 1. Watch ConfigMap for changes using K8s watch API
-    // 2. Reload configuration when changes detected
-    // 3. Update running applications with new configuration
-    // 4. Handle graceful transitions for stateful components
-    
-    println!("Configuration hot reload mechanism demonstrated");
-}

@@ -3,15 +3,15 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn test_basic_sort_window() {
+#[tokio::test]
+async fn test_basic_sort_window() {
     // Basic test to verify sort window can be created and used
     let app = "\
         define stream In (price double, volume int);\n\
         define stream Out (price double, volume int);\n\
         from In#sort(3) select price, volume insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // Send some events
     runner.send(
@@ -36,15 +36,15 @@ fn test_basic_sort_window() {
     assert!(!output.is_empty(), "Should have sort window output");
 }
 
-#[test]
-fn test_sort_window_with_parameters() {
+#[tokio::test]
+async fn test_sort_window_with_parameters() {
     // Test that sort window accepts parameters without crashing
     let app = "\
         define stream In (value int);\n\
         define stream Out (value int);\n\
         from In#sort(2) select value insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     runner.send("In", vec![AttributeValue::Int(3)]);
     runner.send("In", vec![AttributeValue::Int(1)]);
@@ -57,8 +57,8 @@ fn test_sort_window_with_parameters() {
     assert!(!output.is_empty(), "Should have output events");
 }
 
-#[test]
-fn test_sort_window_length_validation() {
+#[tokio::test]
+async fn test_sort_window_length_validation() {
     // Test that sort window validates its length parameter
     // This should not crash the test, but we can't easily test compilation errors
     // so we'll just verify the basic functionality works
@@ -67,7 +67,7 @@ fn test_sort_window_length_validation() {
         define stream Out (id int);\n\
         from In#sort(1) select id insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     runner.send("In", vec![AttributeValue::Int(42)]);
 
@@ -78,15 +78,15 @@ fn test_sort_window_length_validation() {
     assert!(!output.is_empty(), "Should work with length 1");
 }
 
-#[test]
-fn test_sort_window_expiry() {
+#[tokio::test]
+async fn test_sort_window_expiry() {
     // Test that sort window properly expires events when window size is exceeded
     let app = "\
         define stream In (value int);\n\
         define stream Out (value int);\n\
         from In#sort(2) select value insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // Send 3 events to a window of size 2 - should get expired events
     runner.send("In", vec![AttributeValue::Int(10)]);
@@ -103,15 +103,15 @@ fn test_sort_window_expiry() {
     );
 }
 
-#[test]
-fn test_sort_window_ordering() {
+#[tokio::test]
+async fn test_sort_window_ordering() {
     // Test the basic sorting functionality by timestamp
     let app = "\
         define stream In (id int);\n\
         define stream Out (id int);\n\
         from In#sort(3) select id insert into Out;\n";
 
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
 
     // Send events - the sort window should maintain them in sorted order
     runner.send("In", vec![AttributeValue::Int(100)]);

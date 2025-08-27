@@ -5,6 +5,7 @@ use crate::core::config::{
     siddhi_app_context::SiddhiAppContext,
     siddhi_context::SiddhiContext,
     siddhi_query_context::SiddhiQueryContext,
+    ProcessorConfigReader, ConfigValue,
 };
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent;
@@ -58,55 +59,66 @@ impl SortWindowProcessor {
     fn calculate_effective_window_size(requested_size: usize, app_ctx: &SiddhiAppContext) -> usize {
         let base_size = requested_size;
         
-        // Example: Scale window size based on runtime mode
-        match app_ctx.get_runtime_mode() {
-            crate::core::config::RuntimeMode::SingleNode => base_size,
-            crate::core::config::RuntimeMode::Distributed => {
-                // Smaller windows in distributed mode to reduce memory and network overhead
-                (base_size as f64 * 0.8).ceil() as usize
-            }
-            crate::core::config::RuntimeMode::Hybrid => {
-                // Moderate scaling for hybrid mode
-                (base_size as f64 * 0.9).ceil() as usize
+        // Use the configuration reader to get distributed size factor
+        if let Some(config_reader) = app_ctx.get_config_reader() {
+            if let Some(ConfigValue::Float(factor)) = config_reader.get_window_config("sort", "distributed_size_factor") {
+                // Apply scaling factor - for now we'll use a simple approach
+                return (base_size as f64 * factor).ceil() as usize;
             }
         }
+        
+        // Fallback to base size if configuration is unavailable
+        base_size
     }
     
     /// Calculate initial capacity for the sorted buffer
     fn calculate_initial_capacity(window_size: usize, app_ctx: &SiddhiAppContext) -> usize {
-        // Pre-allocate based on expected usage pattern
-        let multiplier = if app_ctx.is_batch_processing_enabled() {
-            1.5 // Higher capacity for batch processing
+        // Get multiplier from configuration
+        let multiplier = if let Some(config_reader) = app_ctx.get_config_reader() {
+            if let Some(ConfigValue::Float(mult)) = config_reader.get_window_config("sort", "initial_capacity_multiplier") {
+                mult
+            } else {
+                1.2 // Default multiplier
+            }
         } else {
-            1.2 // Standard capacity
+            1.2
         };
         
-        (window_size as f64 * multiplier).ceil() as usize
+        // Check for batch processing mode from performance config
+        let batch_multiplier = if let Some(config_reader) = app_ctx.get_config_reader() {
+            if let Some(ConfigValue::Boolean(true)) = config_reader.get_performance_config("batch_processing_enabled") {
+                1.25 // Additional multiplier for batch mode
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+        
+        (window_size as f64 * multiplier * batch_multiplier).ceil() as usize
     }
     
     /// Log configuration-driven initialization
     fn log_window_configuration(&self) {
-        let config = self.meta.siddhi_app_context.get_global_config();
-        
         println!("SortWindowProcessor configured:");
         println!("  - Window size: {} events", self.length_to_keep);
-        println!("  - Runtime mode: {:?}", config.siddhi.runtime.mode);
-        println!("  - Batch processing: {}", config.siddhi.runtime.performance.batch_processing);
         
-        if let Some(resources) = &config.siddhi.runtime.resources {
-            if let Some(memory) = &resources.memory {
-                println!("  - Max heap: {}", memory.max_heap);
+        // Log configuration if available through config reader
+        if let Some(config_reader) = self.meta.siddhi_app_context.get_config_reader() {
+            if let Some(ConfigValue::Float(factor)) = config_reader.get_window_config("sort", "distributed_size_factor") {
+                println!("  - Distributed size factor: {}", factor);
+            }
+            if let Some(ConfigValue::Float(multiplier)) = config_reader.get_window_config("sort", "initial_capacity_multiplier") {
+                println!("  - Initial capacity multiplier: {}", multiplier);
             }
         }
     }
     
     /// Check if memory-optimized processing should be used
     fn should_use_memory_optimization(&self) -> bool {
-        let config = self.meta.siddhi_app_context.get_global_config();
-        
-        // Enable memory optimization in distributed mode or when memory limits are set
-        config.siddhi.runtime.mode != crate::core::config::RuntimeMode::SingleNode
-            || config.siddhi.runtime.resources.is_some()
+        // For now, return false since we don't have direct access to runtime config
+        // TODO: Implement memory optimization detection through config reader
+        false
     }
 
     /// Create from window handler (standard factory pattern)

@@ -662,8 +662,8 @@ fn test_pattern_query_parsing_from_string() {
     assert!(res.is_ok());
 }
 
-#[test]
-fn test_app_runner_join_via_app_runner() {
+#[tokio::test]
+async fn test_app_runner_join_via_app_runner() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
 
@@ -672,7 +672,7 @@ fn test_app_runner_join_via_app_runner() {
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
@@ -682,8 +682,8 @@ fn test_app_runner_join_via_app_runner() {
     );
 }
 
-#[test]
-fn test_app_runner_table_in_lookup() {
+#[tokio::test]
+async fn test_app_runner_table_in_lookup() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
     use siddhi_rust::query_api::definition::{StreamDefinition, TableDefinition};
@@ -748,7 +748,7 @@ fn test_app_runner_table_in_lookup() {
     app.add_execution_element(ExecutionElement::Query(insert_q));
     app.add_execution_element(ExecutionElement::Query(filter_q));
 
-    let runner = AppRunner::new_from_api(app, "Out");
+    let runner = AppRunner::new_from_api(app, "Out").await;
     runner.send("S", vec![AttributeValue::Int(1)]);
     runner.send("S", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
@@ -758,8 +758,8 @@ fn test_app_runner_table_in_lookup() {
     );
 }
 
-#[test]
-fn test_app_runner_custom_udf() {
+#[tokio::test]
+async fn test_app_runner_custom_udf() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
     use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
@@ -828,14 +828,14 @@ fn test_app_runner_custom_udf() {
         define stream Out (v int);\n\
         from In select plusOne(v) as v insert into Out;\n";
 
-    let runner = AppRunner::new_with_manager(manager, app, "Out");
+    let runner = AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(4)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(5)]]);
 }
 
-#[test]
-fn app_runner_join_variable_resolution() {
+#[tokio::test]
+async fn app_runner_join_variable_resolution() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
 
@@ -844,7 +844,7 @@ fn app_runner_join_variable_resolution() {
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
@@ -854,8 +854,8 @@ fn app_runner_join_variable_resolution() {
     );
 }
 
-#[test]
-fn app_runner_pattern_variable_resolution() {
+#[tokio::test]
+async fn app_runner_pattern_variable_resolution() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
 
@@ -864,7 +864,7 @@ fn app_runner_pattern_variable_resolution() {
         define stream B (val int);\n\
         define stream Out (a int, b int);\n\
         from A -> B select A.val as a, B.val as b insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("A", vec![AttributeValue::Int(1)]);
     runner.send("B", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();

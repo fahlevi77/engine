@@ -304,15 +304,15 @@ fn test_query_parser_uses_custom_window_factory() {
     assert!(dbg.contains("DummyWindowProcessor"));
 }
 
-#[test]
-fn app_runner_custom_window() {
+#[tokio::test]
+async fn app_runner_custom_window() {
     let manager = SiddhiManager::new();
     manager.add_window_factory("ptWin".to_string(), Box::new(DummyWindowFactory));
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#ptWin() select v insert into Out;\n";
-    let runner = common::AppRunner::new_with_manager(manager, app, "Out");
+    let runner = common::AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(1)]]);
@@ -367,7 +367,7 @@ fn test_table_factory_invoked() {
         .insert("T1".to_string(), Arc::new(table_def));
 
     let _ =
-        SiddhiAppParser::parse_siddhi_app_runtime_builder(&app_obj, Arc::clone(&app_ctx)).unwrap();
+        SiddhiAppParser::parse_siddhi_app_runtime_builder(&app_obj, Arc::clone(&app_ctx), None).unwrap();
 
     assert_eq!(CREATED.load(Ordering::SeqCst), 1);
     assert!(app_ctx.get_siddhi_context().get_table("T1").is_some());

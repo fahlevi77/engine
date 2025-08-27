@@ -1,6 +1,7 @@
 // siddhi_rust/src/core/siddhi_app_runtime_builder.rs
 use crate::core::aggregation::AggregationRuntime;
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::ApplicationConfig;
 use crate::core::partition::PartitionRuntime;
 use crate::core::query::query_runtime::QueryRuntime;
 use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
@@ -20,6 +21,7 @@ use crate::core::trigger::TriggerRuntime;
 #[derive(Debug)]
 pub struct SiddhiAppRuntimeBuilder {
     pub siddhi_app_context: Arc<SiddhiAppContext>, // Set upon creation, not Option
+    pub application_config: Option<ApplicationConfig>, // Optional configuration for the application
 
     pub stream_definition_map: HashMap<String, Arc<ApiStreamDefinition>>,
     pub table_definition_map: HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
@@ -38,9 +40,10 @@ pub struct SiddhiAppRuntimeBuilder {
 }
 
 impl SiddhiAppRuntimeBuilder {
-    pub fn new(siddhi_app_context: Arc<SiddhiAppContext>) -> Self {
+    pub fn new(siddhi_app_context: Arc<SiddhiAppContext>, application_config: Option<ApplicationConfig>) -> Self {
         Self {
             siddhi_app_context, // No longer Option
+            application_config,
             stream_definition_map: HashMap::new(),
             table_definition_map: HashMap::new(),
             window_definition_map: HashMap::new(),

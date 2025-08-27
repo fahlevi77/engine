@@ -1,6 +1,21 @@
 //! Configuration Manager
 //! 
-//! Central orchestrator for configuration loading, merging, validation, and hot reload.
+//! Central orchestrator for configuration loading, merging, and validation.
+//! 
+//! ## Configuration Reload Strategy
+//! 
+//! **Important**: This configuration system does not support hot reload functionality.
+//! If you need to reload configuration changes:
+//! 
+//! 1. **Ensure State Persistence**: Enable state persistence before stopping the application
+//! 2. **Graceful Shutdown**: Stop the current Siddhi application runtime gracefully  
+//! 3. **Update Configuration**: Modify your configuration files or environment variables
+//! 4. **Restart with New Config**: Start a new Siddhi application runtime with the updated configuration
+//! 5. **State Recovery**: The application will automatically restore from persisted state and continue 
+//!    processing from where it left off
+//! 
+//! This approach ensures data consistency and prevents configuration conflicts while providing
+//! reliable state recovery across restarts.
 
 use crate::core::config::{
     ConfigError, ConfigResult, SiddhiConfig,
@@ -16,8 +31,8 @@ use tokio::sync::RwLock;
 
 /// Configuration Manager
 /// 
-/// Orchestrates configuration loading from multiple sources with proper precedence,
-/// validation, and hot reload capabilities.
+/// Orchestrates configuration loading from multiple sources with proper precedence
+/// and validation.
 #[derive(Debug)]
 pub struct ConfigManager {
     /// Registered configuration loaders in priority order
@@ -28,13 +43,6 @@ pub struct ConfigManager {
     
     /// Configuration validation enabled
     validation_enabled: bool,
-    
-    /// Hot reload enabled
-    hot_reload_enabled: bool,
-    
-    /// File watcher for hot reload
-    #[cfg(feature = "hot-reload")]
-    _watcher: Option<notify::RecommendedWatcher>,
 }
 
 impl ConfigManager {
@@ -44,9 +52,6 @@ impl ConfigManager {
             loaders: Vec::new(),
             cached_config: Arc::new(RwLock::new(None)),
             validation_enabled: true,
-            hot_reload_enabled: false,
-            #[cfg(feature = "hot-reload")]
-            _watcher: None,
         };
         
         // Register default loaders in priority order
@@ -60,9 +65,6 @@ impl ConfigManager {
             loaders: Vec::new(),
             cached_config: Arc::new(RwLock::new(None)),
             validation_enabled: true,
-            hot_reload_enabled: false,
-            #[cfg(feature = "hot-reload")]
-            _watcher: None,
         };
         
         // Register only YAML file loader for the specific file
@@ -106,16 +108,6 @@ impl ConfigManager {
     /// Enable or disable configuration validation
     pub fn set_validation_enabled(&mut self, enabled: bool) {
         self.validation_enabled = enabled;
-    }
-    
-    /// Enable or disable hot reload
-    pub fn set_hot_reload_enabled(&mut self, enabled: bool) {
-        self.hot_reload_enabled = enabled;
-        
-        #[cfg(feature = "hot-reload")]
-        if enabled {
-            // Implementation pending: File system watcher setup for hot reload
-        }
     }
     
     /// Check if running in Kubernetes environment
@@ -246,12 +238,6 @@ impl ConfigManager {
         Ok(())
     }
     
-    /// Reload configuration (useful for hot reload)
-    pub async fn reload_config(&self) -> ConfigResult<SiddhiConfig> {
-        self.clear_cache().await;
-        self.load_unified_config().await
-    }
-    
     /// List all available loaders and their status
     pub fn list_loaders(&self) -> Vec<LoaderInfo> {
         self.loaders.iter().map(|loader| {
@@ -293,7 +279,6 @@ pub struct LoaderInfo {
 pub struct ConfigManagerBuilder {
     loaders: Vec<Box<dyn ConfigLoader>>,
     validation_enabled: bool,
-    hot_reload_enabled: bool,
 }
 
 impl ConfigManagerBuilder {
@@ -302,7 +287,6 @@ impl ConfigManagerBuilder {
         Self {
             loaders: Vec::new(),
             validation_enabled: true,
-            hot_reload_enabled: false,
         }
     }
     
@@ -359,30 +343,16 @@ impl ConfigManagerBuilder {
         self
     }
     
-    /// Enable or disable hot reload
-    pub fn hot_reload_enabled(mut self, enabled: bool) -> Self {
-        self.hot_reload_enabled = enabled;
-        self
-    }
-    
     /// Build the configuration manager
     pub fn build(self) -> ConfigManager {
         let mut manager = ConfigManager {
             loaders: self.loaders,
             cached_config: Arc::new(RwLock::new(None)),
             validation_enabled: self.validation_enabled,
-            hot_reload_enabled: self.hot_reload_enabled,
-            #[cfg(feature = "hot-reload")]
-            _watcher: None,
         };
         
         // Sort loaders by priority
         manager.loaders.sort_by_key(|loader| loader.priority());
-        
-        // Set up hot reload if enabled
-        if manager.hot_reload_enabled {
-            manager.set_hot_reload_enabled(true);
-        }
         
         manager
     }
@@ -406,7 +376,6 @@ mod tests {
         let manager = ConfigManager::new();
         assert!(!manager.loaders.is_empty());
         assert!(manager.validation_enabled);
-        assert!(!manager.hot_reload_enabled);
     }
     
     #[tokio::test]
@@ -536,7 +505,6 @@ siddhi:
             .with_yaml_file(&config_path)
             .with_environment_vars()
             .validation_enabled(true)
-            .hot_reload_enabled(false)
             .build();
         
         let config = manager.load_unified_config().await.unwrap();

@@ -11,8 +11,8 @@ use siddhi_rust::core::persistence::{InMemoryPersistenceStore, RedisPersistenceS
 use siddhi_rust::core::distributed::RedisConfig;
 use std::sync::Arc;
 
-#[test] 
-fn test_memory_store_simple_works() {
+#[tokio::test] 
+async fn test_memory_store_simple_works() {
     // Test the exact same pattern as the working app_runner_persistence test
     let store: Arc<dyn PersistenceStore> = Arc::new(InMemoryPersistenceStore::new());
     let app = "\
@@ -21,7 +21,7 @@ fn test_memory_store_simple_works() {
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
     let rev = runner.persist();
@@ -29,7 +29,7 @@ fn test_memory_store_simple_works() {
     runner.send("In", vec![AttributeValue::Int(3)]);
     let _ = runner.shutdown();
     
-    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner2 = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner2.restore_revision(&rev);
     runner2.send("In", vec![AttributeValue::Int(4)]);
     let out = runner2.shutdown();
@@ -39,8 +39,8 @@ fn test_memory_store_simple_works() {
     println!("✅ Memory store simple pattern works!");
 }
 
-#[test]
-fn test_memory_store_with_count_fails() {
+#[tokio::test]
+async fn test_memory_store_with_count_fails() {
     let store: Arc<dyn PersistenceStore> = Arc::new(InMemoryPersistenceStore::new());
     let app = "\
         @app:name('TestApp')\n\
@@ -48,7 +48,7 @@ fn test_memory_store_with_count_fails() {
         define stream Out (v int, count long);\n\
         from In#length(3) select v, count() as count insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     
     // Build window state
     runner.send("In", vec![AttributeValue::Int(1)]);
@@ -86,8 +86,8 @@ fn test_memory_store_with_count_fails() {
     }
 }
 
-#[test]
-fn test_redis_store_debug() {
+#[tokio::test]
+async fn test_redis_store_debug() {
     let config = RedisConfig {
         url: "redis://localhost:6379".to_string(),
         max_connections: 5,
@@ -110,7 +110,7 @@ fn test_redis_store_debug() {
         define stream Out (v int, count long);\n\
         from In#length(3) select v, count() as count insert into Out;\n";
     
-    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     
     // Build window state
     runner.send("In", vec![AttributeValue::Int(1)]);

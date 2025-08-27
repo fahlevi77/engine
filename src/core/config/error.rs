@@ -40,9 +40,6 @@ pub enum ConfigError {
     #[error("Configuration version '{version}' is incompatible with current version '{current}'")]
     VersionMismatch { version: String, current: String },
     
-    #[error("Hot reload failed: {reason}")]
-    HotReloadFailed { reason: String },
-    
     #[error("Kubernetes API error: {message}")]
     KubernetesError { message: String },
     
@@ -285,14 +282,6 @@ impl From<std::env::VarError> for ConfigError {
     }
 }
 
-#[cfg(feature = "hot-reload")]
-impl From<notify::Error> for ConfigError {
-    fn from(err: notify::Error) -> Self {
-        ConfigError::WatchError {
-            message: err.to_string(),
-        }
-    }
-}
 
 #[cfg(feature = "kubernetes")]
 impl From<kube::Error> for ConfigError {

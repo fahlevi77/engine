@@ -4,8 +4,8 @@ use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
 
-#[test]
-fn test_dynamic_extension_loading() {
+#[tokio::test]
+async fn test_dynamic_extension_loading() {
     let manager = SiddhiManager::new();
     let lib_path = custom_dyn_ext::library_path();
     manager
@@ -20,7 +20,7 @@ fn test_dynamic_extension_loading() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#dynWindow() select dynPlusOne(v) as v insert into Out;\n";
-    let runner = AppRunner::new_with_manager(manager, app, "Out");
+    let runner = AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(2)]]);

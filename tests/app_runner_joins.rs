@@ -3,14 +3,14 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
-#[test]
-fn inner_join_simple() {
+#[tokio::test]
+async fn inner_join_simple() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();
@@ -20,14 +20,14 @@ fn inner_join_simple() {
     );
 }
 
-#[test]
-fn left_outer_join_no_match() {
+#[tokio::test]
+async fn left_outer_join_no_match() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L left outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
     assert_eq!(
@@ -36,14 +36,14 @@ fn left_outer_join_no_match() {
     );
 }
 
-#[test]
-fn join_with_condition_gt() {
+#[tokio::test]
+async fn join_with_condition_gt() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L join R on L.id > R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("L", vec![AttributeValue::Int(3)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
@@ -54,14 +54,14 @@ fn join_with_condition_gt() {
     );
 }
 
-#[test]
-fn join_complex_condition() {
+#[tokio::test]
+async fn join_complex_condition() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L join R on (L.id > R.id and R.id > 0) or L.id == 10 select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
     runner.send("L", vec![AttributeValue::Int(10)]);
@@ -76,14 +76,14 @@ fn join_complex_condition() {
     );
 }
 
-#[test]
-fn right_outer_join_no_match() {
+#[tokio::test]
+async fn right_outer_join_no_match() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L right outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("R", vec![AttributeValue::Int(5)]);
     let out = runner.shutdown();
     assert_eq!(
@@ -92,14 +92,14 @@ fn right_outer_join_no_match() {
     );
 }
 
-#[test]
-fn full_outer_join_basic() {
+#[tokio::test]
+async fn full_outer_join_basic() {
     let app = "\
         define stream L (id int);\n\
         define stream R (id int);\n\
         define stream Out (l int, r int);\n\
         from L full outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
@@ -107,8 +107,8 @@ fn full_outer_join_basic() {
     assert!(out.contains(&vec![AttributeValue::Null, AttributeValue::Int(2)]));
 }
 
-#[test]
-fn join_with_group_by() {
+#[tokio::test]
+async fn join_with_group_by() {
     let app = "\
         define stream L (id int, cat int);\n\
         define stream R (id int);\n\
@@ -116,7 +116,7 @@ fn join_with_group_by() {
         from L join R on L.id == R.id\n\
         select L.cat as cat, count() as c\n\
         group by cat order by cat asc insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "L",
         vec![

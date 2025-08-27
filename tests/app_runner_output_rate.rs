@@ -42,10 +42,10 @@ fn make_app() -> SiddhiApp {
     app
 }
 
-#[test]
-fn rate_limit_emits_in_batches() {
+#[tokio::test]
+async fn rate_limit_emits_in_batches() {
     let app = make_app();
-    let runner = AppRunner::new_from_api(app, "Out");
+    let runner = AppRunner::new_from_api(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     assert_eq!(runner.collected.lock().unwrap().len(), 0);
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -58,11 +58,11 @@ fn rate_limit_emits_in_batches() {
     assert_eq!(out.len(), 4);
 }
 
-#[test]
-fn rate_limit_persist_restore() {
+#[tokio::test]
+async fn rate_limit_persist_restore() {
     let store: Arc<dyn PersistenceStore> = Arc::new(InMemoryPersistenceStore::new());
     let app = make_app();
-    let runner = AppRunner::new_from_api_with_store(app, "Out", Arc::clone(&store));
+    let runner = AppRunner::new_from_api_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
     runner.send("In", vec![AttributeValue::Int(2)]);

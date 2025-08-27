@@ -58,8 +58,8 @@ fn setup_sqlite_table(ctx: &Arc<SiddhiContext>, name: &str) {
     conn.execute(&sql, []).unwrap();
 }
 
-#[test]
-fn cache_table_crud_via_app_runner() {
+#[tokio::test]
+async fn cache_table_crud_via_app_runner() {
     let query = "\
         define stream In (v string);\n\
         define stream Out (v string);\n\
@@ -67,7 +67,7 @@ fn cache_table_crud_via_app_runner() {
         define table T (v string);\n\
         from In select v insert into T;\n\
         from In select v insert into Out;\n";
-    let runner = AppRunner::new(query, "Out");
+    let runner = AppRunner::new(query, "Out").await;
     runner.send("In", vec![AttributeValue::String("a".into())]);
     std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -95,8 +95,8 @@ fn cache_table_crud_via_app_runner() {
     let _ = runner.shutdown();
 }
 
-#[test]
-fn jdbc_table_crud_via_app_runner() {
+#[tokio::test]
+async fn jdbc_table_crud_via_app_runner() {
     let mut manager = SiddhiManager::new();
     manager
         .add_data_source(
@@ -114,7 +114,7 @@ fn jdbc_table_crud_via_app_runner() {
         define table J (v string);\n\
         from In select v insert into J;\n\
         from In select v insert into Out;\n";
-    let runner = AppRunner::new_with_manager(manager, query, "Out");
+    let runner = AppRunner::new_with_manager(manager, query, "Out").await;
     runner.send("In", vec![AttributeValue::String("x".into())]);
     std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -137,8 +137,8 @@ fn jdbc_table_crud_via_app_runner() {
     let _ = runner.shutdown();
 }
 
-#[test]
-fn stream_table_join_basic() {
+#[tokio::test]
+async fn stream_table_join_basic() {
     let query = "\
         define stream L (roomNo int, val string);\n\
         @store(type='cache', max_size='5')\n\
@@ -147,7 +147,7 @@ fn stream_table_join_basic() {
         from L join R on L.roomNo == R.roomNo\n\
         select L.roomNo as r, R.type as t, L.val as v\n\
         insert into Out;\n";
-    let runner = AppRunner::new(query, "Out");
+    let runner = AppRunner::new(query, "Out").await;
     let th = runner.runtime().get_table_input_handler("R").unwrap();
     th.add(vec![siddhi_rust::core::event::event::Event::new_with_data(
         0,
@@ -168,8 +168,8 @@ fn stream_table_join_basic() {
     );
 }
 
-#[test]
-fn stream_table_join_jdbc() {
+#[tokio::test]
+async fn stream_table_join_jdbc() {
     let mut manager = SiddhiManager::new();
     manager
         .add_data_source(
@@ -188,7 +188,7 @@ fn stream_table_join_jdbc() {
         from L join J2 on L.roomNo == J2.roomNo\n\
         select L.roomNo as r, J2.type as t, L.val as v\n\
         insert into Out;\n";
-    let runner = AppRunner::new_with_manager(manager, query, "Out");
+    let runner = AppRunner::new_with_manager(manager, query, "Out").await;
     let th = runner.runtime().get_table_input_handler("J2").unwrap();
     th.add(vec![siddhi_rust::core::event::event::Event::new_with_data(
         0,
@@ -209,8 +209,8 @@ fn stream_table_join_jdbc() {
     );
 }
 
-#[test]
-fn cache_and_jdbc_tables_eviction_and_queries() {
+#[tokio::test]
+async fn cache_and_jdbc_tables_eviction_and_queries() {
     let mut manager = SiddhiManager::new();
     manager
         .add_data_source(
@@ -231,7 +231,7 @@ fn cache_and_jdbc_tables_eviction_and_queries() {
         from In select v insert into C;\n\
         from In select v insert into J3;\n\
         from In select v insert into Out;\n";
-    let runner = AppRunner::new_with_manager(manager, query, "Out");
+    let runner = AppRunner::new_with_manager(manager, query, "Out").await;
 
     runner.send("In", vec![AttributeValue::String("a".into())]);
     runner.send("In", vec![AttributeValue::String("b".into())]);

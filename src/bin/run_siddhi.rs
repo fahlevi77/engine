@@ -9,6 +9,7 @@ use siddhi_rust::core::persistence::{
     FilePersistenceStore, PersistenceStore, SqlitePersistenceStore,
 };
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use siddhi_rust::core::config::ConfigManager;
 use siddhi_rust::core::stream::output::sink::LogSink;
 use std::sync::Arc;
 
@@ -35,7 +36,8 @@ struct Cli {
     config: Option<String>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
 
     let mut store: Option<Arc<dyn PersistenceStore>> = None;
@@ -59,12 +61,13 @@ fn main() {
         }
     };
 
-    let manager = SiddhiManager::new();
+    let mut manager = SiddhiManager::new();
     if let Some(s) = store {
         manager.set_persistence_store(s);
     }
     if let Some(cfg) = cli.config {
-        if let Err(e) = manager.set_config_manager(cfg) {
+        let config_manager = ConfigManager::from_file(cfg);
+        if let Err(e) = manager.set_config_manager(config_manager) {
             eprintln!("Failed to apply config: {e}");
         }
     }
@@ -76,7 +79,7 @@ fn main() {
             }
         }
     }
-    let runtime = match manager.create_siddhi_app_runtime_from_string(&content) {
+    let runtime = match manager.create_siddhi_app_runtime_from_string(&content).await {
         Ok(rt) => rt,
         Err(e) => {
             eprintln!("Failed to create runtime: {e}");

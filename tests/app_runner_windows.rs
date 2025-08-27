@@ -5,26 +5,26 @@ use siddhi_rust::core::event::value::AttributeValue;
 use std::thread::sleep;
 use std::time::Duration;
 
-#[test]
-fn filter_projection_simple() {
+#[tokio::test]
+async fn filter_projection_simple() {
     let app = "\
         define stream In (a int);\n\
         define stream Out (a int);\n\
         from In[a > 10] select a insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(5)]);
     runner.send("In", vec![AttributeValue::Int(15)]);
     let out = runner.shutdown();
     assert_eq!(out, vec![vec![AttributeValue::Int(15)]]);
 }
 
-#[test]
-fn length_window_basic() {
+#[tokio::test]
+async fn length_window_basic() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
     runner.send("In", vec![AttributeValue::Int(3)]);
@@ -40,13 +40,13 @@ fn length_window_basic() {
     );
 }
 
-#[test]
-fn length_window_batch() {
+#[tokio::test]
+async fn length_window_batch() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#length(2) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
         vec![
@@ -67,13 +67,13 @@ fn length_window_batch() {
     );
 }
 
-#[test]
-fn time_window_expiry() {
+#[tokio::test]
+async fn time_window_expiry() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#time(100) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(5)]);
     sleep(Duration::from_millis(150));
     let out = runner.shutdown();
@@ -81,13 +81,13 @@ fn time_window_expiry() {
     assert_eq!(out[0], vec![AttributeValue::Int(5)]);
 }
 
-#[test]
-fn length_batch_window() {
+#[tokio::test]
+async fn length_batch_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#lengthBatch(2) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
     runner.send("In", vec![AttributeValue::Int(3)]);
@@ -106,13 +106,13 @@ fn length_batch_window() {
     );
 }
 
-#[test]
-fn time_batch_window() {
+#[tokio::test]
+async fn time_batch_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#timeBatch(100) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     sleep(Duration::from_millis(120));
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -122,13 +122,13 @@ fn time_batch_window() {
     assert_eq!(out[0], vec![AttributeValue::Int(1)]);
 }
 
-#[test]
-fn external_time_window_basic() {
+#[tokio::test]
+async fn external_time_window_basic() {
     let app = "\
         define stream In (ts long, v int);\n\
         define stream Out (v int);\n\
         from In#externalTime(ts, 100) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_with_ts(
         "In",
         0,
@@ -150,13 +150,13 @@ fn external_time_window_basic() {
     );
 }
 
-#[test]
-fn external_time_batch_window() {
+#[tokio::test]
+async fn external_time_batch_window() {
     let app = "\
         define stream In (ts long, v int);\n\
         define stream Out (v int);\n\
         from In#externalTimeBatch(ts, 100) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send_with_ts(
         "In",
         0,
@@ -190,13 +190,13 @@ fn external_time_batch_window() {
     );
 }
 
-#[test]
-fn lossy_counting_window() {
+#[tokio::test]
+async fn lossy_counting_window() {
     let app = "\
         define stream In (v string);\n\
         define stream Out (v string);\n\
         from In#lossyCounting(1,1) select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::String("A".to_string())]);
     runner.send("In", vec![AttributeValue::String("B".to_string())]);
     let out = runner.shutdown();
@@ -209,13 +209,13 @@ fn lossy_counting_window() {
     );
 }
 
-#[test]
-fn cron_window_basic() {
+#[tokio::test]
+async fn cron_window_basic() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#cron('*/1 * * * * *') select v insert into Out;\n";
-    let runner = AppRunner::new(app, "Out");
+    let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     std::thread::sleep(std::time::Duration::from_millis(1100));
     let out = runner.shutdown();

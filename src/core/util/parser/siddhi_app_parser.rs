@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex}; // Added Mutex // If QueryParser needs table_map et
 
 use crate::core::config::siddhi_app_context::SiddhiAppContext;
 use crate::core::config::siddhi_query_context::SiddhiQueryContext; // QueryParser will need this
+use crate::core::config::ApplicationConfig;
 use crate::core::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
 use crate::core::stream::{junction_factory::JunctionConfig, stream_junction::StreamJunction}; // For creating junctions
 use crate::core::window::WindowRuntime;
@@ -30,8 +31,9 @@ impl SiddhiAppParser {
     pub fn parse_siddhi_app_runtime_builder(
         api_siddhi_app: &ApiSiddhiApp,             // This is from query_api
         siddhi_app_context: Arc<SiddhiAppContext>, // This is from core::config
+        application_config: Option<ApplicationConfig>, // Optional application configuration
     ) -> Result<SiddhiAppRuntimeBuilder, String> {
-        let mut builder = SiddhiAppRuntimeBuilder::new(siddhi_app_context.clone());
+        let mut builder = SiddhiAppRuntimeBuilder::new(siddhi_app_context.clone(), application_config.clone());
 
         // Parse @app level annotations to configure defaults
         let mut default_stream_async = siddhi_app_context

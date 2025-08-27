@@ -1,6 +1,6 @@
 // Corresponds to io.siddhi.core.config.SiddhiAppContext
 use super::siddhi_context::SiddhiContext;
-use crate::core::config::{SiddhiConfig, ApplicationConfig, ConfigManager};
+use crate::core::config::{SiddhiConfig, ApplicationConfig, ConfigManager, ProcessorConfigReader};
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::id_generator::IdGenerator;
 use crate::core::util::Scheduler;
@@ -89,6 +89,7 @@ pub struct SiddhiAppContext {
     // pub trigger_holders: Vec<TriggerPlaceholder>, // Holds trigger runtime instances.
     pub snapshot_service: Option<Arc<SnapshotService>>, // Manages state snapshotting and persistence.
     pub thread_barrier: Option<Arc<ThreadBarrier>>, // Coordinates threads when ordering is enforced.
+    pub config_reader: Option<Arc<ProcessorConfigReader>>, // Configuration reader for processors
     pub timestamp_generator: TimestampGeneratorPlaceholder, // Generates timestamps, especially for playback mode. Has a default in Java if not set by user.
     pub id_generator: Option<IdGenerator>, // Generates unique IDs for runtime elements. Option because it's set.
 
@@ -196,6 +197,10 @@ impl SiddhiAppContext {
             // trigger_holders: Vec::new(),
             snapshot_service: None,
             thread_barrier: None,
+            config_reader: Some(Arc::new(ProcessorConfigReader::new(
+                app_config.clone(), 
+                Some(global_config.as_ref().clone())
+            ))),
             timestamp_generator: TimestampGeneratorPlaceholder::default(), // Java new-s one if null
             id_generator: None,                                            // Set later
             // script_function_map: HashMap::new(),
@@ -315,6 +320,16 @@ impl SiddhiAppContext {
 
     pub fn set_thread_barrier(&mut self, barrier: Arc<ThreadBarrier>) {
         self.thread_barrier = Some(barrier);
+    }
+
+    /// Get the configuration reader for processors
+    pub fn get_config_reader(&self) -> Option<Arc<ProcessorConfigReader>> {
+        self.config_reader.clone()
+    }
+
+    /// Set the configuration reader
+    pub fn set_config_reader(&mut self, reader: Arc<ProcessorConfigReader>) {
+        self.config_reader = Some(reader);
     }
 
     pub fn get_executor_service(&self) -> Option<Arc<ExecutorService>> {
