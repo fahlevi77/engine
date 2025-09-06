@@ -44,17 +44,27 @@ use crate::query_api::execution::{
 };
 
 pub AnnotationStmt: Annotation = {
+    // Generic annotation with namespace and key: @namespace:key(...)
+    "@" <ns:Ident> ":" <key:Ident> "(" <val:AnnotationValue> ")" => {
+        Annotation::new(ns).element(Some(key), val)
+    },
+    // Annotation with key-value pairs: @name(key='value', ...)
     "@" <name:Ident> "(" <pairs:KeyValuePairs> ")" => {
         let mut a = Annotation::new(name);
         for (k, v) in pairs { a = a.element(Some(k), v); }
         a
     },
-    "@" <name:Ident> ":" <key:Ident> "(" <val:STRING> ")" => {
-        Annotation::new(name).element(Some(key), val)
-    },
+    // Simple annotation: @name
     "@" <name:Ident> => {
         Annotation::new(name)
     }
+};
+
+AnnotationValue: String = {
+    <s:STRING> => s,
+    <id:Ident> => id,
+    // Allow numbers as annotation values
+    <n:NUMBER> => n.to_string(),
 };
 
 KeyValuePairs: Vec<(String, String)> = {
@@ -66,7 +76,9 @@ KeyValuePairs: Vec<(String, String)> = {
     => Vec::new(),
 };
 
-KeyValue: (String, String) = { <k:Ident> "=" <v:STRING> => (k, v) };
+KeyValue: (String, String) = {
+    <k:Ident> "=" <v:AnnotationValue> => (k, v)
+};
 
 pub OnDemandQueryStmt: OnDemandQuery = {
     "from" <st:InputStoreRule> <sel:QuerySection> => {
@@ -236,76 +248,107 @@ pub AggDef: AggregationDefinition = {
     }
 };
 
-InputStreamRule: InputStream = {
-    <id:Ident> "[" <cond:Expression> "]" => {
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
-        InputStream::Single(si)
+// Helper for single input stream with optional alias
+SingleStreamWithAlias: SingleInputStream = {
+    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
+        let wname = format!("window.{}", wsecond);
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
     },
+    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
+        let wname = format!("{}.{}", wfirst, wsecond);
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
+    },
+    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
+    },
+    <id:Ident> "[" <cond:Expression> "]" "as" <alias:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond).as_ref(alias)
+    },
+    <id:Ident> "as" <alias:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).as_ref(alias)
+    },
+    // Without alias
     <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
         let wname = format!("window.{}", wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
-        InputStream::Single(si)
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
     },
     <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
         let wname = format!("{}.{}", wfirst, wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
-        InputStream::Single(si)
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
     },
     <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
+    },
+    <id:Ident> "[" <cond:Expression> "]" => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond)
+    },
+    <id:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new())
+    },
+};
+
+InputStreamRule: InputStream = {
+    <s:SingleStreamWithAlias> => InputStream::Single(s),
+    // Aggregation with condition, within, and per clauses
+    <id:Ident> "on" <cond:Expression> "within" <_within_expr:Expression> "per" <_per_expr:Expression> => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new());
         InputStream::Single(si)
     },
-    <id:Ident> "on" <_cond:Expression> "within" <_within:Expression> "per" <_per:Expression> => InputStream::stream(id),
-    <id:Ident> => InputStream::stream(id),
-    <left:Ident> "join" <right:Ident> "on" <cond:Expression> => {
+    // Aggregation with just condition
+    <id:Ident> "on" <cond:Expression> => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new());
+        InputStream::Single(si)
+    },
+    // Join operations with aliases
+    <left:SingleStreamWithAlias> "join" <right:SingleStreamWithAlias> "on" <cond:Expression> => {
         InputStream::join_stream(
-            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            left,
             JoinType::Join,
-            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            right,
             Some(cond),
             None,
             None,
             None,
         )
     },
-    <left:Ident> "inner" "join" <right:Ident> "on" <cond:Expression> => {
+    <left:SingleStreamWithAlias> "inner" "join" <right:SingleStreamWithAlias> "on" <cond:Expression> => {
         InputStream::join_stream(
-            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            left,
             JoinType::InnerJoin,
-            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            right,
             Some(cond),
             None,
             None,
             None,
         )
     },
-    <left:Ident> "left" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+    <left:SingleStreamWithAlias> "left" "outer" "join" <right:SingleStreamWithAlias> "on" <cond:Expression> => {
         InputStream::join_stream(
-            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            left,
             JoinType::LeftOuterJoin,
-            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            right,
             Some(cond),
             None,
             None,
             None,
         )
     },
-    <left:Ident> "right" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+    <left:SingleStreamWithAlias> "right" "outer" "join" <right:SingleStreamWithAlias> "on" <cond:Expression> => {
         InputStream::join_stream(
-            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            left,
             JoinType::RightOuterJoin,
-            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            right,
             Some(cond),
             None,
             None,
             None,
         )
     },
-    <left:Ident> "full" "outer" "join" <right:Ident> "on" <cond:Expression> => {
+    <left:SingleStreamWithAlias> "full" "outer" "join" <right:SingleStreamWithAlias> "on" <cond:Expression> => {
         InputStream::join_stream(
-            SingleInputStream::new_basic(left, false, false, None, Vec::new()),
+            left,
             JoinType::FullOuterJoin,
-            SingleInputStream::new_basic(right, false, false, None, Vec::new()),
+            right,
             Some(cond),
             None,
             None,
@@ -649,12 +692,12 @@ OrderByOpt: Vec<OrderByAttribute> = {
 };
 
 LimitOpt: Option<Constant> = {
-    "limit" <n:NUMBER> => Some(Constant::long(n)),
+    "limit" <n:INTEGER> => Some(Constant::long(n)),
     => None,
 };
 
 OffsetOpt: Option<Constant> = {
-    "offset" <n:NUMBER> => Some(Constant::long(n)),
+    "offset" <n:INTEGER> => Some(Constant::long(n)),
     => None,
 };
 
@@ -741,8 +784,22 @@ MulExpr: Expression = {
 PrimaryExpr: Expression = {
     "(" <e:Expression> ")" => e,
     <s:STRING> => Expression::value_string(s),
-    <n:NUMBER> => Expression::value_long(n),
-    "-" <n:NUMBER> => Expression::value_long(-n),
+    <n:NUMBER> => {
+        // Check if it's an integer or float
+        if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+            Expression::value_long(n as i64)
+        } else {
+            Expression::value_double(n)
+        }
+    },
+    "-" <n:NUMBER> => {
+        let neg = -n;
+        if neg.fract() == 0.0 && neg >= i64::MIN as f64 && neg <= i64::MAX as f64 {
+            Expression::value_long(neg as i64)
+        } else {
+            Expression::value_double(neg)
+        }
+    },
     <tc:TimeConstant> => Expression::Constant(tc),
     <sid:Ident> "." <id:Ident> => Expression::Variable(Variable::new(id).of_stream(sid)),
     <ns:Ident> ":" <id:Ident> "(" <args:ExprList> ")" => Expression::function(Some(ns), id, args),
@@ -766,7 +823,18 @@ STRING: String = {
     <r#"\"([^\"]*)\""#> => { let s = <>; s[1..s.len()-1].to_string() },
 };
 
-NUMBER: i64 = { <r"[0-9]+"> => <>.parse().unwrap() };
+// Support both integer and floating-point numbers
+// Note: Must come before explicit "." token to take precedence
+FLOAT_NUMBER: f64 = { <r"[0-9]+\\.[0-9]+"> => <>.parse::<f64>().unwrap() };
+INT_NUMBER: i64 = { <r"[0-9]+"> => <>.parse::<i64>().unwrap() };
+
+NUMBER: f64 = {
+    <f:FLOAT_NUMBER> => f,
+    <i:INT_NUMBER> => i as f64,
+};
+
+// Keep a separate integer rule for contexts that need integers
+INTEGER: i64 = { <r"[0-9]+"> => <>.parse().unwrap() };
 
 TimeUnit: String = {
     "ms" => "ms".to_string(),
@@ -794,7 +862,7 @@ TimeUnit: String = {
 };
 
 pub TimeConstant: Constant = {
-    <n:NUMBER> <u:TimeUnit> => {
+    <n:INTEGER> <u:TimeUnit> => {
         let millis = match u.as_str() {
             "ms" | "millisec" | "millisecs" | "millisecond" | "milliseconds" => TimeUtil::millisec_val(n),
             "sec" | "second" | "seconds" => TimeUtil::sec_val(n),
