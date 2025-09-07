@@ -2,7 +2,7 @@ define stream StockStream (symbol string, price float,volume int);
 partition with (symbol of StockStream)
 begin
    @info(name = 'query')
-   from StockStream#window.length(2)
+   from StockStream#window:length(2)
    select symbol, sum(price) as price, volume
    insert into OutStockStream ;
 end

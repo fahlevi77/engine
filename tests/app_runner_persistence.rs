@@ -12,7 +12,7 @@ async fn persist_restore_no_error() {
         @app:name('PersistApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
@@ -30,7 +30,7 @@ async fn length_window_restore_state() {
         @app:name('PersistApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -49,7 +49,7 @@ async fn persist_shutdown_restore_state() {
         @app:name('PersistApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);

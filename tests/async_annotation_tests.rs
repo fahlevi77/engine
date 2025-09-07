@@ -250,7 +250,7 @@ async fn test_async_annotation_with_query() {
         
         define stream OutputStream (symbol string, avgPrice float);
         
-        from InputStream#time(10 sec)
+        from InputStream#window:time(10 sec)
         select symbol, avg(price) as avgPrice
         insert into OutputStream;
     "#;

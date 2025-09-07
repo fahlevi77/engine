@@ -311,7 +311,7 @@ async fn app_runner_custom_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#ptWin() select v insert into Out;\n";
+        from In#window:ptWin() select v insert into Out;\n";
     let runner = common::AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();

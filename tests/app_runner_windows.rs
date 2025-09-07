@@ -23,7 +23,7 @@ async fn length_window_basic() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -45,7 +45,7 @@ async fn length_window_batch() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
@@ -72,7 +72,7 @@ async fn time_window_expiry() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#time(100) select v insert into Out;\n";
+        from In#window:time(100) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(5)]);
     sleep(Duration::from_millis(150));
@@ -86,7 +86,7 @@ async fn length_batch_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#lengthBatch(2) select v insert into Out;\n";
+        from In#window:lengthBatch(2) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);
@@ -111,7 +111,7 @@ async fn time_batch_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#timeBatch(100) select v insert into Out;\n";
+        from In#window:timeBatch(100) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     sleep(Duration::from_millis(120));
@@ -127,7 +127,7 @@ async fn external_time_window_basic() {
     let app = "\
         define stream In (ts long, v int);\n\
         define stream Out (v int);\n\
-        from In#externalTime(ts, 100) select v insert into Out;\n";
+        from In#window:externalTime(ts, 100) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_with_ts(
         "In",
@@ -155,7 +155,7 @@ async fn external_time_batch_window() {
     let app = "\
         define stream In (ts long, v int);\n\
         define stream Out (v int);\n\
-        from In#externalTimeBatch(ts, 100) select v insert into Out;\n";
+        from In#window:externalTimeBatch(ts, 100) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_with_ts(
         "In",
@@ -195,7 +195,7 @@ async fn lossy_counting_window() {
     let app = "\
         define stream In (v string);\n\
         define stream Out (v string);\n\
-        from In#lossyCounting(1,1) select v insert into Out;\n";
+        from In#window:lossyCounting(1,1) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::String("A".to_string())]);
     runner.send("In", vec![AttributeValue::String("B".to_string())]);
@@ -214,7 +214,7 @@ async fn cron_window_basic() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#cron('*/1 * * * * *') select v insert into Out;\n";
+        from In#window:cron('*/1 * * * * *') select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     std::thread::sleep(std::time::Duration::from_millis(1100));

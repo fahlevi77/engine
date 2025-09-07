@@ -19,7 +19,7 @@ async fn test_dynamic_extension_loading() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#dynWindow() select dynPlusOne(v) as v insert into Out;\n";
+        from In#window:dynWindow() select dynPlusOne(v) as v insert into Out;\n";
     let runner = AppRunner::new_with_manager(manager, app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let out = runner.shutdown();

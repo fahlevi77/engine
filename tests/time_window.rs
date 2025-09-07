@@ -23,7 +23,7 @@ async fn test_time_window_expiry() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#time(100) select v insert into Out;\n";
+        from In#window:time(100) select v insert into Out;\n";
     let manager = SiddhiManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager

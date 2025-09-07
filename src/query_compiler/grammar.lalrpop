@@ -250,37 +250,22 @@ pub AggDef: AggregationDefinition = {
 
 // Helper for single input stream with optional alias
 SingleStreamWithAlias: SingleInputStream = {
-    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
-        let wname = format!("window.{}", wsecond);
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
+    // New colon separator syntax for windows
+    <id:Ident> "#" "window" ":" <wtype:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wtype, wargs).as_ref(alias)
     },
-    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
-        let wname = format!("{}.{}", wfirst, wsecond);
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
+    <id:Ident> "#" "window" ":" <wtype:Ident> "(" <wargs:ExprList> ")" => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wtype, wargs)
     },
-    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" "as" <alias:Ident> => {
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias)
-    },
+    // Stream operations without windows
     <id:Ident> "[" <cond:Expression> "]" "as" <alias:Ident> => {
         SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond).as_ref(alias)
     },
-    <id:Ident> "as" <alias:Ident> => {
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).as_ref(alias)
-    },
-    // Without alias
-    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("window.{}", wsecond);
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
-    },
-    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("{}.{}", wfirst, wsecond);
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
-    },
-    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
-        SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs)
-    },
     <id:Ident> "[" <cond:Expression> "]" => {
         SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond)
+    },
+    <id:Ident> "as" <alias:Ident> => {
+        SingleInputStream::new_basic(id, false, false, None, Vec::new()).as_ref(alias)
     },
     <id:Ident> => {
         SingleInputStream::new_basic(id, false, false, None, Vec::new())
@@ -391,18 +376,8 @@ BasicUnit: StateElement = {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond).as_ref(alias);
         State::stream_element(si)
     },
-    <alias:Ident> "=" <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("window.{}", wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
-        State::stream_element(si)
-    },
-    <alias:Ident> "=" <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("{}.{}", wfirst, wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
-        State::stream_element(si)
-    },
-    <alias:Ident> "=" <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs).as_ref(alias);
+    <alias:Ident> "=" <id:Ident> "#" "window" ":" <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wsecond, wargs).as_ref(alias);
         State::stream_element(si)
     },
     <alias:Ident> "=" <id:Ident> => {
@@ -413,18 +388,8 @@ BasicUnit: StateElement = {
         let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).filter(cond);
         State::stream_element(si)
     },
-    <id:Ident> "#" "window" "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("window.{}", wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
-        State::stream_element(si)
-    },
-    <id:Ident> "#" <wfirst:Ident> "." <wsecond:Ident> "(" <wargs:ExprList> ")" => {
-        let wname = format!("{}.{}", wfirst, wsecond);
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
-        State::stream_element(si)
-    },
-    <id:Ident> "#" <wname:Ident> "(" <wargs:ExprList> ")" => {
-        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wname, wargs);
+    <id:Ident> "#" "window" ":" <wsecond:Ident> "(" <wargs:ExprList> ")" => {
+        let si = SingleInputStream::new_basic(id, false, false, None, Vec::new()).window(None, wsecond, wargs);
         State::stream_element(si)
     },
     <id:Ident> => {
@@ -825,7 +790,7 @@ STRING: String = {
 
 // Support both integer and floating-point numbers
 // Note: Must come before explicit "." token to take precedence
-FLOAT_NUMBER: f64 = { <r"[0-9]+\\.[0-9]+"> => <>.parse::<f64>().unwrap() };
+FLOAT_NUMBER: f64 = { <r"[0-9]+\.[0-9]+"> => <>.parse::<f64>().unwrap() };
 INT_NUMBER: i64 = { <r"[0-9]+"> => <>.parse::<i64>().unwrap() };
 
 NUMBER: f64 = {

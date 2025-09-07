@@ -9,7 +9,7 @@ async fn test_basic_sort_window() {
     let app = "\
         define stream In (price double, volume int);\n\
         define stream Out (price double, volume int);\n\
-        from In#sort(3) select price, volume insert into Out;\n";
+        from In#window:sort(3) select price, volume insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -42,7 +42,7 @@ async fn test_sort_window_with_parameters() {
     let app = "\
         define stream In (value int);\n\
         define stream Out (value int);\n\
-        from In#sort(2) select value insert into Out;\n";
+        from In#window:sort(2) select value insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -65,7 +65,7 @@ async fn test_sort_window_length_validation() {
     let app = "\
         define stream In (id int);\n\
         define stream Out (id int);\n\
-        from In#sort(1) select id insert into Out;\n";
+        from In#window:sort(1) select id insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -84,7 +84,7 @@ async fn test_sort_window_expiry() {
     let app = "\
         define stream In (value int);\n\
         define stream Out (value int);\n\
-        from In#sort(2) select value insert into Out;\n";
+        from In#window:sort(2) select value insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -109,7 +109,7 @@ async fn test_sort_window_ordering() {
     let app = "\
         define stream In (id int);\n\
         define stream Out (id int);\n\
-        from In#sort(3) select id insert into Out;\n";
+        from In#window:sort(3) select id insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 

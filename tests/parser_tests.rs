@@ -21,7 +21,7 @@ async fn test_length_window() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     runner.send("In", vec![AttributeValue::Int(2)]);

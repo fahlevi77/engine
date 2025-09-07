@@ -98,7 +98,7 @@ async fn partition_with_window() {
         define stream In (symbol string, v int);\n\
         define stream Out (v int);\n\
         partition with (symbol of In) begin \n\
-            from In#length(1) select v insert into Out;\n\
+            from In#window:length(1) select v insert into Out;\n\
         end;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send(

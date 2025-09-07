@@ -175,7 +175,7 @@ async fn test_yaml_config_to_runtime_integration() {
         define stream OutputStream (symbol string, avgPrice float, maxVolume int);
         
         @info(name = 'query1')
-        from InputStream#window.sort(5, price desc) 
+        from InputStream#window:sort(5, price desc) 
         select symbol, avg(price) as avgPrice, max(volume) as maxVolume
         group by symbol
         insert into OutputStream;

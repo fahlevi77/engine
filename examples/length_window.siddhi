@@ -1,5 +1,5 @@
 define stream InputStream (symbol string, price float);
 @info(name='len_window_query')
-from InputStream#window.length(3)
+from InputStream#window:length(3)
 select symbol, avg(price) as avgPrice
 insert into AvgPriceStream;

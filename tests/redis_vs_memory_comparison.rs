@@ -19,7 +19,7 @@ async fn test_memory_store_simple_works() {
         @app:name('TestApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
@@ -46,7 +46,7 @@ async fn test_memory_store_with_count_fails() {
         @app:name('TestApp')\n\
         define stream In (v int);\n\
         define stream Out (v int, count long);\n\
-        from In#length(3) select v, count() as count insert into Out;\n";
+        from In#window:length(3) select v, count() as count insert into Out;\n";
     
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     
@@ -108,7 +108,7 @@ async fn test_redis_store_debug() {
         @app:name('TestApp')\n\
         define stream In (v int);\n\
         define stream Out (v int, count long);\n\
-        from In#length(3) select v, count() as count insert into Out;\n";
+        from In#window:length(3) select v, count() as count insert into Out;\n";
     
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     

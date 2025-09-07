@@ -51,7 +51,7 @@ async fn test_redis_persistence_basic() {
         @app:name('RedisTestApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
@@ -79,7 +79,7 @@ async fn test_redis_length_window_state_persistence() {
         @app:name('RedisLengthWindowApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
@@ -112,7 +112,7 @@ async fn test_redis_persist_across_app_restarts() {
         @app:name('RedisRestartApp')\n\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     
     // First app instance
     let runner1 = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
@@ -148,8 +148,8 @@ async fn test_redis_multiple_windows_persistence() {
         define stream Out1 (id int, value double, count long);\n\
         define stream Out2 (total double, avg double);\n\
         \n\
-        from In#length(2) select id, value, count() as count insert into Out1;\n\
-        from In#lengthBatch(3) select sum(value) as total, avg(value) as avg insert into Out2;\n";
+        from In#window:length(2) select id, value, count() as count insert into Out1;\n\
+        from In#window:lengthBatch(3) select sum(value) as total, avg(value) as avg insert into Out2;\n";
     
     let runner = AppRunner::new_with_store(app, "Out1", Arc::clone(&store)).await;
     
@@ -196,7 +196,7 @@ async fn test_redis_aggregation_state_persistence() {
         define stream In (category string, value double);\n\
         define stream Out (category string, total double, count long);\n\
         \n\
-        from In#length(5) \n\
+        from In#window:length(5) \n\
         select category, sum(value) as total, count() as count \n\
         group by category \n\
         insert into Out;\n";

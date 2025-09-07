@@ -145,7 +145,7 @@ async fn test_length_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#length(2) select v insert into Out;\n";
+        from In#window:length(2) select v insert into Out;\n";
     let manager = SiddhiManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
@@ -194,7 +194,7 @@ async fn test_time_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#time(100) select v insert into Out;\n";
+        from In#window:time(100) select v insert into Out;\n";
     let manager = SiddhiManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
@@ -230,7 +230,7 @@ async fn test_length_batch_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#lengthBatch(2) select v insert into Out;\n";
+        from In#window:lengthBatch(2) select v insert into Out;\n";
     let manager = SiddhiManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
@@ -285,7 +285,7 @@ async fn test_time_batch_window_runtime() {
     let app = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
-        from In#timeBatch(100) select v insert into Out;\n";
+        from In#window:timeBatch(100) select v insert into Out;\n";
     let manager = SiddhiManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager

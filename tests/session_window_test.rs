@@ -8,7 +8,7 @@ async fn test_basic_session_window() {
     let app = "\
         define stream In (user string, value int);\n\
         define stream Out (user string, total int);\n\
-        from In#session(5000, user) select user, sum(value) as total group by user insert into Out;\n";
+        from In#window:session(5000, user) select user, sum(value) as total group by user insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -60,7 +60,7 @@ async fn test_default_session_key() {
     let app = "\
         define stream In (value int);\n\
         define stream Out (total int, count long);\n\
-        from In#session(3000) select sum(value) as total, count() as count insert into Out;\n";
+        from In#window:session(3000) select sum(value) as total, count() as count insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
@@ -82,7 +82,7 @@ async fn test_session_window_gap_validation() {
     let app = "\
         define stream In (id string, data int);\n\
         define stream Out (id string, count long);\n\
-        from In#session(1000) select id, count() as count group by id insert into Out;\n";
+        from In#window:session(1000) select id, count() as count group by id insert into Out;\n";
 
     let runner = AppRunner::new(app, "Out").await;
 
