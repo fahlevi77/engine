@@ -462,7 +462,11 @@ siddhi:
     }
     
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_config_manager_cache() {
+        // Ensure clean environment for this test
+        std::env::remove_var("SIDDHI_RUNTIME_MODE");
+        
         let manager = ConfigManager::new();
         
         // Initially no cache
