@@ -255,6 +255,22 @@ The ROADMAP.md file contains:
 
 **Do not guess or assume priorities - the roadmap is the single source of truth for what needs to be done next.**
 
+### New Engine Approach
+- **No Backward Compatibility**: Design optimal solutions without legacy constraints
+- **Clean Architecture**: Build modern, efficient implementations from scratch
+- **Best Practices**: Follow current industry standards and Rust idioms
+- **Performance First**: Prioritize performance and memory efficiency over compatibility
+
+### Git Commit Guidelines
+- **Never mention Claude or AI assistance** in commit messages
+- **No co-authored tags**: Do not include "Co-authored-by: Claude" or similar
+- **Focus on technical changes**: Describe what was implemented, not how
+- **Standard format**: Use conventional commit format
+- **Examples**: 
+  - `feat: implement Redis state backend with ThreadBarrier coordination`
+  - `fix: resolve window syntax parsing conflicts with float literals`
+  - `perf: optimize event pipeline with lock-free crossbeam queues`
+
 ### Performance-First Approach
 
 1. **Benchmark Everything**: Create benchmarks before optimization
@@ -820,5 +836,22 @@ Zstd: 274 bytes (4.3% of original) - 95.7% reduction
 - **Intelligent Algorithm Selection**: Based on data characteristics and size
 - **Lock-Free Design**: Non-blocking patterns prevent deadlocks
 - **Zero-Copy Operations**: When compression provides no benefit
+
+## CRITICAL: New Engine Development Philosophy
+
+**This is a new streaming engine, not a migration:**
+- No backward compatibility constraints - design optimal solutions
+- Focus on modern best practices and performance
+- Clean architecture without legacy baggage  
+- Never mention AI assistance or Claude in commits
+- Build the best possible CEP engine using Rust's advantages
+- Prioritize performance, safety, and developer experience
+
+**Implementation Approach:**
+- Design from first principles using Rust idioms
+- Leverage zero-cost abstractions and compile-time guarantees
+- Build enterprise-grade distributed systems capabilities
+- Focus on >1M events/sec performance targets
+- Maintain comprehensive test coverage and documentation
 
 Last Updated: 2025-08-11
