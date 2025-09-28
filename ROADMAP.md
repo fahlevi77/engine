@@ -1,5 +1,66 @@
 # Siddhi Rust Implementation Roadmap
 
+## 🔄 **MAJOR UPDATE**: Hybrid Parser Architecture Strategy
+
+**Date**: 2025-09-28
+**Decision**: Migrate from LALRPOP to hybrid sqlparser-rs + pattern parser approach
+**Status**: **REFINED** - Comprehensive technical analysis completed
+
+### **Parser Migration Timeline**
+
+#### **Phase 0: Proof of Concept (2-3 weeks)**
+- **Goal**: Validate hybrid approach with hands-on implementation
+- **Key Deliverables**:
+  - [ ] Custom `SiddhiDialect` for sqlparser-rs
+  - [ ] Basic DDL parsing (CREATE STREAM)
+  - [ ] Window clause parsing (WINDOW TUMBLING)
+  - [ ] Technical approach validation
+  - [ ] Refined timeline estimates
+
+#### **Phase 1: Hybrid Parser Foundation (Months 1-3)**
+- **Goal**: Implement dual-parser architecture with IR-centric design
+- **Key Deliverables**:
+  - [ ] sqlparser-rs with SiddhiDialect (90% of SQL syntax)
+  - [ ] Dedicated pattern parser (winnow/chumsky for CEP)
+  - [ ] Single normalized IR (LogicalPlan) both parsers target
+  - [ ] Basic SQL-first syntax (CREATE STREAM, SELECT, INSERT)
+  - [ ] Window operations (TUMBLING, SLIDING, SESSION)
+  - [ ] Dual parser support (legacy Siddhi + new SQL)
+  - [ ] EMIT CHANGES clause implementation
+
+#### **Phase 2: Semantic Analysis & Extensions (Months 4-6)**
+- **Goal**: Robust semantic validation and advanced features
+- **Key Deliverables**:
+  - [ ] Analyzer/Binder for semantic validation
+  - [ ] Type inference and checking across streams
+  - [ ] Function resolution with watermark propagation
+  - [ ] Advanced window functions with OVER clauses
+  - [ ] Pattern parser integration for CEP
+  - [ ] Stream-to-table joins with temporal predicates
+
+#### **Phase 3: Production & Optimization (Months 7-12)**
+- **Goal**: Production-ready parser with excellent developer experience
+- **Key Deliverables**:
+  - [ ] Curated MATCH_RECOGNIZE subset (not full implementation)
+  - [ ] Pattern compilation to NFA
+  - [ ] Query translation tools (SiddhiQL ↔ SQL)
+  - [ ] IDE integration and syntax highlighting
+  - [ ] Performance optimization (<10ms for 95% of queries)
+  - [ ] Production diagnostics with miette/ariadne
+
+### **Strategic Benefits of Hybrid Architecture**
+
+| Feature | Current (LALRPOP) | Future (Hybrid: sqlparser-rs + Pattern Parser) | Impact |
+|---------|-------------------|------------------------------------------------|---------|
+| **SQL Support** | ❌ No SQL precedence handling | ✅ Battle-tested SQL parser | 🚀 **MAJOR** - Full SQL compatibility without rebuilding |
+| **CEP Patterns** | ✅ Basic pattern support | ✅ Dedicated pattern parser | 🚀 **MAJOR** - Clean separation of concerns |
+| **Error Recovery** | ⚠️ Limited LR(1) recovery | ✅ Sophisticated hand-written recovery | 🚀 **MAJOR** - Production-quality error handling |
+| **Component Parsing** | ❌ Full context required | ✅ Fragment parsing naturally supported | 🔧 **HIGH** - IDE integration ready |
+| **Maintenance** | ⚠️ Complex grammar conflicts | ✅ Two focused parsers | 📖 **HIGH** - Easier to maintain and extend |
+| **Performance** | ✅ Fast LR(1) | ✅ Hand-optimized recursive descent | ⚡ **HIGH** - No LR(1) limitations |
+
+---
+
 This document tracks the implementation tasks for achieving **enterprise-grade CEP capabilities** with the Java version of Siddhi CEP. Based on comprehensive gap analysis, this roadmap prioritizes **foundational architecture** over individual features.
 
 ## Task Categories
@@ -374,7 +435,73 @@ Zstd: 274 bytes (4.3% of original) - 95.7% space reduction
   - ✅ `src/core/query/processor/stream/window/*_state_holder.rs` - **5 window state holders (V2 suffix removed)**
   - ✅ `src/core/query/selector/attribute/aggregator/*_state_holder.rs` - **6 aggregator state holders (V2 suffix removed)**
 
-#### **5. Comprehensive Monitoring & Metrics Framework**
+#### **5. Query Parser Migration: LALRPOP → Hybrid Architecture** 🔄 **NEW PRIORITY**
+- **Status**: 🔄 **REFINED** - Hybrid approach validated through technical analysis
+- **Current**: LALRPOP-based parser with limitations
+- **Target**: Hybrid sqlparser-rs + pattern parser with IR-centric design
+- **Strategic Impact**: **MAJOR** - Leverages battle-tested SQL parser + preserves CEP strengths
+
+**Phase 0: Proof of Concept (2-3 weeks)**:
+- [ ] **Technical Validation**
+  - [ ] Create custom `SiddhiDialect` extending sqlparser-rs
+  - [ ] Implement one DDL statement (CREATE STREAM)
+  - [ ] Implement one streaming clause (WINDOW TUMBLING)
+  - [ ] Validate integration challenges
+  - [ ] Refine implementation timeline
+
+**Phase 1: Foundation (Months 1-3)**:
+- [ ] **Hybrid Parser Architecture**
+  - [ ] sqlparser-rs with SiddhiDialect for SQL syntax (90%)
+  - [ ] Dedicated pattern parser (winnow/chumsky) for CEP (10%)
+  - [ ] Single normalized IR (LogicalPlan) as compilation target
+  - [ ] Basic SQL-first syntax (CREATE STREAM, SELECT, INSERT)
+  - [ ] Window operations with SQL WINDOW clause
+  - [ ] EMIT CHANGES clause implementation
+- [ ] **Runtime Function Registry**
+  - [ ] UDF registration without parser changes
+  - [ ] Namespace support (math:, string:, custom:)
+  - [ ] Dynamic function resolution at runtime
+- [ ] **Dual Mode Support**
+  - [ ] Keep LALRPOP parser for backward compatibility
+  - [ ] Automatic syntax detection (SQL vs Siddhi)
+  - [ ] Query translation utilities
+
+**Phase 2: Semantic Analysis (Months 4-6)**:
+- [ ] **Analyzer/Binder Implementation**
+  - [ ] Semantic validation beyond syntax
+  - [ ] Type inference and checking
+  - [ ] Function resolution and validation
+  - [ ] Watermark propagation
+  - [ ] Aggregation context validation
+- [ ] **Pattern Parser Integration**
+  - [ ] Dedicated CEP pattern parser
+  - [ ] Pattern compilation to NFA
+  - [ ] Integration with SQL components
+- [ ] **Advanced SQL Features**
+  - [ ] Window functions with OVER clauses
+  - [ ] Stream-to-table joins
+  - [ ] Subqueries and CTEs
+
+**Phase 3: Production Features (Months 7-12)**:
+- [ ] **Measured MATCH_RECOGNIZE**
+  - [ ] Curated subset (SEQ, WITHIN, DEFINE, MEASURES)
+  - [ ] Avoid over-ambitious full implementation
+  - [ ] Clear documentation of supported features
+- [ ] **IDE Integration**
+  - [ ] Fragment parsing for IDE support
+  - [ ] Syntax highlighting and autocomplete
+  - [ ] Query visualization tools
+- [ ] **Production Quality**
+  - [ ] Advanced diagnostics (miette/ariadne)
+  - [ ] Query translation tools
+  - [ ] Performance optimization (<10ms for 95% queries)
+
+- **Effort**: 7-12 months (Phase 0 + 3 implementation phases)
+- **Impact**: **TRANSFORMATIONAL** - SQL familiarity with preserved CEP excellence
+- **Architecture**: Two specialized parsers → Single IR → Runtime execution
+- **Files**: `src/query_compiler/sqlparser_dialect.rs`, `src/query_compiler/pattern_parser.rs`, `src/query_compiler/logical_plan.rs`
+
+#### **6. Comprehensive Monitoring & Metrics Framework**
 - **Status**: 🟠 **PARTIALLY IMPLEMENTED** - Crossbeam pipeline metrics completed, enterprise monitoring needed
 - **Current**: ✅ Complete crossbeam pipeline metrics + Basic global counters
 - **Completed for Pipeline**:
@@ -798,11 +925,37 @@ This milestone establishes Siddhi Rust as having **enterprise-grade state manage
 
 **Industry Examples**: Apache Flink, Spark Structured Streaming, and Kafka Streams all support S3 state backends for production deployments.
 
+## **🔄 Updated Implementation Priorities (Post Hybrid Parser Decision)**
+
+### **NEW Priority 1: Hybrid Parser Architecture** (Q1-Q4 2025)
+- **Strategic Impact**: **TRANSFORMATIONAL** - Leverages battle-tested SQL parser with preserved CEP strengths
+- **Timeline**: 7-12 months (2-3 week PoC + 3 implementation phases)
+- **Key Benefits**:
+  - ✅ Battle-tested SQL parsing without rebuilding from scratch
+  - ✅ Preserved CEP pattern matching strengths
+  - ✅ IR-centric design for runtime agnosticism
+  - ✅ Fragment parsing for IDE support
+  - ✅ SQL familiarity attracts broader developer audience
+  - ✅ Two focused parsers easier to maintain than one complex grammar
+
+### **Priority 2: Query Optimization Engine** (During Phase 2-3)
+- **Integration Point**: Can leverage IR from hybrid parser for optimization
+- **Impact**: 5-10x performance improvement for complex queries
+- **Timeline**: Can begin during Phase 2 of parser implementation
+
+### **Priority 3: Enterprise Security & Monitoring** (Parallel Implementation)
+- **Can Progress Independently**: Not dependent on parser migration
+- **Enterprise Readiness**: Required for production deployments
+- **Timeline**: Can begin immediately alongside parser work
+
+---
+
 ### 🟡 **PRIORITY 3: Developer Experience & Productivity**
 
-#### **1. Enhanced User-Defined Functions (UDFs)** 🔧
+#### **1. Enhanced User-Defined Functions (UDFs)** 🔧 **[MAJOR IMPROVEMENT WITH HYBRID PARSER]**
 - **Vision**: Make UDF development as simple as writing regular functions
-- **Target**: Best-in-class UDF development experience
+- **Target**: Best-in-class UDF development experience with zero grammar changes
+- **🆕 Hybrid Advantage**: sqlparser-rs handles function calls, runtime registry resolves them - no parser modifications needed
 - **Improvements**:
   - [ ] **Simplified UDF API**
     - Procedural macro for automatic registration
