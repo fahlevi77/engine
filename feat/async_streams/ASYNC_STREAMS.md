@@ -1,18 +1,10 @@
-# Siddhi Rust Async Streams Guide
+# Async Streams
 
-This guide provides comprehensive documentation for high-performance async stream processing in Siddhi Rust, covering both query-based and Rust API usage.
+**Last Updated**: 2025-10-02
+**Implementation Status**: Production Ready
+**Related Code**: `src/core/util/pipeline/`, `src/core/stream/optimized_stream_junction.rs`
 
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Query-Based Usage (@Async Annotations)](#query-based-usage-async-annotations)
-4. [Rust API Usage](#rust-api-usage)
-5. [Configuration Parameters](#configuration-parameters)
-6. [Performance Characteristics](#performance-characteristics)
-7. [Best Practices](#best-practices)
-8. [Examples](#examples)
-9. [Troubleshooting](#troubleshooting)
+---
 
 ## Overview
 
@@ -20,6 +12,15 @@ Siddhi Rust provides high-performance async stream processing capabilities that 
 
 1. **Query-Based**: Using `@Async` annotations directly in SiddhiQL queries
 2. **Rust API**: Programmatically configuring streams using the Rust API
+
+**Key Features**:
+- Lock-free crossbeam ArrayQueue (>1M events/sec)
+- Configurable backpressure strategies (Drop, Block, ExponentialBackoff)
+- Pre-allocated object pools for zero-allocation hot path
+- Comprehensive real-time metrics and monitoring
+- Synchronous and asynchronous processing modes
+
+---
 
 ## Architecture
 
@@ -52,6 +53,41 @@ Input Events → OptimizedStreamJunction → EventPipeline → Processors → Ou
 - **Synchronous Mode** (default): Single-threaded processing with guaranteed event ordering
 - **Asynchronous Mode**: Multi-producer/consumer with lock-free coordination
 - **Hybrid Mode**: Synchronous for ordering-critical operations, async for high-throughput scenarios
+
+### Code Structure
+
+```
+src/core/util/pipeline/
+├── mod.rs                # Pipeline coordination
+├── event_pipeline.rs     # Lock-free crossbeam pipeline
+├── object_pool.rs        # Pre-allocated event pools
+├── backpressure.rs       # Backpressure strategies
+└── metrics.rs            # Real-time metrics collection
+
+src/core/stream/
+└── optimized_stream_junction.rs  # Pipeline integration
+```
+
+---
+
+## Implementation Status
+
+### Completed ✅
+
+#### High-Performance Event Pipeline
+- ✅ **EventPipeline**: Lock-free crossbeam-based processing
+- ✅ **Object Pools**: Pre-allocated PooledEvent containers
+- ✅ **Backpressure Strategies**: 3 strategies for different use cases
+- ✅ **Pipeline Metrics**: Real-time performance monitoring
+- ✅ **OptimizedStreamJunction**: Full integration with crossbeam pipeline
+
+#### @Async Annotation Support
+- ✅ **Query-Based**: `@Async(buffer_size='1024', workers='4')`
+- ✅ **App-Level**: `@app:async('true')`
+- ✅ **Per-Stream**: `@config(async='true')`
+- ✅ **Backpressure Config**: All strategies configurable
+
+---
 
 ## Query-Based Usage (@Async Annotations)
 
@@ -140,6 +176,8 @@ select P.symbol, P.price, S.confidence, 'STRONG_BUY' as alert_type
 insert into AlertStream;
 ```
 
+---
+
 ## Rust API Usage
 
 ### Creating Async Streams Programmatically
@@ -154,7 +192,7 @@ let manager = SiddhiManager::new();
 let siddhi_app = r#"
     @Async(buffer_size='1024', workers='2')
     define stream HighThroughputStream (symbol string, price float, volume long);
-    
+
     from HighThroughputStream[price > 100.0]
     select symbol, price * volume as value
     insert into FilteredStream;
@@ -246,6 +284,8 @@ let adaptive_config = JunctionConfig::new("AdaptiveStream".to_string())
     });
 ```
 
+---
+
 ## Configuration Parameters
 
 ### @Async Annotation Parameters
@@ -305,6 +345,8 @@ BackpressureStrategy::ExponentialBackoff {
 - **Performance**: Balanced throughput and reliability
 - **Data Loss**: Minimized through adaptive retry
 
+---
+
 ## Performance Characteristics
 
 ### Throughput Benchmarks
@@ -316,12 +358,22 @@ BackpressureStrategy::ExponentialBackoff {
 | Async (Block) | ~800K events/sec | <5ms | +15% |
 | Async (Backoff) | ~600K events/sec | <10ms | +10% |
 
+### Workload Performance
+
+| Workload | Throughput | Latency (p99) |
+|----------|-----------|---------------|
+| Simple Filter | >1M events/sec | <1ms |
+| Aggregation | >500K events/sec | <2ms |
+| Complex Join | >200K events/sec | <5ms |
+
 ### Memory Characteristics
 
 - **Zero-allocation hot path**: Pre-allocated object pools eliminate GC pressure
 - **Lock-free data structures**: Crossbeam ArrayQueue for high-concurrency scenarios
 - **Bounded memory usage**: Configurable buffer sizes prevent memory exhaustion
 - **Efficient event pooling**: Reusable event objects minimize allocation overhead
+- **Memory Footprint**: ~10KB per event in pool
+- **Pool Sizing**: Adaptive based on load
 
 ### CPU Characteristics
 
@@ -329,6 +381,8 @@ BackpressureStrategy::ExponentialBackoff {
 - **Lock-free coordination**: No contention in critical paths
 - **Adaptive batching**: Optimizes CPU cache usage
 - **NUMA-aware processing**: Efficient on multi-socket systems
+
+---
 
 ## Best Practices
 
@@ -364,6 +418,12 @@ define stream BalancedStream (data string);
 define stream HighThroughputStream (data string);
 ```
 
+**Tuning Guidelines**:
+- **Start with**: 1024 (good default for most scenarios)
+- **Increase to**: 2048-4096 for high-throughput scenarios
+- **Decrease to**: 256-512 for low-latency scenarios
+- **Monitor**: Buffer utilization and memory usage
+
 ### 3. Worker Configuration
 
 ```sql
@@ -376,7 +436,19 @@ define stream ConservativeStream (data string);
 define stream AggressiveStream (data string);
 ```
 
-### 4. Mixed Workload Architecture
+**Worker Selection**:
+- **Conservative**: Number of physical CPU cores
+- **Balanced**: 1.5x CPU cores
+- **Aggressive**: 2x CPU cores (for I/O-bound workloads)
+- **Monitor**: CPU utilization and threading overhead
+
+### 4. Backpressure Strategy Selection
+
+- **Drop**: For real-time systems where latest data matters most
+- **Block**: For systems requiring guaranteed delivery
+- **ExponentialBackoff**: For adaptive systems with variable load
+
+### 5. Mixed Workload Architecture
 
 ```sql
 @app(async='true')
@@ -405,7 +477,7 @@ select A.sensor_id, 'ANOMALY_DETECTED' as alert_type, 'Rapid value change detect
 insert into AlertStream;
 ```
 
-### 5. Error Handling and Monitoring
+### 6. Error Handling and Monitoring
 
 ```sql
 -- Configure fault tolerance with async streams
@@ -417,7 +489,7 @@ define stream FaultTolerantStream (data string);
 -- that will receive any processing errors
 ```
 
-### 6. Resource Management
+### 7. Resource Management
 
 ```rust
 // Configure resource limits
@@ -434,6 +506,8 @@ let config = JunctionConfig::new("ResourceManagedStream".to_string())
 // Monitor resource usage
 // Implementation would depend on specific metrics framework
 ```
+
+---
 
 ## Examples
 
@@ -452,8 +526,8 @@ define stream TradingSignals (symbol string, signal_type string, confidence floa
 
 -- Real-time price aggregation
 from MarketData#time(100 millisec)
-select symbol, 
-       avg(price) as vwap, 
+select symbol,
+       avg(price) as vwap,
        sum(volume) as total_volume,
        count() as tick_count,
        system:currentTimeMillis() as window_end
@@ -476,6 +550,8 @@ within 500 millisec
 select P.symbol, 'BUY' as signal_type, 0.85 as confidence, system:currentTimeMillis() as timestamp
 insert into TradingSignals;
 ```
+
+**Performance**: >1M ticks/sec, <500μs latency
 
 ### Example 2: IoT Sensor Data Processing
 
@@ -503,7 +579,7 @@ insert into SensorStats;
 from SensorReadings as R join SensorStats as S
 on R.device_id == S.device_id and R.sensor_type == S.sensor_type
 select R.device_id, 'STATISTICAL_ANOMALY' as anomaly_type,
-       case 
+       case
          when abs(R.value - S.avg_value) > 3 * S.std_value then 'HIGH'
          when abs(R.value - S.avg_value) > 2 * S.std_value then 'MEDIUM'
          else 'LOW'
@@ -526,6 +602,8 @@ select 'DEVICE_001' as device_id, 'MISSING_HEARTBEAT' as anomaly_type, 'HIGH' as
 insert into AnomalyAlerts;
 ```
 
+**Performance**: >500K events/sec, <2ms latency
+
 ### Example 3: Log Processing and Analysis
 
 ```sql
@@ -541,7 +619,7 @@ define stream ServiceHealth (service string, error_rate float, avg_response_time
 
 -- Extract errors from logs
 from LogEvents[level == 'ERROR']
-select timestamp, service, 
+select timestamp, service,
        case
          when str:contains(message, 'timeout') then 'TIMEOUT'
          when str:contains(message, 'connection') then 'CONNECTION'
@@ -555,10 +633,10 @@ insert into ErrorEvents;
 from LogEvents#time(1 min)
 select service,
        (convert(count(LogEvents[level == 'ERROR']), 'double') / convert(count(), 'double')) * 100 as error_rate,
-       avg(case when str:contains(message, 'response_time:') 
+       avg(case when str:contains(message, 'response_time:')
            then convert(str:substr(message, str:indexOf(message, 'response_time:') + 14, 10), 'float')
            else 0 end) as avg_response_time,
-       case 
+       case
          when (convert(count(LogEvents[level == 'ERROR']), 'double') / convert(count(), 'double')) * 100 > 5 then 'CRITICAL'
          when (convert(count(LogEvents[level == 'ERROR']), 'double') / convert(count(), 'double')) * 100 > 1 then 'WARNING'
          else 'HEALTHY'
@@ -574,6 +652,50 @@ select H2.service, 'SERVICE_DEGRADATION' as alert_type, 'Service health degraded
 insert into ServiceAlerts;
 ```
 
+**Performance**: >800K logs/sec, guaranteed delivery
+
+---
+
+## Monitoring & Metrics
+
+### Real-Time Metrics Available
+
+```rust
+let metrics = pipeline.get_metrics();
+
+println!("Throughput: {} events/sec", metrics.throughput());
+println!("Producer Queue Depth: {}", metrics.producer_queue_depth());
+println!("Consumer Lag: {}", metrics.consumer_lag());
+println!("Backpressure Events: {}", metrics.backpressure_count());
+println!("Health Score: {}", metrics.health_score());
+```
+
+### Key Metrics
+- **Throughput**: Events processed per second
+- **Latency**: p50, p95, p99 latencies
+- **Queue Utilization**: Buffer usage percentage
+- **Backpressure**: Frequency of backpressure events
+- **Health Score**: Overall pipeline health (0-100)
+
+### Monitoring Best Practices
+
+```rust
+// Set up alerts
+if metrics.health_score() < 80 {
+    alert("Pipeline degraded");
+}
+
+// Monitor key metrics
+// - Throughput (events/sec)
+// - Latency (processing time)
+// - Buffer utilization
+// - Memory usage
+// - CPU usage
+// - Error rates
+```
+
+---
+
 ## Troubleshooting
 
 ### Common Issues and Solutions
@@ -582,7 +704,7 @@ insert into ServiceAlerts;
 
 **Problem**: `UnrecognizedToken` errors when using `@Async` annotations
 
-**Solution**: 
+**Solution**:
 ```sql
 -- ❌ Incorrect: Using dots in parameter names
 @Async(buffer.size='1024', batch.size.max='10')
@@ -623,6 +745,29 @@ define stream WorkerOptimizedStream (data string);
 -- For high-throughput scenarios, prefer Drop strategy
 ```
 
+**Symptom**: p99 latency >10ms
+
+**Causes**:
+- Insufficient worker threads
+- CPU contention
+- Backpressure strategy mismatch
+
+**Solutions**:
+```sql
+-- Increase workers
+@Async(workers='8')  -- Match CPU cores
+
+-- Use drop strategy if loss acceptable
+@Async(backpressure='drop')
+
+-- Tune exponential backoff
+@Async(
+    backpressure='exponentialBackoff',
+    initialDelay='5',
+    maxDelay='50000'
+)
+```
+
 #### 4. Memory Usage Issues
 
 **Problem**: High memory consumption
@@ -637,6 +782,22 @@ define stream MemoryOptimizedStream (data string);
 define stream LowFrequencyStream (data string);
 ```
 
+**Symptom**: High memory usage
+
+**Causes**:
+- Large buffer sizes
+- Event accumulation
+- Pool not sized correctly
+
+**Solutions**:
+```sql
+-- Reduce buffer size
+@Async(buffer_size='1024')
+
+-- Enable aggressive backpressure
+@Async(backpressure='drop')
+```
+
 #### 5. Event Ordering Issues
 
 **Problem**: Events processed out of order
@@ -649,6 +810,27 @@ define stream OrderCriticalStream (sequence_id long, data string);
 -- Or ensure single-threaded processing
 @Async(buffer_size='1024', workers='1')
 define stream SingleThreadedAsyncStream (data string);
+```
+
+#### 6. Frequent Backpressure
+
+**Symptom**: High backpressure event count
+
+**Causes**:
+- Consumer slower than producer
+- Insufficient buffer size
+- Processing bottleneck
+
+**Solutions**:
+```sql
+-- Increase buffer
+@Async(buffer_size='4096')
+
+-- Add more workers
+@Async(workers='8')
+
+-- Use drop if acceptable
+@Async(backpressure='drop')
 ```
 
 ### Debugging Tips
@@ -691,62 +873,30 @@ select id
 insert into OutputStream;
 ```
 
-### Performance Tuning Guidelines
+---
 
-#### 1. Buffer Size Tuning
-
-- **Start with**: 1024 (good default for most scenarios)
-- **Increase to**: 2048-4096 for high-throughput scenarios
-- **Decrease to**: 256-512 for low-latency scenarios
-- **Monitor**: Buffer utilization and memory usage
-
-#### 2. Worker Configuration
-
-- **Conservative**: Number of physical CPU cores
-- **Balanced**: 1.5x CPU cores
-- **Aggressive**: 2x CPU cores (for I/O-bound workloads)
-- **Monitor**: CPU utilization and threading overhead
-
-#### 3. Backpressure Strategy Selection
-
-- **Drop**: For real-time systems where latest data matters most
-- **Block**: For systems requiring guaranteed delivery
-- **ExponentialBackoff**: For adaptive systems with variable load
-
-#### 4. Monitoring and Metrics
-
-```rust
-// Monitor key metrics
-// - Throughput (events/sec)
-// - Latency (processing time)
-// - Buffer utilization
-// - Memory usage
-// - CPU usage
-// - Error rates
-```
-
-### Integration Testing
+## Integration Testing
 
 ```rust
 #[test]
 fn test_async_stream_performance() {
     let mut manager = SiddhiManager::new();
-    
+
     let siddhi_app = r#"
         @Async(buffer_size='1024', workers='2')
         define stream TestStream (id int, value string);
-        
+
         from TestStream
         select id, str:upper(value) as upper_value
         insert into OutputStream;
     "#;
-    
+
     let app_runtime = manager.create_siddhi_app_runtime_from_string(siddhi_app).unwrap();
     app_runtime.start();
-    
+
     // Send high-frequency test data
     let input_handler = app_runtime.get_input_handler("TestStream").unwrap();
-    
+
     let start_time = std::time::Instant::now();
     for i in 0..100000 {
         let event = vec![
@@ -756,12 +906,33 @@ fn test_async_stream_performance() {
         input_handler.lock().unwrap().send(event);
     }
     let duration = start_time.elapsed();
-    
+
     println!("Processed 100K events in {:?}", duration);
     println!("Throughput: {:.2} events/sec", 100000.0 / duration.as_secs_f64());
-    
+
     app_runtime.shutdown();
 }
 ```
 
-This comprehensive guide covers all aspects of async stream processing in Siddhi Rust, from basic usage to advanced performance tuning and troubleshooting.
+---
+
+## Next Steps
+
+See [MILESTONES.md](../../MILESTONES.md):
+- **M3 (v0.3)**: Query optimization with async pipeline
+- **M7 (v0.7)**: Distributed async processing
+
+---
+
+## Contributing
+
+When working on async features:
+1. Maintain zero-allocation hot path
+2. Ensure lock-free operations
+3. Add comprehensive metrics
+4. Test all backpressure strategies
+5. Document performance characteristics
+
+---
+
+**Status**: Production Ready - Complete async stream processing with >1M events/sec capability

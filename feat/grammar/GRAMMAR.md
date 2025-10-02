@@ -1,3 +1,75 @@
+# Grammar & Parser
+
+**Last Updated**: 2025-10-02
+**Implementation Status**: Hybrid Parser Strategy Planned
+**Related Code**: `src/query_compiler/grammar.lalrpop`, `src/query_api/`
+
+---
+
+## Overview
+
+Siddhi Rust's query language parser and grammar design, evolving from LALRPOP-based SiddhiQL to a hybrid SQL-first approach using sqlparser-rs.
+
+**Current Status**:
+- ✅ **LALRPOP Parser**: Complete SiddhiQL grammar implementation
+- ✅ **AST Structures**: Full query API with all constructs
+- ✅ **Pattern Syntax**: Basic pattern matching support
+- ✅ **Window Syntax**: Colon separator (redesigned from dot)
+
+**Future Direction**:
+- 📋 **sqlparser-rs Integration**: Custom SiddhiDialect for SQL compatibility
+- 📋 **Hybrid Architecture**: sqlparser-rs (90%) + dedicated pattern parser (10%)
+- 📋 **Dual Parser Support**: Auto-detect SQL vs SiddhiQL during transition
+- 📋 **Backward Compatibility**: Maintain LALRPOP parser for existing queries
+
+---
+
+## Implementation Status
+
+### Current (v0.0) ✅
+- ✅ **LALRPOP Parser**: Complete SiddhiQL grammar
+- ✅ **AST Structures**: Full query API with all constructs
+- ✅ **Pattern Syntax**: Basic pattern matching support
+- ✅ **Window Syntax**: Colon separator (redesigned from dot)
+
+### Planned (M1 - v0.1) 📋
+- [ ] **sqlparser-rs Integration**: Custom SiddhiDialect
+- [ ] **SQL Syntax**: CREATE STREAM, SELECT, INSERT, WINDOW, EMIT
+- [ ] **Dual Parser**: Auto-detect SQL vs SiddhiQL
+- [ ] **Backward Compatibility**: Keep LALRPOP parser
+
+### Future (M8 - v0.8) 📋
+- [ ] **Advanced SQL**: HAVING, LIMIT, CTEs, Window Functions (OVER)
+- [ ] **Pattern Parser**: Dedicated CEP pattern parser (winnow/chumsky)
+- [ ] **MATCH_RECOGNIZE**: Curated subset for CEP
+- [ ] **IDE Integration**: Fragment parsing, syntax highlighting
+
+---
+
+## Code Structure
+
+### Current Parser
+```
+src/query_compiler/
+├── grammar.lalrpop           # LALRPOP grammar definition
+├── mod.rs                    # Parser module
+└── parser.rs                 # Generated parser code
+```
+
+### Query API (AST)
+```
+src/query_api/
+├── query/                    # Query structures
+├── definition/               # Stream/table definitions
+├── execution/                # Execution elements
+├── expression/               # Expressions and conditions
+├── aggregation/              # Aggregation elements
+├── pattern/                  # Pattern matching
+└── window/                   # Window definitions
+```
+
+---
+
 # Siddhi Rust Grammar Analysis: Parser Technology Evaluation and Implementation Options
 
 ## 🔄 **Parser Selection Analysis**: Comprehensive Technical Evaluation
