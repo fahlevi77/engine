@@ -9,9 +9,10 @@ use std::time::Duration;
 #[tokio::test]
 async fn concurrent_sends() {
     let app = "\
-        define stream In (v int);\n\
-        define stream Out (v int);\n\
-        from In select v insert into Out;\n";
+        CREATE STREAM In (v INT);\n\
+        CREATE STREAM Out (v INT);\n\
+        INSERT INTO Out\n\
+        SELECT v FROM In;\n";
     let runner = Arc::new(AppRunner::new(app, "Out").await);
     let mut handles = Vec::new();
     for i in 0..4 {

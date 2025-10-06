@@ -5,7 +5,6 @@ use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
 use siddhi_rust::core::siddhi_manager::SiddhiManager;
 use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
 use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -32,9 +31,8 @@ pub struct AppRunner {
 impl AppRunner {
     pub async fn new(app_string: &str, out_stream: &str) -> Self {
         let manager = SiddhiManager::new();
-        let app = parse(app_string).expect("parse");
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_siddhi_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -135,9 +133,8 @@ impl AppRunner {
     }
 
     pub async fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
-        let app = parse(app_string).expect("parse");
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_siddhi_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -164,9 +161,8 @@ impl AppRunner {
     ) -> Self {
         let manager = SiddhiManager::new();
         manager.set_persistence_store(store);
-        let app = parse(app_string).expect("parse");
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_siddhi_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));

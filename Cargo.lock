@@ -2756,6 +2756,7 @@ dependencies = [
  "serde_yaml",
  "serial_test",
  "snap",
+ "sqlparser",
  "tempfile",
  "thiserror 1.0.69",
  "thread_local",
@@ -2820,6 +2821,15 @@ checksum = "233504af464074f9d066d7b5416c5f9b894a5862a6506e306f7b816cdd6f1807"
 dependencies = [
  "libc",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "sqlparser"
+version = "0.39.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "743b4dc2cbde11890ccb254a8fc9d537fa41b36da00de2a1c5e9848c9bc42bd7"
+dependencies = [
+ "log",
 ]
 
 [[package]]

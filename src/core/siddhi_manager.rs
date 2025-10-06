@@ -5,10 +5,9 @@ use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
 // SiddhiAppContext is created by SiddhiAppRuntime::new or its internal parser logic
 // use crate::core::config::siddhi_app_context::SiddhiAppContext;
 
-// Use query_compiler::parse (which currently returns Err for actual parsing)
+// Use SQL compiler for parsing (sqlparser-rs based)
 use crate::core::executor::ScalarFunctionExecutor; // Added for UDFs
 use crate::core::DataSource;
-use crate::query_compiler::parse as parse_siddhi_ql_string_to_api_app; // Added for data sources
                                                                        // Placeholder for actual persistence store trait/type
 use crate::core::config::{ConfigManager, SiddhiConfig, ApplicationConfig};
 use crate::core::config::siddhi_context::ExtensionClassPlaceholder;
@@ -67,11 +66,19 @@ impl SiddhiManager {
         &self,
         siddhi_app_string: &str,
     ) -> Result<Arc<SiddhiAppRuntime>, String> {
-        // 1. Parse string to ApiSiddhiApp (using query_compiler)
-        let api_siddhi_app = parse_siddhi_ql_string_to_api_app(siddhi_app_string)?; // This currently returns Err
+        // 1. Parse SQL string to SqlApplication (using sql_compiler)
+        let sql_app = crate::sql_compiler::parse_sql_application(siddhi_app_string)
+            .map_err(|e| format!("SQL parse error: {}", e))?;
+
+        // 2. Convert to SiddhiApp
+        let app_name = sql_app.catalog.get_stream_names()
+            .first()
+            .map(|s| format!("App_{}", s))
+            .unwrap_or_else(|| "SiddhiApp".to_string());
+        let api_siddhi_app = sql_app.to_siddhi_app(app_name);
         let api_siddhi_app_arc = Arc::new(api_siddhi_app);
 
-        // 2. Create runtime from ApiSiddhiApp
+        // 3. Create runtime from ApiSiddhiApp
         self.create_siddhi_app_runtime_from_api(
             api_siddhi_app_arc,
             Some(siddhi_app_string.to_string()),
@@ -346,7 +353,17 @@ impl SiddhiManager {
 
     // --- Validation ---
     pub fn validate_siddhi_app_string(&self, siddhi_app_string: &str) -> Result<(), String> {
-        let api_siddhi_app = parse_siddhi_ql_string_to_api_app(siddhi_app_string)?;
+        // Parse SQL string to SqlApplication
+        let sql_app = crate::sql_compiler::parse_sql_application(siddhi_app_string)
+            .map_err(|e| format!("SQL parse error: {}", e))?;
+
+        // Convert to SiddhiApp
+        let app_name = sql_app.catalog.get_stream_names()
+            .first()
+            .map(|s| format!("App_{}", s))
+            .unwrap_or_else(|| "SiddhiApp".to_string());
+        let api_siddhi_app = sql_app.to_siddhi_app(app_name);
+
         self.validate_siddhi_app_api(
             &Arc::new(api_siddhi_app),
             Some(siddhi_app_string.to_string()),
@@ -413,6 +430,43 @@ impl SiddhiManager {
                 }
             }
         }
+    }
+
+    /// Level 3 API: Create SiddhiAppRuntime from SQL application string
+    ///
+    /// This is the high-level API for creating a runtime directly from SQL.
+    /// Internally uses the SQL compiler to parse and convert to SiddhiApp.
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let manager = SiddhiManager::new();
+    /// let sql = r#"
+    ///     CREATE STREAM StockStream (symbol VARCHAR, price DOUBLE);
+    ///
+    ///     SELECT symbol, price
+    ///     FROM StockStream
+    ///     WHERE price > 100;
+    /// "#;
+    ///
+    /// let runtime = manager.create_runtime_from_sql(sql, Some("MyApp".to_string())).await?;
+    /// runtime.start();
+    /// ```
+    pub async fn create_runtime_from_sql(
+        &self,
+        sql: &str,
+        app_name: Option<String>,
+    ) -> Result<Arc<SiddhiAppRuntime>, String> {
+        // Parse SQL application
+        let sql_app = crate::sql_compiler::parse_sql_application(sql)
+            .map_err(|e| format!("SQL parse error: {}", e))?;
+
+        // Convert to SiddhiApp
+        let app_name = app_name.unwrap_or_else(|| "SqlApp".to_string());
+        let siddhi_app = sql_app.to_siddhi_app(app_name);
+
+        // Create runtime using existing method
+        self.create_siddhi_app_runtime_from_api(Arc::new(siddhi_app), Some(sql.to_string()))
+            .await
     }
 }
 

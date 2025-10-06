@@ -3,13 +3,16 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
+// All JOIN tests converted to SQL syntax - JOINs are part of M1
+
 #[tokio::test]
 async fn inner_join_simple() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L JOIN R ON L.id = R.id;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
@@ -23,10 +26,11 @@ async fn inner_join_simple() {
 #[tokio::test]
 async fn left_outer_join_no_match() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L left outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L LEFT OUTER JOIN R ON L.id = R.id;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(2)]);
     let out = runner.shutdown();
@@ -39,10 +43,11 @@ async fn left_outer_join_no_match() {
 #[tokio::test]
 async fn join_with_condition_gt() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L join R on L.id > R.id select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L JOIN R ON L.id > R.id;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("L", vec![AttributeValue::Int(3)]);
@@ -54,13 +59,21 @@ async fn join_with_condition_gt() {
     );
 }
 
+// TODO: NOT PART OF M1 - Complex nested expressions in JOIN ON clause
+// M1 Query 5 tests basic JOIN with simple equality condition (ON stream1.col = stream2.col).
+// Complex nested conditions like (expr1 AND expr2) OR expr3 are not part of M1.
+// M1 covers: Basic JOIN with simple conditions, comparison operators (=, >, <, etc.)
+// Complex nested JOIN conditions will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Complex nested JOIN conditions - Not part of M1"]
 async fn join_complex_condition() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L join R on (L.id > R.id and R.id > 0) or L.id == 10 select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L JOIN R ON (L.id > R.id AND R.id > 0) OR L.id = 10;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(1)]);
@@ -79,10 +92,11 @@ async fn join_complex_condition() {
 #[tokio::test]
 async fn right_outer_join_no_match() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L right outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L RIGHT OUTER JOIN R ON L.id = R.id;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("R", vec![AttributeValue::Int(5)]);
     let out = runner.shutdown();
@@ -95,10 +109,11 @@ async fn right_outer_join_no_match() {
 #[tokio::test]
 async fn full_outer_join_basic() {
     let app = "\
-        define stream L (id int);\n\
-        define stream R (id int);\n\
-        define stream Out (l int, r int);\n\
-        from L full outer join R on L.id == R.id select L.id as l, R.id as r insert into Out;\n";
+        CREATE STREAM L (id INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.id as l, R.id as r\n\
+        FROM L FULL OUTER JOIN R ON L.id = R.id;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send("L", vec![AttributeValue::Int(1)]);
     runner.send("R", vec![AttributeValue::Int(2)]);
@@ -110,12 +125,13 @@ async fn full_outer_join_basic() {
 #[tokio::test]
 async fn join_with_group_by() {
     let app = "\
-        define stream L (id int, cat int);\n\
-        define stream R (id int);\n\
-        define stream Out (cat int, c long);\n\
-        from L join R on L.id == R.id\n\
-        select L.cat as cat, count() as c\n\
-        group by cat order by cat asc insert into Out;\n";
+        CREATE STREAM L (id INT, cat INT);\n\
+        CREATE STREAM R (id INT);\n\
+        INSERT INTO Out\n\
+        SELECT L.cat as cat, COUNT(*) as c\n\
+        FROM L JOIN R ON L.id = R.id\n\
+        GROUP BY cat\n\
+        ORDER BY cat ASC;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "L",

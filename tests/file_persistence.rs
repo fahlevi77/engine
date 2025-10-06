@@ -13,10 +13,10 @@ async fn persist_restore_file_store() {
     let dir = tempdir().unwrap();
     let store: Arc<dyn PersistenceStore> = Arc::new(FilePersistenceStore::new(dir.path()).unwrap());
     let app = "\
-        @app:name('PersistApp')\n\
-        define stream In (v int);\n\
-        define stream Out (v int);\n\
-        from In#window:length(2) select v insert into Out;\n";
+        CREATE STREAM In (v INT);\n\
+        CREATE STREAM Out (v INT);\n\
+        INSERT INTO Out\n\
+        SELECT v FROM In WINDOW length(2);\n";
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();
@@ -32,10 +32,10 @@ async fn persist_restore_sqlite_store() {
     let store: Arc<dyn PersistenceStore> =
         Arc::new(SqlitePersistenceStore::new(file.path()).unwrap());
     let app = "\
-        @app:name('PersistApp')\n\
-        define stream In (v int);\n\
-        define stream Out (v int);\n\
-        from In#window:length(2) select v insert into Out;\n";
+        CREATE STREAM In (v INT);\n\
+        CREATE STREAM Out (v INT);\n\
+        INSERT INTO Out\n\
+        SELECT v FROM In WINDOW length(2);\n";
     let runner = AppRunner::new_with_store(app, "Out", Arc::clone(&store)).await;
     runner.send("In", vec![AttributeValue::Int(1)]);
     let rev = runner.persist();

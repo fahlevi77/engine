@@ -3,7 +3,14 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
+// TODO: NOT PART OF M1 - Pattern/Sequence matching not in M1
+// This test uses pattern sequence syntax ("from A -> B") which is an advanced CEP feature.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Pattern matching and sequence processing will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
+// NOTE: Tests using programmatic API (not parser) like kleene_star_pattern still work.
 #[tokio::test]
+#[ignore = "Requires PATTERN/SEQUENCE syntax - Not part of M1"]
 async fn sequence_basic() {
     let app = "\
         define stream AStream (val int);\n\
@@ -25,7 +32,14 @@ async fn sequence_basic() {
     );
 }
 
+// TODO: NOT PART OF M1 - Pattern/Sequence matching not in M1
+// This test uses pattern sequence syntax ("from every A -> B") which is an advanced CEP feature.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Pattern matching and sequence processing will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
+// NOTE: Tests using programmatic API (not parser) like kleene_star_pattern still work.
 #[tokio::test]
+#[ignore = "Requires PATTERN/SEQUENCE syntax - Not part of M1"]
 async fn every_sequence() {
     let app = "\
         define stream A (val int);\n\

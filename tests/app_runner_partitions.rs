@@ -3,7 +3,13 @@ mod common;
 use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 
+// TODO: NOT PART OF M1 - PARTITION feature not in M1
+// This test uses "partition with" syntax which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Partition support will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires PARTITION support - Not part of M1"]
 async fn partition_forward() {
     let app = "\
         define stream InStream (symbol string, volume int);\n\
@@ -35,7 +41,13 @@ async fn partition_forward() {
     );
 }
 
+// TODO: NOT PART OF M1 - PARTITION feature not in M1
+// This test uses "partition with" syntax which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Partition support will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires PARTITION support - Not part of M1"]
 async fn partition_sum_by_symbol() {
     let app = "\
         define stream InStream (symbol string, volume int);\n\
@@ -67,7 +79,13 @@ async fn partition_sum_by_symbol() {
     );
 }
 
+// TODO: NOT PART OF M1 - PARTITION feature not in M1
+// This test uses "partition with" syntax which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Partition support will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires PARTITION support - Not part of M1"]
 async fn partition_join_streams() {
     let app = "\
         define stream A (symbol string, v int);\n\
@@ -92,7 +110,13 @@ async fn partition_join_streams() {
     );
 }
 
+// TODO: NOT PART OF M1 - PARTITION feature not in M1
+// This test uses "partition with" syntax which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Partition support will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires PARTITION support - Not part of M1"]
 async fn partition_with_window() {
     let app = "\
         define stream In (symbol string, v int);\n\

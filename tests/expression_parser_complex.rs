@@ -1,3 +1,6 @@
+// NOTE: Some tests at the end of this file use old SiddhiQL syntax and are disabled for M1.
+// Tests using programmatic API (not parser) remain enabled and passing.
+
 use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
 use siddhi_rust::core::config::siddhi_context::SiddhiContext;
 use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
@@ -662,7 +665,12 @@ fn test_pattern_query_parsing_from_string() {
     assert!(res.is_ok());
 }
 
+// TODO: NOT PART OF M1 - Old SiddhiQL syntax
+// This test uses "define stream" and old JOIN syntax which is not supported by SQL parser.
+// M1 covers JOINs but via SQL syntax. See app_runner_joins.rs for SQL JOIN tests.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn test_app_runner_join_via_app_runner() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
@@ -758,7 +766,13 @@ async fn test_app_runner_table_in_lookup() {
     );
 }
 
+// TODO: NOT PART OF M1 - Old SiddhiQL syntax for custom UDF
+// This test uses "define stream" and old query syntax.
+// Custom UDF functionality works (see test_custom_udf_plus_one above), but SQL syntax for
+// custom functions is not part of M1.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn test_app_runner_custom_udf() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
@@ -834,7 +848,12 @@ async fn test_app_runner_custom_udf() {
     assert_eq!(out, vec![vec![AttributeValue::Int(5)]]);
 }
 
+// TODO: NOT PART OF M1 - Old SiddhiQL syntax
+// This test uses "define stream" and old JOIN syntax which is not supported by SQL parser.
+// M1 covers JOINs but via SQL syntax. See app_runner_joins.rs for SQL JOIN tests.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn app_runner_join_variable_resolution() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;
@@ -854,7 +873,12 @@ async fn app_runner_join_variable_resolution() {
     );
 }
 
+// TODO: NOT PART OF M1 - Old SiddhiQL pattern syntax
+// This test uses "define stream" and pattern sequence syntax ("A -> B") which is not supported
+// by SQL parser. Pattern matching is not part of M1.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Pattern syntax not part of M1"]
 async fn app_runner_pattern_variable_resolution() {
     use common::AppRunner;
     use siddhi_rust::core::event::value::AttributeValue;

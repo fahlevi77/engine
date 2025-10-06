@@ -1,3 +1,7 @@
+// TODO: NOT PART OF M1 - All variable access tests use old SiddhiQL syntax
+// Tests use "define stream", "define table", "define aggregation" which are not supported by SQL parser.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
+
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
@@ -5,6 +9,7 @@ use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::query_api::aggregation::time_period::Duration;
 
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn variable_from_window() {
     let app = "\
         define stream In (v int);\n\
@@ -17,6 +22,7 @@ async fn variable_from_window() {
 }
 
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn variable_from_aggregation() {
     let app = "\
         define stream In (value int);\n\
@@ -34,6 +40,7 @@ async fn variable_from_aggregation() {
 }
 
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn window_variable_access() {
     // Simplified test using stream window instead of define window
     let app = "\
@@ -51,6 +58,7 @@ async fn window_variable_access() {
 }
 
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn table_variable_access() {
     // Simplified test without table join for now - just basic table functionality
     let app = "\
@@ -68,6 +76,7 @@ async fn table_variable_access() {
 }
 
 #[tokio::test]
+#[ignore = "Old SiddhiQL syntax not part of M1"]
 async fn aggregation_variable_access() {
     // Simplified test without aggregation for now - just basic value passing
     let app = "\

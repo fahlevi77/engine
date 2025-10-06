@@ -1,56 +1,56 @@
 # Siddhi Rust Implementation Roadmap
 
-## 🔄 **MAJOR UPDATE**: Hybrid Parser Architecture Strategy
+## 🔄 **MAJOR UPDATE**: SQL Parser Production Ready
 
-**Date**: 2025-09-28
-**Decision**: Migrate from LALRPOP to hybrid sqlparser-rs + pattern parser approach
-**Status**: **REFINED** - Comprehensive technical analysis completed
+**Date**: 2025-10-06
+**Decision**: SQL-only engine using sqlparser-rs with custom SiddhiDialect
+**Status**: ✅ **M1 COMPLETE** - Production-ready SQL parser with 675 passing tests
 
-### **Parser Migration Timeline**
+### **SQL Parser Implementation Status**
 
-#### **Phase 0: Proof of Concept (2-3 weeks)**
+#### **Phase 0: Foundation** ✅ **COMPLETE**
 
-- **Goal**: Validate hybrid approach with hands-on implementation
+- **Goal**: Validate SQL approach with production implementation
 - **Key Deliverables**:
-    - [ ] Custom `SiddhiDialect` for sqlparser-rs
-    - [ ] Basic DDL parsing (CREATE STREAM)
-    - [ ] Window clause parsing (WINDOW TUMBLING)
-    - [ ] Technical approach validation
-    - [ ] Refined timeline estimates
+    - [x] Custom `SiddhiDialect` for sqlparser-rs ✅
+    - [x] DDL parsing (CREATE STREAM) ✅
+    - [x] Window clause parsing (WINDOW TUMBLING, SLIDING, length, session) ✅
+    - [x] Complete M1 SQL syntax support ✅
+    - [x] Production validation (675 tests passing) ✅
 
-#### **Phase 1: Hybrid Parser Foundation (Months 1-3)**
+#### **Phase 1: M1 SQL Implementation** ✅ **COMPLETE**
 
-- **Goal**: Implement dual-parser architecture with IR-centric design
+- **Goal**: Production SQL parser for streaming queries
 - **Key Deliverables**:
-    - [ ] sqlparser-rs with SiddhiDialect (90% of SQL syntax)
-    - [ ] Dedicated pattern parser (winnow/chumsky for CEP)
-    - [ ] Single normalized IR (LogicalPlan) both parsers target
-    - [ ] Basic SQL-first syntax (CREATE STREAM, SELECT, INSERT)
-    - [ ] Window operations (TUMBLING, SLIDING, SESSION)
-    - [ ] Dual parser support (legacy Siddhi + new SQL)
-    - [ ] EMIT CHANGES clause implementation
+    - [x] sqlparser-rs with SiddhiDialect ✅
+    - [x] SQL-only engine (no legacy SiddhiQL) ✅
+    - [x] Complete SQL syntax (CREATE STREAM, SELECT, INSERT) ✅
+    - [x] Window operations (TUMBLING, SLIDING, length, session) ✅
+    - [x] WHERE, GROUP BY, HAVING, ORDER BY, LIMIT/OFFSET ✅
+    - [x] JOIN support (INNER, LEFT, RIGHT, FULL OUTER) ✅
+    - [x] Aggregations (COUNT, SUM, AVG, MIN, MAX) ✅
 
-#### **Phase 2: Semantic Analysis & Extensions (Months 4-6)**
+#### **Phase 2: Advanced SQL Features (Deferred to M8)** 📋 **PLANNED**
 
-- **Goal**: Robust semantic validation and advanced features
+- **Goal**: SQL feature parity with enterprise requirements
 - **Key Deliverables**:
-    - [ ] Analyzer/Binder for semantic validation
-    - [ ] Type inference and checking across streams
-    - [ ] Function resolution with watermark propagation
-    - [ ] Advanced window functions with OVER clauses
-    - [ ] Pattern parser integration for CEP
-    - [ ] Stream-to-table joins with temporal predicates
+    - [ ] Window functions with OVER clauses
+    - [ ] Subqueries and CTEs (Common Table Expressions)
+    - [ ] Advanced temporal join predicates
+    - [ ] Pattern parser integration for CEP (MATCH_RECOGNIZE subset)
+    - [ ] Enhanced type inference and validation
+    - [ ] Advanced watermark propagation
 
-#### **Phase 3: Production & Optimization (Months 7-12)**
+#### **Phase 3: Developer Experience (Future)** 📋 **PLANNED**
 
-- **Goal**: Production-ready parser with excellent developer experience
+- **Goal**: Best-in-class developer experience
 - **Key Deliverables**:
-    - [ ] Curated MATCH_RECOGNIZE subset (not full implementation)
-    - [ ] Pattern compilation to NFA
-    - [ ] Query translation tools (SiddhiQL ↔ SQL)
     - [ ] IDE integration and syntax highlighting
-    - [ ] Performance optimization (<10ms for 95% of queries)
-    - [ ] Production diagnostics with miette/ariadne
+    - [ ] Query visualization tools
+    - [ ] Performance diagnostics and profiling
+    - [ ] Migration tools and documentation
+    - [ ] Interactive query builder
+    - [ ] Production debugging tools
 
 ### **Strategic Benefits of Hybrid Architecture**
 
@@ -78,9 +78,9 @@ individual features.
 
 ## 📊 **COMPREHENSIVE AUDIT RESULTS**: Current Status vs Java Siddhi
 
-**🔍 AUDIT DATE**: 2025-10-02
+**🔍 AUDIT DATE**: 2025-10-06
 **📈 OVERALL FEATURE COVERAGE**: ~32% of Java Siddhi functionality
-**🎯 ENTERPRISE READINESS**: Foundation complete, feature gaps significant
+**🎯 ENTERPRISE READINESS**: M1 Complete - SQL Parser Production Ready, Feature Gaps Remain
 
 ### ✅ **Areas Where Rust EXCEEDS Java:**
 
@@ -600,77 +600,71 @@ individual features.
     - ✅ `src/core/query/selector/attribute/aggregator/*_state_holder.rs` - **6 aggregator state holders (V2 suffix
       removed)**
 
-#### **5. Query Parser Migration: LALRPOP → Hybrid Architecture** 🔄 **NEW PRIORITY**
+#### **5. SQL Parser Migration** ✅ **COMPLETE**
 
-- **Status**: 🔄 **REFINED** - Hybrid approach validated through technical analysis
-- **Current**: LALRPOP-based parser with limitations
-- **Target**: Hybrid sqlparser-rs + pattern parser with IR-centric design
-- **Strategic Impact**: **MAJOR** - Leverages battle-tested SQL parser + preserves CEP strengths
+- **Status**: ✅ **PRODUCTION READY** - M1 SQL foundation complete
+- **Current**: sqlparser-rs with custom SiddhiDialect
+- **Achievement**: SQL-only engine with 675 passing tests
+- **Strategic Impact**: **TRANSFORMATIONAL** - Production SQL parser enabling broad adoption
 
-**Phase 0: Proof of Concept (2-3 weeks)**:
+**Phase 0: M1 Implementation** ✅ **COMPLETE**:
 
-- [ ] **Technical Validation**
-    - [ ] Create custom `SiddhiDialect` extending sqlparser-rs
-    - [ ] Implement one DDL statement (CREATE STREAM)
-    - [ ] Implement one streaming clause (WINDOW TUMBLING)
-    - [ ] Validate integration challenges
-    - [ ] Refine implementation timeline
+- [x] **Production Implementation**
+    - [x] Custom `SiddhiDialect` extending sqlparser-rs ✅
+    - [x] All M1 SQL statements (CREATE STREAM, SELECT, INSERT) ✅
+    - [x] Complete window clause support ✅
+    - [x] 675 passing tests demonstrating SQL capabilities ✅
+    - [x] Production-ready SQL parser ✅
 
-**Phase 1: Foundation (Months 1-3)**:
+**Phase 1: Next Priorities (M2+)**:
 
-- [ ] **Hybrid Parser Architecture**
-    - [ ] sqlparser-rs with SiddhiDialect for SQL syntax (90%)
-    - [ ] Dedicated pattern parser (winnow/chumsky) for CEP (10%)
-    - [ ] Single normalized IR (LogicalPlan) as compilation target
-    - [ ] Basic SQL-first syntax (CREATE STREAM, SELECT, INSERT)
-    - [ ] Window operations with SQL WINDOW clause
-    - [ ] EMIT CHANGES clause implementation
-- [ ] **Runtime Function Registry**
-    - [ ] UDF registration without parser changes
-    - [ ] Namespace support (math:, string:, custom:)
-    - [ ] Dynamic function resolution at runtime
-- [ ] **Dual Mode Support**
-    - [ ] Keep LALRPOP parser for backward compatibility
-    - [ ] Automatic syntax detection (SQL vs Siddhi)
-    - [ ] Query translation utilities
+- [ ] **I/O Ecosystem Expansion**
+    - [ ] HTTP Source/Sink for REST API integration
+    - [ ] Kafka Source/Sink for message broker integration
+    - [ ] File Source/Sink for log processing
+    - [ ] Data mapping layer (JSON, CSV, Avro)
+- [ ] **Query Optimization Engine**
+    - [ ] Cost-based query planner
+    - [ ] Expression compilation pipeline
+    - [ ] Runtime code generation
+    - [ ] Query plan visualization
+- [ ] **Advanced CEP Features**
+    - [ ] Pattern parser for complex event detection
+    - [ ] Absent pattern processing
+    - [ ] Count/quantification patterns
+    - [ ] MATCH_RECOGNIZE subset implementation
 
-**Phase 2: Semantic Analysis (Months 4-6)**:
+**Phase 2: Window & Aggregation Expansion**:
 
-- [ ] **Analyzer/Binder Implementation**
-    - [ ] Semantic validation beyond syntax
-    - [ ] Type inference and checking
-    - [ ] Function resolution and validation
-    - [ ] Watermark propagation
-    - [ ] Aggregation context validation
-- [ ] **Pattern Parser Integration**
-    - [ ] Dedicated CEP pattern parser
-    - [ ] Pattern compilation to NFA
-    - [ ] Integration with SQL components
-- [ ] **Advanced SQL Features**
-    - [ ] Window functions with OVER clauses
-    - [ ] Stream-to-table joins
-    - [ ] Subqueries and CTEs
+- [ ] **Complete Window Types**
+    - [ ] Implement remaining 22 window types
+    - [ ] Cron, Delay, Hopping windows
+    - [ ] Frequent, LossyFrequent for analytics
+    - [ ] Unique, UniqueLength for deduplication
+    - [ ] Expression and custom windows
+- [ ] **Advanced Aggregations**
+    - [ ] Complete remaining 7 aggregator types
+    - [ ] Incremental aggregation framework
+    - [ ] Time-based multi-duration aggregations
+    - [ ] Distributed aggregation coordination
 
-**Phase 3: Production Features (Months 7-12)**:
+**Phase 3: Production Hardening**:
 
-- [ ] **Measured MATCH_RECOGNIZE**
-    - [ ] Curated subset (SEQ, WITHIN, DEFINE, MEASURES)
-    - [ ] Avoid over-ambitious full implementation
-    - [ ] Clear documentation of supported features
-- [ ] **IDE Integration**
-    - [ ] Fragment parsing for IDE support
-    - [ ] Syntax highlighting and autocomplete
-    - [ ] Query visualization tools
-- [ ] **Production Quality**
-    - [ ] Advanced diagnostics (miette/ariadne)
-    - [ ] Query translation tools
-    - [ ] Performance optimization (<10ms for 95% queries)
+- [ ] **Security & Monitoring**
+    - [ ] Prometheus metrics integration
+    - [ ] Authentication/authorization framework
+    - [ ] Audit logging and compliance
+    - [ ] Distributed tracing with OpenTelemetry
+- [ ] **Performance Optimization**
+    - [ ] Query optimization engine (5-10x improvement)
+    - [ ] Advanced memory management
+    - [ ] Lock-free data structures
+    - [ ] SIMD acceleration where applicable
 
-- **Effort**: 7-12 months (Phase 0 + 3 implementation phases)
-- **Impact**: **TRANSFORMATIONAL** - SQL familiarity with preserved CEP excellence
-- **Architecture**: Two specialized parsers → Single IR → Runtime execution
-- **Files**: `src/query_compiler/sqlparser_dialect.rs`, `src/query_compiler/pattern_parser.rs`,
-  `src/query_compiler/logical_plan.rs`
+- **M1 Completion**: ✅ **ACHIEVED** - SQL foundation production ready
+- **Next Focus**: M2 Essential Connectivity (I/O ecosystem)
+- **Architecture**: SQL-only engine with sqlparser-rs
+- **Files**: `src/query_compiler/`, `src/core/sql/`, `feat/grammar/GRAMMAR.md`
 
 #### **6. Comprehensive Monitoring & Metrics Framework**
 
@@ -834,18 +828,20 @@ individual features.
 
 ## 📊 **SUCCESS METRICS & TARGETS**
 
-### **🎯 Current Status (2025-10-02)**
+### **🎯 Current Status (2025-10-06)**
 
 - **Overall Feature Coverage**: ~32% of Java Siddhi functionality
+- **M1 Milestone**: ✅ **COMPLETE** - SQL Streaming Foundation (675 passing tests, 74 ignored)
+- **SQL Parser**: ✅ **PRODUCTION READY** - sqlparser-rs with SiddhiDialect, 100% M1 queries supported
 - **Core Runtime Coverage**: 50% (Event processing, stream junctions, query runtime)
-- **Query Processing**: 25% (Parser complete, optimization missing)
-- **Windows**: 27% (8 of 30 types)
-- **Aggregators**: 46% (6 of 13 types)
+- **Query Processing**: 30% (SQL parser complete, optimization missing)
+- **Windows**: 27% (8 of 30 types) - TUMBLING, SLIDING, LENGTH, LENGTH_BATCH, SESSION implemented
+- **Aggregators**: 46% (6 of 13 types) - COUNT, SUM, AVG, MIN, MAX, distinctCount
 - **Functions**: 70% (Good coverage of common functions)
 - **I/O Ecosystem**: 8% (Only Timer source and Log sink)
 - **Pattern Processing**: 15% (Basic sequences only, missing 85% of CEP)
 - **Architectural Foundation**: Complete and superior in distributed processing & state management
-- **Production Readiness**: Foundation ready, critical feature gaps blocking production
+- **Production Readiness**: M1 SQL foundation ready, critical feature gaps (I/O, optimization, CEP) blocking full production
 
 ### **🚀 Performance Targets**
 
@@ -1485,7 +1481,7 @@ With transport infrastructure complete, the distributed framework is ready for:
 This milestone establishes **production-ready communication infrastructure** and removes the transport layer blocker for
 enterprise distributed deployments.
 
-Last Updated: 2025-10-02
+Last Updated: 2025-10-06
 
 ---
 

@@ -6,9 +6,10 @@ use siddhi_rust::core::event::value::AttributeValue;
 #[tokio::test]
 async fn group_by_having_order_limit_offset() {
     let app = "\
-        define stream In (a int, b int);\n\
-        define stream Out (b int, s long);\n\
-        from In select b, sum(a) as s group by b having sum(a) > 5 order by b desc limit 2 offset 1 insert into Out;\n";
+        CREATE STREAM In (a INT, b INT);\n\
+        CREATE STREAM Out (b INT, s BIGINT);\n\
+        INSERT INTO Out\n\
+        SELECT b, SUM(a) as s FROM In GROUP BY b HAVING SUM(a) > 5 ORDER BY b DESC LIMIT 2 OFFSET 1;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
@@ -29,9 +30,10 @@ async fn group_by_having_order_limit_offset() {
 #[tokio::test]
 async fn group_by_having_order_asc() {
     let app = "\
-        define stream In (a int, b int);\n\
-        define stream Out (b int, s long);\n\
-        from In select b, sum(a) as s group by b having sum(a) >= 3 order by b asc insert into Out;\n";
+        CREATE STREAM In (a INT, b INT);\n\
+        CREATE STREAM Out (b INT, s BIGINT);\n\
+        INSERT INTO Out\n\
+        SELECT b, SUM(a) as s FROM In GROUP BY b HAVING SUM(a) >= 3 ORDER BY b ASC;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",
@@ -53,9 +55,10 @@ async fn group_by_having_order_asc() {
 #[tokio::test]
 async fn order_by_desc_limit_offset() {
     let app = "\
-        define stream In (a int);\n\
-        define stream Out (a int);\n\
-        from In select a order by a desc limit 2 offset 1 insert into Out;\n";
+        CREATE STREAM In (a INT);\n\
+        CREATE STREAM Out (a INT);\n\
+        INSERT INTO Out\n\
+        SELECT a FROM In ORDER BY a DESC LIMIT 2 OFFSET 1;\n";
     let runner = AppRunner::new(app, "Out").await;
     runner.send_batch(
         "In",

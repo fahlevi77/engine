@@ -1,0 +1,294 @@
+//! SQL Catalog - Schema Management System
+//!
+//! Provides schema management for SQL queries, tracking stream and table definitions.
+
+use crate::query_api::definition::attribute::{Attribute, Type as AttributeType};
+use crate::query_api::definition::{StreamDefinition, TableDefinition};
+use crate::query_api::execution::query::Query;
+use crate::query_api::execution::ExecutionElement;
+use crate::query_api::expression::Expression;
+use crate::query_api::siddhi_app::SiddhiApp;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use super::error::DdlError;
+
+/// SQL Catalog manages stream and table schemas
+#[derive(Debug, Clone)]
+pub struct SqlCatalog {
+    streams: HashMap<String, Arc<StreamDefinition>>,
+    tables: HashMap<String, Arc<TableDefinition>>,
+    aliases: HashMap<String, String>,
+}
+
+impl SqlCatalog {
+    /// Create a new empty catalog
+    pub fn new() -> Self {
+        SqlCatalog {
+            streams: HashMap::new(),
+            tables: HashMap::new(),
+            aliases: HashMap::new(),
+        }
+    }
+
+    /// Register a stream definition
+    pub fn register_stream(&mut self, name: String, definition: StreamDefinition) -> Result<(), DdlError> {
+        if self.streams.contains_key(&name) {
+            return Err(DdlError::DuplicateStream(name));
+        }
+        self.streams.insert(name, Arc::new(definition));
+        Ok(())
+    }
+
+    /// Register a table definition
+    pub fn register_table(&mut self, name: String, definition: TableDefinition) {
+        self.tables.insert(name, Arc::new(definition));
+    }
+
+    /// Register an alias for a stream
+    pub fn register_alias(&mut self, alias: String, stream_name: String) {
+        self.aliases.insert(alias, stream_name);
+    }
+
+    /// Get a stream definition by name (or alias)
+    pub fn get_stream(&self, name: &str) -> Result<Arc<StreamDefinition>, DdlError> {
+        // Try direct lookup
+        if let Some(def) = self.streams.get(name) {
+            return Ok(Arc::clone(def));
+        }
+
+        // Try alias lookup
+        if let Some(actual_name) = self.aliases.get(name) {
+            if let Some(def) = self.streams.get(actual_name) {
+                return Ok(Arc::clone(def));
+            }
+        }
+
+        Err(DdlError::UnknownStream(name.to_string()))
+    }
+
+    /// Get a table definition by name
+    pub fn get_table(&self, name: &str) -> Option<Arc<TableDefinition>> {
+        self.tables.get(name).map(Arc::clone)
+    }
+
+    /// Check if a column exists in a stream
+    pub fn has_column(&self, stream_name: &str, column_name: &str) -> bool {
+        if let Ok(stream) = self.get_stream(stream_name) {
+            stream.abstract_definition.get_attribute_list()
+                .iter()
+                .any(|attr| attr.get_name() == column_name)
+        } else {
+            false
+        }
+    }
+
+    /// Get column type from a stream
+    pub fn get_column_type(&self, stream_name: &str, column_name: &str) -> Result<AttributeType, DdlError> {
+        let stream = self.get_stream(stream_name)?;
+
+        stream.abstract_definition.get_attribute_list()
+            .iter()
+            .find(|attr| attr.get_name() == column_name)
+            .map(|attr| attr.get_type().clone())
+            .ok_or_else(|| DdlError::InvalidCreateStream(
+                format!("Column {} not found in stream {}", column_name, stream_name)
+            ))
+    }
+
+    /// Get all columns from a stream
+    pub fn get_all_columns(&self, stream_name: &str) -> Result<Vec<Attribute>, DdlError> {
+        let stream = self.get_stream(stream_name)?;
+        Ok(stream.abstract_definition.get_attribute_list().to_vec())
+    }
+
+    /// Get all stream names
+    pub fn get_stream_names(&self) -> Vec<String> {
+        self.streams.keys().cloned().collect()
+    }
+
+    /// Check if catalog is empty
+    pub fn is_empty(&self) -> bool {
+        self.streams.is_empty() && self.tables.is_empty()
+    }
+}
+
+impl Default for SqlCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Represents a complete SQL application with catalog and queries
+#[derive(Debug, Clone)]
+pub struct SqlApplication {
+    pub catalog: SqlCatalog,
+    pub queries: Vec<Query>,
+}
+
+impl SqlApplication {
+    /// Create a new SQL application
+    pub fn new(catalog: SqlCatalog, queries: Vec<Query>) -> Self {
+        SqlApplication { catalog, queries }
+    }
+
+    /// Get the catalog
+    pub fn get_catalog(&self) -> &SqlCatalog {
+        &self.catalog
+    }
+
+    /// Get the queries
+    pub fn get_queries(&self) -> &[Query] {
+        &self.queries
+    }
+
+    /// Check if application is empty
+    pub fn is_empty(&self) -> bool {
+        self.queries.is_empty()
+    }
+
+    /// Convert to SiddhiApp for runtime creation
+    pub fn to_siddhi_app(self, app_name: String) -> SiddhiApp {
+        let mut app = SiddhiApp::new(app_name);
+
+        // Add all stream definitions from catalog
+        for (stream_name, stream_def) in self.catalog.streams {
+            app.stream_definition_map.insert(stream_name, stream_def);
+        }
+
+        // Add all table definitions from catalog
+        for (table_name, table_def) in self.catalog.tables {
+            app.table_definition_map.insert(table_name, table_def);
+        }
+
+        // Auto-create output streams from queries
+        for query in &self.queries {
+            // Extract target stream name from query's output stream
+            let output_stream = query.get_output_stream();
+            let target_stream_name = output_stream.get_target_id()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "OutputStream".to_string());
+
+            // Create output stream if it doesn't exist
+            if !app.stream_definition_map.contains_key(&target_stream_name) {
+                let selector = query.get_selector();
+                let mut output_stream = StreamDefinition::new(target_stream_name.clone());
+
+                // Add attributes from selector output
+                for output_attr in selector.get_selection_list() {
+                    let attr_name = output_attr.get_rename().clone().unwrap_or_else(|| {
+                        if let Expression::Variable(var) = output_attr.get_expression() {
+                            var.get_attribute_name().to_string()
+                        } else {
+                            "output".to_string()
+                        }
+                    });
+
+                    // Default to STRING type (type inference would be better)
+                    output_stream = output_stream.attribute(attr_name, AttributeType::STRING);
+                }
+
+                app.stream_definition_map.insert(
+                    target_stream_name,
+                    Arc::new(output_stream)
+                );
+            }
+        }
+
+        // Add all queries as execution elements
+        for query in self.queries {
+            app.add_execution_element(ExecutionElement::Query(query));
+        }
+
+        app
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_catalog_creation() {
+        let catalog = SqlCatalog::new();
+        assert!(catalog.is_empty());
+    }
+
+    #[test]
+    fn test_register_stream() {
+        let mut catalog = SqlCatalog::new();
+        let stream = StreamDefinition::new("TestStream".to_string())
+            .attribute("col1".to_string(), AttributeType::STRING);
+
+        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        assert!(!catalog.is_empty());
+        assert!(catalog.get_stream("TestStream").is_ok());
+    }
+
+    #[test]
+    fn test_duplicate_stream_error() {
+        let mut catalog = SqlCatalog::new();
+        let stream1 = StreamDefinition::new("TestStream".to_string());
+        let stream2 = StreamDefinition::new("TestStream".to_string());
+
+        catalog.register_stream("TestStream".to_string(), stream1).unwrap();
+        let result = catalog.register_stream("TestStream".to_string(), stream2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_has_column() {
+        let mut catalog = SqlCatalog::new();
+        let stream = StreamDefinition::new("TestStream".to_string())
+            .attribute("col1".to_string(), AttributeType::STRING)
+            .attribute("col2".to_string(), AttributeType::INT);
+
+        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        assert!(catalog.has_column("TestStream", "col1"));
+        assert!(catalog.has_column("TestStream", "col2"));
+        assert!(!catalog.has_column("TestStream", "col3"));
+    }
+
+    #[test]
+    fn test_get_column_type() {
+        let mut catalog = SqlCatalog::new();
+        let stream = StreamDefinition::new("TestStream".to_string())
+            .attribute("name".to_string(), AttributeType::STRING)
+            .attribute("age".to_string(), AttributeType::INT);
+
+        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+
+        let name_type = catalog.get_column_type("TestStream", "name").unwrap();
+        assert_eq!(name_type, AttributeType::STRING);
+
+        let age_type = catalog.get_column_type("TestStream", "age").unwrap();
+        assert_eq!(age_type, AttributeType::INT);
+    }
+
+    #[test]
+    fn test_get_all_columns() {
+        let mut catalog = SqlCatalog::new();
+        let stream = StreamDefinition::new("TestStream".to_string())
+            .attribute("col1".to_string(), AttributeType::STRING)
+            .attribute("col2".to_string(), AttributeType::INT);
+
+        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        let columns = catalog.get_all_columns("TestStream").unwrap();
+        assert_eq!(columns.len(), 2);
+        assert_eq!(columns[0].get_name(), "col1");
+        assert_eq!(columns[1].get_name(), "col2");
+    }
+
+    #[test]
+    fn test_alias() {
+        let mut catalog = SqlCatalog::new();
+        let stream = StreamDefinition::new("TestStream".to_string())
+            .attribute("col1".to_string(), AttributeType::STRING);
+
+        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog.register_alias("ts".to_string(), "TestStream".to_string());
+
+        assert!(catalog.get_stream("ts").is_ok());
+        assert!(catalog.has_column("ts", "col1"));
+    }
+}

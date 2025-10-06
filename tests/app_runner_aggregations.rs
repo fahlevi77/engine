@@ -4,7 +4,13 @@ use common::AppRunner;
 use siddhi_rust::core::event::value::AttributeValue;
 use siddhi_rust::query_api::aggregation::time_period::Duration;
 
+// TODO: NOT PART OF M1 - Requires DEFINE AGGREGATION syntax support in SQL compiler
+// This test uses "define aggregation" which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Incremental aggregation will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires DEFINE AGGREGATION - Not part of M1"]
 async fn incremental_sum_seconds() {
     let app = "\
         define stream In (value int);\n\
@@ -26,7 +32,13 @@ async fn incremental_sum_seconds() {
     );
 }
 
+// TODO: NOT PART OF M1 - Requires DEFINE AGGREGATION syntax support in SQL compiler
+// This test uses "define aggregation" which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Incremental aggregation will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires DEFINE AGGREGATION - Not part of M1"]
 async fn incremental_sum_single_bucket() {
     let app = "\
         define stream In (value int);\n\
@@ -43,7 +55,13 @@ async fn incremental_sum_single_bucket() {
     assert!(data.is_empty() || data[0] == vec![AttributeValue::Long(2)]);
 }
 
+// TODO: NOT PART OF M1 - Requires DEFINE AGGREGATION syntax support in SQL compiler
+// This test uses "define aggregation" which is an advanced feature not included in M1.
+// M1 covers: Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
+// Incremental aggregation will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
+#[ignore = "Requires DEFINE AGGREGATION - Not part of M1"]
 async fn query_within_per() {
     use siddhi_rust::query_api::aggregation::within::Within;
     use siddhi_rust::query_api::expression::Expression;

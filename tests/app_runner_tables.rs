@@ -1,3 +1,11 @@
+// TODO: NOT PART OF M1 - All table tests disabled for M1
+// Table support (DEFINE TABLE, @store annotations, cache/JDBC tables, stream-table joins)
+// is not part of the M1 milestone. M1 focuses on:
+// - Basic queries, Windows, Joins (stream-stream), GROUP BY, HAVING, ORDER BY, LIMIT
+// Table infrastructure including cache tables, JDBC tables, and stream-table joins
+// will be implemented in Phase 2.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
+
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
@@ -59,6 +67,7 @@ fn setup_sqlite_table(ctx: &Arc<SiddhiContext>, name: &str) {
 }
 
 #[tokio::test]
+#[ignore = "Table support not part of M1"]
 async fn cache_table_crud_via_app_runner() {
     let query = "\
         define stream In (v string);\n\
@@ -96,6 +105,7 @@ async fn cache_table_crud_via_app_runner() {
 }
 
 #[tokio::test]
+#[ignore = "Table support not part of M1"]
 async fn jdbc_table_crud_via_app_runner() {
     let mut manager = SiddhiManager::new();
     manager
@@ -138,6 +148,7 @@ async fn jdbc_table_crud_via_app_runner() {
 }
 
 #[tokio::test]
+#[ignore = "Table support not part of M1"]
 async fn stream_table_join_basic() {
     let query = "\
         define stream L (roomNo int, val string);\n\
@@ -169,6 +180,7 @@ async fn stream_table_join_basic() {
 }
 
 #[tokio::test]
+#[ignore = "Table support not part of M1"]
 async fn stream_table_join_jdbc() {
     let mut manager = SiddhiManager::new();
     manager
@@ -210,6 +222,7 @@ async fn stream_table_join_jdbc() {
 }
 
 #[tokio::test]
+#[ignore = "Table support not part of M1"]
 async fn cache_and_jdbc_tables_eviction_and_queries() {
     let mut manager = SiddhiManager::new();
     manager

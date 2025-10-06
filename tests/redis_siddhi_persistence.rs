@@ -1,9 +1,15 @@
 // tests/redis_siddhi_persistence.rs
 
 //! Integration tests for Redis-backed Siddhi application state persistence
-//! 
+//!
 //! These tests verify that actual Siddhi application state (window processors,
 //! aggregators, etc.) can be persisted to Redis and restored correctly.
+
+// TODO: NOT PART OF M1 - Redis persistence tests with old SiddhiQL syntax
+// Most tests in this file use old SiddhiQL syntax with @app:name annotations and "define stream".
+// Tests using old syntax have been disabled for M1.
+// Test using PersistenceStore interface directly (not parser) remains enabled.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 
 #[path = "common/mod.rs"]
 mod common;
@@ -38,6 +44,7 @@ fn ensure_redis_available() -> Result<Arc<dyn PersistenceStore>, String> {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_persistence_basic() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
@@ -65,6 +72,7 @@ async fn test_redis_persistence_basic() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_length_window_state_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
@@ -98,6 +106,7 @@ async fn test_redis_length_window_state_persistence() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_persist_across_app_restarts() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
@@ -133,6 +142,7 @@ async fn test_redis_persist_across_app_restarts() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_multiple_windows_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,
@@ -182,6 +192,7 @@ async fn test_redis_multiple_windows_persistence() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_aggregation_state_persistence() {
     let store = match ensure_redis_available() {
         Ok(store) => store,

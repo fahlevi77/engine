@@ -3,6 +3,10 @@
 //! Direct comparison test between InMemory and Redis persistence stores
 //! to isolate where the problem lies.
 
+// TODO: NOT PART OF M1 - All tests in this file use old SiddhiQL syntax
+// Tests use @app:name annotations and "define stream" which are not supported by SQL parser.
+// See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
+
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
@@ -11,7 +15,8 @@ use siddhi_rust::core::persistence::{InMemoryPersistenceStore, RedisPersistenceS
 use siddhi_rust::core::distributed::RedisConfig;
 use std::sync::Arc;
 
-#[tokio::test] 
+#[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_memory_store_simple_works() {
     // Test the exact same pattern as the working app_runner_persistence test
     let store: Arc<dyn PersistenceStore> = Arc::new(InMemoryPersistenceStore::new());
@@ -40,6 +45,7 @@ async fn test_memory_store_simple_works() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_memory_store_with_count_fails() {
     let store: Arc<dyn PersistenceStore> = Arc::new(InMemoryPersistenceStore::new());
     let app = "\
@@ -87,6 +93,7 @@ async fn test_memory_store_with_count_fails() {
 }
 
 #[tokio::test]
+#[ignore = "@app:name annotation and old SiddhiQL syntax not part of M1"]
 async fn test_redis_store_debug() {
     let config = RedisConfig {
         url: "redis://localhost:6379".to_string(),
