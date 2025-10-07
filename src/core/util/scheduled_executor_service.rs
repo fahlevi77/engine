@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::util::executor_service::ExecutorService;
 use std::sync::Arc;
 use std::time::Duration;

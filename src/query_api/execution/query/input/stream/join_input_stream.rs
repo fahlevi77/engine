@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.stream.JoinInputStream
 use super::input_stream::InputStreamTrait;
 use super::single_input_stream::SingleInputStream;

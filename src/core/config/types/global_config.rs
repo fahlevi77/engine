@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Global EventFlux Configuration Types
 //!
 //! Defines global runtime configuration for EventFlux applications.

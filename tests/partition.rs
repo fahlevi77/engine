@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::query_api::execution::ExecutionElement;
 use eventflux_rust::query_compiler::{parse, parse_partition};
 

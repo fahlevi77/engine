@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::on_demand_query::{OnDemandQuery, OnDemandQueryType}; // Import Rust OnDemandQuery
 use super::OutputStream;
 use crate::query_api::eventflux_element::EventFluxElement;

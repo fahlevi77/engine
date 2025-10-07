@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::event::Event;
 use crate::core::util::serialization::{from_bytes, to_bytes};
 

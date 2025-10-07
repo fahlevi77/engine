@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::query_api::expression::constant::TimeUtil;
 use eventflux_rust::query_compiler::parse_time_constant;
 

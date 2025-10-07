@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.handler.Window
 // Implements StreamHandler and Extension in Java.
 use crate::query_api::eventflux_element::EventFluxElement;

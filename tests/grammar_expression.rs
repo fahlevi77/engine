@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::query_api::expression::condition::compare::Operator as CompareOp;
 use eventflux_rust::query_api::expression::Expression;
 use eventflux_rust::query_compiler::parse_expression;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to parts of io.eventflux.query.api.execution.query.output.ratelimit.EventOutputRate
 
 // This struct holds the specific data for event-based rate limiting.

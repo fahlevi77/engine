@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::query_api::eventflux_element::EventFluxElement;
 // Annotation is not used here as Java OnDemandQuery doesn't have annotations field.
 // use crate::query_api::annotation::Annotation;

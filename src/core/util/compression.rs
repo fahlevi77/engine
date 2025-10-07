@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! High-Performance Shared Compression Utility
 //!
 //! This module provides enterprise-grade compression capabilities for all StateHolders

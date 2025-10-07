@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! StreamJunction Factory for Performance-Optimized Event Routing
 //!
 //! Provides intelligent selection between original crossbeam_channel-based

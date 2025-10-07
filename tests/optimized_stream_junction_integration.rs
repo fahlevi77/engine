@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Integration tests for OptimizedStreamJunction
 //!
 //! Tests the crossbeam pipeline-based StreamJunction implementation

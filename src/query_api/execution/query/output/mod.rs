@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod output_stream; // Defines the main OutputStream enum (wrapping actions) and OutputEventType
 pub mod ratelimit;
 pub mod stream; // Added this module for specific stream actions like SetAttribute

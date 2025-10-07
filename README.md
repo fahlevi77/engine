@@ -948,3 +948,9 @@ After parsing, `AggregationRuntime` instances are created when building a
 for each configured duration.  Query APIs for reading these buckets are not yet
 implemented, but tests demonstrate the accumulation logic.
 \nNote: The project still emits numerous compiler warnings due to incomplete features and placeholder code. These are expected during the early porting phase.
+
+## License
+Licensed under either of
+- MIT license (see `LICENSE-MIT`)
+- Apache License, Version 2.0 (see `LICENSE-APACHE`)
+at your option.

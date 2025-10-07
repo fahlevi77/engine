@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Configuration Resolvers
 //!
 //! Handles resolution of configuration values from various sources including

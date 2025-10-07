@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::core::util::{ExecutorService, Schedulable, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

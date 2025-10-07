@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Configuration Validation API
 //!
 //! Provides comprehensive validation capabilities for EventFlux configuration,

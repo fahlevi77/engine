@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::util::eventflux_constants::KEY_DELIMITER;

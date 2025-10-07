@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Distributed Processing Configuration Types
 //!
 //! Defines configuration structures for distributed EventFlux deployments.

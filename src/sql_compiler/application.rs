@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Application Parser - Parse Complete SQL Applications
 //!
 //! Parses multi-statement SQL applications with DDL and queries.

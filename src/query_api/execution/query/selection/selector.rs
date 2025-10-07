@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::order_by_attribute::{Order as OrderByOrder, OrderByAttribute};
 use super::output_attribute::OutputAttribute;
 use crate::query_api::eventflux_element::EventFluxElement;

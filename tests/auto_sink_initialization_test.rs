@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Automatic Sink Initialization Test
 //!
 //! This test demonstrates automatic sink initialization from YAML configuration

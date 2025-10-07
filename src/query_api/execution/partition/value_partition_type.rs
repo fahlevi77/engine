@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq)]

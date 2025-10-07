@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! DDL Parser - Parse CREATE STREAM Statements
 //!
 //! Parses Data Definition Language (DDL) statements like CREATE STREAM.

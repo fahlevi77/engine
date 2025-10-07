@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Object Pool for Zero-Allocation Event Processing
 //!
 //! Provides lock-free object pooling to minimize allocations in the hot path,

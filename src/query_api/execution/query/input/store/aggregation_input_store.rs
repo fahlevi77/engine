@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.store.AggregationInputStore
 use super::input_store::InputStoreTrait;
 use super::store::Store; // The base Store

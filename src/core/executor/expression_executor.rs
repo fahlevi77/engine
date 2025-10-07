@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/executor/expression_executor.rs
 // Corresponds to io.eventflux.core.executor.ExpressionExecutor (interface)
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: NOT PART OF M1 - Dynamic extension loading test
 // This test uses old EventFluxQL syntax and tests dynamic extension loading.
 // While extension system exists, SQL syntax for custom extensions is not in M1.

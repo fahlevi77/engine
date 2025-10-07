@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // This file is for defining error types specific to the eventflux_query_api Rust representation,
 // if any are needed for structural validation or construction that isn't covered by panics
 // or standard Result types from method calls.

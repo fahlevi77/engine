@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::stream::output::stream_callback::StreamCallback;
 use std::fmt::Debug;
 

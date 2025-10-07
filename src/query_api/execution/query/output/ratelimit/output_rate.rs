@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::events_output_rate::EventsOutputRate;
 use super::snapshot_output_rate::SnapshotOutputRate;
 use super::time_output_rate::TimeOutputRate;

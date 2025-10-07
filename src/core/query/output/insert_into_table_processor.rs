@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent;

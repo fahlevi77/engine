@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;

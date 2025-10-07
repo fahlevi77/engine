@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/stream/stream_junction.rs
 // Corresponds to io.eventflux.core.stream.StreamJunction
 use crate::core::config::eventflux_app_context::EventFluxAppContext; // Actual struct

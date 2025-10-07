@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.expression.condition.And
 use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;

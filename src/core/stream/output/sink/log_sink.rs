@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::core::config::{ConfigValue, ProcessorConfigReader};
 use crate::core::event::event::Event;
 use crate::core::stream::output::sink::sink_trait::Sink;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to package io.eventflux.query.api.execution.query.input.stream
 
 // Individual stream types

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/util/parser/trigger_parser.rs
 
 use std::sync::{Arc, Mutex};

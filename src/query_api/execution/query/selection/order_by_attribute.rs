@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Variable;
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::query_api::eventflux_element::EventFluxElement;
 
 // Individual constant files (bool_constant.rs, etc.) are not needed with this unified approach.

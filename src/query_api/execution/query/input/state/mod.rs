@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to package io.eventflux.query.api.execution.query.input.state
 
 pub mod absent_stream_state_element;

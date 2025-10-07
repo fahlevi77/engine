@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/query/selector/mod.rs
 pub mod attribute; // For OutputAttributeProcessor and future aggregators/processors
 pub mod group_by_key_generator;

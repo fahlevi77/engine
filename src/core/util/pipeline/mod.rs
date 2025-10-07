@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! High-Performance Event Processing Pipeline
 //!
 //! This module provides a crossbeam-based event processing pipeline optimized for

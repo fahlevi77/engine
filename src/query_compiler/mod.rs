@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod eventflux_compiler;
 // pub mod error; // If specific compiler errors are defined later
 

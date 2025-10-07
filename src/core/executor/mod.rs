@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod condition;
 pub mod constant_expression_executor;
 pub mod event_variable_function_executor;

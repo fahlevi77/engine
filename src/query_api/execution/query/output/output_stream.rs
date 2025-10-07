@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::stream::UpdateSet;
 use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression; // Using UpdateSet

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.definition.TriggerDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::eventflux_element::EventFluxElement;

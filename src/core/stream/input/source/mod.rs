@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod timer_source;
 
 use crate::core::stream::input::input_handler::InputHandler;

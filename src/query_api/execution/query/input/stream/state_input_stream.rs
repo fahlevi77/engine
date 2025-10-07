@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.stream.StateInputStream
 use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::state::{StateElement, StreamStateElement};

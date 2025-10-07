@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Service Discovery for Distributed EventFlux Clusters
 //!
 //! Provides service discovery mechanisms for distributed EventFlux deployments

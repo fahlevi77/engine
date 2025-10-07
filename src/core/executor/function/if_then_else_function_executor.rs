@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/executor/function/if_then_else_function_executor.rs
 // Corresponds to io.eventflux.core.executor.function.IfThenElseFunctionExecutor
 use crate::core::event::complex_event::ComplexEvent;

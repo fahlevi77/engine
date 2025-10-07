@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to the package io.eventflux.query.api.expression.condition
 
 pub mod and;

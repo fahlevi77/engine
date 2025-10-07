@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/data_source.rs
 // Public DataSource trait and basic SqliteDataSource implementation
 

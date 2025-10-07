@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Main EventFlux Configuration Type
 //!
 //! Defines the top-level configuration structure that combines all configuration components.

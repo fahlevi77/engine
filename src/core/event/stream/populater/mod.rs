@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/stream/populater/mod.rs
 pub mod complex_event_populater;
 pub mod selective_complex_event_populater;

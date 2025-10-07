@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Sink Factory Implementation
 //!
 //! Provides automatic sink creation from configuration

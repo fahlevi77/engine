@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/state/state_event.rs
 // Corresponds to io.eventflux.core.event.state.StateEvent
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};

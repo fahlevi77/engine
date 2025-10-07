@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::core::config::{
     eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
 };

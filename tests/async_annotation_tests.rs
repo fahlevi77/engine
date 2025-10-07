@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: NOT PART OF M1 - All @Async annotation tests disabled
 // These tests use old EventFluxQL syntax with @Async, @config, and @app annotations.
 // Annotation support is not part of M1. M1 focuses on:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod aggregate_base_time;
 pub mod should_update;
 pub mod start_end_time;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Integration tests for SQL compiler
 // Tests end-to-end flow: SQL → Runtime → Event Processing → Output
 

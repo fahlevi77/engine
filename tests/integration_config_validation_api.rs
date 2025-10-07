@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Integration tests for configuration validation API
 //!
 //! These tests demonstrate how the comprehensive validation system works

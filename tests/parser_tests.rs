@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: Some tests converted to SQL syntax but still disabled due to missing features
 // Tests using programmatic API (not parser) remain enabled and passing.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.

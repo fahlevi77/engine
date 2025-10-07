@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.core.config.EventFluxOnDemandQueryContext
 use super::eventflux_app_context::EventFluxAppContext;
 use super::eventflux_query_context::EventFluxQueryContext;

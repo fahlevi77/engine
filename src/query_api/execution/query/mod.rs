@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // In eventflux_rust/src/query_api/execution/query/mod.rs
 
 // Existing modules

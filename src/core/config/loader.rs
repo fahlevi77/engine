@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Configuration Loaders
 //!
 //! Implements various configuration loaders for different sources (YAML files, Kubernetes, etc.).

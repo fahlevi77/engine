@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/tests/distributed_redis_state.rs
 
 //! Redis State Backend Integration Tests

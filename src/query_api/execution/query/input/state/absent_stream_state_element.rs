@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.state.AbsentStreamStateElement
 use super::stream_state_element::StreamStateElement;
 use crate::query_api::eventflux_element::EventFluxElement;

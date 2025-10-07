@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: Session window tests converted to SQL syntax
 // Session window is implemented but SQL syntax needs verification
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.

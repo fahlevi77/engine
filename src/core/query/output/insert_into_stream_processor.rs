@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/query/output/insert_into_stream_processor.rs
 // This is a conceptual equivalent to part of EventFlux's output handling logic,
 // specifically for INSERT INTO clauses. Java doesn't have a direct one-to-one class
