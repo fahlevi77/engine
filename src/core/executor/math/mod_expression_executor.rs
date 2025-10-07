@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/mod_expression_executor.rs
+// eventflux_rust/src/core/executor/math/mod_expression_executor.rs
 use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
@@ -21,7 +21,7 @@ impl ModExpressionExecutor {
         let right_type = right.get_return_type();
 
         // Type promotion for modulo: result type is usually the type of the dividend after promoting both to a common numeric type.
-        // Siddhi's typed ModExpressionExecutors (Int, Long, Float, Double) imply the result type matches this promoted type.
+        // EventFlux's typed ModExpressionExecutors (Int, Long, Float, Double) imply the result type matches this promoted type.
         let return_type = match (left_type, right_type) {
             // Handle error cases first
             (ApiAttributeType::STRING, _)
@@ -118,13 +118,13 @@ impl ExpressionExecutor for ModExpressionExecutor {
     }
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(ModExpressionExecutor {
-            left_executor: self.left_executor.clone_executor(siddhi_app_context),
-            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            left_executor: self.left_executor.clone_executor(eventflux_app_context),
+            right_executor: self.right_executor.clone_executor(eventflux_app_context),
             return_type: self.return_type,
         })
     }

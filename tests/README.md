@@ -1,9 +1,9 @@
 # Test Utilities
 
 The tests in this crate rely on a small helper called `AppRunner` located in
-`tests/common/mod.rs`.  `AppRunner` parses a Siddhi application string using the
-embedded SiddhiQL grammar and creates a `SiddhiAppRuntime` through a
-`SiddhiManager`.  It provides convenience methods to feed events into input
+`tests/common/mod.rs`.  `AppRunner` parses a EventFlux application string using the
+embedded EventFluxQL grammar and creates a `EventFluxAppRuntime` through a
+`EventFluxManager`.  It provides convenience methods to feed events into input
 streams and collects events emitted from an output stream for assertions.
 
 Usage pattern:

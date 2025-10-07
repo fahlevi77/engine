@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/query/mod.rs
+// eventflux_rust/src/core/query/mod.rs
 
 pub mod input;
 pub mod processor; // For join stream runtimes and other input handling

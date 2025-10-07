@@ -1,19 +1,19 @@
 use thiserror::Error;
 
-/// Main error type for Siddhi operations
+/// Main error type for EventFlux operations
 #[derive(Error, Debug)]
-pub enum SiddhiError {
-    /// Errors that occur during Siddhi app creation and parsing
-    #[error("Siddhi app creation error: {message}")]
-    SiddhiAppCreation {
+pub enum EventFluxError {
+    /// Errors that occur during EventFlux app creation and parsing
+    #[error("EventFlux app creation error: {message}")]
+    EventFluxAppCreation {
         message: String,
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
 
     /// Runtime errors during query execution
-    #[error("Siddhi app runtime error: {message}")]
-    SiddhiAppRuntime {
+    #[error("EventFlux app runtime error: {message}")]
+    EventFluxAppRuntime {
         message: String,
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
@@ -56,7 +56,7 @@ pub enum SiddhiError {
     },
 
     /// Query not found errors
-    #[error("Query '{name}' does not exist in Siddhi app '{app_name}'")]
+    #[error("Query '{name}' does not exist in EventFlux app '{app_name}'")]
     QueryNotExist { name: String, app_name: String },
 
     /// Attribute not found errors
@@ -102,21 +102,21 @@ pub enum SiddhiError {
     },
 
     /// State persistence errors
-    #[error("Cannot persist Siddhi app state: {message}")]
+    #[error("Cannot persist EventFlux app state: {message}")]
     CannotPersistState {
         message: String,
         app_name: Option<String>,
     },
 
     /// State restoration errors
-    #[error("Cannot restore Siddhi app state: {message}")]
+    #[error("Cannot restore EventFlux app state: {message}")]
     CannotRestoreState {
         message: String,
         app_name: Option<String>,
     },
 
     /// State clearing errors
-    #[error("Cannot clear Siddhi app state: {message}")]
+    #[error("Cannot clear EventFlux app state: {message}")]
     CannotClearState {
         message: String,
         app_name: Option<String>,
@@ -203,21 +203,21 @@ pub enum SiddhiError {
     Other(String),
 }
 
-/// Result type alias for Siddhi operations
-pub type SiddhiResult<T> = Result<T, SiddhiError>;
+/// Result type alias for EventFlux operations
+pub type EventFluxResult<T> = Result<T, EventFluxError>;
 
-impl SiddhiError {
-    /// Create a new SiddhiAppCreation error
+impl EventFluxError {
+    /// Create a new EventFluxAppCreation error
     pub fn app_creation(message: impl Into<String>) -> Self {
-        SiddhiError::SiddhiAppCreation {
+        EventFluxError::EventFluxAppCreation {
             message: message.into(),
             source: None,
         }
     }
 
-    /// Create a new SiddhiAppRuntime error
+    /// Create a new EventFluxAppRuntime error
     pub fn app_runtime(message: impl Into<String>) -> Self {
-        SiddhiError::SiddhiAppRuntime {
+        EventFluxError::EventFluxAppRuntime {
             message: message.into(),
             source: None,
         }
@@ -229,7 +229,7 @@ impl SiddhiError {
         expected: impl Into<String>,
         actual: impl Into<String>,
     ) -> Self {
-        SiddhiError::TypeError {
+        EventFluxError::TypeError {
             message: message.into(),
             expected: Some(expected.into()),
             actual: Some(actual.into()),
@@ -238,7 +238,7 @@ impl SiddhiError {
 
     /// Create a new InvalidParameter error
     pub fn invalid_parameter(message: impl Into<String>, parameter: impl Into<String>) -> Self {
-        SiddhiError::InvalidParameter {
+        EventFluxError::InvalidParameter {
             message: message.into(),
             parameter: Some(parameter.into()),
             expected: None,
@@ -247,7 +247,7 @@ impl SiddhiError {
 
     /// Create a new ExtensionNotFound error
     pub fn extension_not_found(extension_type: impl Into<String>, name: impl Into<String>) -> Self {
-        SiddhiError::ExtensionNotFound {
+        EventFluxError::ExtensionNotFound {
             extension_type: extension_type.into(),
             name: name.into(),
         }
@@ -258,7 +258,7 @@ impl SiddhiError {
         definition_type: impl Into<String>,
         name: impl Into<String>,
     ) -> Self {
-        SiddhiError::DefinitionNotExist {
+        EventFluxError::DefinitionNotExist {
             definition_type: definition_type.into(),
             name: name.into(),
         }
@@ -267,12 +267,12 @@ impl SiddhiError {
     /// Add source error context
     pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
         match &mut self {
-            SiddhiError::SiddhiAppCreation { source: src, .. }
-            | SiddhiError::SiddhiAppRuntime { source: src, .. }
-            | SiddhiError::ConnectionUnavailable { source: src, .. }
-            | SiddhiError::DatabaseRuntime { source: src, .. }
-            | SiddhiError::PersistenceStore { source: src, .. }
-            | SiddhiError::MappingFailed { source: src, .. } => {
+            EventFluxError::EventFluxAppCreation { source: src, .. }
+            | EventFluxError::EventFluxAppRuntime { source: src, .. }
+            | EventFluxError::ConnectionUnavailable { source: src, .. }
+            | EventFluxError::DatabaseRuntime { source: src, .. }
+            | EventFluxError::PersistenceStore { source: src, .. }
+            | EventFluxError::MappingFailed { source: src, .. } => {
                 *src = Some(Box::new(source));
             }
             _ => {}
@@ -281,27 +281,27 @@ impl SiddhiError {
     }
 }
 
-/// Convert String errors to SiddhiError::Other (for backward compatibility)
-impl From<String> for SiddhiError {
+/// Convert String errors to EventFluxError::Other (for backward compatibility)
+impl From<String> for EventFluxError {
     fn from(s: String) -> Self {
-        SiddhiError::Other(s)
+        EventFluxError::Other(s)
     }
 }
 
-/// Convert &str errors to SiddhiError::Other (for backward compatibility)
-impl From<&str> for SiddhiError {
+/// Convert &str errors to EventFluxError::Other (for backward compatibility)
+impl From<&str> for EventFluxError {
     fn from(s: &str) -> Self {
-        SiddhiError::Other(s.to_string())
+        EventFluxError::Other(s.to_string())
     }
 }
 
-/// Extension trait for converting Results with String errors to SiddhiError
-pub trait IntoSiddhiResult<T> {
-    fn into_siddhi_result(self) -> SiddhiResult<T>;
+/// Extension trait for converting Results with String errors to EventFluxError
+pub trait IntoEventFluxResult<T> {
+    fn into_eventflux_result(self) -> EventFluxResult<T>;
 }
 
-impl<T> IntoSiddhiResult<T> for Result<T, String> {
-    fn into_siddhi_result(self) -> SiddhiResult<T> {
-        self.map_err(SiddhiError::from)
+impl<T> IntoEventFluxResult<T> for Result<T, String> {
+    fn into_eventflux_result(self) -> EventFluxResult<T> {
+        self.map_err(EventFluxError::from)
     }
 }

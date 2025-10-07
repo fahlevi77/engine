@@ -1,9 +1,9 @@
 // Integration tests for SQL compiler
 // Tests end-to-end flow: SQL → Runtime → Event Processing → Output
 
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
 use std::sync::{Arc, Mutex};
 
 /// Test callback that collects events
@@ -29,7 +29,7 @@ impl TestCallback {
 }
 
 impl StreamCallback for TestCallback {
-    fn receive_events(&self, events: &[siddhi_rust::core::event::event::Event]) {
+    fn receive_events(&self, events: &[eventflux_rust::core::event::event::Event]) {
         let mut collected = self.events.lock().unwrap();
         for event in events {
             collected.push(event.data.clone());
@@ -48,8 +48,8 @@ async fn test_sql_query_1_basic_filter() {
         WHERE price > 100;
     "#;
 
-    // Create SiddhiManager and runtime from SQL
-    let manager = SiddhiManager::new();
+    // Create EventFluxManager and runtime from SQL
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query1Test".to_string()))
         .await
@@ -72,7 +72,7 @@ async fn test_sql_query_1_basic_filter() {
     // Send test events
     let events = vec![
         vec![
-            AttributeValue::String("WSO2".to_string()),
+            AttributeValue::String("EventFlux".to_string()),
             AttributeValue::Double(55.6),
         ], // Should be filtered out (price <= 100)
         vec![
@@ -146,7 +146,7 @@ async fn test_sql_query_2_arithmetic() {
         FROM StockStream;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query2Test".to_string()))
         .await
@@ -168,7 +168,7 @@ async fn test_sql_query_2_arithmetic() {
         .lock()
         .unwrap()
         .send_data(vec![
-            AttributeValue::String("WSO2".to_string()),
+            AttributeValue::String("EventFlux".to_string()),
             AttributeValue::Double(100.0),
         ])
         .expect("Failed to send event");
@@ -185,8 +185,12 @@ async fn test_sql_query_2_arithmetic() {
     if let (AttributeValue::String(symbol), AttributeValue::Double(adjusted)) =
         (&output_events[0][0], &output_events[0][1])
     {
-        assert_eq!(symbol, "WSO2");
-        assert!((adjusted - 110.0).abs() < 0.001, "Expected 110.0, got {}", adjusted);
+        assert_eq!(symbol, "EventFlux");
+        assert!(
+            (adjusted - 110.0).abs() < 0.001,
+            "Expected 110.0, got {}",
+            adjusted
+        );
     } else {
         panic!("Invalid output event format");
     }
@@ -204,7 +208,7 @@ async fn test_sql_query_7_builtin_function() {
         FROM StockStream;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query7Test".to_string()))
         .await
@@ -222,11 +226,7 @@ async fn test_sql_query_7_builtin_function() {
         .expect("Failed to get input handler");
 
     // Send test events with prices that need rounding
-    let test_data = vec![
-        ("AAPL", 123.456),
-        ("MSFT", 99.999),
-        ("GOOGL", 150.123),
-    ];
+    let test_data = vec![("AAPL", 123.456), ("MSFT", 99.999), ("GOOGL", 150.123)];
 
     for (symbol, price) in test_data {
         input_handler
@@ -243,7 +243,10 @@ async fn test_sql_query_7_builtin_function() {
 
     let output_events = callback.get_events();
 
-    println!("Output events (Query 7 - ROUND function): {:?}", output_events);
+    println!(
+        "Output events (Query 7 - ROUND function): {:?}",
+        output_events
+    );
 
     assert_eq!(output_events.len(), 3, "Expected 3 events");
 
@@ -293,7 +296,7 @@ async fn test_sql_query_3_window_tumbling_avg() {
         GROUP BY symbol;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query3Test".to_string()))
         .await
@@ -310,12 +313,12 @@ async fn test_sql_query_3_window_tumbling_avg() {
         .get_input_handler("StockStream")
         .expect("Failed to get input handler");
 
-    // Send test events for WSO2
+    // Send test events for EventFlux
     input_handler
         .lock()
         .unwrap()
         .send_data(vec![
-            AttributeValue::String("WSO2".to_string()),
+            AttributeValue::String("EventFlux".to_string()),
             AttributeValue::Double(100.0),
         ])
         .expect("Failed to send event");
@@ -324,7 +327,7 @@ async fn test_sql_query_3_window_tumbling_avg() {
         .lock()
         .unwrap()
         .send_data(vec![
-            AttributeValue::String("WSO2".to_string()),
+            AttributeValue::String("EventFlux".to_string()),
             AttributeValue::Double(200.0),
         ])
         .expect("Failed to send event");
@@ -337,7 +340,10 @@ async fn test_sql_query_3_window_tumbling_avg() {
     println!("Output events (Query 3): {:?}", output_events);
 
     // Verify AVG calculation: (100 + 200) / 2 = 150
-    assert!(output_events.len() > 0, "Expected at least 1 event from tumbling window");
+    assert!(
+        output_events.len() > 0,
+        "Expected at least 1 event from tumbling window"
+    );
 
     runtime.shutdown();
 }
@@ -354,7 +360,7 @@ async fn test_sql_query_4_window_length_count() {
         GROUP BY symbol;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query4Test".to_string()))
         .await
@@ -371,13 +377,13 @@ async fn test_sql_query_4_window_length_count() {
         .get_input_handler("StockStream")
         .expect("Failed to get input handler");
 
-    // Send 3 events for WSO2 (should trigger window)
+    // Send 3 events for EventFlux (should trigger window)
     for i in 1..=3 {
         input_handler
             .lock()
             .unwrap()
             .send_data(vec![
-                AttributeValue::String("WSO2".to_string()),
+                AttributeValue::String("EventFlux".to_string()),
                 AttributeValue::Double(100.0 * i as f64),
             ])
             .expect("Failed to send event");
@@ -390,7 +396,10 @@ async fn test_sql_query_4_window_length_count() {
     println!("Output events (Query 4): {:?}", output_events);
 
     // Verify COUNT calculation: should have counts of 1, 2, 3 as events arrive
-    assert!(output_events.len() >= 3, "Expected at least 3 events from length window");
+    assert!(
+        output_events.len() >= 3,
+        "Expected at least 3 events from length window"
+    );
 
     runtime.shutdown();
 }
@@ -409,7 +418,7 @@ async fn test_sql_query_9_order_by_limit() {
         LIMIT 3;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query9Test".to_string()))
         .await
@@ -479,7 +488,7 @@ async fn test_sql_query_10_insert_into() {
         WHERE price > 500;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query10Test".to_string()))
         .await
@@ -519,7 +528,10 @@ async fn test_sql_query_10_insert_into() {
 
     let output_events = callback.get_events();
 
-    println!("Output events (Query 10 - HighPriceAlerts): {:?}", output_events);
+    println!(
+        "Output events (Query 10 - HighPriceAlerts): {:?}",
+        output_events
+    );
 
     // Verify only high-price stocks (> 500) are in HighPriceAlerts
     assert_eq!(output_events.len(), 2, "Expected 2 high-price alerts");
@@ -560,7 +572,7 @@ async fn test_sql_query_6_sum_having() {
         HAVING SUM(volume) > 1000;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query6Test".to_string()))
         .await
@@ -621,7 +633,10 @@ async fn test_sql_query_6_sum_having() {
 
     let output_events = callback.get_events();
 
-    println!("Output events (Query 6 - SUM + HAVING): {:?}", output_events);
+    println!(
+        "Output events (Query 6 - SUM + HAVING): {:?}",
+        output_events
+    );
 
     // Verify HAVING clause filters correctly
     // Should only have GOOGL (1100 > 1000), not AAPL (700 <= 1000)
@@ -635,7 +650,10 @@ async fn test_sql_query_6_sum_having() {
             false
         }
     });
-    assert!(has_googl, "Expected GOOGL in output (SUM(volume) = 1100 > 1000)");
+    assert!(
+        has_googl,
+        "Expected GOOGL in output (SUM(volume) = 1100 > 1000)"
+    );
 
     // Verify AAPL is NOT in output (filtered by HAVING)
     let has_aapl = output_events.iter().any(|event| {
@@ -645,7 +663,10 @@ async fn test_sql_query_6_sum_having() {
             false
         }
     });
-    assert!(!has_aapl, "AAPL should be filtered out by HAVING clause (SUM(volume) = 700 <= 1000)");
+    assert!(
+        !has_aapl,
+        "AAPL should be filtered out by HAVING clause (SUM(volume) = 700 <= 1000)"
+    );
 
     runtime.shutdown();
 }
@@ -667,7 +688,7 @@ async fn test_sql_query_8_multiple_aggregations() {
         GROUP BY symbol;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query8Test".to_string()))
         .await
@@ -719,10 +740,16 @@ async fn test_sql_query_8_multiple_aggregations() {
 
     let output_events = callback.get_events();
 
-    println!("Output events (Query 8 - Multiple Aggregations): {:?}", output_events);
+    println!(
+        "Output events (Query 8 - Multiple Aggregations): {:?}",
+        output_events
+    );
 
     // Verify we got output
-    assert!(output_events.len() > 0, "Expected at least 1 event from tumbling window");
+    assert!(
+        output_events.len() > 0,
+        "Expected at least 1 event from tumbling window"
+    );
 
     // Find GOOGL in output and verify all aggregations
     let googl_event = output_events.iter().find(|event| {
@@ -738,7 +765,11 @@ async fn test_sql_query_8_multiple_aggregations() {
     let event = googl_event.unwrap();
 
     // Verify structure: [symbol, trade_count, avg_price, min_price, max_price]
-    assert_eq!(event.len(), 5, "Expected 5 attributes (symbol + 4 aggregations)");
+    assert_eq!(
+        event.len(),
+        5,
+        "Expected 5 attributes (symbol + 4 aggregations)"
+    );
 
     // Verify symbol
     if let AttributeValue::String(symbol) = &event[0] {
@@ -756,7 +787,11 @@ async fn test_sql_query_8_multiple_aggregations() {
 
     // Verify AVG(price) = 200.0
     if let AttributeValue::Double(avg) = event[2] {
-        assert!((avg - 200.0).abs() < 0.001, "Expected AVG = 200.0, got {}", avg);
+        assert!(
+            (avg - 200.0).abs() < 0.001,
+            "Expected AVG = 200.0, got {}",
+            avg
+        );
     } else {
         panic!("Expected Double for avg_price, got {:?}", event[2]);
     }
@@ -791,7 +826,7 @@ async fn test_sql_query_5_stream_join() {
         JOIN News ON Trades.symbol = News.symbol;
     "#;
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runtime = manager
         .create_runtime_from_sql(sql, Some("Query5Test".to_string()))
         .await
@@ -860,7 +895,10 @@ async fn test_sql_query_5_stream_join() {
     println!("Output events (Query 5 - JOIN): {:?}", output_events);
 
     // Verify JOIN results
-    assert!(output_events.len() >= 2, "Expected at least 2 joined events");
+    assert!(
+        output_events.len() >= 2,
+        "Expected at least 2 joined events"
+    );
 
     // Note: JOIN output format depends on runtime implementation
     // This test verifies that the SQL → Query API conversion works

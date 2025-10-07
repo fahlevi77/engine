@@ -1,4 +1,4 @@
-// Minimal Siddhi grammar using LALRPOP
+// Minimal EventFlux grammar using LALRPOP
 // Supports stream/table/query definitions used in tests
 
 grammar;

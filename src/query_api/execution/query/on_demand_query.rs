@@ -1,4 +1,4 @@
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 // Annotation is not used here as Java OnDemandQuery doesn't have annotations field.
 // use crate::query_api::annotation::Annotation;
 use super::{OutputEventType, OutputStream}; // Use parent module's re-exports
@@ -22,10 +22,9 @@ pub enum OnDemandQueryType {
     Find,
 }
 
-
 #[derive(Clone, Debug, PartialEq)] // Default will be custom via new()
 pub struct OnDemandQuery {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub input_store: Option<InputStore>,
     pub selector: Selector,
@@ -37,7 +36,7 @@ pub struct OnDemandQuery {
 impl OnDemandQuery {
     pub fn new() -> Self {
         OnDemandQuery {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             input_store: None,
             selector: Selector::new(),
             output_stream: OutputStream::default_return_stream(),
@@ -163,8 +162,8 @@ impl Default for OnDemandQuery {
     }
 }
 
-// SiddhiElement is composed. Access via self.siddhi_element.
-// No direct impl of SiddhiElement trait needed on OnDemandQuery itself if using composition and public field.
-// However, Java's OnDemandQuery *is* a SiddhiElement. So, if we want to pass OnDemandQuery
-// where a dyn SiddhiElement is expected, it should implement the trait (by delegating).
-// For now, assuming direct access to composed `siddhi_element` is sufficient, or this will be added later.
+// EventFluxElement is composed. Access via self.eventflux_element.
+// No direct impl of EventFluxElement trait needed on OnDemandQuery itself if using composition and public field.
+// However, Java's OnDemandQuery *is* a EventFluxElement. So, if we want to pass OnDemandQuery
+// where a dyn EventFluxElement is expected, it should implement the trait (by delegating).
+// For now, assuming direct access to composed `eventflux_element` is sufficient, or this will be added later.

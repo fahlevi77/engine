@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/trigger/trigger_runtime.rs
+// eventflux_rust/src/core/trigger/trigger_runtime.rs
 
 use crate::core::event::event::Event;
 use crate::core::event::value::AttributeValue;

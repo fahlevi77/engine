@@ -1,14 +1,14 @@
-// siddhi_rust/src/core/siddhi_app_runtime_builder.rs
+// eventflux_rust/src/core/eventflux_app_runtime_builder.rs
 use crate::core::aggregation::AggregationRuntime;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::config::ApplicationConfig;
+use crate::core::eventflux_app_runtime::EventFluxAppRuntime; // Actual EventFluxAppRuntime
 use crate::core::partition::PartitionRuntime;
 use crate::core::query::query_runtime::QueryRuntime;
-use crate::core::siddhi_app_runtime::SiddhiAppRuntime; // Actual SiddhiAppRuntime
 use crate::core::stream::stream_junction::StreamJunction;
 // use crate::core::window::WindowRuntime; // TODO: Will be used when window runtime is implemented
 use crate::query_api::definition::StreamDefinition as ApiStreamDefinition;
-use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp; // For build() method arg // Added this import
+use crate::query_api::eventflux_app::EventFluxApp as ApiEventFluxApp; // For build() method arg // Added this import
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -19,8 +19,8 @@ pub struct TableRuntimePlaceholder {}
 use crate::core::trigger::TriggerRuntime;
 
 #[derive(Debug)]
-pub struct SiddhiAppRuntimeBuilder {
-    pub siddhi_app_context: Arc<SiddhiAppContext>, // Set upon creation, not Option
+pub struct EventFluxAppRuntimeBuilder {
+    pub eventflux_app_context: Arc<EventFluxAppContext>, // Set upon creation, not Option
     pub application_config: Option<ApplicationConfig>, // Optional configuration for the application
 
     pub stream_definition_map: HashMap<String, Arc<ApiStreamDefinition>>,
@@ -39,10 +39,13 @@ pub struct SiddhiAppRuntimeBuilder {
     pub trigger_runtimes: Vec<Arc<TriggerRuntime>>,
 }
 
-impl SiddhiAppRuntimeBuilder {
-    pub fn new(siddhi_app_context: Arc<SiddhiAppContext>, application_config: Option<ApplicationConfig>) -> Self {
+impl EventFluxAppRuntimeBuilder {
+    pub fn new(
+        eventflux_app_context: Arc<EventFluxAppContext>,
+        application_config: Option<ApplicationConfig>,
+    ) -> Self {
         Self {
-            siddhi_app_context, // No longer Option
+            eventflux_app_context, // No longer Option
             application_config,
             stream_definition_map: HashMap::new(),
             table_definition_map: HashMap::new(),
@@ -123,24 +126,30 @@ impl SiddhiAppRuntimeBuilder {
         self.trigger_runtimes.push(trigger_runtime);
     }
 
-    // build() method that consumes the builder and returns a SiddhiAppRuntime
-    pub fn build(self, api_siddhi_app: Arc<ApiSiddhiApp>) -> Result<SiddhiAppRuntime, String> {
+    // build() method that consumes the builder and returns a EventFluxAppRuntime
+    pub fn build(
+        self,
+        api_eventflux_app: Arc<ApiEventFluxApp>,
+    ) -> Result<EventFluxAppRuntime, String> {
         // Create InputManager and populate it
         let input_manager = crate::core::stream::input::input_manager::InputManager::new(
-            Arc::clone(&self.siddhi_app_context),
+            Arc::clone(&self.eventflux_app_context),
             self.stream_junction_map.clone(),
         );
 
-        let scheduler = self.siddhi_app_context.get_scheduler().unwrap_or_else(|| {
-            Arc::new(crate::core::util::Scheduler::new(Arc::new(
-                crate::core::util::ExecutorService::default(),
-            )))
-        });
+        let scheduler = self
+            .eventflux_app_context
+            .get_scheduler()
+            .unwrap_or_else(|| {
+                Arc::new(crate::core::util::Scheduler::new(Arc::new(
+                    crate::core::util::ExecutorService::default(),
+                )))
+            });
 
-        Ok(SiddhiAppRuntime {
-            name: self.siddhi_app_context.name.clone(),
-            siddhi_app: api_siddhi_app, // The original parsed API definition
-            siddhi_app_context: self.siddhi_app_context, // The context created for this app instance
+        Ok(EventFluxAppRuntime {
+            name: self.eventflux_app_context.name.clone(),
+            eventflux_app: api_eventflux_app, // The original parsed API definition
+            eventflux_app_context: self.eventflux_app_context, // The context created for this app instance
             stream_junction_map: self.stream_junction_map,
             input_manager: Arc::new(input_manager),
             query_runtimes: self.query_runtimes,

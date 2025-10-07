@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/complex_event.rs
-// Corresponds to io.siddhi.core.event.ComplexEvent (interface)
+// eventflux_rust/src/core/event/complex_event.rs
+// Corresponds to io.eventflux.core.event.ComplexEvent (interface)
 use super::value::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::any::Any;

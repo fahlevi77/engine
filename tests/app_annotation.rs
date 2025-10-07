@@ -1,4 +1,4 @@
-use siddhi_rust::query_compiler::parse;
+use eventflux_rust::query_compiler::parse;
 
 #[test]
 fn test_parse_app_annotations() {

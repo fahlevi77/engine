@@ -1,4 +1,4 @@
-// Corresponds to package io.siddhi.query.api.execution.query.input.stream
+// Corresponds to package io.eventflux.query.api.execution.query.input.stream
 
 // Individual stream types
 // pub mod anonymous_input_stream; // Functionality merged into single_input_stream.rs
@@ -27,5 +27,5 @@ pub use crate::query_api::aggregation::Within as JoinWithin; // Import Within di
 // - `join_input_stream.rs` defines `pub struct JoinInputStream { ... }` and its enums `Type` and `EventTrigger`.
 // - `state_input_stream.rs` defines `pub struct StateInputStream { ... }` and its enum `Type`.
 // All structs that are variants or composed within these (e.g. SingleInputStream, JoinInputStream, StateInputStream)
-// must compose `siddhi_element: SiddhiElement`.
-// The `InputStream` enum implements `SiddhiElement` and `InputStreamTrait` by dispatching to its variants.
+// must compose `eventflux_element: EventFluxElement`.
+// The `InputStream` enum implements `EventFluxElement` and `InputStreamTrait` by dispatching to its variants.

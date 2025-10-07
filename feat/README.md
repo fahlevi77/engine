@@ -1,6 +1,6 @@
-# Siddhi Rust Features Documentation
+# EventFlux Rust Features Documentation
 
-This directory contains detailed documentation for specific features and architectural components of Siddhi Rust.
+This directory contains detailed documentation for specific features and architectural components of EventFlux Rust.
 
 ## Directory Structure
 
@@ -134,7 +134,7 @@ Start with:
 
 ### 👥 For Users
 Start with:
-1. `../README.md` - Get started with Siddhi Rust
+1. `../README.md` - Get started with EventFlux Rust
 2. `../MILESTONES.md` - Understand upcoming features and releases
 3. Feature-specific guides in this directory
 

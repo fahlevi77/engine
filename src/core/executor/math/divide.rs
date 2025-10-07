@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/divide.rs
+// eventflux_rust/src/core/executor/math/divide.rs
 use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
@@ -21,7 +21,7 @@ impl DivideExpressionExecutor {
         let right_type = right.get_return_type();
 
         // Determine return type: typically Double for division, unless both are Int/Long and result should be Int/Long (integer division).
-        // Siddhi's Java typed executors (e.g., DivideExpressionExecutorInt) suggest it maintains integer division if possible.
+        // EventFlux's Java typed executors (e.g., DivideExpressionExecutorInt) suggest it maintains integer division if possible.
         // However, to avoid loss of precision and match general SQL behavior for `/`, promoting to DOUBLE is safest.
         // If strict integer division is needed, a separate DivInt executor or different operator could be used.
         // For now, promoting to DOUBLE for `/` operator.
@@ -78,7 +78,7 @@ impl ExpressionExecutor for DivideExpressionExecutor {
                 let r = right_val.to_f64_or_err_str("Divide")?;
 
                 if r == 0.0 {
-                    // Division by zero. Siddhi might return null or throw an error.
+                    // Division by zero. EventFlux might return null or throw an error.
                     // Returning Null is a common SQL behavior.
                     // log_error!("Division by zero error");
                     return Some(AttributeValue::Null);
@@ -105,13 +105,13 @@ impl ExpressionExecutor for DivideExpressionExecutor {
     }
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(DivideExpressionExecutor {
-            left_executor: self.left_executor.clone_executor(siddhi_app_context),
-            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            left_executor: self.left_executor.clone_executor(eventflux_app_context),
+            right_executor: self.right_executor.clone_executor(eventflux_app_context),
             return_type: self.return_type,
         })
     }

@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/coalesce_function_executor.rs
-// Corresponds to io.siddhi.core.executor.function.CoalesceFunctionExecutor
+// eventflux_rust/src/core/executor/function/coalesce_function_executor.rs
+// Corresponds to io.eventflux.core.executor.function.CoalesceFunctionExecutor
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -65,14 +65,14 @@ impl ExpressionExecutor for CoalesceFunctionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         let cloned_execs = self
             .attribute_executors
             .iter()
-            .map(|e| e.clone_executor(siddhi_app_context))
+            .map(|e| e.clone_executor(eventflux_app_context))
             .collect();
         // new already determines the return type from the cloned_execs.
         // If new fails (e.g. if cloning results in incompatible types somehow, though unlikely here),

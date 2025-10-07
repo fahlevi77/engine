@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/state/state_event_cloner.rs
-// Simplified port of io.siddhi.core.event.state.StateEventCloner
+// eventflux_rust/src/core/event/state/state_event_cloner.rs
+// Simplified port of io.eventflux.core.event.state.StateEventCloner
 use super::{
     meta_state_event::MetaStateEvent, state_event::StateEvent,
     state_event_factory::StateEventFactory,

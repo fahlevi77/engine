@@ -1,8 +1,8 @@
-# Siddhi Core (Rust Port)
+# EventFlux Core (Rust Port)
 
-This directory mirrors the `io.siddhi.core` package from the Java
+This directory mirrors the `io.eventflux.core` package from the Java
 implementation.  The Rust port now supports windows, joins, patterns,
-tables and persistence, providing a functional runtime for many Siddhi
+tables and persistence, providing a functional runtime for many EventFlux
 applications.
 
 ## Notes

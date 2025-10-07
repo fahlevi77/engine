@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/query/output/mod.rs
+// eventflux_rust/src/core/query/output/mod.rs
 
 // This module is for components related to query output processing in the core engine,
 // like output callbacks, specific output processors (e.g., for INSERT INTO, DELETE, UPDATE),

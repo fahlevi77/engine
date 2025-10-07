@@ -1,33 +1,33 @@
-// siddhi_rust/src/core/distributed/grpc/transport.rs
+// eventflux_rust/src/core/distributed/grpc/transport.rs
 
 //! gRPC Transport Implementation
 //!
 //! This module provides a production-ready gRPC transport layer for distributed communication
 //! using Tonic. It supports streaming, compression, load balancing, and health checks.
 
-use super::{
-    TransportMessage, MessageType, CompressionType, HeartbeatRequest, HeartbeatResponse,
-    EventRequest, NodeStatus, NodeHealth, ClusterInfo
-};
 use super::transport_client::TransportClient;
 use super::transport_server::{Transport as TransportService, TransportServer};
-
-use crate::core::distributed::{DistributedResult, DistributedError};
-use crate::core::distributed::transport::{
-    Transport, Connection, ConnectionState, Listener, Message, 
-    MessageType as LocalMessageType, TransportFactory
+use super::{
+    ClusterInfo, CompressionType, EventRequest, HeartbeatRequest, HeartbeatResponse, MessageType,
+    NodeHealth, NodeStatus, TransportMessage,
 };
 
+use crate::core::distributed::transport::{
+    Connection, ConnectionState, Listener, Message, MessageType as LocalMessageType, Transport,
+    TransportFactory,
+};
+use crate::core::distributed::{DistributedError, DistributedResult};
+
 use async_trait::async_trait;
+use futures::{Stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::{RwLock, mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, RwLock};
 use tokio::time::Duration;
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity, Server, ServerTlsConfig};
 use tonic::{Request, Response, Status, Streaming};
-use tonic::transport::{Server, Channel, ClientTlsConfig, ServerTlsConfig, Identity, Certificate};
 use tower::service_fn;
-use futures::{Stream, StreamExt};
 
 /// gRPC transport implementation using Tonic
 pub struct GrpcTransport {
@@ -144,7 +144,7 @@ impl GrpcTransport {
             server_handle: Arc::new(RwLock::new(None)),
         }
     }
-    
+
     /// Create a new gRPC transport with custom configuration
     pub fn with_config(config: GrpcTransportConfig) -> Self {
         GrpcTransport {
@@ -153,23 +153,33 @@ impl GrpcTransport {
             server_handle: Arc::new(RwLock::new(None)),
         }
     }
-    
+
     /// Convert local message to protobuf message
     fn to_proto_message(&self, message: &Message) -> TransportMessage {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as i64;
-            
+
         TransportMessage {
             id: message.id.clone(),
             message_type: self.to_proto_message_type(&message.message_type) as i32,
             payload: message.payload.clone(),
             headers: message.headers.clone(),
             timestamp,
-            source_node: message.headers.get("source_node").cloned().unwrap_or_default(),
-            target_node: message.headers.get("target_node").cloned().unwrap_or_default(),
-            priority: message.headers.get("priority")
+            source_node: message
+                .headers
+                .get("source_node")
+                .cloned()
+                .unwrap_or_default(),
+            target_node: message
+                .headers
+                .get("target_node")
+                .cloned()
+                .unwrap_or_default(),
+            priority: message
+                .headers
+                .get("priority")
                 .and_then(|p| p.parse().ok())
                 .unwrap_or(5),
             compression: if self.config.enable_compression {
@@ -179,7 +189,7 @@ impl GrpcTransport {
             },
         }
     }
-    
+
     /// Convert protobuf message to local message
     fn from_proto_message(&self, proto_msg: &TransportMessage) -> Message {
         Message {
@@ -189,7 +199,7 @@ impl GrpcTransport {
             message_type: self.from_proto_message_type(proto_msg.message_type),
         }
     }
-    
+
     /// Convert local message type to protobuf message type
     fn to_proto_message_type(&self, msg_type: &LocalMessageType) -> MessageType {
         match msg_type {
@@ -201,7 +211,7 @@ impl GrpcTransport {
             LocalMessageType::Checkpoint => MessageType::Checkpoint,
         }
     }
-    
+
     /// Convert protobuf message type to local message type
     fn from_proto_message_type(&self, proto_type: i32) -> LocalMessageType {
         match MessageType::try_from(proto_type).unwrap_or(MessageType::Unspecified) {
@@ -214,7 +224,7 @@ impl GrpcTransport {
             _ => LocalMessageType::Event, // Default fallback
         }
     }
-    
+
     /// Get or create gRPC client for endpoint
     async fn get_client(&self, endpoint: &str) -> DistributedResult<TransportClient<Channel>> {
         // Check if client exists
@@ -224,13 +234,15 @@ impl GrpcTransport {
                 return Ok(client.clone());
             }
         }
-        
+
         // Create new client
-        let mut channel_builder = Channel::from_shared(format!("http://{}", endpoint))
-            .map_err(|e| DistributedError::TransportError { 
-                message: format!("Invalid endpoint {}: {}", endpoint, e) 
+        let mut channel_builder =
+            Channel::from_shared(format!("http://{}", endpoint)).map_err(|e| {
+                DistributedError::TransportError {
+                    message: format!("Invalid endpoint {}: {}", endpoint, e),
+                }
             })?;
-        
+
         // Configure channel
         channel_builder = channel_builder
             .timeout(Duration::from_millis(self.config.connection_timeout_ms))
@@ -238,39 +250,43 @@ impl GrpcTransport {
             .http2_keep_alive_interval(self.config.http2_keep_alive_interval)
             .keep_alive_timeout(self.config.http2_keep_alive_timeout)
             .keep_alive_while_idle(self.config.http2_keep_alive_enabled);
-        
+
         // Configure TLS if enabled
         if let Some(tls_config) = &self.config.tls_config {
             if tls_config.enabled {
                 let mut client_tls = ClientTlsConfig::new();
-                
+
                 if let Some(ca_file) = &tls_config.ca_file {
-                    let ca_cert = std::fs::read(ca_file)
-                        .map_err(|e| DistributedError::TransportError {
-                            message: format!("Failed to read CA certificate: {}", e)
+                    let ca_cert =
+                        std::fs::read(ca_file).map_err(|e| DistributedError::TransportError {
+                            message: format!("Failed to read CA certificate: {}", e),
                         })?;
                     client_tls = client_tls.ca_certificate(Certificate::from_pem(ca_cert));
                 }
-                
+
                 if let Some(server_name) = &tls_config.server_name {
                     client_tls = client_tls.domain_name(server_name);
                 }
-                
-                channel_builder = channel_builder.tls_config(client_tls)
-                    .map_err(|e| DistributedError::TransportError {
-                        message: format!("Failed to configure TLS: {}", e)
-                    })?;
+
+                channel_builder = channel_builder.tls_config(client_tls).map_err(|e| {
+                    DistributedError::TransportError {
+                        message: format!("Failed to configure TLS: {}", e),
+                    }
+                })?;
             }
         }
-        
+
         // Connect
-        let channel = channel_builder.connect().await
-            .map_err(|e| DistributedError::TransportError {
-                message: format!("Failed to connect to {}: {}", endpoint, e)
-            })?;
-        
+        let channel =
+            channel_builder
+                .connect()
+                .await
+                .map_err(|e| DistributedError::TransportError {
+                    message: format!("Failed to connect to {}: {}", endpoint, e),
+                })?;
+
         let mut client = TransportClient::new(channel);
-        
+
         // Configure compression - using identity for now (compression is handled at payload level)
         // Note: Tonic compression methods depend on specific feature flags and versions
         // if self.config.enable_compression {
@@ -278,13 +294,13 @@ impl GrpcTransport {
         //         .send_compressed(tonic::codec::CompressionEncoding::Gzip)
         //         .accept_compressed(tonic::codec::CompressionEncoding::Gzip);
         // }
-        
+
         // Cache client
         {
             let mut clients = self.clients.write().await;
             clients.insert(endpoint.to_string(), client.clone());
         }
-        
+
         Ok(client)
     }
 }
@@ -293,71 +309,72 @@ impl GrpcTransport {
 impl Transport for GrpcTransport {
     async fn connect(&self, endpoint: &str) -> DistributedResult<Connection> {
         let _client = self.get_client(endpoint).await?;
-        
+
         // For now, create a placeholder connection
         // Full implementation would integrate with the unified transport interface
         Ok(Connection {
             id: uuid::Uuid::new_v4().to_string(),
             endpoint: endpoint.to_string(),
             state: ConnectionState::Connected,
-            handle: Some(Arc::new(RwLock::new(crate::core::distributed::transport::ConnectionHandle::Grpc(
-                endpoint.to_string()
-            )))),
+            handle: Some(Arc::new(RwLock::new(
+                crate::core::distributed::transport::ConnectionHandle::Grpc(endpoint.to_string()),
+            ))),
         })
     }
-    
+
     async fn listen(&self, endpoint: &str) -> DistributedResult<Listener> {
         // Simplified listen implementation
         // Full gRPC server implementation would be complex and requires proper trait implementation
-        
+
         Ok(Listener {
             endpoint: endpoint.to_string(),
-            handle: Some(Arc::new(RwLock::new(crate::core::distributed::transport::ListenerHandle::Grpc(
-                endpoint.to_string()
-            )))),
+            handle: Some(Arc::new(RwLock::new(
+                crate::core::distributed::transport::ListenerHandle::Grpc(endpoint.to_string()),
+            ))),
         })
     }
-    
+
     async fn send(&self, connection: &Connection, message: Message) -> DistributedResult<()> {
         let client = self.get_client(&connection.endpoint).await?;
         let proto_message = self.to_proto_message(&message);
-        
+
         let request = Request::new(proto_message);
-        let response = client.clone().send_message(request).await
-            .map_err(|e| DistributedError::TransportError {
-                message: format!("Failed to send message: {}", e)
-            })?;
-            
+        let response = client.clone().send_message(request).await.map_err(|e| {
+            DistributedError::TransportError {
+                message: format!("Failed to send message: {}", e),
+            }
+        })?;
+
         // Handle response if needed
         let _response_message = response.into_inner();
-        
+
         Ok(())
     }
-    
+
     async fn receive(&self, connection: &Connection) -> DistributedResult<Message> {
         // For gRPC, receiving is typically handled through streaming
         // This is a simplified implementation that would need to be extended
         // based on the specific use case (request/response vs streaming)
-        
+
         Err(DistributedError::TransportError {
-            message: "Direct receive not supported for gRPC. Use streaming instead.".to_string()
+            message: "Direct receive not supported for gRPC. Use streaming instead.".to_string(),
         })
     }
-    
+
     async fn close(&self, connection: Connection) -> DistributedResult<()> {
         // Remove client from cache
         let mut clients = self.clients.write().await;
         clients.remove(&connection.endpoint);
-        
+
         Ok(())
     }
-    
+
     async fn accept(&self, _listener: &Listener) -> DistributedResult<Connection> {
         // For gRPC, connection acceptance is handled by the server framework
         // This would need to be implemented based on the specific server architecture
-        
+
         Err(DistributedError::TransportError {
-            message: "Accept not implemented for gRPC. Use service handlers instead.".to_string()
+            message: "Accept not implemented for gRPC. Use service handlers instead.".to_string(),
         })
     }
 }
@@ -383,7 +400,7 @@ impl GrpcTransportService {
         request: Request<TransportMessage>,
     ) -> Result<Response<TransportMessage>, Status> {
         let message = request.into_inner();
-        
+
         // Process the message and create a response
         let response_message = TransportMessage {
             id: uuid::Uuid::new_v4().to_string(),
@@ -399,17 +416,17 @@ impl GrpcTransportService {
             priority: 0,
             compression: CompressionType::None as i32,
         };
-        
+
         Ok(Response::new(response_message))
     }
-    
+
     /// Handle heartbeat request
     pub async fn handle_heartbeat(
         &self,
         request: Request<HeartbeatRequest>,
     ) -> Result<Response<HeartbeatResponse>, Status> {
         let _heartbeat_req = request.into_inner();
-        
+
         let response = HeartbeatResponse {
             server_timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -426,14 +443,14 @@ impl GrpcTransportService {
                 metadata: HashMap::new(),
             }),
             cluster_info: Some(ClusterInfo {
-                cluster_id: "siddhi-cluster".to_string(),
+                cluster_id: "eventflux-cluster".to_string(),
                 total_nodes: 3,
                 healthy_nodes: 3,
                 leader_node: "node-1".to_string(),
                 cluster_version: "1.0.0".to_string(),
             }),
         };
-        
+
         Ok(Response::new(response))
     }
 }
@@ -444,7 +461,7 @@ impl TransportFactory {
     pub fn create_grpc() -> Arc<dyn Transport> {
         Arc::new(GrpcTransport::new())
     }
-    
+
     /// Create a gRPC transport with custom configuration
     pub fn create_grpc_with_config(config: GrpcTransportConfig) -> Arc<dyn Transport> {
         Arc::new(GrpcTransport::with_config(config))
@@ -454,29 +471,32 @@ impl TransportFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_grpc_transport_creation() {
         let transport = GrpcTransport::new();
         assert_eq!(transport.config.connection_timeout_ms, 10000);
         assert_eq!(transport.config.enable_compression, true);
     }
-    
+
     #[tokio::test]
     async fn test_message_conversion() {
         let transport = GrpcTransport::new();
-        
+
         let original_message = Message::event(b"test data".to_vec())
             .with_header("source_node".to_string(), "node1".to_string());
-        
+
         let proto_message = transport.to_proto_message(&original_message);
         let converted_message = transport.from_proto_message(&proto_message);
-        
+
         assert_eq!(original_message.id, converted_message.id);
         assert_eq!(original_message.payload, converted_message.payload);
-        assert_eq!(original_message.message_type, converted_message.message_type);
+        assert_eq!(
+            original_message.message_type,
+            converted_message.message_type
+        );
     }
-    
+
     #[test]
     fn test_grpc_config_default() {
         let config = GrpcTransportConfig::default();
@@ -485,12 +505,12 @@ mod tests {
         assert_eq!(config.preferred_compression, CompressionType::Zstd);
         assert_eq!(config.max_concurrent_requests, 1000);
     }
-    
+
     #[test]
     fn test_grpc_factory() {
         let _transport = TransportFactory::create_grpc();
         // Transport created successfully
-        
+
         let custom_config = GrpcTransportConfig {
             connection_timeout_ms: 5000,
             enable_compression: false,

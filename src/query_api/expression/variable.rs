@@ -1,9 +1,9 @@
-// Corresponds to io.siddhi.query.api.expression.Variable
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.expression.Variable
+use crate::query_api::eventflux_element::EventFluxElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Variable {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Variable specific fields
     pub stream_id: Option<String>,
@@ -18,7 +18,7 @@ impl Variable {
     // Constructor requires attribute_name, others are optional or defaulted.
     pub fn new(attribute_name: String) -> Self {
         Variable {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             attribute_name,
             stream_id: None,
             is_inner_stream: false,
@@ -97,11 +97,11 @@ pub const LAST_INDEX: i32 = -2;
 
 // Deref if needed:
 // impl std::ops::Deref for Variable {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for Variable {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }
 
 #[cfg(test)]
@@ -117,7 +117,7 @@ mod tests {
         assert_eq!(var.get_stream_index(), None);
         assert_eq!(var.get_function_id(), None);
         assert_eq!(var.get_function_index(), None);
-        assert_eq!(var.siddhi_element.query_context_start_index, None);
+        assert_eq!(var.eventflux_element.query_context_start_index, None);
     }
 
     #[test]

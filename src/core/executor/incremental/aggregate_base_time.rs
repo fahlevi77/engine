@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -92,7 +92,7 @@ impl ExpressionExecutor for IncrementalAggregateBaseTimeFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(Self {
             time_executor: self.time_executor.clone_executor(ctx),
             duration_executor: self.duration_executor.clone_executor(ctx),

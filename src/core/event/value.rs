@@ -1,9 +1,9 @@
-// siddhi_rust/src/core/event/value.rs
+// eventflux_rust/src/core/event/value.rs
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::any::Any;
 use std::fmt;
 
-// This enum will represent the possible types of attribute values in a Siddhi event.
+// This enum will represent the possible types of attribute values in a EventFlux event.
 // Java Event uses Object[], allowing any type. Rust needs to be more explicit.
 // query_api::definition::attribute::Type enum has STRING, INT, LONG, FLOAT, DOUBLE, BOOL, OBJECT.
 // This enum should reflect those types for data carrying.
@@ -198,7 +198,7 @@ impl AttributeValue {
         }
     }
 
-    /// Convert to boolean following Java Siddhi rules
+    /// Convert to boolean following Java EventFlux rules
     pub fn to_boolean(&self) -> Option<bool> {
         match self {
             AttributeValue::Bool(b) => Some(*b),

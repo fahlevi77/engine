@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::state::state_event::StateEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
@@ -50,7 +50,7 @@ impl ExpressionExecutor for MultiValueVariableFunctionExecutor {
         ApiAttributeType::OBJECT
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }

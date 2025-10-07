@@ -30,8 +30,8 @@ impl JoinProcessor {
         condition_executor: Option<Box<dyn ExpressionExecutor>>,
         left_attr_count: usize,
         right_attr_count: usize,
-        app_ctx: Arc<crate::core::config::siddhi_app_context::SiddhiAppContext>,
-        query_ctx: Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext>,
+        app_ctx: Arc<crate::core::config::eventflux_app_context::EventFluxAppContext>,
+        query_ctx: Arc<crate::core::config::eventflux_query_context::EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -174,7 +174,7 @@ impl Processor for JoinProcessorSide {
 
     fn clone_processor(
         &self,
-        _ctx: &Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext>,
+        _ctx: &Arc<crate::core::config::eventflux_query_context::EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         Box::new(JoinProcessorSide {
             parent: Arc::clone(&self.parent),
@@ -182,15 +182,24 @@ impl Processor for JoinProcessorSide {
         })
     }
 
-    fn get_siddhi_app_context(
+    fn get_eventflux_app_context(
         &self,
-    ) -> Arc<crate::core::config::siddhi_app_context::SiddhiAppContext> {
-        self.parent.lock().unwrap().meta.siddhi_app_context.clone()
+    ) -> Arc<crate::core::config::eventflux_app_context::EventFluxAppContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .eventflux_app_context
+            .clone()
     }
-    fn get_siddhi_query_context(
+    fn get_eventflux_query_context(
         &self,
-    ) -> Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext> {
-        self.parent.lock().unwrap().meta.get_siddhi_query_context()
+    ) -> Arc<crate::core::config::eventflux_query_context::EventFluxQueryContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

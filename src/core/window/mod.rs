@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/window/mod.rs
+// eventflux_rust/src/core/window/mod.rs
 
 //! Window related runtime structures.
 

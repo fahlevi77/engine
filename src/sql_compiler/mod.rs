@@ -1,7 +1,7 @@
 //! SQL Compiler Module
 //!
-//! This module provides SQL parsing and compilation capabilities for Siddhi Rust.
-//! It converts SQL syntax into Siddhi's query_api structures for execution.
+//! This module provides SQL parsing and compilation capabilities for EventFlux Rust.
+//! It converts SQL syntax into EventFlux's query_api structures for execution.
 //!
 //! # Architecture
 //!
@@ -16,7 +16,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use siddhi_rust::sql_compiler::parse_sql_application;
+//! use eventflux_rust::sql_compiler::parse_sql_application;
 //!
 //! let sql = r#"
 //!     CREATE STREAM StockStream (symbol STRING, price DOUBLE);
@@ -29,24 +29,27 @@
 //! let app = parse_sql_application(sql)?;
 //! ```
 
-pub mod catalog;
-pub mod preprocessor;
-pub mod ddl;
-pub mod type_mapping;
-pub mod expansion;
 pub mod application;
+pub mod catalog;
 pub mod converter;
+pub mod ddl;
 pub mod error;
+pub mod expansion;
+pub mod preprocessor;
+pub mod type_mapping;
 
 // Re-export main types for convenient access
-pub use catalog::{SqlCatalog, SqlApplication};
-pub use preprocessor::{SqlPreprocessor, PreprocessedSql, WindowClauseText};
-pub use ddl::{DdlParser, CreateStreamInfo};
-pub use type_mapping::{sql_type_to_attribute_type, attribute_type_to_sql_type};
-pub use expansion::SelectExpander;
 pub use application::parse_sql_application;
+pub use catalog::{SqlApplication, SqlCatalog};
 pub use converter::SqlConverter;
-pub use error::{SqlCompilerError, PreprocessorError, DdlError, TypeError, ExpansionError, ConverterError, ApplicationError};
+pub use ddl::{CreateStreamInfo, DdlParser};
+pub use error::{
+    ApplicationError, ConverterError, DdlError, ExpansionError, PreprocessorError,
+    SqlCompilerError, TypeError,
+};
+pub use expansion::SelectExpander;
+pub use preprocessor::{PreprocessedSql, SqlPreprocessor, WindowClauseText};
+pub use type_mapping::{attribute_type_to_sql_type, sql_type_to_attribute_type};
 
 /// Parse a complete SQL application with multiple statements
 pub fn parse(sql: &str) -> Result<SqlApplication, SqlCompilerError> {

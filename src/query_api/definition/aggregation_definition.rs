@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.definition.AggregationDefinition
+// Corresponds to io.eventflux.query.api.definition.AggregationDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
 // BasicSingleInputStream was merged into SingleInputStream; AggregationDefinition should use SingleInputStream.
@@ -68,7 +68,7 @@ impl AggregationDefinition {
     }
 }
 
-// Provide access to AbstractDefinition fields and SiddhiElement fields
+// Provide access to AbstractDefinition fields and EventFluxElement fields
 impl AsRef<AbstractDefinition> for AggregationDefinition {
     fn as_ref(&self) -> &AbstractDefinition {
         &self.abstract_definition
@@ -81,15 +81,15 @@ impl AsMut<AbstractDefinition> for AggregationDefinition {
     }
 }
 
-use crate::query_api::siddhi_element::SiddhiElement;
-impl AsRef<SiddhiElement> for AggregationDefinition {
-    fn as_ref(&self) -> &SiddhiElement {
+use crate::query_api::eventflux_element::EventFluxElement;
+impl AsRef<EventFluxElement> for AggregationDefinition {
+    fn as_ref(&self) -> &EventFluxElement {
         self.abstract_definition.as_ref()
     }
 }
 
-impl AsMut<SiddhiElement> for AggregationDefinition {
-    fn as_mut(&mut self) -> &mut SiddhiElement {
+impl AsMut<EventFluxElement> for AggregationDefinition {
+    fn as_mut(&mut self) -> &mut EventFluxElement {
         self.abstract_definition.as_mut()
     }
 }

@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.definition.WindowDefinition
+// Corresponds to io.eventflux.query.api.definition.WindowDefinition
 use crate::query_api::definition::stream_definition::StreamDefinition;
 use crate::query_api::execution::query::input::handler::WindowHandler; // Use the re-exported WindowHandler
 use crate::query_api::execution::query::output::OutputEventType; // Actual OutputEventType enum
@@ -51,9 +51,9 @@ impl WindowDefinition {
 // Let's assume for now that an ID-less StreamDefinition is not typical for a Default.
 // impl Default for WindowDefinition { ... }
 
-// Provide access to StreamDefinition, AbstractDefinition, and SiddhiElement fields
+// Provide access to StreamDefinition, AbstractDefinition, and EventFluxElement fields
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 
 impl AsRef<StreamDefinition> for WindowDefinition {
     fn as_ref(&self) -> &StreamDefinition {
@@ -79,14 +79,14 @@ impl AsMut<AbstractDefinition> for WindowDefinition {
     }
 }
 
-impl AsRef<SiddhiElement> for WindowDefinition {
-    fn as_ref(&self) -> &SiddhiElement {
+impl AsRef<EventFluxElement> for WindowDefinition {
+    fn as_ref(&self) -> &EventFluxElement {
         self.stream_definition.abstract_definition.as_ref()
     }
 }
 
-impl AsMut<SiddhiElement> for WindowDefinition {
-    fn as_mut(&mut self) -> &mut SiddhiElement {
+impl AsMut<EventFluxElement> for WindowDefinition {
+    fn as_mut(&mut self) -> &mut EventFluxElement {
         self.stream_definition.abstract_definition.as_mut()
     }
 }

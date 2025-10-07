@@ -1,14 +1,14 @@
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::config::{
-    siddhi_app_context::{MetricsLevelPlaceholder, SiddhiAppContext},
-    siddhi_context::SiddhiContext,
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::config::{
+    eventflux_app_context::{EventFluxAppContext, MetricsLevelPlaceholder},
+    eventflux_context::EventFluxContext,
 };
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::query::processor::Processor;
-use siddhi_rust::core::stream::output::InMemoryErrorStore;
-use siddhi_rust::core::stream::stream_junction::{OnErrorAction, StreamJunction};
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::query::processor::Processor;
+use eventflux_rust::core::stream::output::InMemoryErrorStore;
+use eventflux_rust::core::stream::stream_junction::{OnErrorAction, StreamJunction};
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -19,13 +19,13 @@ struct RecordingProcessor {
 impl Processor for RecordingProcessor {
     fn process(
         &self,
-        mut chunk: Option<Box<dyn siddhi_rust::core::event::complex_event::ComplexEvent>>,
+        mut chunk: Option<Box<dyn eventflux_rust::core::event::complex_event::ComplexEvent>>,
     ) {
         while let Some(mut ce) = chunk {
             chunk = ce.set_next(None);
             if let Some(se) = ce
                 .as_any()
-                .downcast_ref::<siddhi_rust::core::event::stream::StreamEvent>()
+                .downcast_ref::<eventflux_rust::core::event::stream::StreamEvent>()
             {
                 self.events
                     .lock()
@@ -40,29 +40,29 @@ impl Processor for RecordingProcessor {
     fn set_next_processor(&mut self, _n: Option<Arc<Mutex<dyn Processor>>>) {}
     fn clone_processor(
         &self,
-        _c: &Arc<siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext>,
+        _c: &Arc<eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         Box::new(RecordingProcessor {
             events: Arc::clone(&self.events),
         })
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::new(SiddhiAppContext::new(
-            Arc::new(SiddhiContext::new()),
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::new(EventFluxAppContext::new(
+            Arc::new(EventFluxContext::new()),
             "T".to_string(),
-            Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+            Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                 "T".to_string(),
             )),
             String::new(),
         ))
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::new(SiddhiQueryContext::new(
-            Arc::new(SiddhiAppContext::new(
-                Arc::new(SiddhiContext::new()),
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::new(EventFluxQueryContext::new(
+            Arc::new(EventFluxAppContext::new(
+                Arc::new(EventFluxContext::new()),
                 "T".to_string(),
-                Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                     "T".to_string(),
                 )),
                 String::new(),
@@ -71,8 +71,8 @@ impl Processor for RecordingProcessor {
             None,
         ))
     }
-    fn get_processing_mode(&self) -> siddhi_rust::core::query::processor::ProcessingMode {
-        siddhi_rust::core::query::processor::ProcessingMode::DEFAULT
+    fn get_processing_mode(&self) -> eventflux_rust::core::query::processor::ProcessingMode {
+        eventflux_rust::core::query::processor::ProcessingMode::DEFAULT
     }
     fn is_stateful(&self) -> bool {
         false
@@ -81,12 +81,12 @@ impl Processor for RecordingProcessor {
 
 #[test]
 fn test_fault_stream_routing() {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "App".to_string(),
     ));
-    let mut app_ctx = SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let mut app_ctx = EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "App".to_string(),
         Arc::clone(&app),
         String::new(),
@@ -128,15 +128,15 @@ fn test_fault_stream_routing() {
 
 #[test]
 fn test_error_store_routing() {
-    let mut siddhi_context = SiddhiContext::new();
+    let mut eventflux_context = EventFluxContext::new();
     let error_store = Arc::new(InMemoryErrorStore::new());
-    siddhi_context.set_error_store(error_store.clone());
-    let siddhi_context = Arc::new(siddhi_context);
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    eventflux_context.set_error_store(error_store.clone());
+    let eventflux_context = Arc::new(eventflux_context);
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "App".to_string(),
     ));
-    let app_ctx = SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let app_ctx = EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "App".to_string(),
         Arc::clone(&app),
         String::new(),

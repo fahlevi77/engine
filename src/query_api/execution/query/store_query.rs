@@ -1,8 +1,8 @@
 use super::on_demand_query::{OnDemandQuery, OnDemandQueryType}; // Import Rust OnDemandQuery
 use super::OutputStream;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::InputStore;
 use crate::query_api::execution::query::selection::Selector;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 #[derive(Default)]
@@ -16,23 +16,22 @@ pub enum StoreQueryType {
     Find,
 }
 
-
 // Removed: impl From<java_sys::StoreQueryType> for StoreQueryType { ... }
 // Removed: mod java_sys { ... }
 
 #[derive(Clone, Debug, PartialEq)] // Default will be custom via new()
 pub struct StoreQuery {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
     pub on_demand_query: OnDemandQuery,
 }
 
 impl StoreQuery {
     pub fn new(on_demand_query: OnDemandQuery) -> Self {
-        // The siddhi_element for StoreQuery should ideally be distinct or mirror
+        // The eventflux_element for StoreQuery should ideally be distinct or mirror
         // the one from on_demand_query. Java's StoreQuery delegates getQueryContextStartIndex/EndIndex
         // to its onDemandQuery instance.
         StoreQuery {
-            siddhi_element: on_demand_query.siddhi_element.clone(), // Clone context from inner query
+            eventflux_element: on_demand_query.eventflux_element.clone(), // Clone context from inner query
             on_demand_query,
         }
     }
@@ -66,10 +65,10 @@ impl StoreQuery {
             StoreQueryType::UpdateOrInsert => OnDemandQueryType::UpdateOrInsert,
             StoreQueryType::Find => OnDemandQueryType::Find,
         };
-        // Propagate siddhi_element if it's being managed independently
-        let current_siddhi_element = self.siddhi_element.clone();
+        // Propagate eventflux_element if it's being managed independently
+        let current_eventflux_element = self.eventflux_element.clone();
         self.on_demand_query = self.on_demand_query.set_type(odq_type);
-        self.on_demand_query.siddhi_element = current_siddhi_element; // Ensure inner query shares context
+        self.on_demand_query.eventflux_element = current_eventflux_element; // Ensure inner query shares context
         self
     }
 
@@ -109,21 +108,21 @@ impl Default for StoreQuery {
     fn default() -> Self {
         let default_odq = OnDemandQuery::default();
         StoreQuery {
-            siddhi_element: default_odq.siddhi_element.clone(),
+            eventflux_element: default_odq.eventflux_element.clone(),
             on_demand_query: default_odq,
         }
     }
 }
 
-// Delegate SiddhiElement methods to the composed siddhi_element field.
+// Delegate EventFluxElement methods to the composed eventflux_element field.
 // Or, if it should always mirror on_demand_query's element:
-// impl SiddhiElementAccess for StoreQuery {
-//     fn siddhi_element(&self) -> &SiddhiElement {
-//         &self.on_demand_query.siddhi_element
+// impl EventFluxElementAccess for StoreQuery {
+//     fn eventflux_element(&self) -> &EventFluxElement {
+//         &self.on_demand_query.eventflux_element
 //     }
-//     fn siddhi_element_mut(&mut self) -> &mut SiddhiElement {
-//         &mut self.on_demand_query.siddhi_element
+//     fn eventflux_element_mut(&mut self) -> &mut EventFluxElement {
+//         &mut self.on_demand_query.eventflux_element
 //     }
 // }
-// For now, StoreQuery has its own siddhi_element field, initialized from on_demand_query.
+// For now, StoreQuery has its own eventflux_element field, initialized from on_demand_query.
 // This means it can have its own distinct context if needed, though usually it would match.

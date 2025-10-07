@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/mod.rs
+// eventflux_rust/src/core/executor/math/mod.rs
 
 pub mod add;
 pub mod common; // Added common module for CoerceNumeric

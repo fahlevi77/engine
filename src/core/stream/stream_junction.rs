@@ -1,10 +1,10 @@
-// siddhi_rust/src/core/stream/stream_junction.rs
-// Corresponds to io.siddhi.core.stream.StreamJunction
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // Actual struct
+// eventflux_rust/src/core/stream/stream_junction.rs
+// Corresponds to io.eventflux.core.stream.StreamJunction
+use crate::core::config::eventflux_app_context::EventFluxAppContext; // Actual struct
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::event::Event; // Actual struct
 use crate::core::event::stream::StreamEvent; // Actual struct for conversion
-use crate::core::exception::SiddhiError;
+use crate::core::exception::EventFluxError;
 use crate::core::query::processor::Processor; // Trait
 use crate::core::stream::input::input_handler::InputProcessor;
 // TODO: ErrorStore will be used for error handling in future implementation
@@ -81,7 +81,7 @@ impl InputProcessor for Publisher {
 pub struct StreamJunction {
     pub stream_id: String,
     stream_definition: Arc<StreamDefinition>, // Added, as it's used in constructor and error handling
-    siddhi_app_context: Arc<SiddhiAppContext>,
+    eventflux_app_context: Arc<EventFluxAppContext>,
     executor_service: Arc<ExecutorService>, // For async processing
     is_async: bool,
     buffer_size: usize,
@@ -101,7 +101,7 @@ pub struct StreamJunction {
     on_error_action: OnErrorAction,
     started: bool,
     fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>,
-    // exception_listener: Option<...>; // From SiddhiAppContext
+    // exception_listener: Option<...>; // From EventFluxAppContext
     // is_trace_enabled: bool;
 }
 
@@ -126,13 +126,13 @@ impl StreamJunction {
     pub fn new(
         stream_id: String,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         buffer_size: usize,
         is_async: bool,
         fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>,
     ) -> Self {
         // let stream_id = stream_definition.id.clone(); // No longer needed if passed directly
-        let executor_service = siddhi_app_context
+        let executor_service = eventflux_app_context
             .executor_service
             .clone()
             .unwrap_or_else(|| Arc::new(ExecutorService::default()));
@@ -144,20 +144,20 @@ impl StreamJunction {
             (None, None)
         };
 
-        let enable_metrics = siddhi_app_context.get_root_metrics_level()
-            != crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF;
+        let enable_metrics = eventflux_app_context.get_root_metrics_level()
+            != crate::core::config::eventflux_app_context::MetricsLevelPlaceholder::OFF;
         let id_clone_for_metrics = stream_id.clone();
         let junction = Self {
             stream_id,
             stream_definition,
-            siddhi_app_context: Arc::clone(&siddhi_app_context),
+            eventflux_app_context: Arc::clone(&eventflux_app_context),
             executor_service, // Use executor_service from context
             is_async,
             buffer_size,
             latency_tracker: if enable_metrics {
                 Some(LatencyTracker::new(
                     &id_clone_for_metrics,
-                    &siddhi_app_context,
+                    &eventflux_app_context,
                 ))
             } else {
                 None
@@ -165,7 +165,7 @@ impl StreamJunction {
             throughput_tracker: if enable_metrics {
                 Some(ThroughputTracker::new(
                     &id_clone_for_metrics,
-                    &siddhi_app_context,
+                    &eventflux_app_context,
                 ))
             } else {
                 None
@@ -231,10 +231,10 @@ impl StreamJunction {
                             let ctx = sub_arc
                                 .lock()
                                 .expect("subscriber mutex")
-                                .get_siddhi_query_context();
+                                .get_eventflux_query_context();
                             if ctx.is_partitioned() {
-                                ctx.siddhi_app_context
-                                    .get_siddhi_context()
+                                ctx.eventflux_app_context
+                                    .get_eventflux_context()
                                     .executor_services
                                     .get_or_create_from_env(&ctx.partition_id, exec.pool_size())
                             } else {
@@ -358,7 +358,7 @@ impl StreamJunction {
     pub fn send_complex_event_chunk(
         &self,
         mut complex_event_chunk: Option<Box<dyn ComplexEvent>>,
-    ) -> Result<(), SiddhiError> {
+    ) -> Result<(), EventFluxError> {
         if self.is_async {
             if let Some(sender) = &self.event_sender {
                 if let Some(event_head) = complex_event_chunk.take() {
@@ -367,23 +367,23 @@ impl StreamJunction {
                         // Use try_send for non-blocking, or send for blocking
                         Ok(_) => Ok(()),
                         Err(TrySendError::Full(event_back)) => {
-                            let err = SiddhiError::SendError {
+                            let err = EventFluxError::SendError {
                                 message: format!("Async buffer full for stream {}", self.stream_id),
                             };
                             self.handle_error_with_event(Some(event_back), err);
-                            Err(SiddhiError::SendError {
+                            Err(EventFluxError::SendError {
                                 message: format!("Async buffer full for stream {}", self.stream_id),
                             })
                         }
                         Err(TrySendError::Disconnected(event_back)) => {
-                            let err = SiddhiError::SendError {
+                            let err = EventFluxError::SendError {
                                 message: format!(
                                     "Async channel disconnected for stream {}",
                                     self.stream_id
                                 ),
                             };
                             self.handle_error_with_event(Some(event_back), err);
-                            Err(SiddhiError::SendError {
+                            Err(EventFluxError::SendError {
                                 message: format!(
                                     "Async channel disconnected for stream {}",
                                     self.stream_id
@@ -395,11 +395,11 @@ impl StreamJunction {
                     Ok(())
                 }
             } else {
-                let err = SiddhiError::SendError {
+                let err = EventFluxError::SendError {
                     message: "Async junction not initialized with a sender".to_string(),
                 };
                 self.handle_error_with_event(complex_event_chunk, err);
-                Err(SiddhiError::SendError {
+                Err(EventFluxError::SendError {
                     message: "Async junction not initialized with a sender".to_string(),
                 })
             }
@@ -424,7 +424,7 @@ impl StreamJunction {
             Ok(())
         }
     }
-    fn handle_error_with_event(&self, event: Option<Box<dyn ComplexEvent>>, e: SiddhiError) {
+    fn handle_error_with_event(&self, event: Option<Box<dyn ComplexEvent>>, e: EventFluxError) {
         match self.on_error_action {
             OnErrorAction::LOG => {
                 eprintln!("[{}] {}", self.stream_id, e);
@@ -439,8 +439,8 @@ impl StreamJunction {
             }
             OnErrorAction::STORE => {
                 if let Some(store) = self
-                    .siddhi_app_context
-                    .get_siddhi_context()
+                    .eventflux_app_context
+                    .get_eventflux_context()
                     .get_error_store()
                 {
                     store.store(&self.stream_id, e);

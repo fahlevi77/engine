@@ -1,9 +1,9 @@
-// This file is for defining error types specific to the siddhi_query_api Rust representation,
+// This file is for defining error types specific to the eventflux_query_api Rust representation,
 // if any are needed for structural validation or construction that isn't covered by panics
 // or standard Result types from method calls.
 
-// Most exceptions from io.siddhi.query.api.exception are related to the validation
-// of a Siddhi Application string during its parsing by the Siddhi compiler,
+// Most exceptions from io.eventflux.query.api.exception are related to the validation
+// of a EventFlux Application string during its parsing by the EventFlux compiler,
 // rather than errors that would arise from building or using the query API objects directly
 // in Rust once they are parsed.
 

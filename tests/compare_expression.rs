@@ -1,19 +1,19 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::executor::condition::CompareExpressionExecutor;
-use siddhi_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::executor::condition::CompareExpressionExecutor;
+use eventflux_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::expression::condition::compare::Operator as CompareOp;
 use std::sync::Arc;
 
-fn dummy_ctx() -> Arc<SiddhiAppContext> {
-    Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+fn dummy_ctx() -> Arc<EventFluxAppContext> {
+    Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "cmp_test".to_string(),
-        Arc::new(SiddhiApp::new("app".to_string())),
+        Arc::new(EventFluxApp::new("app".to_string())),
         String::new(),
     ))
 }

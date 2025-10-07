@@ -1,6 +1,6 @@
-use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_compiler::parse_expression;
+use eventflux_rust::query_api::expression::condition::compare::Operator as CompareOp;
+use eventflux_rust::query_api::expression::Expression;
+use eventflux_rust::query_compiler::parse_expression;
 
 #[test]
 fn test_arithmetic_precedence() {

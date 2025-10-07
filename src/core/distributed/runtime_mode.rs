@@ -1,22 +1,22 @@
-// siddhi_rust/src/core/distributed/runtime_mode.rs
+// eventflux_rust/src/core/distributed/runtime_mode.rs
 
 //! Runtime Mode Selection and Management
-//! 
+//!
 //! This module implements the runtime mode selection mechanism that allows
-//! Siddhi to operate in single-node or distributed mode without code changes.
+//! EventFlux to operate in single-node or distributed mode without code changes.
 //! Mode selection happens at initialization based on configuration.
 
+use super::{DistributedConfig, DistributedError, DistributedResult, RuntimeMode};
 use std::sync::Arc;
-use super::{DistributedConfig, RuntimeMode, DistributedResult, DistributedError};
 
 /// Runtime mode manager that handles mode-specific initialization
 pub struct RuntimeModeManager {
     /// Current runtime mode
     mode: RuntimeMode,
-    
+
     /// Configuration
     config: Arc<DistributedConfig>,
-    
+
     /// Mode-specific implementation
     implementation: Box<dyn RuntimeModeImpl>,
 }
@@ -26,52 +26,46 @@ impl RuntimeModeManager {
     pub fn new(config: DistributedConfig) -> DistributedResult<Self> {
         let mode = config.mode;
         let config = Arc::new(config);
-        
+
         // Select implementation based on mode
         let implementation: Box<dyn RuntimeModeImpl> = match mode {
-            RuntimeMode::SingleNode => {
-                Box::new(SingleNodeMode::new(Arc::clone(&config))?)
-            },
-            RuntimeMode::Distributed => {
-                Box::new(DistributedMode::new(Arc::clone(&config))?)
-            },
-            RuntimeMode::Hybrid => {
-                Box::new(HybridMode::new(Arc::clone(&config))?)
-            },
+            RuntimeMode::SingleNode => Box::new(SingleNodeMode::new(Arc::clone(&config))?),
+            RuntimeMode::Distributed => Box::new(DistributedMode::new(Arc::clone(&config))?),
+            RuntimeMode::Hybrid => Box::new(HybridMode::new(Arc::clone(&config))?),
         };
-        
+
         Ok(Self {
             mode,
             config,
             implementation,
         })
     }
-    
+
     /// Get the current runtime mode
     pub fn mode(&self) -> RuntimeMode {
         self.mode
     }
-    
+
     /// Check if running in distributed mode
     pub fn is_distributed(&self) -> bool {
         matches!(self.mode, RuntimeMode::Distributed | RuntimeMode::Hybrid)
     }
-    
+
     /// Initialize the runtime mode
     pub async fn initialize(&mut self) -> DistributedResult<()> {
         self.implementation.initialize().await
     }
-    
+
     /// Shutdown the runtime mode
     pub async fn shutdown(&mut self) -> DistributedResult<()> {
         self.implementation.shutdown().await
     }
-    
+
     /// Get mode-specific capabilities
     pub fn capabilities(&self) -> ModeCapabilities {
         self.implementation.capabilities()
     }
-    
+
     /// Perform mode-specific health check
     pub async fn health_check(&self) -> DistributedResult<HealthStatus> {
         self.implementation.health_check().await
@@ -83,13 +77,13 @@ impl RuntimeModeManager {
 pub trait RuntimeModeImpl: Send + Sync {
     /// Initialize the mode
     async fn initialize(&mut self) -> DistributedResult<()>;
-    
+
     /// Shutdown the mode
     async fn shutdown(&mut self) -> DistributedResult<()>;
-    
+
     /// Get mode capabilities
     fn capabilities(&self) -> ModeCapabilities;
-    
+
     /// Health check
     async fn health_check(&self) -> DistributedResult<HealthStatus>;
 }
@@ -99,22 +93,22 @@ pub trait RuntimeModeImpl: Send + Sync {
 pub struct ModeCapabilities {
     /// Supports distributed queries
     pub distributed_queries: bool,
-    
+
     /// Supports distributed state
     pub distributed_state: bool,
-    
+
     /// Supports failover
     pub failover: bool,
-    
+
     /// Supports dynamic scaling
     pub dynamic_scaling: bool,
-    
+
     /// Maximum nodes supported
     pub max_nodes: Option<usize>,
-    
+
     /// Supports exactly-once processing
     pub exactly_once: bool,
-    
+
     /// Supports distributed transactions
     pub distributed_transactions: bool,
 }
@@ -138,13 +132,13 @@ impl Default for ModeCapabilities {
 pub struct HealthStatus {
     /// Overall health
     pub healthy: bool,
-    
+
     /// Mode-specific status
     pub mode_status: ModeStatus,
-    
+
     /// Component health
     pub components: Vec<ComponentHealth>,
-    
+
     /// Warnings
     pub warnings: Vec<String>,
 }
@@ -158,7 +152,7 @@ pub enum ModeStatus {
         memory_usage: usize,
         cpu_usage: f64,
     },
-    
+
     /// Distributed mode status
     Distributed {
         cluster_size: usize,
@@ -166,7 +160,7 @@ pub enum ModeStatus {
         leader_node: Option<String>,
         partition_status: String,
     },
-    
+
     /// Hybrid mode status
     Hybrid {
         local_status: Box<ModeStatus>,
@@ -179,13 +173,13 @@ pub enum ModeStatus {
 pub struct ComponentHealth {
     /// Component name
     pub name: String,
-    
+
     /// Is healthy
     pub healthy: bool,
-    
+
     /// Status message
     pub status: String,
-    
+
     /// Last check time
     pub last_check: std::time::Instant,
 }
@@ -204,7 +198,7 @@ impl SingleNodeMode {
                 message: "Cluster configuration not allowed in single-node mode".to_string(),
             });
         }
-        
+
         Ok(Self {
             config,
             start_time: std::time::Instant::now(),
@@ -219,12 +213,12 @@ impl RuntimeModeImpl for SingleNodeMode {
         println!("Initializing single-node mode");
         Ok(())
     }
-    
+
     async fn shutdown(&mut self) -> DistributedResult<()> {
         println!("Shutting down single-node mode");
         Ok(())
     }
-    
+
     fn capabilities(&self) -> ModeCapabilities {
         ModeCapabilities {
             distributed_queries: false,
@@ -236,7 +230,7 @@ impl RuntimeModeImpl for SingleNodeMode {
             distributed_transactions: false,
         }
     }
-    
+
     async fn health_check(&self) -> DistributedResult<HealthStatus> {
         Ok(HealthStatus {
             healthy: true,
@@ -279,13 +273,13 @@ impl DistributedMode {
                 message: "Cluster configuration required for distributed mode".to_string(),
             });
         }
-        
+
         if config.node.is_none() {
             return Err(DistributedError::ConfigurationError {
                 message: "Node configuration required for distributed mode".to_string(),
             });
         }
-        
+
         Ok(Self {
             config,
             coordinator: None,
@@ -298,28 +292,28 @@ impl DistributedMode {
 impl RuntimeModeImpl for DistributedMode {
     async fn initialize(&mut self) -> DistributedResult<()> {
         println!("Initializing distributed mode");
-        
+
         // Initialize coordinator based on configuration
         // This would create the actual coordinator implementation
         // self.coordinator = Some(create_coordinator(&self.config)?);
-        
+
         // Join cluster
         // self.coordinator.join_cluster().await?;
-        
+
         Ok(())
     }
-    
+
     async fn shutdown(&mut self) -> DistributedResult<()> {
         println!("Shutting down distributed mode");
-        
+
         // Leave cluster gracefully
         // if let Some(coordinator) = &self.coordinator {
         //     coordinator.leave_cluster().await?;
         // }
-        
+
         Ok(())
     }
-    
+
     fn capabilities(&self) -> ModeCapabilities {
         ModeCapabilities {
             distributed_queries: true,
@@ -331,13 +325,15 @@ impl RuntimeModeImpl for DistributedMode {
             distributed_transactions: true,
         }
     }
-    
+
     async fn health_check(&self) -> DistributedResult<HealthStatus> {
-        let cluster_size = self.config.cluster
+        let cluster_size = self
+            .config
+            .cluster
             .as_ref()
             .map(|c| c.expected_size)
             .unwrap_or(1);
-        
+
         Ok(HealthStatus {
             healthy: true,
             mode_status: ModeStatus::Distributed {
@@ -381,7 +377,7 @@ struct HybridMode {
 impl HybridMode {
     fn new(config: Arc<DistributedConfig>) -> DistributedResult<Self> {
         let single_node = SingleNodeMode::new(Arc::clone(&config))?;
-        
+
         Ok(Self {
             config,
             single_node,
@@ -394,30 +390,30 @@ impl HybridMode {
 impl RuntimeModeImpl for HybridMode {
     async fn initialize(&mut self) -> DistributedResult<()> {
         println!("Initializing hybrid mode");
-        
+
         // Initialize single-node processing
         self.single_node.initialize().await?;
-        
+
         // Initialize distributed state backend
         // self.distributed_state = Some(create_state_backend(&self.config)?);
-        
+
         Ok(())
     }
-    
+
     async fn shutdown(&mut self) -> DistributedResult<()> {
         println!("Shutting down hybrid mode");
-        
+
         // Shutdown state backend
         // if let Some(state) = &self.distributed_state {
         //     state.shutdown().await?;
         // }
-        
+
         // Shutdown single-node
         self.single_node.shutdown().await?;
-        
+
         Ok(())
     }
-    
+
     fn capabilities(&self) -> ModeCapabilities {
         ModeCapabilities {
             distributed_queries: false,
@@ -429,10 +425,10 @@ impl RuntimeModeImpl for HybridMode {
             distributed_transactions: false,
         }
     }
-    
+
     async fn health_check(&self) -> DistributedResult<HealthStatus> {
         let single_health = self.single_node.health_check().await?;
-        
+
         Ok(HealthStatus {
             healthy: single_health.healthy,
             mode_status: ModeStatus::Hybrid {
@@ -452,38 +448,38 @@ impl RuntimeModeImpl for HybridMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::distributed::{ClusterConfig, NodeConfig, NodeCapabilities, ResourceLimits};
-    
+    use crate::core::distributed::{ClusterConfig, NodeCapabilities, NodeConfig, ResourceLimits};
+
     #[tokio::test]
     async fn test_single_node_mode() {
         let config = DistributedConfig::default();
         let mut manager = RuntimeModeManager::new(config).unwrap();
-        
+
         assert_eq!(manager.mode(), RuntimeMode::SingleNode);
         assert!(!manager.is_distributed());
-        
+
         assert!(manager.initialize().await.is_ok());
-        
+
         let capabilities = manager.capabilities();
         assert!(!capabilities.distributed_queries);
         assert!(!capabilities.distributed_state);
         assert_eq!(capabilities.max_nodes, Some(1));
-        
+
         let health = manager.health_check().await.unwrap();
         assert!(health.healthy);
-        
+
         assert!(manager.shutdown().await.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_distributed_mode_validation() {
         let mut config = DistributedConfig::default();
         config.mode = RuntimeMode::Distributed;
-        
+
         // Should fail without cluster config
         let result = RuntimeModeManager::new(config.clone());
         assert!(result.is_err());
-        
+
         // Add required configuration
         config.cluster = Some(ClusterConfig::default());
         config.node = Some(NodeConfig {
@@ -492,34 +488,34 @@ mod tests {
             capabilities: NodeCapabilities::default(),
             resources: ResourceLimits::default(),
         });
-        
+
         let manager = RuntimeModeManager::new(config).unwrap();
         assert_eq!(manager.mode(), RuntimeMode::Distributed);
         assert!(manager.is_distributed());
-        
+
         let capabilities = manager.capabilities();
         assert!(capabilities.distributed_queries);
         assert!(capabilities.distributed_state);
         assert!(capabilities.failover);
     }
-    
+
     #[tokio::test]
     async fn test_hybrid_mode() {
         let mut config = DistributedConfig::default();
         config.mode = RuntimeMode::Hybrid;
-        
+
         let mut manager = RuntimeModeManager::new(config).unwrap();
-        
+
         assert_eq!(manager.mode(), RuntimeMode::Hybrid);
         assert!(manager.is_distributed());
-        
+
         assert!(manager.initialize().await.is_ok());
-        
+
         let capabilities = manager.capabilities();
         assert!(!capabilities.distributed_queries);
         assert!(capabilities.distributed_state);
         assert!(capabilities.failover);
-        
+
         assert!(manager.shutdown().await.is_ok());
     }
 }

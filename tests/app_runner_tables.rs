@@ -9,12 +9,12 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
+use eventflux_rust::query_compiler::{parse_expression, parse_set_clause};
 use rusqlite::Connection;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_compiler::{parse_expression, parse_set_clause};
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
@@ -35,7 +35,7 @@ impl DataSource for SqliteDataSource {
     }
     fn init(
         &mut self,
-        _ctx: &Arc<siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext>,
+        _ctx: &Arc<eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext>,
         _id: &str,
         _cfg: DataSourceConfig,
     ) -> Result<(), String> {
@@ -54,7 +54,7 @@ impl DataSource for SqliteDataSource {
     }
 }
 
-fn setup_sqlite_table(ctx: &Arc<SiddhiContext>, name: &str) {
+fn setup_sqlite_table(ctx: &Arc<EventFluxContext>, name: &str) {
     let ds = ctx.get_data_source("DS1").unwrap();
     let conn_any = ds.get_connection().unwrap();
     let conn_arc = conn_any.downcast::<Arc<Mutex<Connection>>>().unwrap();
@@ -82,8 +82,8 @@ async fn cache_table_crud_via_app_runner() {
 
     let table = runner
         .runtime()
-        .siddhi_app_context
-        .get_siddhi_context()
+        .eventflux_app_context
+        .get_eventflux_context()
         .get_table("T")
         .unwrap();
     let cond_expr = parse_expression("'a'").unwrap();
@@ -107,14 +107,14 @@ async fn cache_table_crud_via_app_runner() {
 #[tokio::test]
 #[ignore = "Table support not part of M1"]
 async fn jdbc_table_crud_via_app_runner() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
     manager
         .add_data_source(
             "DS1".to_string(),
             Arc::new(SqliteDataSource::new(":memory:")),
         )
         .unwrap();
-    let ctx = manager.siddhi_context();
+    let ctx = manager.eventflux_context();
     setup_sqlite_table(&ctx, "J");
 
     let query = "\
@@ -128,7 +128,10 @@ async fn jdbc_table_crud_via_app_runner() {
     runner.send("In", vec![AttributeValue::String("x".into())]);
     std::thread::sleep(std::time::Duration::from_millis(50));
 
-    let ctx = runner.runtime().siddhi_app_context.get_siddhi_context();
+    let ctx = runner
+        .runtime()
+        .eventflux_app_context
+        .get_eventflux_context();
     let table = ctx.get_table("J").unwrap();
     let cond_expr = parse_expression("v == 'x'").unwrap();
     let cond = table.compile_condition(cond_expr);
@@ -160,10 +163,12 @@ async fn stream_table_join_basic() {
         insert into Out;\n";
     let runner = AppRunner::new(query, "Out").await;
     let th = runner.runtime().get_table_input_handler("R").unwrap();
-    th.add(vec![siddhi_rust::core::event::event::Event::new_with_data(
-        0,
-        vec![AttributeValue::Int(1), AttributeValue::String("A".into())],
-    )]);
+    th.add(vec![
+        eventflux_rust::core::event::event::Event::new_with_data(
+            0,
+            vec![AttributeValue::Int(1), AttributeValue::String("A".into())],
+        ),
+    ]);
     runner.send(
         "L",
         vec![AttributeValue::Int(1), AttributeValue::String("v".into())],
@@ -182,14 +187,14 @@ async fn stream_table_join_basic() {
 #[tokio::test]
 #[ignore = "Table support not part of M1"]
 async fn stream_table_join_jdbc() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
     manager
         .add_data_source(
             "DS1".to_string(),
             Arc::new(SqliteDataSource::new(":memory:")),
         )
         .unwrap();
-    let ctx = manager.siddhi_context();
+    let ctx = manager.eventflux_context();
     setup_sqlite_table(&ctx, "J2");
 
     let query = "\
@@ -202,10 +207,12 @@ async fn stream_table_join_jdbc() {
         insert into Out;\n";
     let runner = AppRunner::new_with_manager(manager, query, "Out").await;
     let th = runner.runtime().get_table_input_handler("J2").unwrap();
-    th.add(vec![siddhi_rust::core::event::event::Event::new_with_data(
-        0,
-        vec![AttributeValue::Int(2), AttributeValue::String("B".into())],
-    )]);
+    th.add(vec![
+        eventflux_rust::core::event::event::Event::new_with_data(
+            0,
+            vec![AttributeValue::Int(2), AttributeValue::String("B".into())],
+        ),
+    ]);
     runner.send(
         "L",
         vec![AttributeValue::Int(2), AttributeValue::String("x".into())],
@@ -224,14 +231,14 @@ async fn stream_table_join_jdbc() {
 #[tokio::test]
 #[ignore = "Table support not part of M1"]
 async fn cache_and_jdbc_tables_eviction_and_queries() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
     manager
         .add_data_source(
             "DS1".to_string(),
             Arc::new(SqliteDataSource::new(":memory:")),
         )
         .unwrap();
-    let ctx = manager.siddhi_context();
+    let ctx = manager.eventflux_context();
     setup_sqlite_table(&ctx, "J3");
 
     let query = "\
@@ -250,7 +257,10 @@ async fn cache_and_jdbc_tables_eviction_and_queries() {
     runner.send("In", vec![AttributeValue::String("b".into())]);
     std::thread::sleep(std::time::Duration::from_millis(50));
 
-    let ctx = runner.runtime().siddhi_app_context.get_siddhi_context();
+    let ctx = runner
+        .runtime()
+        .eventflux_app_context
+        .get_eventflux_context();
     let cache = ctx.get_table("C").unwrap();
     let jdbc = ctx.get_table("J3").unwrap();
 

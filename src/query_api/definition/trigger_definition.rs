@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.definition.TriggerDefinition
+// Corresponds to io.eventflux.query.api.definition.TriggerDefinition
 use crate::query_api::annotation::Annotation;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat};
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct TriggerDefinition {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // TriggerDefinition fields
     pub id: String,
@@ -18,7 +18,7 @@ impl TriggerDefinition {
     // Constructor that takes an id, as per Java's `TriggerDefinition.id(id)`
     pub fn new(id: String) -> Self {
         TriggerDefinition {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             id,
             at_every: None,
             at: None,
@@ -69,13 +69,13 @@ impl TriggerDefinition {
     }
 }
 
-// Removed: impl From<SiddhiElement> for TriggerDefinition
+// Removed: impl From<EventFluxElement> for TriggerDefinition
 
 // For direct field access via Deref, if desired:
 // impl std::ops::Deref for TriggerDefinition {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for TriggerDefinition {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }

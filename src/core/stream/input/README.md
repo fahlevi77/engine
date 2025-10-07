@@ -1,6 +1,6 @@
 # Input Submodule
 
-Rust port of Siddhi's `io.siddhi.core.stream.input` package.  The
+Rust port of EventFlux's `io.eventflux.core.stream.input` package.  The
 implementation mirrors the Java classes where possible but remains
 simplified.
 

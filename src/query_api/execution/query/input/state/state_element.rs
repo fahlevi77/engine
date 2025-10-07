@@ -1,5 +1,5 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.StateElement (interface)
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.execution.query.input.state.StateElement (interface)
+use crate::query_api::eventflux_element::EventFluxElement;
 
 // Import specific state element types
 use super::absent_stream_state_element::AbsentStreamStateElement;
@@ -19,32 +19,32 @@ pub enum StateElement {
     Every(Box<EveryStateElement>),
 }
 
-// Implement SiddhiElement for the enum by dispatching to variants' composed siddhi_element field
+// Implement EventFluxElement for the enum by dispatching to variants' composed eventflux_element field
 impl StateElement {
-    fn siddhi_element_ref(&self) -> &SiddhiElement {
+    fn eventflux_element_ref(&self) -> &EventFluxElement {
         match self {
-            StateElement::Stream(s) => &s.siddhi_element,
-            StateElement::AbsentStream(a) => a.siddhi_element(),
-            StateElement::Logical(l) => &l.siddhi_element,
-            StateElement::Next(n) => &n.siddhi_element,
-            StateElement::Count(c) => &c.siddhi_element,
-            StateElement::Every(e) => &e.siddhi_element,
+            StateElement::Stream(s) => &s.eventflux_element,
+            StateElement::AbsentStream(a) => a.eventflux_element(),
+            StateElement::Logical(l) => &l.eventflux_element,
+            StateElement::Next(n) => &n.eventflux_element,
+            StateElement::Count(c) => &c.eventflux_element,
+            StateElement::Every(e) => &e.eventflux_element,
         }
     }
 
-    fn siddhi_element_mut_ref(&mut self) -> &mut SiddhiElement {
+    fn eventflux_element_mut_ref(&mut self) -> &mut EventFluxElement {
         match self {
-            StateElement::Stream(s) => &mut s.siddhi_element,
-            StateElement::AbsentStream(a) => a.siddhi_element_mut(),
-            StateElement::Logical(l) => &mut l.siddhi_element,
-            StateElement::Next(n) => &mut n.siddhi_element,
-            StateElement::Count(c) => &mut c.siddhi_element,
-            StateElement::Every(e) => &mut e.siddhi_element,
+            StateElement::Stream(s) => &mut s.eventflux_element,
+            StateElement::AbsentStream(a) => a.eventflux_element_mut(),
+            StateElement::Logical(l) => &mut l.eventflux_element,
+            StateElement::Next(n) => &mut n.eventflux_element,
+            StateElement::Count(c) => &mut c.eventflux_element,
+            StateElement::Every(e) => &mut e.eventflux_element,
         }
     }
 }
 
-// `impl SiddhiElement for StateElement` removed.
+// `impl EventFluxElement for StateElement` removed.
 
 // Removed placeholder: impl StreamStateElement { pub(crate) fn get_stream_id_placeholder(&self) -> String }
 // This functionality should be part of StreamStateElement's own API if needed by other modules.

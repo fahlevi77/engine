@@ -8,7 +8,7 @@
 
 ## Overview
 
-Siddhi Rust implements a comprehensive error handling framework using `thiserror` for structured, type-safe error management. This replaced primitive String-based errors with a robust hierarchical error system.
+EventFlux Rust implements a comprehensive error handling framework using `thiserror` for structured, type-safe error management. This replaced primitive String-based errors with a robust hierarchical error system.
 
 **Key Features**:
 - Hierarchical error types using `thiserror`
@@ -417,8 +417,8 @@ fn test_invalid_state() {
 ### What Was Implemented
 
 #### 1. Comprehensive Error Hierarchy
-Created `SiddhiError` enum with 25+ error variants covering:
-- **Application Lifecycle**: SiddhiAppCreation, SiddhiAppRuntime
+Created `EventFluxError` enum with 25+ error variants covering:
+- **Application Lifecycle**: EventFluxAppCreation, EventFluxAppRuntime
 - **Query Operations**: QueryCreation, QueryRuntime, OnDemandQuery operations
 - **Data Access**: StoreQuery, NoSuchAttribute, DefinitionNotExist
 - **Extensions**: ExtensionNotFound, CannotLoadClass
@@ -434,7 +434,7 @@ Created `SiddhiError` enum with 25+ error variants covering:
 
 #### 3. Backward Compatibility
 - Maintained `From<String>` and `From<&str>` implementations
-- Added `IntoSiddhiResult` trait for gradual migration
+- Added `IntoEventFluxResult` trait for gradual migration
 - Preserved existing API signatures while improving error quality
 
 #### 4. Updated Error Store

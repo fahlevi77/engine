@@ -1,14 +1,14 @@
-// siddhi_rust/src/core/persistence/state_registry.rs
+// eventflux_rust/src/core/persistence/state_registry.rs
 
 //! State Registry for centralized state component management
-//! 
+//!
 //! The StateRegistry maintains a catalog of all stateful components in the system,
 //! their dependencies, and topology information for optimization.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-use super::state_holder::{ComponentId, StateHolder, StateError, StateSize, AccessPattern};
+use super::state_holder::{AccessPattern, ComponentId, StateError, StateHolder, StateSize};
 
 /// Component metadata for registry
 #[derive(Debug, Clone)]
@@ -24,10 +24,10 @@ pub struct ComponentMetadata {
 /// Priority for component recovery ordering
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ComponentPriority {
-    Critical = 0,   // Must recover first (e.g., sources)
-    High = 1,       // Important for system function
-    Medium = 2,     // Normal processing components
-    Low = 3,        // Optional or derived components
+    Critical = 0, // Must recover first (e.g., sources)
+    High = 1,     // Important for system function
+    Medium = 2,   // Normal processing components
+    Low = 3,      // Optional or derived components
 }
 
 /// Resource requirements for optimization
@@ -115,7 +115,10 @@ impl DependencyGraph {
     pub fn add_dependency(&mut self, from: ComponentId, to: ComponentId) {
         // 'from' depends on 'to', so 'to' -> 'from' in the dependency graph
         // This means 'to' must come before 'from' in topological order
-        self.edges.entry(to.clone()).or_default().insert(from.clone());
+        self.edges
+            .entry(to.clone())
+            .or_default()
+            .insert(from.clone());
         self.reverse_edges.entry(from).or_default().insert(to);
     }
 
@@ -139,7 +142,7 @@ impl DependencyGraph {
         for (from, tos) in &self.edges {
             all_nodes.insert(from.clone());
             in_degree.entry(from.clone()).or_insert(0);
-            
+
             for to in tos {
                 all_nodes.insert(to.clone());
                 *in_degree.entry(to.clone()).or_insert(0) += 1;
@@ -156,7 +159,7 @@ impl DependencyGraph {
         while !queue.is_empty() {
             // All nodes in current queue can be processed in parallel
             result.push(queue.clone());
-            
+
             let current_level = queue.clone();
             queue.clear();
 
@@ -191,7 +194,7 @@ impl DependencyGraph {
         // This is a simplified version - could be enhanced
         let mut visited = HashSet::new();
         let mut cycles = Vec::new();
-        
+
         for node in self.edges.keys() {
             if !visited.contains(node) {
                 let mut path = Vec::new();
@@ -201,7 +204,7 @@ impl DependencyGraph {
                 }
             }
         }
-        
+
         cycles
     }
 
@@ -300,7 +303,9 @@ impl StateRegistry {
 
             // Add dependencies to topology
             for dep in &metadata.dependencies {
-                topology.dependency_graph.add_dependency(id.clone(), dep.clone());
+                topology
+                    .dependency_graph
+                    .add_dependency(id.clone(), dep.clone());
             }
 
             metadata_map.insert(id.clone(), metadata.clone());
@@ -373,10 +378,14 @@ impl StateRegistry {
     pub fn analyze_dependencies(&self) -> StateDependencyGraph {
         let topology = self.topology.read().unwrap();
         let circular_deps = topology.dependency_graph.detect_cycles();
-        
+
         let recovery_stages = &topology.recovery_stages;
-        let parallel_width = recovery_stages.iter().map(|stage| stage.len()).max().unwrap_or(0);
-        
+        let parallel_width = recovery_stages
+            .iter()
+            .map(|stage| stage.len())
+            .max()
+            .unwrap_or(0);
+
         // Find critical path (longest dependency chain)
         let critical_path = self.find_critical_path(&topology);
 
@@ -428,8 +437,13 @@ impl StateRegistry {
         for component_id in topology.components.keys() {
             if !visited.contains(component_id) {
                 let mut current_path = Vec::new();
-                self.dfs_longest_path(component_id, &topology.dependency_graph, &mut visited, &mut current_path);
-                
+                self.dfs_longest_path(
+                    component_id,
+                    &topology.dependency_graph,
+                    &mut visited,
+                    &mut current_path,
+                );
+
                 if current_path.len() > longest_path.len() {
                     longest_path = current_path;
                 }
@@ -468,7 +482,9 @@ impl Default for StateRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::persistence::state_holder::{SchemaVersion, StateSnapshot, SerializationHints, ChangeLog};
+    use crate::core::persistence::state_holder::{
+        ChangeLog, SchemaVersion, SerializationHints, StateSnapshot,
+    };
 
     // Mock component for testing
     struct MockStateHolder {
@@ -480,7 +496,10 @@ mod tests {
             SchemaVersion::new(1, 0, 0)
         }
 
-        fn serialize_state(&self, _hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
+        fn serialize_state(
+            &self,
+            _hints: &SerializationHints,
+        ) -> Result<StateSnapshot, StateError> {
             unimplemented!()
         }
 
@@ -488,7 +507,10 @@ mod tests {
             unimplemented!()
         }
 
-        fn get_changelog(&self, _since: super::super::state_holder::CheckpointId) -> Result<ChangeLog, StateError> {
+        fn get_changelog(
+            &self,
+            _since: super::super::state_holder::CheckpointId,
+        ) -> Result<ChangeLog, StateError> {
             unimplemented!()
         }
 
@@ -509,15 +531,20 @@ mod tests {
         }
 
         fn component_metadata(&self) -> super::super::state_holder::StateMetadata {
-            super::super::state_holder::StateMetadata::new(self.id.clone(), "MockComponent".to_string())
+            super::super::state_holder::StateMetadata::new(
+                self.id.clone(),
+                "MockComponent".to_string(),
+            )
         }
     }
 
     #[test]
     fn test_registry_registration() {
         let registry = StateRegistry::new();
-        let component = Arc::new(MockStateHolder { id: "test1".to_string() });
-        
+        let component = Arc::new(MockStateHolder {
+            id: "test1".to_string(),
+        });
+
         let metadata = ComponentMetadata {
             component_id: "test1".to_string(),
             component_type: "MockComponent".to_string(),
@@ -535,33 +562,35 @@ mod tests {
             },
         };
 
-        assert!(registry.register("test1".to_string(), component, metadata).is_ok());
+        assert!(registry
+            .register("test1".to_string(), component, metadata)
+            .is_ok());
         assert!(registry.get_component(&"test1".to_string()).is_some());
     }
 
     #[test]
     fn test_dependency_graph_topological_sort() {
         let mut graph = DependencyGraph::new();
-        
+
         // Create a simple dependency chain where:
         // - A depends on B (A cannot start until B is recovered)
         // - B depends on C (B cannot start until C is recovered)
         // So recovery order should be: C -> B -> A
-        // 
+        //
         // In our implementation: add_dependency(from, to) means "from depends on to"
         // So A->B means A depends on B, B must come before A in topological order
         graph.add_dependency("A".to_string(), "B".to_string());
         graph.add_dependency("B".to_string(), "C".to_string());
-        
+
         let result = graph.topological_sort().unwrap();
-        
+
         println!("Topological sort result: {:?}", result);
-        
+
         // Find the positions of each node
         let mut c_pos = None;
         let mut b_pos = None;
         let mut a_pos = None;
-        
+
         for (stage_idx, stage) in result.iter().enumerate() {
             if stage.contains(&"C".to_string()) {
                 c_pos = Some(stage_idx);
@@ -573,13 +602,13 @@ mod tests {
                 a_pos = Some(stage_idx);
             }
         }
-        
+
         println!("Positions - C: {:?}, B: {:?}, A: {:?}", c_pos, b_pos, a_pos);
-        
+
         // For recovery: C should come before B, and B should come before A
         // (dependencies must be recovered first)
         assert!(c_pos.is_some());
-        assert!(b_pos.is_some()); 
+        assert!(b_pos.is_some());
         assert!(a_pos.is_some());
         assert!(c_pos.unwrap() < b_pos.unwrap());
         assert!(b_pos.unwrap() < a_pos.unwrap());
@@ -588,12 +617,12 @@ mod tests {
     #[test]
     fn test_cycle_detection() {
         let mut graph = DependencyGraph::new();
-        
+
         // Create a cycle: A -> B -> C -> A
         graph.add_dependency("A".to_string(), "B".to_string());
         graph.add_dependency("B".to_string(), "C".to_string());
         graph.add_dependency("C".to_string(), "A".to_string());
-        
+
         let cycles = graph.detect_cycles();
         assert!(!cycles.is_empty());
     }

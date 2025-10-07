@@ -28,25 +28,35 @@ impl SelectExpander {
             match item {
                 SelectItem::Wildcard(_) => {
                     // Expand SELECT * using schema
-                    let columns = catalog.get_all_columns(from_stream)
+                    let columns = catalog
+                        .get_all_columns(from_stream)
                         .map_err(|_| ExpansionError::UnknownStream(from_stream.to_string()))?;
 
                     for column in columns {
-                        selector = selector.select_variable(Variable::new(column.get_name().to_string()));
+                        selector =
+                            selector.select_variable(Variable::new(column.get_name().to_string()));
                     }
                 }
 
                 SelectItem::QualifiedWildcard(object_name, _) => {
                     // Handle qualified wildcard: stream.*
-                    let stream_name = object_name.0.last()
+                    let stream_name = object_name
+                        .0
+                        .last()
                         .map(|ident| ident.value.as_str())
-                        .ok_or_else(|| ExpansionError::InvalidSelectItem("Invalid qualified wildcard".to_string()))?;
+                        .ok_or_else(|| {
+                            ExpansionError::InvalidSelectItem(
+                                "Invalid qualified wildcard".to_string(),
+                            )
+                        })?;
 
-                    let columns = catalog.get_all_columns(stream_name)
+                    let columns = catalog
+                        .get_all_columns(stream_name)
                         .map_err(|_| ExpansionError::UnknownStream(stream_name.to_string()))?;
 
                     for column in columns {
-                        selector = selector.select_variable(Variable::new(column.get_name().to_string()));
+                        selector =
+                            selector.select_variable(Variable::new(column.get_name().to_string()));
                     }
                 }
 
@@ -60,7 +70,7 @@ impl SelectExpander {
                         if !catalog.has_column(from_stream, &column_name) {
                             return Err(ExpansionError::UnknownColumn(
                                 from_stream.to_string(),
-                                column_name
+                                column_name,
                             ));
                         }
 
@@ -88,14 +98,11 @@ impl SelectExpander {
                         if !catalog.has_column(from_stream, &column_name) {
                             return Err(ExpansionError::UnknownColumn(
                                 from_stream.to_string(),
-                                column_name
+                                column_name,
                             ));
                         }
 
-                        selector = selector.select(
-                            alias_name,
-                            Expression::variable(column_name)
-                        );
+                        selector = selector.select(alias_name, Expression::variable(column_name));
                     } else {
                         // Complex expression with alias - convert using SqlConverter
                         let converted_expr = SqlConverter::convert_expression(expr, catalog)
@@ -136,7 +143,10 @@ impl SelectExpander {
     /// Check if SELECT contains wildcard
     pub fn has_wildcard(items: &[SelectItem]) -> bool {
         items.iter().any(|item| {
-            matches!(item, SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(_, _))
+            matches!(
+                item,
+                SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(_, _)
+            )
         })
     }
 }
@@ -154,7 +164,9 @@ mod tests {
             .attribute("col2".to_string(), AttributeType::INT)
             .attribute("col3".to_string(), AttributeType::DOUBLE);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
         catalog
     }
 
@@ -169,11 +181,9 @@ mod tests {
 
         if let sqlparser::ast::Statement::Query(query) = &statements[0] {
             if let sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
-                let selector = SelectExpander::expand_select_items(
-                    &select.projection,
-                    "TestStream",
-                    &catalog
-                ).unwrap();
+                let selector =
+                    SelectExpander::expand_select_items(&select.projection, "TestStream", &catalog)
+                        .unwrap();
 
                 // Should expand to 3 columns
                 let output_attrs = selector.get_selection_list();
@@ -193,11 +203,9 @@ mod tests {
 
         if let sqlparser::ast::Statement::Query(query) = &statements[0] {
             if let sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
-                let selector = SelectExpander::expand_select_items(
-                    &select.projection,
-                    "TestStream",
-                    &catalog
-                ).unwrap();
+                let selector =
+                    SelectExpander::expand_select_items(&select.projection, "TestStream", &catalog)
+                        .unwrap();
 
                 let output_attrs = selector.get_selection_list();
                 assert_eq!(output_attrs.len(), 2);
@@ -238,11 +246,8 @@ mod tests {
 
         if let sqlparser::ast::Statement::Query(query) = &statements[0] {
             if let sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
-                let result = SelectExpander::expand_select_items(
-                    &select.projection,
-                    "TestStream",
-                    &catalog
-                );
+                let result =
+                    SelectExpander::expand_select_items(&select.projection, "TestStream", &catalog);
                 assert!(result.is_err());
             }
         }

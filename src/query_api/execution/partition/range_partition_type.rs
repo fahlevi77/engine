@@ -19,11 +19,11 @@ impl RangePartitionProperty {
     }
 }
 
-// impl SiddhiElement for RangePartitionProperty removed
+// impl EventFluxElement for RangePartitionProperty removed
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RangePartitionType {
-    // This 'element' field was in the prompt, but Java RangePartitionType implements SiddhiElement directly.
+    // This 'element' field was in the prompt, but Java RangePartitionType implements EventFluxElement directly.
     // So, query_context_start/end_index will be direct fields.
     pub query_context_start_index: Option<(i32, i32)>,
     pub query_context_end_index: Option<(i32, i32)>,
@@ -47,4 +47,4 @@ impl RangePartitionType {
     }
 }
 
-// impl SiddhiElement for RangePartitionType removed
+// impl EventFluxElement for RangePartitionType removed

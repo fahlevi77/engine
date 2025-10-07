@@ -27,10 +27,23 @@ pub enum TimeUnit {
 /// Window specification extracted from SQL
 #[derive(Debug, Clone, PartialEq)]
 pub enum WindowSpec {
-    Tumbling { value: i64, unit: TimeUnit },
-    Sliding { window_value: i64, window_unit: TimeUnit, slide_value: i64, slide_unit: TimeUnit },
-    Length { size: i64 },
-    Session { value: i64, unit: TimeUnit },
+    Tumbling {
+        value: i64,
+        unit: TimeUnit,
+    },
+    Sliding {
+        window_value: i64,
+        window_unit: TimeUnit,
+        slide_value: i64,
+        slide_unit: TimeUnit,
+    },
+    Length {
+        size: i64,
+    },
+    Session {
+        value: i64,
+        unit: TimeUnit,
+    },
 }
 
 /// Text representation of window clause
@@ -62,17 +75,20 @@ impl SqlPreprocessor {
 
         // Extract WINDOW clause if present
         if let Some(captures) = WINDOW_REGEX.captures(sql) {
-            let full_match = captures.get(0)
+            let full_match = captures
+                .get(0)
                 .ok_or_else(|| PreprocessorError::WindowParseFailed("No match found".to_string()))?
                 .as_str()
                 .to_string();
 
-            let window_type = captures.get(1)
+            let window_type = captures
+                .get(1)
                 .ok_or_else(|| PreprocessorError::WindowParseFailed("No window type".to_string()))?
                 .as_str()
                 .to_uppercase();
 
-            let parameters = captures.get(2)
+            let parameters = captures
+                .get(2)
                 .ok_or_else(|| PreprocessorError::WindowParseFailed("No parameters".to_string()))?
                 .as_str()
                 .trim()
@@ -106,12 +122,17 @@ impl SqlPreprocessor {
                 let parts: Vec<&str> = params.split(',').map(|s| s.trim()).collect();
                 if parts.len() != 2 {
                     return Err(PreprocessorError::InvalidWindowParams(
-                        "SLIDING window requires 2 parameters (window, slide)".to_string()
+                        "SLIDING window requires 2 parameters (window, slide)".to_string(),
                     ));
                 }
                 let (window_value, window_unit) = Self::parse_time_param(parts[0])?;
                 let (slide_value, slide_unit) = Self::parse_time_param(parts[1])?;
-                Ok(WindowSpec::Sliding { window_value, window_unit, slide_value, slide_unit })
+                Ok(WindowSpec::Sliding {
+                    window_value,
+                    window_unit,
+                    slide_value,
+                    slide_unit,
+                })
             }
             "LENGTH" => {
                 let size = Self::parse_int_param(params)?;
@@ -121,7 +142,9 @@ impl SqlPreprocessor {
                 let (value, unit) = Self::parse_time_param(params)?;
                 Ok(WindowSpec::Session { value, unit })
             }
-            _ => Err(PreprocessorError::InvalidWindowType(window_type.to_string()))
+            _ => Err(PreprocessorError::InvalidWindowType(
+                window_type.to_string(),
+            )),
         }
     }
 
@@ -136,15 +159,21 @@ impl SqlPreprocessor {
             if parts.len() >= 3 {
                 let value_str = parts[1].trim_matches('\'').trim_matches('"');
                 let unit_str = parts[2].to_uppercase();
-                let value: i64 = value_str.parse()
-                    .map_err(|_| PreprocessorError::InvalidWindowParams(format!("Invalid number: {}", value_str)))?;
+                let value: i64 = value_str.parse().map_err(|_| {
+                    PreprocessorError::InvalidWindowParams(format!("Invalid number: {}", value_str))
+                })?;
 
                 let unit = match unit_str.as_str() {
                     "MILLISECOND" | "MILLISECONDS" => TimeUnit::Milliseconds,
                     "SECOND" | "SECONDS" => TimeUnit::Seconds,
                     "MINUTE" | "MINUTES" => TimeUnit::Minutes,
                     "HOUR" | "HOURS" => TimeUnit::Hours,
-                    _ => return Err(PreprocessorError::InvalidWindowParams(format!("Unknown time unit: {}", unit_str)))
+                    _ => {
+                        return Err(PreprocessorError::InvalidWindowParams(format!(
+                            "Unknown time unit: {}",
+                            unit_str
+                        )))
+                    }
                 };
 
                 return Ok((value, unit));
@@ -156,13 +185,17 @@ impl SqlPreprocessor {
             return Ok((num, TimeUnit::Milliseconds));
         }
 
-        Err(PreprocessorError::InvalidWindowParams(format!("Cannot parse time: {}", param)))
+        Err(PreprocessorError::InvalidWindowParams(format!(
+            "Cannot parse time: {}",
+            param
+        )))
     }
 
     /// Parse integer parameter
     fn parse_int_param(param: &str) -> Result<i64, PreprocessorError> {
-        param.trim().parse::<i64>()
-            .map_err(|_| PreprocessorError::InvalidWindowParams(format!("Invalid integer: {}", param)))
+        param.trim().parse::<i64>().map_err(|_| {
+            PreprocessorError::InvalidWindowParams(format!("Invalid integer: {}", param))
+        })
     }
 }
 
@@ -188,7 +221,13 @@ mod tests {
 
         let window = result.window_clause.unwrap();
         assert_eq!(window.window_type, "TUMBLING");
-        assert_eq!(window.spec, WindowSpec::Tumbling { value: 5, unit: TimeUnit::Seconds });
+        assert_eq!(
+            window.spec,
+            WindowSpec::Tumbling {
+                value: 5,
+                unit: TimeUnit::Seconds
+            }
+        );
     }
 
     #[test]
@@ -198,12 +237,15 @@ mod tests {
 
         let window = result.window_clause.unwrap();
         assert_eq!(window.window_type, "SLIDING");
-        assert_eq!(window.spec, WindowSpec::Sliding {
-            window_value: 10,
-            window_unit: TimeUnit::Seconds,
-            slide_value: 5,
-            slide_unit: TimeUnit::Seconds
-        });
+        assert_eq!(
+            window.spec,
+            WindowSpec::Sliding {
+                window_value: 10,
+                window_unit: TimeUnit::Seconds,
+                slide_value: 5,
+                slide_unit: TimeUnit::Seconds
+            }
+        );
     }
 
     #[test]
@@ -223,7 +265,13 @@ mod tests {
 
         let window = result.window_clause.unwrap();
         assert_eq!(window.window_type, "SESSION");
-        assert_eq!(window.spec, WindowSpec::Session { value: 30, unit: TimeUnit::Seconds });
+        assert_eq!(
+            window.spec,
+            WindowSpec::Session {
+                value: 30,
+                unit: TimeUnit::Seconds
+            }
+        );
     }
 
     #[test]

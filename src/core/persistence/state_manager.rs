@@ -1,17 +1,17 @@
-// siddhi_rust/src/core/persistence/state_manager.rs
+// eventflux_rust/src/core/persistence/state_manager.rs
 
 //! Unified State Manager - Central coordinator for state management operations
-//! 
+//!
 //! This module provides the main interface for state management operations including
 //! checkpointing, recovery, and schema migration.
 
-use std::sync::{Arc, RwLock, Mutex};
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 use super::state_holder::{
-    CheckpointId, ComponentId, StateHolder, StateError, StateSnapshot, 
-    SerializationHints, CompressionType, ChangeLog, StateSize, AccessPattern
+    AccessPattern, ChangeLog, CheckpointId, ComponentId, CompressionType, SerializationHints,
+    StateError, StateHolder, StateSize, StateSnapshot,
 };
 use super::state_registry::StateRegistry;
 
@@ -58,19 +58,19 @@ pub enum MigrationStrategy {
 pub enum CheckpointMode {
     /// Full snapshot of all components
     Full,
-    
+
     /// Incremental changes only
     Incremental { base: CheckpointId },
-    
+
     /// Combination of incremental and full for optimization
-    Hybrid { 
+    Hybrid {
         incremental_threshold: usize,
         differential_threshold: usize,
     },
-    
+
     /// Aligned checkpoint with barriers (for consistency)
     Aligned { timeout: Duration },
-    
+
     /// Unaligned checkpoint for low latency
     Unaligned,
 }
@@ -91,7 +91,7 @@ impl Default for StateConfig {
     fn default() -> Self {
         Self {
             checkpoint_mode: CheckpointMode::Hybrid {
-                incremental_threshold: 1024 * 1024, // 1MB
+                incremental_threshold: 1024 * 1024,       // 1MB
                 differential_threshold: 10 * 1024 * 1024, // 10MB
             },
             checkpoint_interval: Duration::from_secs(30),
@@ -123,11 +123,12 @@ impl StateMetrics {
         if success {
             self.successful_checkpoints += 1;
             self.total_checkpoint_time += duration;
-            
+
             // Update rolling average
             let total_successful = self.successful_checkpoints;
-            self.average_checkpoint_size = 
-                (self.average_checkpoint_size * (total_successful - 1) as usize + size) / total_successful as usize;
+            self.average_checkpoint_size =
+                (self.average_checkpoint_size * (total_successful - 1) as usize + size)
+                    / total_successful as usize;
         } else {
             self.failed_checkpoints += 1;
         }
@@ -194,22 +195,25 @@ impl UnifiedStateManager {
         if !analysis.circular_dependencies.is_empty() {
             return Err(StateError::InvalidStateData {
                 message: format!(
-                    "Circular dependencies detected: {:?}", 
+                    "Circular dependencies detected: {:?}",
                     analysis.circular_dependencies
                 ),
             });
         }
 
-        println!("State management initialized with {} components", analysis.total_components);
+        println!(
+            "State management initialized with {} components",
+            analysis.total_components
+        );
         println!("Recovery parallelism: {}", analysis.parallel_recovery_width);
-        
+
         Ok(())
     }
 
-    /// Trigger a checkpoint 
+    /// Trigger a checkpoint
     pub fn checkpoint(&self, mode: CheckpointMode) -> Result<CheckpointHandle, StateError> {
         let start_time = Instant::now();
-        
+
         // Get next checkpoint ID
         let checkpoint_id = {
             let mut counter = self.checkpoint_counter.lock().unwrap();
@@ -243,7 +247,7 @@ impl UnifiedStateManager {
 
         // Execute checkpoint synchronously (simplified version)
         let result = self.execute_checkpoint(checkpoint_id, mode);
-        
+
         // Remove from active checkpoints
         {
             let mut active = self.active_checkpoints.lock().unwrap();
@@ -253,7 +257,7 @@ impl UnifiedStateManager {
         // Record metrics
         let duration = start_time.elapsed();
         let mut metrics = self.metrics.write().unwrap();
-        
+
         match result {
             Ok(metadata) => {
                 metrics.record_checkpoint(duration, metadata.total_size, true);
@@ -350,11 +354,13 @@ impl UnifiedStateManager {
     /// Recover from a specific checkpoint
     pub fn recover(&self, checkpoint_id: CheckpointId) -> Result<RecoveryStats, StateError> {
         let start_time = Instant::now();
-        
+
         // Get checkpoint metadata
         let metadata = {
             let checkpoints = self.checkpoints.read().unwrap();
-            checkpoints.get(&checkpoint_id).cloned()
+            checkpoints
+                .get(&checkpoint_id)
+                .cloned()
                 .ok_or(StateError::CheckpointNotFound { checkpoint_id })?
         };
 
@@ -382,7 +388,7 @@ impl UnifiedStateManager {
         }
 
         let recovery_time = start_time.elapsed();
-        
+
         // Record recovery metrics
         {
             let mut metrics = self.metrics.write().unwrap();
@@ -397,9 +403,7 @@ impl UnifiedStateManager {
             parallel_workers: self.config.recovery_parallelism,
         };
 
-        println!(
-            "Recovery completed: {recovered_components} components in {recovery_time:?}"
-        );
+        println!("Recovery completed: {recovered_components} components in {recovery_time:?}");
 
         Ok(stats)
     }
@@ -420,7 +424,9 @@ impl UnifiedStateManager {
 
     /// Perform live state schema migration
     pub fn migrate_schema(&self, migration: SchemaMigration) -> Result<(), StateError> {
-        let component = self.registry.get_component(&migration.component_id)
+        let component = self
+            .registry
+            .get_component(&migration.component_id)
             .ok_or_else(|| StateError::InvalidStateData {
                 message: format!("Component '{}' not found", migration.component_id),
             })?;
@@ -431,7 +437,7 @@ impl UnifiedStateManager {
                     "Starting in-place migration for component '{}' from {} to {}",
                     migration.component_id, migration.from_version, migration.to_version
                 );
-                
+
                 // In-place migration would require careful coordination
                 // This is a placeholder for the complex migration logic
                 println!("In-place migration not yet implemented");
@@ -442,7 +448,7 @@ impl UnifiedStateManager {
                     "Starting blue-green migration for component '{}'",
                     migration.component_id
                 );
-                
+
                 // Blue-green would involve creating a new component version
                 // This is a placeholder for the blue-green migration logic
                 println!("Blue-green migration not yet implemented");
@@ -451,9 +457,10 @@ impl UnifiedStateManager {
             MigrationStrategy::CanaryRollout { percentage } => {
                 println!(
                     "Starting canary rollout migration for component '{}' at {}%",
-                    migration.component_id, percentage * 100.0
+                    migration.component_id,
+                    percentage * 100.0
                 );
-                
+
                 // Canary rollout would gradually migrate traffic
                 // This is a placeholder for the canary migration logic
                 println!("Canary rollout migration not yet implemented");
@@ -480,7 +487,7 @@ impl UnifiedStateManager {
     pub fn cleanup_old_checkpoints(&self) -> Result<usize, StateError> {
         let mut removed_count = 0;
         let retention_cutoff = Instant::now() - self.config.state_retention_time;
-        
+
         {
             let mut checkpoints = self.checkpoints.write().unwrap();
             let ids_to_remove: Vec<_> = checkpoints
@@ -488,7 +495,7 @@ impl UnifiedStateManager {
                 .filter(|(_, metadata)| metadata.created_at < retention_cutoff)
                 .map(|(id, _)| *id)
                 .collect();
-            
+
             for id in ids_to_remove {
                 checkpoints.remove(&id);
                 removed_count += 1;
@@ -519,10 +526,13 @@ mod tests {
             super::super::state_holder::SchemaVersion::new(1, 0, 0)
         }
 
-        fn serialize_state(&self, _hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
+        fn serialize_state(
+            &self,
+            _hints: &SerializationHints,
+        ) -> Result<StateSnapshot, StateError> {
             let data = self.data.load(Ordering::Relaxed).to_le_bytes().to_vec();
             let checksum = StateSnapshot::calculate_checksum(&data);
-            
+
             Ok(StateSnapshot {
                 version: self.schema_version(),
                 checkpoint_id: 0,
@@ -539,12 +549,12 @@ mod tests {
                     message: "Invalid data size".to_string(),
                 });
             }
-            
+
             let mut bytes = [0u8; 8];
             bytes.copy_from_slice(&snapshot.data);
             let value = usize::from_le_bytes(bytes);
             self.data.store(value, Ordering::Relaxed);
-            
+
             Ok(())
         }
 
@@ -569,7 +579,10 @@ mod tests {
         }
 
         fn component_metadata(&self) -> super::super::state_holder::StateMetadata {
-            super::super::state_holder::StateMetadata::new(self.id.clone(), "MockComponent".to_string())
+            super::super::state_holder::StateMetadata::new(
+                self.id.clone(),
+                "MockComponent".to_string(),
+            )
         }
     }
 
@@ -578,20 +591,20 @@ mod tests {
         let registry = Arc::new(StateRegistry::new());
         let config = StateConfig::default();
         let manager = UnifiedStateManager::new(registry, config);
-        
+
         assert!(manager.initialize().is_ok());
     }
 
     #[test]
     fn test_checkpoint_and_recovery() {
         let registry = Arc::new(StateRegistry::new());
-        
+
         // Register a mock component
         let component = Arc::new(MockStateHolder {
             id: "test1".to_string(),
             data: Arc::new(AtomicUsize::new(42)),
         });
-        
+
         let metadata = super::super::state_registry::ComponentMetadata {
             component_id: "test1".to_string(),
             component_type: "MockComponent".to_string(),
@@ -608,17 +621,19 @@ mod tests {
                 },
             },
         };
-        
-        registry.register("test1".to_string(), component, metadata).unwrap();
-        
+
+        registry
+            .register("test1".to_string(), component, metadata)
+            .unwrap();
+
         let config = StateConfig::default();
         let manager = UnifiedStateManager::new(registry, config);
-        
+
         assert!(manager.initialize().is_ok());
-        
+
         // Create checkpoint
         let _handle = manager.checkpoint(CheckpointMode::Full).unwrap();
-        
+
         // Verify checkpoint was created
         let history = manager.get_checkpoint_history();
         assert!(!history.is_empty());

@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.State (factory class)
+// Corresponds to io.eventflux.query.api.execution.query.input.state.State (factory class)
 use super::absent_stream_state_element::AbsentStreamStateElement;
 use super::count_state_element::{CountStateElement, ANY_COUNT};
 use super::every_state_element::EveryStateElement;
@@ -47,7 +47,7 @@ impl State {
         {
             // TODO: This should ideally return a Result or handle error more gracefully
             panic!(
-                "SiddhiAppValidationException: NOT pattern cannot have reference id but found {}",
+                "EventFluxAppValidationException: NOT pattern cannot have reference id but found {}",
                 stream_state_element
                     .get_single_input_stream()
                     .get_stream_reference_id_str()

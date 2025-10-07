@@ -1,5 +1,5 @@
-use siddhi_rust::query_api::execution::ExecutionElement;
-use siddhi_rust::query_compiler::{parse, parse_partition};
+use eventflux_rust::query_api::execution::ExecutionElement;
+use eventflux_rust::query_compiler::{parse, parse_partition};
 
 #[test]
 fn test_parse_partition_direct() {

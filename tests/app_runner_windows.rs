@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 use std::thread::sleep;
 use std::time::Duration;
 

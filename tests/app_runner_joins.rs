@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 // All JOIN tests converted to SQL syntax - JOINs are part of M1
 

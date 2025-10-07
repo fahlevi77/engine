@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::event::Event;
 
 /// Trait representing processors that can accept events from `InputHandler`.
@@ -24,7 +24,7 @@ pub trait InputProcessor: Send + Sync + std::fmt::Debug {
 pub struct InputHandler {
     stream_id: String,
     stream_index: usize,
-    siddhi_app_context: Arc<SiddhiAppContext>,
+    eventflux_app_context: Arc<EventFluxAppContext>,
     input_processor: Option<Arc<Mutex<dyn InputProcessor>>>,
     paused_input_publisher: Arc<Mutex<dyn InputProcessor>>, // stored for resume/connect
 }
@@ -34,12 +34,12 @@ impl InputHandler {
         stream_id: String,
         stream_index: usize,
         input_processor: Arc<Mutex<dyn InputProcessor>>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
     ) -> Self {
         Self {
             stream_id,
             stream_index,
-            siddhi_app_context,
+            eventflux_app_context,
             input_processor: Some(input_processor.clone()),
             paused_input_publisher: input_processor,
         }
@@ -53,7 +53,7 @@ impl InputHandler {
         self.input_processor
             .as_ref()
             .cloned()
-            .ok_or_else(|| "Siddhi app is not running, cannot send event".to_string())
+            .ok_or_else(|| "EventFlux app is not running, cannot send event".to_string())
     }
 
     pub fn send_data(
@@ -75,14 +75,15 @@ impl InputHandler {
         timestamp: i64,
         data: Vec<crate::core::event::value::AttributeValue>,
     ) -> Result<(), String> {
-        if self.siddhi_app_context.is_playback {
+        if self.eventflux_app_context.is_playback {
             // TODO: timestamp generator
         }
-        
+
         // Use ThreadBarrier to coordinate with restoration operations
-        if let Some(barrier) = self.siddhi_app_context.get_thread_barrier() {
+        if let Some(barrier) = self.eventflux_app_context.get_thread_barrier() {
             barrier.enter();
-            let result = self.ensure_processor()?
+            let result = self
+                .ensure_processor()?
                 .lock()
                 .map_err(|_| "processor mutex poisoned".to_string())?
                 .send_event_with_data(timestamp, data, self.stream_index);
@@ -97,7 +98,7 @@ impl InputHandler {
     }
 
     pub fn send_single_event(&self, event: Event) -> Result<(), String> {
-        if self.siddhi_app_context.is_playback {
+        if self.eventflux_app_context.is_playback {
             // TODO: set timestamp generator
         }
         self.ensure_processor()?
@@ -107,7 +108,7 @@ impl InputHandler {
     }
 
     pub fn send_multiple_events(&self, events: Vec<Event>) -> Result<(), String> {
-        if self.siddhi_app_context.is_playback && !events.is_empty() {
+        if self.eventflux_app_context.is_playback && !events.is_empty() {
             // TODO: update timestamp generator
         }
         self.ensure_processor()?

@@ -1,10 +1,10 @@
-// Corresponds to io.siddhi.query.api.expression.condition.Not
+// Corresponds to io.eventflux.query.api.expression.condition.Not
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Not {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Not specific field
     pub expression: Box<Expression>,
@@ -13,7 +13,7 @@ pub struct Not {
 impl Not {
     pub fn new(expression: Expression) -> Self {
         Not {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             expression: Box::new(expression),
         }
     }

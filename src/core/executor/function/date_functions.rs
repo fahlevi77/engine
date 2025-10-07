@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/date_functions.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/date_functions.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -20,7 +20,7 @@ impl ExpressionExecutor for CurrentTimestampFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }
@@ -77,7 +77,7 @@ impl ExpressionExecutor for ParseDateFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(ParseDateFunctionExecutor {
             date_executor: self.date_executor.clone_executor(ctx),
             pattern: self.pattern.clone(),
@@ -146,7 +146,7 @@ impl ExpressionExecutor for DateAddFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(DateAddFunctionExecutor {
             timestamp_executor: self.timestamp_executor.clone_executor(ctx),
             increment_executor: self.increment_executor.clone_executor(ctx),
@@ -192,7 +192,7 @@ impl ExpressionExecutor for FormatDateFunctionExecutor {
         ApiAttributeType::STRING
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(FormatDateFunctionExecutor {
             timestamp_executor: self.timestamp_executor.clone_executor(ctx),
             pattern: self.pattern.clone(),

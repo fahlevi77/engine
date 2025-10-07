@@ -1,38 +1,39 @@
-// siddhi_rust/src/core/query/selector/attribute/aggregator/sum_aggregator_state_holder.rs
+// eventflux_rust/src/core/query/selector/attribute/aggregator/sum_aggregator_state_holder.rs
 
 //! Enhanced StateHolder implementation for SumAttributeAggregatorExecutor
-//! 
+//!
 //! This implementation provides enterprise-grade state management for sum aggregation
 //! with versioning, incremental checkpointing, and comprehensive metadata.
 
-use std::sync::{Arc, Mutex};
 use crate::core::event::value::AttributeValue;
 use crate::core::persistence::state_holder::{
-    StateHolder, StateSnapshot, StateError, StateSize, AccessPattern,
-    SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
-    CompressionType, StateOperation
+    AccessPattern, ChangeLog, CheckpointId, CompressionType, SchemaVersion, SerializationHints,
+    StateError, StateHolder, StateMetadata, StateOperation, StateSize, StateSnapshot,
 };
-use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
+use crate::core::util::compression::{
+    CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange,
+};
 use crate::query_api::definition::attribute::Type as ApiAttributeType;
+use std::sync::{Arc, Mutex};
 
 /// Enhanced state holder for SumAttributeAggregatorExecutor with StateHolder capabilities
 #[derive(Debug, Clone)]
 pub struct SumAggregatorStateHolder {
     /// Sum value
     sum: Arc<Mutex<f64>>,
-    
+
     /// Count of values added
     count: Arc<Mutex<u64>>,
-    
+
     /// Return type for the aggregator
     return_type: ApiAttributeType,
-    
+
     /// Component identifier
     component_id: String,
-    
+
     /// Last checkpoint ID for incremental tracking
     last_checkpoint_id: Arc<Mutex<Option<CheckpointId>>>,
-    
+
     /// Change log for incremental checkpointing
     change_log: Arc<Mutex<Vec<StateOperation>>>,
 }
@@ -58,7 +59,7 @@ impl SumAggregatorStateHolder {
     /// Record a value addition for incremental checkpointing
     pub fn record_value_added(&self, value: f64) {
         let mut change_log = self.change_log.lock().unwrap();
-        
+
         change_log.push(StateOperation::Insert {
             key: self.generate_operation_key("add"),
             value: self.serialize_value_operation(value),
@@ -68,7 +69,7 @@ impl SumAggregatorStateHolder {
     /// Record a value removal for incremental checkpointing
     pub fn record_value_removed(&self, value: f64) {
         let mut change_log = self.change_log.lock().unwrap();
-        
+
         change_log.push(StateOperation::Delete {
             key: self.generate_operation_key("remove"),
             old_value: self.serialize_value_operation(value),
@@ -78,7 +79,7 @@ impl SumAggregatorStateHolder {
     /// Record a state reset for incremental checkpointing
     pub fn record_reset(&self, old_sum: f64, old_count: u64) {
         let mut change_log = self.change_log.lock().unwrap();
-        
+
         change_log.push(StateOperation::Update {
             key: b"reset".to_vec(),
             old_value: self.serialize_state_values(old_sum, old_count),
@@ -91,11 +92,11 @@ impl SumAggregatorStateHolder {
         let mut key = Vec::new();
         key.extend_from_slice(operation_type.as_bytes());
         key.push(b'_');
-        
+
         // Add timestamp for uniqueness
         let timestamp = chrono::Utc::now().timestamp_millis();
         key.extend_from_slice(&timestamp.to_le_bytes());
-        
+
         key
     }
 
@@ -147,40 +148,41 @@ impl StateHolder for SumAggregatorStateHolder {
 
     fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
         use crate::core::util::to_bytes;
-        
+
         let sum = *self.sum.lock().unwrap();
         let count = *self.count.lock().unwrap();
-        
+
         // Create state data structure
         let state_data = SumAggregatorStateData::new(sum, count, self.return_type);
-        
+
         // Serialize to bytes
         let mut data = to_bytes(&state_data).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize sum aggregator state: {e}"),
         })?;
-        
+
         // Apply compression if requested using the shared compression utility
-        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
-            match self.compress_state_data(&data, Some(compression.clone())) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => {
-                    // Fall back to no compression if compression fails
-                    (data, CompressionType::None)
+        let (compressed_data, compression_type) =
+            if let Some(ref compression) = hints.prefer_compression {
+                match self.compress_state_data(&data, Some(compression.clone())) {
+                    Ok((compressed, comp_type)) => (compressed, comp_type),
+                    Err(_) => {
+                        // Fall back to no compression if compression fails
+                        (data, CompressionType::None)
+                    }
                 }
-            }
-        } else {
-            // Use intelligent compression selection
-            match self.compress_state_data(&data, None) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => (data, CompressionType::None)
-            }
-        };
-        
+            } else {
+                // Use intelligent compression selection
+                match self.compress_state_data(&data, None) {
+                    Ok((compressed, comp_type)) => (compressed, comp_type),
+                    Err(_) => (data, CompressionType::None),
+                }
+            };
+
         let data = compressed_data;
         let compression = compression_type;
-        
+
         let checksum = StateSnapshot::calculate_checksum(&data);
-        
+
         Ok(StateSnapshot {
             version: self.schema_version(),
             checkpoint_id: 0, // Will be set by the checkpoint coordinator
@@ -193,46 +195,47 @@ impl StateHolder for SumAggregatorStateHolder {
 
     fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
         use crate::core::util::from_bytes;
-        
+
         // Verify integrity
         if !snapshot.verify_integrity() {
             return Err(StateError::ChecksumMismatch);
         }
-        
+
         // Decompress data if needed using the shared compression utility
         let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
-        
+
         // Deserialize state data
-        let state_data: SumAggregatorStateData = from_bytes(&data).map_err(|e| {
-            StateError::DeserializationError {
+        let state_data: SumAggregatorStateData =
+            from_bytes(&data).map_err(|e| StateError::DeserializationError {
                 message: format!("Failed to deserialize sum aggregator state: {e}"),
-            }
-        })?;
-        
+            })?;
+
         // Restore aggregator state
         *self.sum.lock().unwrap() = state_data.sum;
         *self.count.lock().unwrap() = state_data.count;
         self.return_type = state_data.get_return_type();
-        
+
         Ok(())
     }
 
     fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
         let last_checkpoint = self.last_checkpoint_id.lock().unwrap();
-        
+
         if let Some(last_id) = *last_checkpoint {
             if since > last_id {
-                return Err(StateError::CheckpointNotFound { checkpoint_id: since });
+                return Err(StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                });
             }
         }
-        
+
         let change_log = self.change_log.lock().unwrap();
         let mut changelog = ChangeLog::new(since, since + 1);
-        
+
         for operation in change_log.iter() {
             changelog.add_operation(operation.clone());
         }
-        
+
         Ok(changelog)
     }
 
@@ -240,12 +243,12 @@ impl StateHolder for SumAggregatorStateHolder {
         // For sum aggregators, we could apply incremental changes
         // For now, this is a simplified implementation
         // Note: Applying {} state operations to sum aggregator
-        
+
         // In a full implementation, we would:
         // 1. Parse each operation (add/remove/reset)
         // 2. Apply value changes to sum and count
         // 3. Maintain aggregation consistency
-        
+
         Ok(())
     }
 
@@ -254,10 +257,10 @@ impl StateHolder for SumAggregatorStateHolder {
         // Just stores sum (f64) and count (u64) values
         let base_size = std::mem::size_of::<f64>() + std::mem::size_of::<u64>();
         let entries = 1; // Single aggregation value
-        
+
         // Growth rate is minimal - just accumulates values
         let growth_rate = 0.0; // Aggregators don't grow in size
-        
+
         StateSize {
             bytes: base_size,
             entries,
@@ -272,16 +275,27 @@ impl StateHolder for SumAggregatorStateHolder {
     }
 
     fn component_metadata(&self) -> StateMetadata {
-        let mut metadata = StateMetadata::new(self.component_id.clone(), "SumAttributeAggregatorExecutor".to_string());
+        let mut metadata = StateMetadata::new(
+            self.component_id.clone(),
+            "SumAttributeAggregatorExecutor".to_string(),
+        );
         metadata.access_pattern = self.access_pattern();
         metadata.size_estimation = self.estimate_size();
-        
+
         // Add custom metadata
-        metadata.custom_metadata.insert("aggregator_type".to_string(), "sum".to_string());
-        metadata.custom_metadata.insert("return_type".to_string(), format!("{:?}", self.return_type));
-        metadata.custom_metadata.insert("current_sum".to_string(), self.get_sum().to_string());
-        metadata.custom_metadata.insert("current_count".to_string(), self.get_count().to_string());
-        
+        metadata
+            .custom_metadata
+            .insert("aggregator_type".to_string(), "sum".to_string());
+        metadata
+            .custom_metadata
+            .insert("return_type".to_string(), format!("{:?}", self.return_type));
+        metadata
+            .custom_metadata
+            .insert("current_sum".to_string(), self.get_sum().to_string());
+        metadata
+            .custom_metadata
+            .insert("current_count".to_string(), self.get_count().to_string());
+
         metadata
     }
 }
@@ -292,8 +306,8 @@ impl CompressibleStateHolder for SumAggregatorStateHolder {
             prefer_speed: true, // Aggregators need low latency for real-time processing
             prefer_ratio: false,
             data_type: DataCharacteristics::Numeric, // Sum aggregators work with numeric data
-            target_latency_ms: Some(1), // Target < 1ms compression time
-            min_compression_ratio: Some(0.2), // At least 20% space savings to be worthwhile
+            target_latency_ms: Some(1),              // Target < 1ms compression time
+            min_compression_ratio: Some(0.2),        // At least 20% space savings to be worthwhile
             expected_size_range: DataSizeRange::Small, // Aggregator state is very small
         }
     }
@@ -315,7 +329,7 @@ impl SumAggregatorStateData {
             return_type: format!("{return_type:?}"),
         }
     }
-    
+
     fn get_return_type(&self) -> ApiAttributeType {
         match self.return_type.as_str() {
             "LONG" => ApiAttributeType::LONG,
@@ -342,7 +356,7 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         assert_eq!(holder.schema_version(), SchemaVersion::new(1, 0, 0));
         assert_eq!(holder.access_pattern(), AccessPattern::Random);
         assert_eq!(holder.get_sum(), 0.0);
@@ -353,24 +367,24 @@ mod tests {
     fn test_state_serialization_and_deserialization() {
         let sum = Arc::new(Mutex::new(42.5));
         let count = Arc::new(Mutex::new(3));
-        
+
         let mut holder = SumAggregatorStateHolder::new(
             sum,
             count,
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         let hints = SerializationHints::default();
-        
+
         // Test serialization
         let snapshot = holder.serialize_state(&hints).unwrap();
         assert!(snapshot.verify_integrity());
-        
+
         // Test deserialization
         let result = holder.deserialize_state(&snapshot);
         assert!(result.is_ok());
-        
+
         // Verify the data was restored
         assert_eq!(holder.get_sum(), 42.5);
         assert_eq!(holder.get_count(), 3);
@@ -386,24 +400,24 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         // Record value additions
         holder.record_value_added(10.0);
         holder.record_value_added(20.0);
-        
+
         // Get changelog
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 2);
-        
+
         // Record value removal
         holder.record_value_removed(5.0);
-        
+
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 3);
-        
+
         // Record reset
         holder.record_reset(25.0, 2);
-        
+
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 4);
     }
@@ -412,7 +426,7 @@ mod tests {
     fn test_aggregated_value_conversion() {
         let sum = Arc::new(Mutex::new(42.7));
         let count = Arc::new(Mutex::new(3));
-        
+
         // Test DOUBLE return type
         let holder_double = SumAggregatorStateHolder::new(
             sum.clone(),
@@ -420,13 +434,13 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         let value = holder_double.get_aggregated_value().unwrap();
         match value {
             AttributeValue::Double(d) => assert!((d - 42.7).abs() < f64::EPSILON),
             _ => panic!("Expected Double value"),
         }
-        
+
         // Test LONG return type
         let holder_long = SumAggregatorStateHolder::new(
             sum,
@@ -434,7 +448,7 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::LONG,
         );
-        
+
         let value = holder_long.get_aggregated_value().unwrap();
         match value {
             AttributeValue::Long(l) => assert_eq!(l, 42),
@@ -452,7 +466,7 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         let size = holder.estimate_size();
         assert_eq!(size.entries, 1);
         assert!(size.bytes > 0); // Should have some base size
@@ -469,11 +483,17 @@ mod tests {
             "test_sum_aggregator".to_string(),
             ApiAttributeType::DOUBLE,
         );
-        
+
         let metadata = holder.component_metadata();
         assert_eq!(metadata.component_type, "SumAttributeAggregatorExecutor");
-        assert_eq!(metadata.custom_metadata.get("aggregator_type").unwrap(), "sum");
-        assert_eq!(metadata.custom_metadata.get("current_sum").unwrap(), "123.45");
+        assert_eq!(
+            metadata.custom_metadata.get("aggregator_type").unwrap(),
+            "sum"
+        );
+        assert_eq!(
+            metadata.custom_metadata.get("current_sum").unwrap(),
+            "123.45"
+        );
         assert_eq!(metadata.custom_metadata.get("current_count").unwrap(), "7");
     }
 }

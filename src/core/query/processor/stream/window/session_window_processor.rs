@@ -1,8 +1,8 @@
-// siddhi_rust/src/core/query/processor/stream/window/session_window_processor.rs
-// Rust implementation of Siddhi SessionWindowProcessor
+// eventflux_rust/src/core/query/processor/stream/window/session_window_processor.rs
+// Rust implementation of EventFlux SessionWindowProcessor
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent;
@@ -68,8 +68,8 @@ impl SessionWindowProcessor {
         session_gap: i64,
         session_key_executor: Option<Box<dyn ExpressionExecutor>>,
         allowed_latency: i64,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         SessionWindowProcessor {
@@ -85,8 +85,8 @@ impl SessionWindowProcessor {
     /// Create from window handler (standard factory pattern)
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let params = handler.get_parameters();
 
@@ -451,23 +451,23 @@ impl Processor for SessionWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, query_ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.session_gap,
             // TODO: Clone session key executor properly
             None,
             self.allowed_latency,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(query_ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

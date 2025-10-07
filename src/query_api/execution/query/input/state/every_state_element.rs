@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.EveryStateElement
+// Corresponds to io.eventflux.query.api.execution.query.input.state.EveryStateElement
 use super::state_element::StateElement;
-use crate::query_api::siddhi_element::SiddhiElement; // Recursive definition
-                                                     // Expression is not used here as per Java structure. 'within' is on StateInputStream.
+use crate::query_api::eventflux_element::EventFluxElement; // Recursive definition
+                                                           // Expression is not used here as per Java structure. 'within' is on StateInputStream.
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct EveryStateElement {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // EveryStateElement fields
     pub state_element: Box<StateElement>,
@@ -16,7 +16,7 @@ pub struct EveryStateElement {
 impl EveryStateElement {
     pub fn new(state_element: StateElement) -> Self {
         EveryStateElement {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             state_element: Box::new(state_element),
         }
     }

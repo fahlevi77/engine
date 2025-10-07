@@ -1,18 +1,18 @@
 use super::set_attribute::SetAttribute;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::Variable;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct UpdateSet {
-    pub siddhi_element: SiddhiElement, // UpdateSet in Java is a SiddhiElement
+    pub eventflux_element: EventFluxElement, // UpdateSet in Java is a EventFluxElement
     pub set_attributes: Vec<SetAttribute>,
 }
 
 impl UpdateSet {
     pub fn new() -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             set_attributes: Vec::new(),
         }
     }

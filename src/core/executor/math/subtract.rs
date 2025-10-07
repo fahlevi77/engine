@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/subtract.rs
+// eventflux_rust/src/core/executor/math/subtract.rs
 use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
@@ -96,13 +96,13 @@ impl ExpressionExecutor for SubtractExpressionExecutor {
     }
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(SubtractExpressionExecutor {
-            left_executor: self.left_executor.clone_executor(siddhi_app_context),
-            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            left_executor: self.left_executor.clone_executor(eventflux_app_context),
+            right_executor: self.right_executor.clone_executor(eventflux_app_context),
             return_type: self.return_type,
         })
     }

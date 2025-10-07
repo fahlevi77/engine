@@ -1,5 +1,5 @@
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
@@ -17,8 +17,8 @@ pub struct AggregationInputProcessor {
 impl AggregationInputProcessor {
     pub fn new(
         runtime: Arc<Mutex<AggregationRuntime>>,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -42,18 +42,18 @@ impl Processor for AggregationInputProcessor {
         None
     }
     fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
-    fn clone_processor(&self, qctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, qctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             Arc::clone(&self.runtime),
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(qctx),
         ))
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::DEFAULT

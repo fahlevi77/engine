@@ -1,5 +1,5 @@
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Variable;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 #[derive(Default)]
@@ -9,11 +9,10 @@ pub enum Order {
     Desc,
 }
 
-
 #[derive(Clone, Debug, PartialEq)] // Default requires Variable to be Default
 #[derive(Default)]
 pub struct OrderByAttribute {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // OrderByAttribute fields
     pub variable: Variable, // Variable struct has Default derive
@@ -24,7 +23,7 @@ impl OrderByAttribute {
     // Constructor for `OrderByAttribute(Variable variable, Order order)`
     pub fn new(variable: Variable, order: Order) -> Self {
         OrderByAttribute {
-            siddhi_element: SiddhiElement::default(), // Or copy from variable.siddhi_element?
+            eventflux_element: EventFluxElement::default(), // Or copy from variable.eventflux_element?
             variable,
             order,
         }

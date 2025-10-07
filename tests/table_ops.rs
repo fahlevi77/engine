@@ -1,19 +1,17 @@
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::stream::stream_event::StreamEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
+use eventflux_rust::core::query::output::InsertIntoTableProcessor;
+use eventflux_rust::core::query::processor::Processor;
+use eventflux_rust::core::stream::input::table_input_handler::TableInputHandler;
+use eventflux_rust::core::table::JdbcTable;
+use eventflux_rust::core::table::{InMemoryCompiledCondition, InMemoryTable, Table};
 use rusqlite::Connection;
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
-use siddhi_rust::core::query::output::InsertIntoTableProcessor;
-use siddhi_rust::core::query::processor::Processor;
-use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
-use siddhi_rust::core::table::JdbcTable;
-use siddhi_rust::core::table::{
-    InMemoryCompiledCondition, InMemoryTable, Table,
-};
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -37,7 +35,7 @@ impl DataSource for SqliteDataSource {
     }
     fn init(
         &mut self,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
         _id: &str,
         _cfg: DataSourceConfig,
     ) -> Result<(), String> {
@@ -56,7 +54,7 @@ impl DataSource for SqliteDataSource {
     }
 }
 
-fn setup_jdbc_table(ctx: &Arc<SiddhiContext>, table_name: &str) {
+fn setup_jdbc_table(ctx: &Arc<EventFluxContext>, table_name: &str) {
     let ds = ctx.get_data_source("DS1").unwrap();
     let conn_any = ds.get_connection().unwrap();
     let conn_arc = conn_any.downcast::<Arc<Mutex<Connection>>>().unwrap();
@@ -67,41 +65,43 @@ fn setup_jdbc_table(ctx: &Arc<SiddhiContext>, table_name: &str) {
 
 #[test]
 fn test_table_input_handler_add() {
-    let ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+    let ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "app".to_string(),
-        Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
             "app".to_string(),
         )),
         String::new(),
     ));
     let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
-    ctx.get_siddhi_context()
+    ctx.get_eventflux_context()
         .add_table("T1".to_string(), table.clone());
     let handler = TableInputHandler::new(table, Arc::clone(&ctx));
     handler.add(vec![Event::new_with_data(0, vec![AttributeValue::Int(5)])]);
-    assert!(ctx.get_siddhi_context().get_table("T1").unwrap().contains(
-        &InMemoryCompiledCondition {
+    assert!(ctx
+        .get_eventflux_context()
+        .get_table("T1")
+        .unwrap()
+        .contains(&InMemoryCompiledCondition {
             values: vec![AttributeValue::Int(5)]
-        }
-    ));
+        }));
 }
 
 #[test]
 fn test_insert_into_table_processor() {
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "app".to_string(),
-        Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
             "app".to_string(),
         )),
         String::new(),
     ));
     let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
     app_ctx
-        .get_siddhi_context()
+        .get_eventflux_context()
         .add_table("T2".to_string(), table.clone());
-    let query_ctx = Arc::new(SiddhiQueryContext::new(
+    let query_ctx = Arc::new(EventFluxQueryContext::new(
         Arc::clone(&app_ctx),
         "q".to_string(),
         None,
@@ -111,7 +111,7 @@ fn test_insert_into_table_processor() {
     se.set_output_data(Some(vec![AttributeValue::Int(7)]));
     proc.process(Some(Box::new(se)));
     assert!(app_ctx
-        .get_siddhi_context()
+        .get_eventflux_context()
         .get_table("T2")
         .unwrap()
         .contains(&InMemoryCompiledCondition {
@@ -121,16 +121,16 @@ fn test_insert_into_table_processor() {
 
 #[test]
 fn test_table_input_handler_update_delete_find() {
-    let ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+    let ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "app".to_string(),
-        Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
             "app".to_string(),
         )),
         String::new(),
     ));
     let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
-    ctx.get_siddhi_context()
+    ctx.get_eventflux_context()
         .add_table("T3".to_string(), table.clone());
     let handler = TableInputHandler::new(table.clone(), Arc::clone(&ctx));
     handler.add(vec![Event::new_with_data(
@@ -165,7 +165,7 @@ fn test_table_input_handler_update_delete_find() {
 
 #[test]
 fn test_table_input_handler_jdbc() {
-    let ctx = Arc::new(SiddhiContext::new());
+    let ctx = Arc::new(EventFluxContext::new());
     ctx.add_data_source(
         "DS1".to_string(),
         Arc::new(SqliteDataSource::new(":memory:")),
@@ -173,10 +173,10 @@ fn test_table_input_handler_jdbc() {
     .unwrap();
     setup_jdbc_table(&ctx, "test2");
 
-    let app_ctx = Arc::new(SiddhiAppContext::new(
+    let app_ctx = Arc::new(EventFluxAppContext::new(
         Arc::clone(&ctx),
         "app".to_string(),
-        Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
             "app".to_string(),
         )),
         String::new(),
@@ -184,7 +184,7 @@ fn test_table_input_handler_jdbc() {
     let table: Arc<dyn Table> =
         Arc::new(JdbcTable::new("test2".to_string(), "DS1".to_string(), Arc::clone(&ctx)).unwrap());
     app_ctx
-        .get_siddhi_context()
+        .get_eventflux_context()
         .add_table("J1".to_string(), table.clone());
     let handler = TableInputHandler::new(table.clone(), Arc::clone(&app_ctx));
 
@@ -210,25 +210,26 @@ fn test_table_input_handler_jdbc() {
 
 #[test]
 fn test_query_parser_with_table_actions() {
-    use siddhi_rust::core::stream::stream_junction::StreamJunction;
-    use siddhi_rust::query_compiler::{parse_query, parse_stream_definition};
+    use eventflux_rust::core::stream::stream_junction::StreamJunction;
+    use eventflux_rust::query_compiler::{parse_query, parse_stream_definition};
     use std::collections::HashMap;
     use std::sync::Mutex;
 
     let s_def = Arc::new(parse_stream_definition("define stream S (val string)").unwrap());
     let t_def = Arc::new(
-        siddhi_rust::query_compiler::parse_table_definition("define table T (val string)").unwrap(),
+        eventflux_rust::query_compiler::parse_table_definition("define table T (val string)")
+            .unwrap(),
     );
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "app".to_string(),
-        Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+        Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
             "app".to_string(),
         )),
         String::new(),
     ));
     app_ctx
-        .get_siddhi_context()
+        .get_eventflux_context()
         .add_table("T".to_string(), Arc::new(InMemoryTable::new()));
 
     let mut junctions = HashMap::new();
@@ -248,35 +249,41 @@ fn test_query_parser_with_table_actions() {
     table_defs.insert("T".to_string(), t_def);
 
     let q1 = parse_query("from S select val insert into table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(
-        &q1,
-        &app_ctx,
-        &junctions,
-        &table_defs,
-        &HashMap::new(),
-        None
-    )
-    .is_ok());
+    assert!(
+        eventflux_rust::core::util::parser::QueryParser::parse_query(
+            &q1,
+            &app_ctx,
+            &junctions,
+            &table_defs,
+            &HashMap::new(),
+            None
+        )
+        .is_ok()
+    );
 
     let q2 = parse_query("from S select val update table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(
-        &q2,
-        &app_ctx,
-        &junctions,
-        &table_defs,
-        &HashMap::new(),
-        None
-    )
-    .is_ok());
+    assert!(
+        eventflux_rust::core::util::parser::QueryParser::parse_query(
+            &q2,
+            &app_ctx,
+            &junctions,
+            &table_defs,
+            &HashMap::new(),
+            None
+        )
+        .is_ok()
+    );
 
     let q3 = parse_query("from S select val delete table T").unwrap();
-    assert!(siddhi_rust::core::util::parser::QueryParser::parse_query(
-        &q3,
-        &app_ctx,
-        &junctions,
-        &table_defs,
-        &HashMap::new(),
-        None
-    )
-    .is_ok());
+    assert!(
+        eventflux_rust::core::util::parser::QueryParser::parse_query(
+            &q3,
+            &app_ctx,
+            &junctions,
+            &table_defs,
+            &HashMap::new(),
+            None
+        )
+        .is_ok()
+    );
 }

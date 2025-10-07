@@ -1,47 +1,47 @@
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
 };
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::state::{MetaStateEvent, StateEvent};
-use siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
-use siddhi_rust::core::query::processor::stream::join::{
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::state::{MetaStateEvent, StateEvent};
+use eventflux_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
+use eventflux_rust::core::event::stream::stream_event::StreamEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::query::output::callback_processor::CallbackProcessor;
+use eventflux_rust::core::query::processor::stream::join::{
     JoinProcessor, JoinProcessorSide, JoinSide,
 };
-use siddhi_rust::core::query::processor::{ProcessingMode, Processor};
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::core::util::parser::QueryParser;
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::definition::StreamDefinition;
-use siddhi_rust::query_api::execution::query::input::stream::{
+use eventflux_rust::core::query::processor::{ProcessingMode, Processor};
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::stream::stream_junction::StreamJunction;
+use eventflux_rust::core::util::parser::QueryParser;
+use eventflux_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::StreamDefinition;
+use eventflux_rust::query_api::execution::query::input::stream::{
     InputStream, JoinType, SingleInputStream,
 };
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::expression::condition::compare::Operator as CompareOp;
-use siddhi_rust::query_api::expression::{variable::Variable, Expression};
+use eventflux_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::expression::condition::compare::Operator as CompareOp;
+use eventflux_rust::query_api::expression::{variable::Variable, Expression};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 fn setup_context() -> (
-    Arc<SiddhiAppContext>,
+    Arc<EventFluxAppContext>,
     HashMap<String, Arc<Mutex<StreamJunction>>>,
 ) {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "TestApp".to_string(),
     ));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "TestApp".to_string(),
         Arc::clone(&app),
         String::new(),
@@ -175,7 +175,7 @@ impl StreamCallback for CollectCallback {
 }
 
 fn collect_from_out_stream(
-    app_ctx: &Arc<SiddhiAppContext>,
+    app_ctx: &Arc<EventFluxAppContext>,
     junctions: &HashMap<String, Arc<Mutex<StreamJunction>>>,
 ) -> Arc<Mutex<Vec<Vec<AttributeValue>>>> {
     let out_junction = junctions.get("OutStream").unwrap().clone();
@@ -187,7 +187,7 @@ fn collect_from_out_stream(
         Arc::new(Mutex::new(Box::new(cb) as Box<dyn StreamCallback>)),
         Arc::clone(app_ctx),
         Arc::new(
-            siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(
+            eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext::new(
                 Arc::clone(app_ctx),
                 "callback".to_string(),
                 None,
@@ -295,28 +295,28 @@ impl Processor for CollectStateEvents {
         None
     }
     fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
-    fn clone_processor(&self, _ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, _ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(CollectStateEvents {
             events: Arc::clone(&self.events),
         })
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::new(SiddhiAppContext::new(
-            Arc::new(SiddhiContext::new()),
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::new(EventFluxAppContext::new(
+            Arc::new(EventFluxContext::new()),
             "T".to_string(),
-            Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+            Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                 "T".to_string(),
             )),
             String::new(),
         ))
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::new(SiddhiQueryContext::new(
-            Arc::new(SiddhiAppContext::new(
-                Arc::new(SiddhiContext::new()),
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::new(EventFluxQueryContext::new(
+            Arc::new(EventFluxAppContext::new(
+                Arc::new(EventFluxContext::new()),
                 "T".to_string(),
-                Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                     "T".to_string(),
                 )),
                 String::new(),
@@ -340,18 +340,18 @@ fn setup_state_join(
     Arc<Mutex<JoinProcessorSide>>,
     Arc<Mutex<Vec<(Option<i32>, Option<i32>)>>>,
 ) {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "App".to_string(),
     ));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "App".to_string(),
         Arc::clone(&app),
         String::new(),
     ));
     let query_ctx = Arc::new(
-        siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext::new(
+        eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext::new(
             Arc::clone(&app_ctx),
             "q".to_string(),
             None,
@@ -384,8 +384,8 @@ fn setup_state_join(
     );
 
     let ctx = ExpressionParserContext {
-        siddhi_app_context: Arc::clone(&app_ctx),
-        siddhi_query_context: Arc::clone(&query_ctx),
+        eventflux_app_context: Arc::clone(&app_ctx),
+        eventflux_query_context: Arc::clone(&query_ctx),
         stream_meta_map: stream_meta,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),

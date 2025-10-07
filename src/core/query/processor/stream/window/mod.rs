@@ -1,5 +1,5 @@
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::complex_event::ComplexEventType;
@@ -10,13 +10,13 @@ use crate::core::util::scheduler::{Schedulable, Scheduler};
 use crate::query_api::execution::query::input::handler::WindowHandler;
 use crate::query_api::expression::{constant::ConstantValueWithFloat, Expression};
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 // Import StateHolder trait and related types
 use crate::core::persistence::state_holder::{
-    StateHolder as NewStateHolder, StateSnapshot, StateError, StateSize, AccessPattern, 
-    SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata
+    AccessPattern, ChangeLog, CheckpointId, SchemaVersion, SerializationHints, StateError,
+    StateHolder as NewStateHolder, StateMetadata, StateSize, StateSnapshot,
 };
 
 // Import session window processor
@@ -59,15 +59,14 @@ pub struct LengthWindowProcessor {
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
 }
 
-
 impl LengthWindowProcessor {
     pub fn new(
         length: usize,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        
+
         // Create enhanced StateHolder and register it for persistence
         let component_id = format!("length_window_{}_{}", query_ctx.get_name(), length);
         let state_holder = Arc::new(LengthWindowStateHolder::new(
@@ -75,15 +74,15 @@ impl LengthWindowProcessor {
             component_id.clone(),
             length,
         ));
-        
-        // Register state holder with SnapshotService for persistence  
+
+        // Register state holder with SnapshotService for persistence
         let state_holder_clone = (*state_holder).clone();
-        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> =
             Arc::new(Mutex::new(state_holder_clone));
         if let Some(snapshot_service) = app_ctx.get_snapshot_service() {
             snapshot_service.register_state_holder(component_id, state_holder_arc);
         }
-        
+
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length,
@@ -93,8 +92,8 @@ impl LengthWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -159,19 +158,19 @@ impl Processor for LengthWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, query_ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.length,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(query_ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -197,19 +196,19 @@ pub struct TimeWindowProcessor {
 impl TimeWindowProcessor {
     pub fn new(
         duration_ms: i64,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
         let component_id = format!("time_window_{}_{}", query_ctx.get_name(), duration_ms);
-        
+
         let state_holder = Some(TimeWindowStateHolder::new(
             Arc::clone(&buffer),
             component_id,
             duration_ms,
         ));
-        
+
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             duration_ms,
@@ -221,8 +220,8 @@ impl TimeWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -263,12 +262,12 @@ impl Schedulable for ExpireTask {
             let mut ev = ev_arc.as_ref().clone_without_next();
             ev.set_event_type(ComplexEventType::Expired);
             ev.set_timestamp(timestamp);
-            
+
             // Track state change
             if let Some(ref state_holder) = self.state_holder {
                 state_holder.record_event_expired(&ev);
             }
-            
+
             if let Some(ref next) = self.next {
                 next.lock().unwrap().process(Some(Box::new(ev)));
             }
@@ -349,12 +348,12 @@ impl Processor for TimeWindowProcessor {
                                 let mut buf = self.buffer.lock().unwrap();
                                 buf.push_back(Arc::clone(&arc));
                             }
-                            
+
                             // Track state change
                             if let Some(ref state_holder) = self.state_holder {
                                 state_holder.record_event_added(se);
                             }
-                            
+
                             let task = ExpireTask {
                                 event: Arc::clone(&arc),
                                 buffer: Arc::clone(&self.buffer),
@@ -379,19 +378,19 @@ impl Processor for TimeWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, query_ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.duration_ms,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(query_ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -413,47 +412,73 @@ impl NewStateHolder for TimeWindowProcessor {
             crate::core::persistence::state_holder::SchemaVersion::new(1, 0, 0)
         }
     }
-    
-    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+
+    fn serialize_state(
+        &self,
+        hints: &crate::core::persistence::state_holder::SerializationHints,
+    ) -> Result<
+        crate::core::persistence::state_holder::StateSnapshot,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
-                message: "StateHolder not initialized".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::InvalidStateData {
+                    message: "StateHolder not initialized".to_string(),
+                },
+            )
         }
     }
-    
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::state_holder::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.deserialize_state(snapshot)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
-                message: "StateHolder not initialized".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::InvalidStateData {
+                    message: "StateHolder not initialized".to_string(),
+                },
+            )
         }
     }
-    
-    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+
+    fn get_changelog(
+        &self,
+        since: crate::core::persistence::state_holder::CheckpointId,
+    ) -> Result<
+        crate::core::persistence::state_holder::ChangeLog,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
-                message: "StateHolder not initialized".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::InvalidStateData {
+                    message: "StateHolder not initialized".to_string(),
+                },
+            )
         }
     }
-    
-    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+
+    fn apply_changelog(
+        &mut self,
+        changes: &crate::core::persistence::state_holder::ChangeLog,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::InvalidStateData {
-                message: "StateHolder not initialized".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::InvalidStateData {
+                    message: "StateHolder not initialized".to_string(),
+                },
+            )
         }
     }
-    
+
     fn estimate_size(&self) -> crate::core::persistence::state_holder::StateSize {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.estimate_size()
@@ -465,7 +490,7 @@ impl NewStateHolder for TimeWindowProcessor {
             }
         }
     }
-    
+
     fn access_pattern(&self) -> crate::core::persistence::state_holder::AccessPattern {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.access_pattern()
@@ -473,7 +498,7 @@ impl NewStateHolder for TimeWindowProcessor {
             crate::core::persistence::state_holder::AccessPattern::Sequential
         }
     }
-    
+
     fn component_metadata(&self) -> crate::core::persistence::state_holder::StateMetadata {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.component_metadata()
@@ -488,11 +513,11 @@ impl NewStateHolder for TimeWindowProcessor {
 
 pub fn create_window_processor(
     handler: &WindowHandler,
-    app_ctx: Arc<SiddhiAppContext>,
-    query_ctx: Arc<SiddhiQueryContext>,
+    app_ctx: Arc<EventFluxAppContext>,
+    query_ctx: Arc<EventFluxQueryContext>,
 ) -> Result<Arc<Mutex<dyn Processor>>, String> {
     if let Some(factory) = app_ctx
-        .get_siddhi_context()
+        .get_eventflux_context()
         .get_window_factory(&handler.name)
     {
         factory.create(handler, app_ctx, query_ctx)
@@ -537,8 +562,8 @@ impl WindowProcessorFactory for LengthWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(LengthWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,
@@ -560,8 +585,8 @@ impl WindowProcessorFactory for TimeWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(TimeWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,
@@ -587,13 +612,13 @@ pub struct LengthBatchWindowProcessor {
 impl LengthBatchWindowProcessor {
     pub fn new(
         length: usize,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let expired = Arc::new(Mutex::new(Vec::new()));
-        
-        // Create enhanced StateHolder and register it  
+
+        // Create enhanced StateHolder and register it
         let component_id = format!("length_batch_window_{}_{}", query_ctx.get_name(), length);
         let state_holder = LengthBatchWindowStateHolder::new(
             Arc::clone(&buffer),
@@ -601,15 +626,15 @@ impl LengthBatchWindowProcessor {
             component_id.clone(),
             length,
         );
-        
+
         // Register state holder with SnapshotService for persistence
         let state_holder_clone = state_holder.clone();
-        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> =
             Arc::new(Mutex::new(state_holder_clone));
         if let Some(snapshot_service) = app_ctx.get_snapshot_service() {
             snapshot_service.register_state_holder(component_id, state_holder_arc);
         }
-        
+
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length,
@@ -621,8 +646,8 @@ impl LengthBatchWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -694,12 +719,12 @@ impl Processor for LengthBatchWindowProcessor {
             while let Some(ev) = current_opt {
                 if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                     let se_clone = se.clone_without_next();
-                    
+
                     // Record state change for incremental checkpointing
                     if let Some(ref state_holder) = self.state_holder {
                         state_holder.record_event_added(&se_clone);
                     }
-                    
+
                     self.buffer.lock().unwrap().push(se_clone);
                     let last_ts = se.timestamp;
                     if self.buffer.lock().unwrap().len() >= self.length {
@@ -719,19 +744,19 @@ impl Processor for LengthBatchWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.length,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -753,7 +778,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             SchemaVersion::new(1, 0, 0)
         }
     }
-    
+
     fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
@@ -763,7 +788,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             })
         }
     }
-    
+
     fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.deserialize_state(snapshot)
@@ -773,7 +798,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             })
         }
     }
-    
+
     fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
@@ -783,7 +808,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             })
         }
     }
-    
+
     fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
@@ -793,7 +818,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             })
         }
     }
-    
+
     fn estimate_size(&self) -> StateSize {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.estimate_size()
@@ -805,7 +830,7 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             }
         }
     }
-    
+
     fn access_pattern(&self) -> AccessPattern {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.access_pattern()
@@ -813,14 +838,14 @@ impl NewStateHolder for LengthBatchWindowProcessor {
             AccessPattern::Sequential
         }
     }
-    
+
     fn component_metadata(&self) -> StateMetadata {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.component_metadata()
         } else {
             StateMetadata::new(
                 "unknown_length_batch_window".to_string(),
-                "LengthBatchWindowProcessor".to_string()
+                "LengthBatchWindowProcessor".to_string(),
             )
         }
     }
@@ -836,8 +861,8 @@ impl WindowProcessorFactory for LengthBatchWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             LengthBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
@@ -865,14 +890,14 @@ pub struct TimeBatchWindowProcessor {
 impl TimeBatchWindowProcessor {
     pub fn new(
         duration_ms: i64,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let expired = Arc::new(Mutex::new(Vec::new()));
         let start_time = Arc::new(Mutex::new(None));
-        
+
         // Create enhanced StateHolder
         let component_id = format!("time_batch_window_{}", uuid::Uuid::new_v4());
         let state_holder = TimeBatchWindowStateHolder::new(
@@ -882,7 +907,7 @@ impl TimeBatchWindowProcessor {
             component_id,
             duration_ms,
         );
-        
+
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             duration_ms,
@@ -896,8 +921,8 @@ impl TimeBatchWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -982,15 +1007,16 @@ impl Processor for TimeBatchWindowProcessor {
                 if let Some(se) = ev.as_any().downcast_ref::<StreamEvent>() {
                     let mut start = self.start_time.lock().unwrap();
                     let old_start_time = *start;
-                    
+
                     if start.is_none() {
                         *start = Some(se.timestamp);
-                        
+
                         // Record start time change for incremental checkpointing
                         if let Some(ref state_holder) = self.state_holder {
-                            state_holder.record_start_time_updated(old_start_time, Some(se.timestamp));
+                            state_holder
+                                .record_start_time_updated(old_start_time, Some(se.timestamp));
                         }
-                        
+
                         if let Some(ref scheduler) = self.scheduler {
                             let task = BatchFlushTask {
                                 buffer: Arc::clone(&self.buffer),
@@ -1007,14 +1033,14 @@ impl Processor for TimeBatchWindowProcessor {
                         drop(start);
                         self.flush(ts);
                     }
-                    
+
                     let se_clone = se.clone_without_next();
-                    
+
                     // Record state change for incremental checkpointing
                     if let Some(ref state_holder) = self.state_holder {
                         state_holder.record_event_added(&se_clone);
                     }
-                    
+
                     self.buffer.lock().unwrap().push(se_clone);
                 }
                 current_opt = ev.get_next();
@@ -1030,19 +1056,19 @@ impl Processor for TimeBatchWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.duration_ms,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1064,7 +1090,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             SchemaVersion::new(1, 0, 0)
         }
     }
-    
+
     fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
@@ -1074,7 +1100,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             })
         }
     }
-    
+
     fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.deserialize_state(snapshot)
@@ -1084,7 +1110,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             })
         }
     }
-    
+
     fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
@@ -1094,7 +1120,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             })
         }
     }
-    
+
     fn apply_changelog(&mut self, changes: &ChangeLog) -> Result<(), StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
@@ -1104,7 +1130,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             })
         }
     }
-    
+
     fn estimate_size(&self) -> StateSize {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.estimate_size()
@@ -1116,7 +1142,7 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             }
         }
     }
-    
+
     fn access_pattern(&self) -> AccessPattern {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.access_pattern()
@@ -1124,14 +1150,14 @@ impl NewStateHolder for TimeBatchWindowProcessor {
             AccessPattern::Sequential
         }
     }
-    
+
     fn component_metadata(&self) -> StateMetadata {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.component_metadata()
         } else {
             StateMetadata::new(
                 "unknown_time_batch_window".to_string(),
-                "TimeBatchWindowProcessor".to_string()
+                "TimeBatchWindowProcessor".to_string(),
             )
         }
     }
@@ -1147,8 +1173,8 @@ impl WindowProcessorFactory for TimeBatchWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             TimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
@@ -1172,8 +1198,8 @@ pub struct ExternalTimeWindowProcessor {
 impl ExternalTimeWindowProcessor {
     pub fn new(
         duration_ms: i64,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -1184,8 +1210,8 @@ impl ExternalTimeWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -1249,19 +1275,19 @@ impl Processor for ExternalTimeWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.duration_ms,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1285,8 +1311,8 @@ impl WindowProcessorFactory for ExternalTimeWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             ExternalTimeWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
@@ -1312,8 +1338,8 @@ pub struct ExternalTimeBatchWindowProcessor {
 impl ExternalTimeBatchWindowProcessor {
     pub fn new(
         duration_ms: i64,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -1326,8 +1352,8 @@ impl ExternalTimeBatchWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -1424,19 +1450,19 @@ impl Processor for ExternalTimeBatchWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.duration_ms,
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1458,7 +1484,7 @@ pub struct LossyCountingWindowProcessor {
 }
 
 impl LossyCountingWindowProcessor {
-    pub fn new(app_ctx: Arc<SiddhiAppContext>, query_ctx: Arc<SiddhiQueryContext>) -> Self {
+    pub fn new(app_ctx: Arc<EventFluxAppContext>, query_ctx: Arc<EventFluxQueryContext>) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
         }
@@ -1466,8 +1492,8 @@ impl LossyCountingWindowProcessor {
 
     pub fn from_handler(
         _handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         Ok(Self::new(app_ctx, query_ctx))
     }
@@ -1488,18 +1514,18 @@ impl Processor for LossyCountingWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1523,8 +1549,8 @@ impl WindowProcessorFactory for LossyCountingWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             LossyCountingWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
@@ -1551,8 +1577,8 @@ pub struct CronWindowProcessor {
 impl CronWindowProcessor {
     pub fn new(
         cron: String,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         let scheduler = app_ctx.get_scheduler();
         Self {
@@ -1567,8 +1593,8 @@ impl CronWindowProcessor {
 
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let expr = handler
             .get_parameters()
@@ -1672,19 +1698,19 @@ impl Processor for CronWindowProcessor {
         self.schedule();
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.cron.clone(),
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -1708,8 +1734,8 @@ impl WindowProcessorFactory for CronWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(CronWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,
@@ -1731,8 +1757,8 @@ impl WindowProcessorFactory for ExternalTimeBatchWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(
             ExternalTimeBatchWindowProcessor::from_handler(handler, app_ctx, query_ctx)?,
@@ -1754,8 +1780,8 @@ impl WindowProcessorFactory for SessionWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(SessionWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,
@@ -1778,8 +1804,8 @@ impl WindowProcessorFactory for SortWindowFactory {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(SortWindowProcessor::from_handler(
             handler, app_ctx, query_ctx,

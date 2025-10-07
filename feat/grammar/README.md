@@ -1,6 +1,6 @@
-# Siddhi Rust SQL Grammar Documentation
+# EventFlux Rust SQL Grammar Documentation
 
-This directory contains the comprehensive SQL grammar documentation for Siddhi Rust.
+This directory contains the comprehensive SQL grammar documentation for EventFlux Rust.
 
 ---
 
@@ -8,7 +8,7 @@ This directory contains the comprehensive SQL grammar documentation for Siddhi R
 
 ### **GRAMMAR.md** ⭐
 
-**The complete and authoritative reference** for Siddhi Rust SQL grammar implementation.
+**The complete and authoritative reference** for EventFlux Rust SQL grammar implementation.
 
 **Contains Everything**:
 - ✅ Current implementation status (M1 100% complete)
@@ -16,7 +16,7 @@ This directory contains the comprehensive SQL grammar documentation for Siddhi R
 - ✅ Complete SQL syntax reference
 - ✅ Architecture and design decisions
 - ✅ Future roadmap (Phases 2, 3, 4)
-- ✅ Migration guide from old SiddhiQL
+- ✅ Migration guide from old EventFluxQL
 - ✅ Performance characteristics
 - ✅ Test results (675 passing, 74 ignored)
 
@@ -40,15 +40,15 @@ This directory contains the comprehensive SQL grammar documentation for Siddhi R
 cat feat/grammar/GRAMMAR.md
 
 # Or on GitHub
-https://github.com/your-repo/siddhi_rust/blob/main/feat/grammar/GRAMMAR.md
+https://github.com/your-repo/eventflux_rust/blob/main/feat/grammar/GRAMMAR.md
 ```
 
 ### Using SQL in Code
 
 ```rust
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
 
-let manager = SiddhiManager::new();
+let manager = EventFluxManager::new();
 
 let sql = r#"
     CREATE STREAM StockStream (symbol VARCHAR, price DOUBLE);
@@ -60,7 +60,7 @@ let sql = r#"
 "#;
 
 let runtime = manager
-    .create_siddhi_app_runtime_from_string(sql)
+    .create_eventflux_app_runtime_from_string(sql)
     .await?;
 
 runtime.start();

@@ -1,8 +1,8 @@
-pub mod siddhi_compiler;
+pub mod eventflux_compiler;
 // pub mod error; // If specific compiler errors are defined later
 
-// Re-export specific public functions from siddhi_compiler.rs module
-pub use self::siddhi_compiler::{
+// Re-export specific public functions from eventflux_compiler.rs module
+pub use self::eventflux_compiler::{
     parse,
     parse_aggregation_definition,
     parse_expression,
@@ -21,6 +21,6 @@ pub use self::siddhi_compiler::{
 };
 
 // Or, if we prefer a struct-based approach for the compiler in Rust eventually:
-// pub use self::siddhi_compiler::SiddhiCompiler;
-// And then functions would be SiddhiCompiler::parse(), etc.
+// pub use self::eventflux_compiler::EventFluxCompiler;
+// And then functions would be EventFluxCompiler::parse(), etc.
 // For now, free functions are used as per the direct translation of static Java methods.

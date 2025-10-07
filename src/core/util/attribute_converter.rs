@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/util/attribute_converter.rs
+// eventflux_rust/src/core/util/attribute_converter.rs
 // Utility helpers for converting between arbitrary values and AttributeValue
 // according to the desired Attribute::Type.  This is a comprehensive port of
-// io.siddhi.core.util.AttributeConverter with Java-compatible behavior.
+// io.eventflux.core.util.AttributeConverter with Java-compatible behavior.
 
 use crate::core::event::value::AttributeValue;
 use crate::core::util::type_system::TypeConverter;
@@ -49,8 +49,8 @@ pub fn get_property_value_from_str_result(
 pub fn get_validated_property_value(
     value: AttributeValue,
     attribute_type: AttributeType,
-) -> Result<AttributeValue, crate::core::exception::SiddhiError> {
-    use crate::core::exception::SiddhiError;
+) -> Result<AttributeValue, crate::core::exception::EventFluxError> {
+    use crate::core::exception::EventFluxError;
     use crate::core::util::type_system::TypeConverter;
 
     // Store the type before moving the value
@@ -61,7 +61,7 @@ pub fn get_validated_property_value(
 
     // Perform conversion
     TypeConverter::convert(value, attribute_type).ok_or_else(|| {
-        SiddhiError::type_error(
+        EventFluxError::type_error(
             "Type conversion failed at runtime",
             format!("{value_type:?}"),
             format!("{attribute_type:?}"),
@@ -91,7 +91,7 @@ pub fn is_numeric_type(value: &AttributeValue) -> bool {
 pub fn get_arithmetic_result_type(
     left: AttributeType,
     right: AttributeType,
-) -> Result<AttributeType, crate::core::exception::SiddhiError> {
+) -> Result<AttributeType, crate::core::exception::EventFluxError> {
     crate::core::util::type_system::get_arithmetic_result_type(left, right)
 }
 

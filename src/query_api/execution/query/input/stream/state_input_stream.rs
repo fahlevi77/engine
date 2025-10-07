@@ -1,7 +1,7 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.stream.StateInputStream
+// Corresponds to io.eventflux.query.api.execution.query.input.stream.StateInputStream
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::state::{StateElement, StreamStateElement};
 use crate::query_api::expression::constant::Constant as ExpressionConstant;
-use crate::query_api::siddhi_element::SiddhiElement;
 // StreamHandler is not directly used by StateInputStream itself, but by its contained BasicSingleInputStreams.
 // use crate::query_api::execution::query::input::handler::StreamHandler;
 use super::input_stream::InputStreamTrait; // For get_all_stream_ids, get_unique_stream_ids
@@ -15,10 +15,9 @@ pub enum Type {
     Sequence,
 }
 
-
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
 pub struct StateInputStream {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // StateInputStream specific fields
     pub state_type: Type,
@@ -33,7 +32,7 @@ impl StateInputStream {
         within_time: Option<ExpressionConstant>,
     ) -> Self {
         StateInputStream {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             state_type,
             state_element: Box::new(state_element),
             within_time,
@@ -99,7 +98,7 @@ impl Default for StateInputStream {
         // Creating a minimal valid default, e.g. a pattern with a default stream.
         // This might not be a very useful default.
         StateInputStream {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             state_type: Type::default(),
             // This requires StateElement to have a sensible default.
             // Assuming StateElement::Stream(StreamStateElement::default()) could be one.

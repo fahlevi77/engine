@@ -1,10 +1,12 @@
-// Corresponds to io.siddhi.core.config.SiddhiAppContext
-use super::siddhi_context::SiddhiContext;
-use crate::core::config::{SiddhiConfig, ApplicationConfig, ConfigManager, ProcessorConfigReader};
+// Corresponds to io.eventflux.core.config.EventFluxAppContext
+use super::eventflux_context::EventFluxContext;
+use crate::core::config::{
+    ApplicationConfig, ConfigManager, EventFluxConfig, ProcessorConfigReader,
+};
 use crate::core::util::executor_service::ExecutorService;
 use crate::core::util::id_generator::IdGenerator;
 use crate::core::util::Scheduler;
-use crate::query_api::SiddhiApp; // From query_api
+use crate::query_api::EventFluxApp; // From query_api
 use std::cell::RefCell;
 use std::collections::HashMap; // For scriptFunctionMap
 use std::sync::Arc;
@@ -20,7 +22,7 @@ use std::thread_local;
 // use com::lmax::disruptor::ExceptionHandler; // This is a Java type
 // use java::beans::ExceptionListener; // This is a Java type
 
-// Placeholders for complex Java/Siddhi types not yet ported/defined
+// Placeholders for complex Java/EventFlux types not yet ported/defined
 #[derive(Debug, Clone, Default)]
 pub struct StatisticsManagerPlaceholder {}
 #[derive(Debug, Clone, Default)]
@@ -66,13 +68,13 @@ pub enum MetricsLevelPlaceholder {
     DETAIL,
 }
 
-/// Context specific to a single Siddhi Application instance.
-#[derive(Debug, Clone)] // Default is tricky due to Arc<SiddhiApp> and Arc<SiddhiContext>
-pub struct SiddhiAppContext {
-    pub siddhi_context: Arc<SiddhiContext>, // Shared global context
-    pub name: String,                       // Name of the SiddhiApp
-    pub siddhi_app_string: String,          // The raw SiddhiQL string
-    pub siddhi_app: Arc<SiddhiApp>,         // Parsed SiddhiApp definition from query_api
+/// Context specific to a single EventFlux Application instance.
+#[derive(Debug, Clone)] // Default is tricky due to Arc<EventFluxApp> and Arc<EventFluxContext>
+pub struct EventFluxAppContext {
+    pub eventflux_context: Arc<EventFluxContext>, // Shared global context
+    pub name: String,                             // Name of the EventFluxApp
+    pub eventflux_app_string: String,             // The raw EventFluxQL string
+    pub eventflux_app: Arc<EventFluxApp>,         // Parsed EventFluxApp definition from query_api
 
     pub is_playback: bool,
     pub is_enforce_order: bool,
@@ -80,7 +82,7 @@ pub struct SiddhiAppContext {
     pub statistics_manager: Option<StatisticsManagerPlaceholder>, // Manages collection and reporting of runtime statistics. Option because it's set post-construction in Java.
 
     // Threading and scheduling (using placeholders)
-    pub executor_service: Option<Arc<ExecutorService>>, // General purpose thread pool for the Siddhi App.
+    pub executor_service: Option<Arc<ExecutorService>>, // General purpose thread pool for the EventFlux App.
     pub scheduled_executor_service: Option<Arc<crate::core::util::ScheduledExecutorService>>, // Thread pool for scheduled tasks.
     pub scheduler: Option<Arc<Scheduler>>, // Exposed scheduler for timers
 
@@ -109,17 +111,17 @@ pub struct SiddhiAppContext {
     /// Placeholder storage for script functions keyed by name.
     pub script_function_map: HashMap<String, ScriptFunctionPlaceholder>,
     _schedulers_placeholder: Vec<String>,
-    
+
     // Configuration system integration
-    /// Global Siddhi configuration
-    pub global_config: Arc<SiddhiConfig>,
+    /// Global EventFlux configuration
+    pub global_config: Arc<EventFluxConfig>,
     /// Application-specific configuration
     pub app_config: Option<ApplicationConfig>,
     /// Configuration manager for dynamic updates
     pub config_manager: Option<Arc<ConfigManager>>,
 }
 
-impl SiddhiAppContext {
+impl EventFluxAppContext {
     // ---- Static flow utilities ----
     pub fn start_group_by_flow(key: String) {
         GROUP_BY_KEY.with(|k| *k.borrow_mut() = Some(key));
@@ -153,39 +155,39 @@ impl SiddhiAppContext {
 
     // Constructor needs essential parts. Others can be set via builder methods or setters.
     pub fn new(
-        siddhi_context: Arc<SiddhiContext>,
+        eventflux_context: Arc<EventFluxContext>,
         name: String,
-        siddhi_app_definition: Arc<SiddhiApp>, // Renamed from siddhi_app to avoid confusion with field
-        siddhi_app_string: String,
+        eventflux_app_definition: Arc<EventFluxApp>, // Renamed from eventflux_app to avoid confusion with field
+        eventflux_app_string: String,
     ) -> Self {
         Self::new_with_config(
-            siddhi_context, 
-            name, 
-            siddhi_app_definition, 
-            siddhi_app_string, 
-            Arc::new(SiddhiConfig::default()),
+            eventflux_context,
+            name,
+            eventflux_app_definition,
+            eventflux_app_string,
+            Arc::new(EventFluxConfig::default()),
             None,
-            None
+            None,
         )
     }
 
     /// Constructor with configuration support
     pub fn new_with_config(
-        siddhi_context: Arc<SiddhiContext>,
+        eventflux_context: Arc<EventFluxContext>,
         name: String,
-        siddhi_app_definition: Arc<SiddhiApp>,
-        siddhi_app_string: String,
-        global_config: Arc<SiddhiConfig>,
+        eventflux_app_definition: Arc<EventFluxApp>,
+        eventflux_app_string: String,
+        global_config: Arc<EventFluxConfig>,
         app_config: Option<ApplicationConfig>,
         config_manager: Option<Arc<ConfigManager>>,
     ) -> Self {
-        // Default values from Java SiddhiAppContext() constructor and field initializers
-        let default_buffer = siddhi_context.get_default_junction_buffer_size() as i32;
+        // Default values from Java EventFluxAppContext() constructor and field initializers
+        let default_buffer = eventflux_context.get_default_junction_buffer_size() as i32;
         Self {
-            siddhi_context,
+            eventflux_context,
             name,
-            siddhi_app_string,
-            siddhi_app: siddhi_app_definition,
+            eventflux_app_string,
+            eventflux_app: eventflux_app_definition,
             is_playback: false,
             is_enforce_order: false, // Default not specified in Java, assuming false
             root_metrics_level: MetricsLevelPlaceholder::default(), // Java defaults to Level.OFF
@@ -198,13 +200,13 @@ impl SiddhiAppContext {
             snapshot_service: None,
             thread_barrier: None,
             config_reader: Some(Arc::new(ProcessorConfigReader::new(
-                app_config.clone(), 
-                Some(global_config.as_ref().clone())
+                app_config.clone(),
+                Some(global_config.as_ref().clone()),
             ))),
             timestamp_generator: TimestampGeneratorPlaceholder::default(), // Java new-s one if null
             id_generator: None,                                            // Set later
             // script_function_map: HashMap::new(),
-            // disruptor_exception_handler: None, // Uses siddhiContext's default if not set
+            // disruptor_exception_handler: None, // Uses eventfluxContext's default if not set
             // runtime_exception_listener: None,
             buffer_size: default_buffer,
             // included_metrics: None,
@@ -214,7 +216,7 @@ impl SiddhiAppContext {
             _triggers_placeholder: Vec::new(),
             script_function_map: HashMap::new(),
             _schedulers_placeholder: Vec::new(),
-            
+
             // Configuration system integration
             global_config,
             app_config,
@@ -238,24 +240,24 @@ impl SiddhiAppContext {
     }
 
     // --- Getter and Setter examples ---
-    pub fn get_siddhi_context(&self) -> Arc<SiddhiContext> {
-        Arc::clone(&self.siddhi_context)
+    pub fn get_eventflux_context(&self) -> Arc<EventFluxContext> {
+        Arc::clone(&self.eventflux_context)
     }
 
     /// Convenience wrapper that lists available scalar function names.
     pub fn list_scalar_function_names(&self) -> Vec<String> {
-        self.siddhi_context.list_scalar_function_names()
+        self.eventflux_context.list_scalar_function_names()
     }
 
     /// Convenience wrapper that lists available attribute aggregators.
     pub fn list_attribute_aggregator_names(&self) -> Vec<String> {
-        self.siddhi_context.list_attribute_aggregator_names()
+        self.eventflux_context.list_attribute_aggregator_names()
     }
 
-    // In Java, getAttributes() delegates to siddhiContext.getAttributes().
+    // In Java, getAttributes() delegates to eventfluxContext.getAttributes().
     pub fn get_attributes(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, String>> {
-        // Delegate to SiddhiContext's thread-safe attributes map
-        self.siddhi_context.get_attributes()
+        // Delegate to EventFluxContext's thread-safe attributes map
+        self.eventflux_context.get_attributes()
     }
 
     pub fn get_name(&self) -> &str {
@@ -374,92 +376,136 @@ impl SiddhiAppContext {
     }
 
     // ---- Configuration system methods ----
-    
-    /// Get the global Siddhi configuration
-    pub fn get_global_config(&self) -> &SiddhiConfig {
+
+    /// Get the global EventFlux configuration
+    pub fn get_global_config(&self) -> &EventFluxConfig {
         &self.global_config
     }
-    
+
     /// Get application-specific configuration if available
     pub fn get_app_config(&self) -> Option<&ApplicationConfig> {
         self.app_config.as_ref()
     }
-    
+
     /// Get configuration manager for dynamic updates
     pub fn get_config_manager(&self) -> Option<&ConfigManager> {
         self.config_manager.as_ref().map(|m| m.as_ref())
     }
-    
+
     /// Update the global configuration
-    pub fn update_global_config(&mut self, config: Arc<SiddhiConfig>) {
+    pub fn update_global_config(&mut self, config: Arc<EventFluxConfig>) {
         self.global_config = config;
     }
-    
+
     /// Update the application-specific configuration
     pub fn update_app_config(&mut self, config: Option<ApplicationConfig>) {
         self.app_config = config;
     }
-    
+
     /// Set the configuration manager
     pub fn set_config_manager(&mut self, manager: Option<Arc<ConfigManager>>) {
         self.config_manager = manager;
     }
-    
+
     /// Get a configuration value from the global config using a dot-notation path
-    /// Example: "siddhi.runtime.performance.thread_pool_size"
-    pub fn get_config_value<T>(&self, path: &str) -> Option<T> 
-    where 
+    /// Example: "eventflux.runtime.performance.thread_pool_size"
+    pub fn get_config_value<T>(&self, path: &str) -> Option<T>
+    where
         T: serde::de::DeserializeOwned + std::fmt::Debug + Clone,
     {
         // This is a simplified implementation - in a full implementation you would
         // walk the configuration structure using the path to find the specific value
         // For now, we'll implement basic commonly used configuration values
-        
+
         match path {
-            "siddhi.runtime.performance.thread_pool_size" => {
-                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.thread_pool_size)).ok()?)
-            }
-            "siddhi.runtime.performance.event_buffer_size" => {
-                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.event_buffer_size)).ok()?)
-            }
-            "siddhi.runtime.performance.batch_processing" => {
-                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.batch_processing)).ok()?)
-            }
-            "siddhi.runtime.performance.async_processing" => {
-                Some(serde_json::from_value(serde_json::json!(self.global_config.siddhi.runtime.performance.async_processing)).ok()?)
-            }
+            "eventflux.runtime.performance.thread_pool_size" => Some(
+                serde_json::from_value(serde_json::json!(
+                    self.global_config
+                        .eventflux
+                        .runtime
+                        .performance
+                        .thread_pool_size
+                ))
+                .ok()?,
+            ),
+            "eventflux.runtime.performance.event_buffer_size" => Some(
+                serde_json::from_value(serde_json::json!(
+                    self.global_config
+                        .eventflux
+                        .runtime
+                        .performance
+                        .event_buffer_size
+                ))
+                .ok()?,
+            ),
+            "eventflux.runtime.performance.batch_processing" => Some(
+                serde_json::from_value(serde_json::json!(
+                    self.global_config
+                        .eventflux
+                        .runtime
+                        .performance
+                        .batch_processing
+                ))
+                .ok()?,
+            ),
+            "eventflux.runtime.performance.async_processing" => Some(
+                serde_json::from_value(serde_json::json!(
+                    self.global_config
+                        .eventflux
+                        .runtime
+                        .performance
+                        .async_processing
+                ))
+                .ok()?,
+            ),
             _ => {
                 // For unsupported paths, return None
                 None
             }
         }
     }
-    
+
     /// Get the thread pool size from configuration
     pub fn get_configured_thread_pool_size(&self) -> usize {
-        self.global_config.siddhi.runtime.performance.thread_pool_size
+        self.global_config
+            .eventflux
+            .runtime
+            .performance
+            .thread_pool_size
     }
-    
+
     /// Get the event buffer size from configuration
     pub fn get_configured_event_buffer_size(&self) -> usize {
-        self.global_config.siddhi.runtime.performance.event_buffer_size
+        self.global_config
+            .eventflux
+            .runtime
+            .performance
+            .event_buffer_size
     }
-    
+
     /// Check if batch processing is enabled
     pub fn is_batch_processing_enabled(&self) -> bool {
-        self.global_config.siddhi.runtime.performance.batch_processing
+        self.global_config
+            .eventflux
+            .runtime
+            .performance
+            .batch_processing
     }
-    
+
     /// Check if async processing is enabled
     pub fn is_async_processing_enabled(&self) -> bool {
-        self.global_config.siddhi.runtime.performance.async_processing
+        self.global_config
+            .eventflux
+            .runtime
+            .performance
+            .async_processing
     }
-    
+
     /// Get the runtime mode
     pub fn get_runtime_mode(&self) -> &crate::core::config::RuntimeMode {
-        &self.global_config.siddhi.runtime.mode
+        &self.global_config.eventflux.runtime.mode
     }
-    
+
     /// Check if the application is running in distributed mode
     pub fn is_distributed_mode(&self) -> bool {
         self.global_config.is_distributed_mode()
@@ -467,20 +513,20 @@ impl SiddhiAppContext {
 }
 
 #[cfg(test)]
-impl SiddhiAppContext {
+impl EventFluxAppContext {
     /// Convenience constructor used across unit tests to build a minimal
-    /// `SiddhiAppContext` instance.  Having this single implementation avoids
+    /// `EventFluxAppContext` instance.  Having this single implementation avoids
     /// multiple `impl` blocks in test modules which previously caused duplicate
     /// method definition errors during compilation.
     pub fn default_for_testing() -> Self {
-        use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
+        use crate::query_api::eventflux_app::EventFluxApp as ApiEventFluxApp;
 
         Self::new_with_config(
-            Arc::new(SiddhiContext::default()),
+            Arc::new(EventFluxContext::default()),
             "test_app_ctx".to_string(),
-            Arc::new(ApiSiddhiApp::new("test_api_app".to_string())),
+            Arc::new(ApiEventFluxApp::new("test_api_app".to_string())),
             String::new(),
-            Arc::new(SiddhiConfig::default()),
+            Arc::new(EventFluxConfig::default()),
             None,
             None,
         )

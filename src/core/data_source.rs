@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/data_source.rs
+// eventflux_rust/src/core/data_source.rs
 // Public DataSource trait and basic SqliteDataSource implementation
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -17,7 +17,7 @@ pub trait DataSource: Debug + Send + Sync + 'static {
 
     fn init(
         &mut self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
         data_source_id: &str,
         config: DataSourceConfig,
     ) -> Result<(), String>;
@@ -57,7 +57,7 @@ impl DataSource for SqliteDataSource {
 
     fn init(
         &mut self,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
         _id: &str,
         cfg: DataSourceConfig,
     ) -> Result<(), String> {

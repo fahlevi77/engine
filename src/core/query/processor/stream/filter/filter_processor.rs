@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/query/processor/stream/filter/filter_processor.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext; // For clone_processor
+// eventflux_rust/src/core/query/processor/stream/filter/filter_processor.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext; // For clone_processor
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
@@ -8,22 +8,22 @@ use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Process
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-// FilterProcessor doesn't exist as a distinct class in Java Siddhi's core structure.
+// FilterProcessor doesn't exist as a distinct class in Java EventFlux's core structure.
 // Filtering is typically part of SingleStreamProcessor or JoinProcessor using a ConditionExpressionExecutor.
 // This Rust struct is created as per the prompt to represent a dedicated filter.
 /// A stream processor that filters events based on a condition.
 #[derive(Debug)]
 pub struct FilterProcessor {
-    meta: CommonProcessorMeta, // Common fields like siddhi_app_context, query_name, next_processor
+    meta: CommonProcessorMeta, // Common fields like eventflux_app_context, query_name, next_processor
     condition_executor: Box<dyn ExpressionExecutor>,
-    // is_per_event_trace_enabled: bool, // Can get from siddhi_app_context.get_siddhi_context().get_statistics_configuration()
+    // is_per_event_trace_enabled: bool, // Can get from eventflux_app_context.get_eventflux_context().get_statistics_configuration()
 }
 
 impl FilterProcessor {
     pub fn new(
         condition_executor: Box<dyn ExpressionExecutor>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
-        siddhi_query_context: Arc<SiddhiQueryContext>, // query_name is in here
+        eventflux_app_context: Arc<EventFluxAppContext>,
+        eventflux_query_context: Arc<EventFluxQueryContext>, // query_name is in here
     ) -> Result<Self, String> {
         if condition_executor.get_return_type() != crate::query_api::definition::AttributeType::BOOL
         {
@@ -32,40 +32,57 @@ impl FilterProcessor {
                 condition_executor.get_return_type()
             ));
         }
-        
+
         let filter_processor = Self {
-            meta: CommonProcessorMeta::new(siddhi_app_context, siddhi_query_context),
+            meta: CommonProcessorMeta::new(eventflux_app_context, eventflux_query_context),
             condition_executor,
         };
-        
+
         // Example: Log configuration-driven initialization
         filter_processor.log_configuration_info();
-        
+
         Ok(filter_processor)
     }
-    
+
     /// Example method demonstrating configuration access
     fn log_configuration_info(&self) {
-        let config = self.meta.siddhi_app_context.get_global_config();
-        
+        let config = self.meta.eventflux_app_context.get_global_config();
+
         println!("FilterProcessor initialized with configuration:");
-        println!("  - Thread pool size: {}", config.siddhi.runtime.performance.thread_pool_size);
-        println!("  - Event buffer size: {}", config.siddhi.runtime.performance.event_buffer_size);
-        println!("  - Batch processing: {}", config.siddhi.runtime.performance.batch_processing);
-        println!("  - Async processing: {}", config.siddhi.runtime.performance.async_processing);
-        println!("  - Runtime mode: {:?}", config.siddhi.runtime.mode);
+        println!(
+            "  - Thread pool size: {}",
+            config.eventflux.runtime.performance.thread_pool_size
+        );
+        println!(
+            "  - Event buffer size: {}",
+            config.eventflux.runtime.performance.event_buffer_size
+        );
+        println!(
+            "  - Batch processing: {}",
+            config.eventflux.runtime.performance.batch_processing
+        );
+        println!(
+            "  - Async processing: {}",
+            config.eventflux.runtime.performance.async_processing
+        );
+        println!("  - Runtime mode: {:?}", config.eventflux.runtime.mode);
     }
-    
+
     /// Example method showing how processors can adapt behavior based on configuration
     fn should_use_batch_processing(&self) -> bool {
-        self.meta.siddhi_app_context.is_batch_processing_enabled()
+        self.meta
+            .eventflux_app_context
+            .is_batch_processing_enabled()
     }
-    
+
     /// Example method showing configuration-driven buffer sizing
     fn get_optimal_buffer_size(&self) -> usize {
-        let base_size = self.meta.siddhi_app_context.get_configured_event_buffer_size();
+        let base_size = self
+            .meta
+            .eventflux_app_context
+            .get_configured_event_buffer_size();
         // Example: Scale buffer size for distributed mode
-        if self.meta.siddhi_app_context.is_distributed_mode() {
+        if self.meta.eventflux_app_context.is_distributed_mode() {
             base_size * 2 // Larger buffer for distributed processing
         } else {
             base_size
@@ -93,26 +110,26 @@ impl Processor for FilterProcessor {
 
     fn clone_processor(
         &self,
-        siddhi_query_context: &Arc<SiddhiQueryContext>,
+        eventflux_query_context: &Arc<EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         let cloned_condition_executor = self
             .condition_executor
-            .clone_executor(&siddhi_query_context.siddhi_app_context);
+            .clone_executor(&eventflux_query_context.eventflux_app_context);
         Box::new(FilterProcessor {
             meta: CommonProcessorMeta::new(
-                Arc::clone(&siddhi_query_context.siddhi_app_context),
-                Arc::clone(siddhi_query_context),
+                Arc::clone(&eventflux_query_context.eventflux_app_context),
+                Arc::clone(eventflux_query_context),
             ),
             condition_executor: cloned_condition_executor,
         })
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -173,7 +190,7 @@ impl FilterProcessor {
             next_proc_arc.lock().unwrap().process(filtered_chunk_head);
         }
     }
-    
+
     /// Process events in batch mode for better performance
     fn process_batch_mode(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         // Get configured batch size for optimal processing
@@ -200,7 +217,7 @@ impl FilterProcessor {
             if passes_filter {
                 filtered_events.push(current_event_box);
                 batch_count += 1;
-                
+
                 // Process in batches for better performance
                 if batch_count >= batch_size {
                     self.send_batch_to_next_processor(&mut filtered_events);
@@ -216,7 +233,7 @@ impl FilterProcessor {
             self.send_batch_to_next_processor(&mut filtered_events);
         }
     }
-    
+
     /// Helper method to send a batch of filtered events to the next processor
     fn send_batch_to_next_processor(&self, filtered_events: &mut Vec<Box<dyn ComplexEvent>>) {
         if filtered_events.is_empty() {
@@ -226,7 +243,7 @@ impl FilterProcessor {
         // Reconstruct linked list from Vec of passed events
         let mut filtered_chunk_head: Option<Box<dyn ComplexEvent>> = None;
         let mut tail_next_ref: &mut Option<Box<dyn ComplexEvent>> = &mut filtered_chunk_head;
-        
+
         for event_box in filtered_events.drain(..) {
             *tail_next_ref = Some(event_box);
             if let Some(ref mut current_tail) = *tail_next_ref {

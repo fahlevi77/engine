@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/util/parser/expression_parser.rs
+// eventflux_rust/src/core/util/parser/expression_parser.rs
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent; // Added this import
 use crate::core::event::state::meta_state_event::MetaStateEvent;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
@@ -42,7 +42,7 @@ pub struct ExpressionParseError {
 impl ExpressionParseError {
     pub fn new(
         message: String,
-        element: &crate::query_api::siddhi_element::SiddhiElement,
+        element: &crate::query_api::eventflux_element::EventFluxElement,
         query: &str,
     ) -> Self {
         let (line, column) = element
@@ -80,7 +80,7 @@ pub type ExpressionParseResult<T> = Result<T, ExpressionParseError>;
 pub struct AttributeFunctionExpressionExecutor {
     scalar_function_executor: Box<dyn ScalarFunctionExecutor>,
     argument_executors: Vec<Box<dyn ExpressionExecutor>>,
-    // siddhi_app_context: Arc<SiddhiAppContext>, // Stored by scalar_function_executor if needed after init
+    // eventflux_app_context: Arc<EventFluxAppContext>, // Stored by scalar_function_executor if needed after init
     return_type: ApiAttributeType,
 }
 
@@ -88,7 +88,7 @@ impl AttributeFunctionExpressionExecutor {
     pub fn new(
         mut scalar_func_impl: Box<dyn ScalarFunctionExecutor>,
         arg_execs: Vec<Box<dyn ExpressionExecutor>>,
-        app_ctx: Arc<SiddhiAppContext>,
+        app_ctx: Arc<EventFluxAppContext>,
     ) -> Result<Self, String> {
         scalar_func_impl.init(&arg_execs, &app_ctx)?;
         let return_type = scalar_func_impl.get_return_type();
@@ -120,19 +120,19 @@ impl ExpressionExecutor for AttributeFunctionExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         let cloned_args = self
             .argument_executors
             .iter()
-            .map(|e| e.clone_executor(siddhi_app_context))
+            .map(|e| e.clone_executor(eventflux_app_context))
             .collect();
         let cloned_scalar_fn = self.scalar_function_executor.clone_scalar_function();
         // Re-initialize the cloned scalar function
         match AttributeFunctionExpressionExecutor::new(
             cloned_scalar_fn,
             cloned_args,
-            Arc::clone(siddhi_app_context),
+            Arc::clone(eventflux_app_context),
         ) {
             Ok(exec) => Box::new(exec),
             Err(e) => {
@@ -161,8 +161,8 @@ impl Drop for AttributeFunctionExpressionExecutor {
 /// stream/table/window/aggregation identifier.  `default_source` indicates which
 /// entry should be used when a variable does not explicitly specify a source.
 pub struct ExpressionParserContext<'a> {
-    pub siddhi_app_context: Arc<SiddhiAppContext>,
-    pub siddhi_query_context: Arc<SiddhiQueryContext>,
+    pub eventflux_app_context: Arc<EventFluxAppContext>,
+    pub eventflux_query_context: Arc<EventFluxQueryContext>,
     pub stream_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub table_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
     pub window_meta_map: HashMap<String, Arc<MetaStreamEvent>>,
@@ -204,7 +204,7 @@ pub fn parse_expression<'a>(
                     if found.is_some() && _found_id.as_deref() != Some(id) {
                         return Err(ExpressionParseError::new(
                             format!("Attribute '{attribute_name}' found in multiple sources"),
-                            &api_var.siddhi_element,
+                            &api_var.eventflux_element,
                             context.query_name,
                         ));
                     }
@@ -213,7 +213,7 @@ pub fn parse_expression<'a>(
                         [
                             pos,
                             api_var.stream_index.unwrap_or(0),
-                            crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                            crate::core::util::eventflux_constants::BEFORE_WINDOW_DATA_INDEX as i32,
                             *idx as i32,
                         ],
                         *t,
@@ -240,7 +240,7 @@ pub fn parse_expression<'a>(
                                     [
                                         pos as i32,
                                         api_var.stream_index.unwrap_or(0),
-                                        crate::core::util::siddhi_constants::BEFORE_WINDOW_DATA_INDEX as i32,
+                                        crate::core::util::eventflux_constants::BEFORE_WINDOW_DATA_INDEX as i32,
                                         *idx as i32,
                                     ],
                                     *t,
@@ -277,7 +277,7 @@ pub fn parse_expression<'a>(
             let stream_name = stream_id_opt.unwrap_or(&context.default_source);
             Err(ExpressionParseError::new(
                 format!("Variable '{stream_name}.{attribute_name}' not found"),
-                &api_var.siddhi_element,
+                &api_var.eventflux_element,
                 context.query_name,
             ))
         }
@@ -286,7 +286,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_value, context)?;
             Ok(Box::new(
                 AddExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -295,7 +295,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_value, context)?;
             Ok(Box::new(
                 SubtractExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -304,7 +304,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_value, context)?;
             Ok(Box::new(
                 MultiplyExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -313,7 +313,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_value, context)?;
             Ok(Box::new(
                 DivideExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -322,7 +322,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_value, context)?;
             Ok(Box::new(
                 ModExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -331,7 +331,7 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_expression, context)?;
             Ok(Box::new(
                 AndExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
@@ -340,24 +340,23 @@ pub fn parse_expression<'a>(
             let right_exec = parse_expression(&api_op.right_expression, context)?;
             Ok(Box::new(
                 OrExpressionExecutor::new(left_exec, right_exec).map_err(|e| {
-                    ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                    ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
                 })?,
             ))
         }
         ApiExpression::Not(api_op) => {
             let exec = parse_expression(&api_op.expression, context)?;
             Ok(Box::new(NotExpressionExecutor::new(exec).map_err(|e| {
-                ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
+                ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name)
             })?))
         }
         ApiExpression::Compare(api_op) => {
             let left_exec = parse_expression(&api_op.left_expression, context)?;
             let right_exec = parse_expression(&api_op.right_expression, context)?;
             Ok(Box::new(
-                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator)
-                    .map_err(|e| {
-                        ExpressionParseError::new(e, &api_op.siddhi_element, context.query_name)
-                    })?,
+                CompareExpressionExecutor::new(left_exec, right_exec, api_op.operator).map_err(
+                    |e| ExpressionParseError::new(e, &api_op.eventflux_element, context.query_name),
+                )?,
             ))
         }
         ApiExpression::IsNull(api_op) => {
@@ -367,7 +366,7 @@ pub fn parse_expression<'a>(
             } else {
                 Err(ExpressionParseError::new(
                     "IsNull without an inner expression (IsNullStream) not yet fully supported here.".to_string(),
-                    &api_op.siddhi_element,
+                    &api_op.eventflux_element,
                     context.query_name,
                 ))
             }
@@ -377,7 +376,7 @@ pub fn parse_expression<'a>(
             Ok(Box::new(InExpressionExecutor::new(
                 val_exec,
                 api_op.source_id.clone(),
-                Arc::clone(&context.siddhi_app_context),
+                Arc::clone(&context.eventflux_app_context),
             )))
         }
         ApiExpression::AttributeFunction(api_func) => {
@@ -407,7 +406,7 @@ pub fn parse_expression<'a>(
                     } else {
                         Err(ExpressionParseError::new(
                             format!("event expects 1 argument, found {}", arg_execs.len()),
-                            &api_func.siddhi_element,
+                            &api_func.eventflux_element,
                             context.query_name,
                         ))
                     }
@@ -418,7 +417,7 @@ pub fn parse_expression<'a>(
                     } else {
                         Err(ExpressionParseError::new(
                             format!("allEvents expects 1 argument, found {}", arg_execs.len()),
-                            &api_func.siddhi_element,
+                            &api_func.eventflux_element,
                             context.query_name,
                         ))
                     }
@@ -429,7 +428,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -442,7 +441,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -455,7 +454,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -468,7 +467,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -481,7 +480,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -494,7 +493,7 @@ pub fn parse_expression<'a>(
                             |e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             },
@@ -507,10 +506,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -520,10 +523,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -533,10 +540,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -546,10 +557,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -559,10 +574,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -572,10 +591,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -585,10 +608,14 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
@@ -598,17 +625,21 @@ pub fn parse_expression<'a>(
                         arg_execs,
                         ProcessingMode::BATCH,
                         false,
-                        &context.siddhi_query_context,
+                        &context.eventflux_query_context,
                     )
                     .map_err(|e| {
-                        ExpressionParseError::new(e, &api_func.siddhi_element, context.query_name)
+                        ExpressionParseError::new(
+                            e,
+                            &api_func.eventflux_element,
+                            context.query_name,
+                        )
                     })?;
                     Ok(Box::new(exec))
                 }
                 _ => {
                     if let Some(factory) = context
-                        .siddhi_app_context
-                        .get_siddhi_context()
+                        .eventflux_app_context
+                        .get_eventflux_context()
                         .get_attribute_aggregator_factory(&function_lookup_name)
                     {
                         let mut exec = factory.create();
@@ -616,37 +647,37 @@ pub fn parse_expression<'a>(
                             arg_execs,
                             ProcessingMode::BATCH,
                             false,
-                            &context.siddhi_query_context,
+                            &context.eventflux_query_context,
                         )
                         .map_err(|e| {
                             ExpressionParseError::new(
                                 e,
-                                &api_func.siddhi_element,
+                                &api_func.eventflux_element,
                                 context.query_name,
                             )
                         })?;
                         Ok(exec)
                     } else if let Some(scalar_fn_factory) = context
-                        .siddhi_app_context
-                        .get_siddhi_context()
+                        .eventflux_app_context
+                        .get_eventflux_context()
                         .get_scalar_function_factory(&function_lookup_name)
                     {
                         Ok(Box::new(
                             AttributeFunctionExpressionExecutor::new(
                                 scalar_fn_factory.clone_scalar_function(),
                                 arg_execs,
-                                Arc::clone(&context.siddhi_app_context),
+                                Arc::clone(&context.eventflux_app_context),
                             )
                             .map_err(|e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             })?,
                         ))
                     } else if let Some(script_fn) = context
-                        .siddhi_app_context
+                        .eventflux_app_context
                         .get_script_function(&function_lookup_name)
                     {
                         Ok(Box::new(
@@ -656,30 +687,30 @@ pub fn parse_expression<'a>(
                                     script_fn.return_type,
                                 )),
                                 arg_execs,
-                                Arc::clone(&context.siddhi_app_context),
+                                Arc::clone(&context.eventflux_app_context),
                             )
                             .map_err(|e| {
                                 ExpressionParseError::new(
                                     e,
-                                    &api_func.siddhi_element,
+                                    &api_func.eventflux_element,
                                     context.query_name,
                                 )
                             })?,
                         ))
                     } else {
                         let scalars = context
-                            .siddhi_app_context
+                            .eventflux_app_context
                             .list_scalar_function_names()
                             .join(", ");
                         let aggs = context
-                            .siddhi_app_context
+                            .eventflux_app_context
                             .list_attribute_aggregator_names()
                             .join(", ");
                         Err(ExpressionParseError::new(
                             format!(
                                 "Unsupported or unknown function: {function_lookup_name}. Known scalar functions: [{scalars}]. Known aggregators: [{aggs}]"
                             ),
-                            &api_func.siddhi_element,
+                            &api_func.eventflux_element,
                             context.query_name,
                         ))
                     }

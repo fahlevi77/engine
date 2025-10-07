@@ -1,9 +1,9 @@
 //! Type Mapping - SQL Types to AttributeType Conversion
 //!
-//! Maps SQL data types to Siddhi's AttributeType system.
+//! Maps SQL data types to EventFlux's AttributeType system.
 
-use sqlparser::ast::DataType;
 use crate::query_api::definition::attribute::Type as AttributeType;
+use sqlparser::ast::DataType;
 
 use super::error::TypeError;
 
@@ -15,7 +15,9 @@ pub fn sql_type_to_attribute_type(sql_type: &DataType) -> Result<AttributeType, 
         DataType::Char(_) | DataType::CharacterVarying(_) => Ok(AttributeType::STRING),
 
         // Integer types
-        DataType::Int(_) | DataType::Integer(_) | DataType::Int2(_) | DataType::Int4(_) => Ok(AttributeType::INT),
+        DataType::Int(_) | DataType::Integer(_) | DataType::Int2(_) | DataType::Int4(_) => {
+            Ok(AttributeType::INT)
+        }
         DataType::SmallInt(_) | DataType::TinyInt(_) => Ok(AttributeType::INT),
 
         // Long types
@@ -44,22 +46,20 @@ pub fn sql_type_to_attribute_type(sql_type: &DataType) -> Result<AttributeType, 
 
         // Unsupported types
         DataType::Array(_) => Err(TypeError::UnsupportedType(
-            "ARRAY types not supported in M1".to_string()
+            "ARRAY types not supported in M1".to_string(),
         )),
         DataType::Struct(_) => Err(TypeError::UnsupportedType(
-            "STRUCT types not supported in M1".to_string()
+            "STRUCT types not supported in M1".to_string(),
         )),
         DataType::JSON => Err(TypeError::UnsupportedType(
-            "JSON type not supported in M1".to_string()
+            "JSON type not supported in M1".to_string(),
         )),
-        DataType::Binary(_) | DataType::Varbinary(_) | DataType::Blob(_) => {
-            Err(TypeError::UnsupportedType(
-                "Binary types not supported in M1".to_string()
-            ))
-        }
+        DataType::Binary(_) | DataType::Varbinary(_) | DataType::Blob(_) => Err(
+            TypeError::UnsupportedType("Binary types not supported in M1".to_string()),
+        ),
 
         // Catch-all for other types
-        other => Err(TypeError::UnsupportedType(format!("{:?}", other)))
+        other => Err(TypeError::UnsupportedType(format!("{:?}", other))),
     }
 }
 

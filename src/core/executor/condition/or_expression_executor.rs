@@ -1,11 +1,11 @@
-// siddhi_rust/src/core/executor/condition/or_expression_executor.rs
-// Corresponds to io.siddhi.core.executor.condition.OrConditionExpressionExecutor
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/condition/or_expression_executor.rs
+// Corresponds to io.eventflux.core.executor.condition.OrConditionExpressionExecutor
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor // For clone_executor
+use std::sync::Arc; // For EventFluxAppContext in clone_executor // For clone_executor
 
 #[derive(Debug)]
 pub struct OrExpressionExecutor {
@@ -76,12 +76,12 @@ impl ExpressionExecutor for OrExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(
             OrExpressionExecutor::new(
-                self.left_executor.clone_executor(siddhi_app_context),
-                self.right_executor.clone_executor(siddhi_app_context),
+                self.left_executor.clone_executor(eventflux_app_context),
+                self.right_executor.clone_executor(eventflux_app_context),
             )
             .expect("Cloning OrExpressionExecutor failed"),
         )

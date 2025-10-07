@@ -1,4 +1,4 @@
-// Corresponds to the package io.siddhi.query.api.expression.math
+// Corresponds to the package io.eventflux.query.api.expression.math
 
 pub mod add;
 pub mod divide;
@@ -14,7 +14,7 @@ pub use self::subtract::Subtract;
 
 // Comments from before are still relevant:
 // Each math operation struct (Add, Subtract, etc.) will contain:
-// - siddhi_element: SiddhiElement (updated from direct fields)
+// - eventflux_element: EventFluxElement (updated from direct fields)
 // - left_value: Box<Expression>
 // - right_value: Box<Expression>
 //

@@ -7,4 +7,4 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-siddhi_rust = { path = "../.." }
+eventflux_rust = { path = "../.." }

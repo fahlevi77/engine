@@ -1,10 +1,10 @@
-// Corresponds to io.siddhi.query.api.expression.condition.Or
+// Corresponds to io.eventflux.query.api.expression.condition.Or
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Or {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub left_expression: Box<Expression>,
     pub right_expression: Box<Expression>,
@@ -13,7 +13,7 @@ pub struct Or {
 impl Or {
     pub fn new(left_expression: Expression, right_expression: Expression) -> Self {
         Or {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             left_expression: Box::new(left_expression),
             right_expression: Box::new(right_expression),
         }

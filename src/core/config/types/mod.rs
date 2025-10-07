@@ -1,46 +1,45 @@
 //! Configuration Type Definitions
-//! 
-//! This module defines all configuration structures for Siddhi Rust,
+//!
+//! This module defines all configuration structures for EventFlux Rust,
 //! following industry-standard practices for configuration management.
 
-pub mod siddhi_config;
 pub mod application_config;
-pub mod global_config;
 pub mod distributed_config;
+pub mod eventflux_config;
+pub mod global_config;
 pub mod metadata;
 
 // Re-export all configuration types
-pub use siddhi_config::SiddhiConfig;
+pub use eventflux_config::EventFluxConfig;
 pub use metadata::ConfigMetadata;
 
 // Application config re-exports (avoid conflicts)
 pub use application_config::{
-    ApplicationConfig, DefinitionConfig, StreamConfig, WindowConfig, TableConfig,
-    AggregationConfig, FunctionConfig, TriggerConfig, QueryConfig, 
-    PersistenceConfig, MonitoringConfig as AppMonitoringConfig, ErrorHandlingConfig,
-    SourceConfig, SinkConfig, DeliveryGuarantee, SchemaConfig,
-    CompressionType as AppCompressionType,
+    AggregationConfig, ApplicationConfig, CompressionType as AppCompressionType, DefinitionConfig,
+    DeliveryGuarantee, ErrorHandlingConfig, FunctionConfig,
+    MonitoringConfig as AppMonitoringConfig, PersistenceConfig, QueryConfig, SchemaConfig,
+    SinkConfig, SourceConfig, StreamConfig, TableConfig, TriggerConfig, WindowConfig,
 };
 
-// Global config re-exports (avoid conflicts)  
+// Global config re-exports (avoid conflicts)
 pub use global_config::{
-    SiddhiGlobalConfig, RuntimeConfig, PerformanceConfig, RuntimeMode, BackpressureStrategy,
-    ResourceConfig, MemoryConfig, CpuConfig, NetworkConfig, StorageConfig, GcStrategy,
-    SecurityConfig, AuthenticationConfig, AuthorizationConfig, TlsConfig as GlobalTlsConfig,
-    AuditConfig, ObservabilityConfig, MetricsConfig, TracingConfig, LoggingConfig,
-    LogLevel as GlobalLogLevel, LogFormat, LogOutput, MetricsProvider, TracingProvider,
-    ExtensionsConfig, ExtensionConfig, ExtensionSecurityConfig,
-    AuthenticationMethod, AuthorizationProvider, AuthorizationPolicy, AuditLevel, AuditDestination
+    AuditConfig, AuditDestination, AuditLevel, AuthenticationConfig, AuthenticationMethod,
+    AuthorizationConfig, AuthorizationPolicy, AuthorizationProvider, BackpressureStrategy,
+    CpuConfig, EventFluxGlobalConfig, ExtensionConfig, ExtensionSecurityConfig, ExtensionsConfig,
+    GcStrategy, LogFormat, LogLevel as GlobalLogLevel, LogOutput, LoggingConfig, MemoryConfig,
+    MetricsConfig, MetricsProvider, NetworkConfig, ObservabilityConfig, PerformanceConfig,
+    ResourceConfig, RuntimeConfig, RuntimeMode, SecurityConfig, StorageConfig,
+    TlsConfig as GlobalTlsConfig, TracingConfig, TracingProvider,
 };
 
 // Distributed config re-exports
 pub use distributed_config::{
-    DistributedConfig, NodeConfig, NodeCapabilities, ResourceLimits, ClusterConfig,
-    PartitionHandling, ServiceDiscoveryConfig, ServiceDiscoveryMethod,
-    TransportConfig, TransportImplementation, StateBackendConfig, StateBackendImplementation,
-    CompressionType as DistCompressionType, CoordinationConfig, CoordinationImplementation,
-    ConsensusLevel, MessageBrokerConfig, MessageBrokerImplementation, ProducerConfig,
-    ConsumerConfig, AcknowledgmentLevel
+    AcknowledgmentLevel, ClusterConfig, CompressionType as DistCompressionType, ConsensusLevel,
+    ConsumerConfig, CoordinationConfig, CoordinationImplementation, DistributedConfig,
+    MessageBrokerConfig, MessageBrokerImplementation, NodeCapabilities, NodeConfig,
+    PartitionHandling, ProducerConfig, ResourceLimits, ServiceDiscoveryConfig,
+    ServiceDiscoveryMethod, StateBackendConfig, StateBackendImplementation, TransportConfig,
+    TransportImplementation,
 };
 
 use serde::Deserialize;
@@ -53,16 +52,17 @@ pub fn parse_duration(s: &str) -> Result<Duration, String> {
     if s.is_empty() {
         return Err("Empty duration string".to_string());
     }
-    
+
     let (number_part, unit_part) = if let Some(pos) = s.find(|c: char| c.is_alphabetic()) {
         (&s[..pos], &s[pos..])
     } else {
         return Err("Duration must include a unit (s, m, h, d)".to_string());
     };
-    
-    let number: f64 = number_part.parse()
+
+    let number: f64 = number_part
+        .parse()
         .map_err(|_| format!("Invalid number in duration: {}", number_part))?;
-    
+
     let multiplier = match unit_part.to_lowercase().as_str() {
         "s" | "sec" | "second" | "seconds" => 1.0,
         "m" | "min" | "minute" | "minutes" => 60.0,
@@ -70,7 +70,7 @@ pub fn parse_duration(s: &str) -> Result<Duration, String> {
         "d" | "day" | "days" => 86400.0,
         _ => return Err(format!("Unknown duration unit: {}", unit_part)),
     };
-    
+
     let seconds = number * multiplier;
     Ok(Duration::from_secs_f64(seconds))
 }
@@ -79,7 +79,7 @@ pub fn parse_duration(s: &str) -> Result<Duration, String> {
 pub mod duration_serde {
     use super::*;
     use serde::{Deserializer, Serializer};
-    
+
     pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -96,7 +96,7 @@ pub mod duration_serde {
         };
         serializer.serialize_str(&formatted)
     }
-    
+
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
     where
         D: Deserializer<'de>,
@@ -110,7 +110,7 @@ pub mod duration_serde {
 pub mod optional_duration_serde {
     use super::*;
     use serde::{Deserializer, Serializer};
-    
+
     pub fn serialize<S>(duration: &Option<Duration>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -120,14 +120,16 @@ pub mod optional_duration_serde {
             None => serializer.serialize_none(),
         }
     }
-    
+
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let opt = Option::<String>::deserialize(deserializer)?;
         match opt {
-            Some(s) => parse_duration(&s).map(Some).map_err(serde::de::Error::custom),
+            Some(s) => parse_duration(&s)
+                .map(Some)
+                .map_err(serde::de::Error::custom),
             None => Ok(None),
         }
     }
@@ -136,7 +138,7 @@ pub mod optional_duration_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_duration() {
         assert_eq!(parse_duration("30s").unwrap(), Duration::from_secs(30));
@@ -144,17 +146,17 @@ mod tests {
         assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
         assert_eq!(parse_duration("2d").unwrap(), Duration::from_secs(172800));
         assert_eq!(parse_duration("1.5h").unwrap(), Duration::from_secs(5400));
-        
+
         assert!(parse_duration("").is_err());
         assert!(parse_duration("30").is_err());
         assert!(parse_duration("30x").is_err());
         assert!(parse_duration("abc").is_err());
     }
-    
+
     #[test]
     fn test_duration_serde() {
         use serde_json;
-        
+
         let duration = Duration::from_secs(3600);
         let serialized = serde_json::to_string(&duration).unwrap();
         // Note: This test would work with a wrapper struct that uses the serde module

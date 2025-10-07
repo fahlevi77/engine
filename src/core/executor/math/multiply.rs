@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/executor/math/multiply.rs
+// eventflux_rust/src/core/executor/math/multiply.rs
 use super::common::CoerceNumeric; // Use CoerceNumeric from common.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -99,12 +99,12 @@ impl ExpressionExecutor for MultiplyExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(
             MultiplyExpressionExecutor::new(
-                self.left_executor.clone_executor(siddhi_app_context),
-                self.right_executor.clone_executor(siddhi_app_context),
+                self.left_executor.clone_executor(eventflux_app_context),
+                self.right_executor.clone_executor(eventflux_app_context),
             )
             .expect("Cloning MultiplyExpressionExecutor failed"),
         )

@@ -1,10 +1,10 @@
-// siddhi_rust/src/core/executor/condition/not_expression_executor.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/condition/not_expression_executor.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor // For clone_executor
+use std::sync::Arc; // For EventFluxAppContext in clone_executor // For clone_executor
 
 #[derive(Debug)]
 pub struct NotExpressionExecutor {
@@ -44,10 +44,10 @@ impl ExpressionExecutor for NotExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(
-            NotExpressionExecutor::new(self.executor.clone_executor(siddhi_app_context))
+            NotExpressionExecutor::new(self.executor.clone_executor(eventflux_app_context))
                 .expect("Cloning NotExpressionExecutor failed"),
         )
     }

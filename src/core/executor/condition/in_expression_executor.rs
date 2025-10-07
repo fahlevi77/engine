@@ -1,12 +1,12 @@
-// siddhi_rust/src/core/executor/condition/in_expression_executor.rs
-// Corresponds to io.siddhi.core.executor.condition.InConditionExpressionExecutor
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor
+// eventflux_rust/src/core/executor/condition/in_expression_executor.rs
+// Corresponds to io.eventflux.core.executor.condition.InConditionExpressionExecutor
+use crate::core::config::eventflux_app_context::EventFluxAppContext; // For clone_executor
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::core::table::InMemoryCompiledCondition;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use std::sync::Arc; // For EventFluxAppContext in clone_executor
 
 #[derive(Debug)]
 pub struct InExpressionExecutor {
@@ -20,19 +20,19 @@ pub struct InExpressionExecutor {
     // Simplified implementation fields
     value_executor: Box<dyn ExpressionExecutor>, // Executes the expression whose value is checked for "IN"
     table_id: String,
-    siddhi_app_context: Arc<SiddhiAppContext>,
+    eventflux_app_context: Arc<EventFluxAppContext>,
 }
 
 impl InExpressionExecutor {
     pub fn new(
         value_executor: Box<dyn ExpressionExecutor>,
         table_id: String,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
     ) -> Self {
         Self {
             value_executor,
             table_id,
-            siddhi_app_context,
+            eventflux_app_context,
         }
     }
 }
@@ -51,8 +51,8 @@ impl ExpressionExecutor for InExpressionExecutor {
         };
 
         let table_opt = self
-            .siddhi_app_context
-            .get_siddhi_context()
+            .eventflux_app_context
+            .get_eventflux_context()
             .get_table(&self.table_id);
 
         if let Some(table) = table_opt {
@@ -73,12 +73,12 @@ impl ExpressionExecutor for InExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(InExpressionExecutor::new(
-            self.value_executor.clone_executor(siddhi_app_context),
+            self.value_executor.clone_executor(eventflux_app_context),
             self.table_id.clone(),
-            Arc::clone(siddhi_app_context),
+            Arc::clone(eventflux_app_context),
         ))
     }
 }

@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 // TODO: NOT PART OF M1 - Only ROUND function is in M1, not LOG/UPPER
 // M1 Query 7 tests built-in functions but specifically uses ROUND function only.

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
@@ -31,8 +31,8 @@ impl TableJoinProcessor {
         stream_attr_count: usize,
         table_attr_count: usize,
         table: Arc<dyn Table>,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -112,26 +112,26 @@ impl Processor for TableJoinProcessor {
         self.next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(TableJoinProcessor::new(
             self.join_type,
             self.compiled_condition.as_ref().map(Arc::clone),
             self.condition_executor
                 .as_ref()
-                .map(|c| c.clone_executor(&self.meta.siddhi_app_context)),
+                .map(|c| c.clone_executor(&self.meta.eventflux_app_context)),
             self.stream_attr_count,
             self.table_attr_count,
             Arc::clone(&self.table),
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

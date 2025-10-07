@@ -1,14 +1,14 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.AbsentStreamStateElement
+// Corresponds to io.eventflux.query.api.execution.query.input.state.AbsentStreamStateElement
 use super::stream_state_element::StreamStateElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::stream::SingleInputStream;
-use crate::query_api::expression::constant::Constant as ExpressionConstant;
-use crate::query_api::siddhi_element::SiddhiElement; // For direct composition if not delegating // Changed
+use crate::query_api::expression::constant::Constant as ExpressionConstant; // For direct composition if not delegating // Changed
 
 #[derive(Clone, Debug, PartialEq)] // Default is not straightforward
 pub struct AbsentStreamStateElement {
     // In Java, AbsentStreamStateElement extends StreamStateElement.
-    // So, it should compose StreamStateElement, which in turn composes SiddhiElement.
-    // The prompt suggests direct composition of siddhi_element, but that would lose
+    // So, it should compose StreamStateElement, which in turn composes EventFluxElement.
+    // The prompt suggests direct composition of eventflux_element, but that would lose
     // the basic_single_input_stream from StreamStateElement if not careful.
     // Sticking to composing StreamStateElement.
     pub stream_state_element: StreamStateElement,
@@ -48,23 +48,23 @@ impl AbsentStreamStateElement {
         self.stream_state_element.get_single_input_stream()
     }
 
-    // Expose siddhi_element for direct access if needed by StateElement enum dispatch.
-    // This provides access to the SiddhiElement composed within the inner StreamStateElement.
-    pub fn siddhi_element(&self) -> &SiddhiElement {
-        &self.stream_state_element.siddhi_element
+    // Expose eventflux_element for direct access if needed by StateElement enum dispatch.
+    // This provides access to the EventFluxElement composed within the inner StreamStateElement.
+    pub fn eventflux_element(&self) -> &EventFluxElement {
+        &self.stream_state_element.eventflux_element
     }
-    pub fn siddhi_element_mut(&mut self) -> &mut SiddhiElement {
-        &mut self.stream_state_element.siddhi_element
+    pub fn eventflux_element_mut(&mut self) -> &mut EventFluxElement {
+        &mut self.stream_state_element.eventflux_element
     }
 }
 
 // No Default derive due to required StreamStateElement.
 
-// No direct SiddhiElement impl for AbsentStreamStateElement.
-// The StateElement enum will access the siddhi_element from the composed stream_state_element.
-// If AbsentStreamStateElement needed to be passed as `dyn SiddhiElement`, it would need:
-// impl SiddhiElement for AbsentStreamStateElement {
-//     fn query_context_start_index(&self) -> Option<(i32,i32)> { self.stream_state_element.siddhi_element.query_context_start_index }
-//     // ... and so on for other SiddhiElement methods, delegating to self.stream_state_element.siddhi_element
+// No direct EventFluxElement impl for AbsentStreamStateElement.
+// The StateElement enum will access the eventflux_element from the composed stream_state_element.
+// If AbsentStreamStateElement needed to be passed as `dyn EventFluxElement`, it would need:
+// impl EventFluxElement for AbsentStreamStateElement {
+//     fn query_context_start_index(&self) -> Option<(i32,i32)> { self.stream_state_element.eventflux_element.query_context_start_index }
+//     // ... and so on for other EventFluxElement methods, delegating to self.stream_state_element.eventflux_element
 // }
-// This is effectively what StateElement enum's SiddhiElement impl will do via the siddhi_element() helper.
+// This is effectively what StateElement enum's EventFluxElement impl will do via the eventflux_element() helper.

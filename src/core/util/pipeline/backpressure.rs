@@ -9,8 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 /// Backpressure strategies for handling pipeline overload
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum BackpressureStrategy {
     /// Drop new events when pipeline is full (fire-and-forget)
     #[default]
@@ -27,7 +26,6 @@ pub enum BackpressureStrategy {
         recovery_timeout_ms: u64,
     },
 }
-
 
 /// Backpressure handler that implements various strategies
 pub struct BackpressureHandler {

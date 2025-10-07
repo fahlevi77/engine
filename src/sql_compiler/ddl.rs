@@ -32,7 +32,8 @@ impl DdlParser {
     /// Parse CREATE STREAM statement
     pub fn parse_create_stream(sql: &str) -> Result<CreateStreamInfo, DdlError> {
         // Replace STREAM with TABLE so sqlparser-rs can parse it
-        let normalized_sql = sql.replace("CREATE STREAM", "CREATE TABLE")
+        let normalized_sql = sql
+            .replace("CREATE STREAM", "CREATE TABLE")
             .replace("create stream", "CREATE TABLE");
 
         // Parse using sqlparser-rs
@@ -40,7 +41,9 @@ impl DdlParser {
             .map_err(|e| DdlError::SqlParseFailed(e.to_string()))?;
 
         if statements.is_empty() {
-            return Err(DdlError::InvalidCreateStream("No statements found".to_string()));
+            return Err(DdlError::InvalidCreateStream(
+                "No statements found".to_string(),
+            ));
         }
 
         match &statements[0] {
@@ -53,14 +56,15 @@ impl DdlParser {
                 })
             }
             _ => Err(DdlError::InvalidCreateStream(
-                "Expected CREATE TABLE statement".to_string()
-            ))
+                "Expected CREATE TABLE statement".to_string(),
+            )),
         }
     }
 
     /// Extract table/stream name from ObjectName
     fn extract_table_name(name: &ObjectName) -> Result<String, DdlError> {
-        name.0.last()
+        name.0
+            .last()
             .map(|ident| ident.value.clone())
             .ok_or_else(|| DdlError::InvalidCreateStream("No table name found".to_string()))
     }
@@ -134,10 +138,22 @@ mod tests {
 
         assert_eq!(stream_def.abstract_definition.get_id(), "TestStream");
         assert_eq!(stream_def.abstract_definition.get_attribute_list().len(), 2);
-        assert_eq!(stream_def.abstract_definition.get_attribute_list()[0].get_name(), "name");
-        assert_eq!(stream_def.abstract_definition.get_attribute_list()[0].get_type(), &AttributeType::STRING);
-        assert_eq!(stream_def.abstract_definition.get_attribute_list()[1].get_name(), "age");
-        assert_eq!(stream_def.abstract_definition.get_attribute_list()[1].get_type(), &AttributeType::INT);
+        assert_eq!(
+            stream_def.abstract_definition.get_attribute_list()[0].get_name(),
+            "name"
+        );
+        assert_eq!(
+            stream_def.abstract_definition.get_attribute_list()[0].get_type(),
+            &AttributeType::STRING
+        );
+        assert_eq!(
+            stream_def.abstract_definition.get_attribute_list()[1].get_name(),
+            "age"
+        );
+        assert_eq!(
+            stream_def.abstract_definition.get_attribute_list()[1].get_type(),
+            &AttributeType::INT
+        );
     }
 
     #[test]

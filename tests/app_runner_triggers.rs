@@ -1,15 +1,15 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::query_api::definition::TriggerDefinition;
-use siddhi_rust::query_api::expression::constant::TimeUtil;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::query_api::definition::TriggerDefinition;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::expression::constant::TimeUtil;
 use std::thread::sleep;
 use std::time::Duration;
 
 #[tokio::test]
 async fn start_trigger_emits_once() {
-    let mut app = SiddhiApp::new("T1".to_string());
+    let mut app = EventFluxApp::new("T1".to_string());
     app.add_trigger_definition(
         TriggerDefinition::id("TrigStream".to_string()).at("start".to_string()),
     );
@@ -21,7 +21,7 @@ async fn start_trigger_emits_once() {
 
 #[tokio::test]
 async fn periodic_trigger_emits() {
-    let mut app = SiddhiApp::new("T2".to_string());
+    let mut app = EventFluxApp::new("T2".to_string());
     let trig = TriggerDefinition::id("PTStream".to_string())
         .at_every_time_constant(TimeUtil::millisec(50))
         .unwrap();
@@ -34,7 +34,7 @@ async fn periodic_trigger_emits() {
 
 #[tokio::test]
 async fn cron_trigger_emits() {
-    let mut app = SiddhiApp::new("T3".to_string());
+    let mut app = EventFluxApp::new("T3".to_string());
     app.add_trigger_definition(
         TriggerDefinition::id("CronStream".to_string()).at("*/1 * * * * *".to_string()),
     );

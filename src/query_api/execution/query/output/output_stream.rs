@@ -1,6 +1,6 @@
 use super::stream::UpdateSet;
-use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // Using UpdateSet
+use crate::query_api::eventflux_element::EventFluxElement;
+use crate::query_api::expression::Expression; // Using UpdateSet
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum OutputEventType {
@@ -12,7 +12,7 @@ pub enum OutputEventType {
     ExpiredRawEvents,
 }
 
-// Action Structs: These do not compose SiddhiElement directly.
+// Action Structs: These do not compose EventFluxElement directly.
 // The outer OutputStream struct holds the context.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct InsertIntoStreamAction {
@@ -63,7 +63,7 @@ impl Default for OutputStreamAction {
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct OutputStream {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub action: OutputStreamAction,
     pub output_event_type: Option<OutputEventType>,
@@ -72,7 +72,7 @@ pub struct OutputStream {
 impl OutputStream {
     pub fn new(action: OutputStreamAction, initial_event_type: Option<OutputEventType>) -> Self {
         OutputStream {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             action,
             // Defaulting to CurrentEvents if None, as per Java logic in Query/OnDemandQuery
             output_event_type: initial_event_type.or(Some(OutputEventType::default())),
@@ -81,7 +81,7 @@ impl OutputStream {
 
     pub fn default_return_stream() -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             action: OutputStreamAction::Return(ReturnStreamAction::default()),
             output_event_type: Some(OutputEventType::CurrentEvents),
         }
@@ -112,8 +112,8 @@ impl OutputStream {
     }
 }
 
-// SiddhiElement is composed. Access via self.siddhi_element.
-// If OutputStream needed to be passed as `dyn SiddhiElement`:
-// impl SiddhiElement for OutputStream { ... delegate to self.siddhi_element ... }
-// However, the main Query/OnDemandQuery structs compose SiddhiElement themselves,
+// EventFluxElement is composed. Access via self.eventflux_element.
+// If OutputStream needed to be passed as `dyn EventFluxElement`:
+// impl EventFluxElement for OutputStream { ... delegate to self.eventflux_element ... }
+// However, the main Query/OnDemandQuery structs compose EventFluxElement themselves,
 // and OutputStream is a field. So direct composition and access is likely intended.

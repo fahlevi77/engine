@@ -2,7 +2,7 @@ use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ValuePartitionType {
-    // This 'element' field was in the prompt, but Java ValuePartitionType implements SiddhiElement directly.
+    // This 'element' field was in the prompt, but Java ValuePartitionType implements EventFluxElement directly.
     pub query_context_start_index: Option<(i32, i32)>,
     pub query_context_end_index: Option<(i32, i32)>,
 
@@ -21,4 +21,4 @@ impl ValuePartitionType {
     }
 }
 
-// impl SiddhiElement for ValuePartitionType removed
+// impl EventFluxElement for ValuePartitionType removed

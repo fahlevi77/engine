@@ -1,16 +1,16 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.store.AggregationInputStore
+// Corresponds to io.eventflux.query.api.execution.query.input.store.AggregationInputStore
 use super::input_store::InputStoreTrait;
 use super::store::Store; // The base Store
 use crate::query_api::aggregation::Within;
-use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // Using the actual Within struct
+use crate::query_api::eventflux_element::EventFluxElement;
+use crate::query_api::expression::Expression; // Using the actual Within struct
 
 #[derive(Clone, Debug, PartialEq)] // Default not straightforward
 pub struct AggregationInputStore {
     // In Java, it extends ConditionInputStore. We will compose Store and add fields.
     // Or compose ConditionInputStore if that's more aligned.
     // Let's compose Store directly and manage on_condition here too.
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
 
     pub store: Store,
     pub on_condition: Option<Expression>, // From ConditionInputStore part
@@ -29,7 +29,7 @@ impl AggregationInputStore {
         per: Expression,
     ) -> Self {
         AggregationInputStore {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             store,
             on_condition: Some(on_condition),
             within: Some(within),
@@ -40,7 +40,7 @@ impl AggregationInputStore {
     // Constructor for when there's no ON condition (onCondition is null in Java)
     pub fn new_no_condition(store: Store, within: Within, per: Expression) -> Self {
         AggregationInputStore {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             store,
             on_condition: None,
             within: Some(within),
@@ -49,7 +49,7 @@ impl AggregationInputStore {
     }
 }
 
-// `impl SiddhiElement for AggregationInputStore` removed.
+// `impl EventFluxElement for AggregationInputStore` removed.
 
 impl InputStoreTrait for AggregationInputStore {
     fn get_store_id(&self) -> &str {

@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.util.SiddhiConstants
+// Corresponds to io.eventflux.query.api.util.EventFluxConstants
 
 pub const ANNOTATION_INFO: &str = "info";
 pub const ANNOTATION_ELEMENT_NAME: &str = "name";

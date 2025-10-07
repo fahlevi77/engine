@@ -1,5 +1,5 @@
 //! Automatic Sink Initialization Test
-//! 
+//!
 //! This test demonstrates automatic sink initialization from YAML configuration
 //! where sinks are automatically attached to streams based on configuration
 
@@ -7,13 +7,13 @@
 mod common;
 
 use common::AppRunner;
-use siddhi_rust::core::config::{ConfigManager, SiddhiConfig, ApplicationConfig};
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_compiler::parse;
+use eventflux_rust::core::config::{ApplicationConfig, ConfigManager, EventFluxConfig};
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::query_compiler::parse;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use tempfile::NamedTempFile;
-use std::io::Write;
 use tokio::time::{sleep, Duration};
 
 #[tokio::test]
@@ -23,11 +23,11 @@ async fn test_automatic_sink_initialization() {
 
     // Step 1: Create YAML configuration with streams and their sinks
     let config_yaml = r#"
-apiVersion: siddhi.io/v1
-kind: SiddhiConfig
+apiVersion: eventflux.io/v1
+kind: EventFluxConfig
 metadata:
   name: auto-sink-test
-siddhi:
+eventflux:
   runtime:
     mode: single-node
     performance:
@@ -57,16 +57,18 @@ applications:
 
     // Create temporary config file
     let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-    temp_file.write_all(config_yaml.as_bytes()).expect("Failed to write config");
+    temp_file
+        .write_all(config_yaml.as_bytes())
+        .expect("Failed to write config");
     let config_path = temp_file.path().to_path_buf();
 
-    // Step 2: Create SiddhiManager with configuration
+    // Step 2: Create EventFluxManager with configuration
     println!("\n📝 Step 1: Loading configuration from YAML...");
     let config_manager = ConfigManager::from_file(&config_path);
-    let mut manager = SiddhiManager::new_with_config_manager(config_manager);
+    let mut manager = EventFluxManager::new_with_config_manager(config_manager);
 
-    // Step 3: Define a Siddhi app with multiple output streams
-    let siddhi_app = r#"
+    // Step 3: Define a EventFlux app with multiple output streams
+    let eventflux_app = r#"
         define stream InputStream (id int, level string, message string);
         define stream LogOutput (id int, message string);
         define stream WarningOutput (id int, message string);
@@ -88,10 +90,10 @@ applications:
         insert into DebugOutput;
     "#;
 
-    println!("\n🏗️ Step 2: Creating Siddhi app with multiple output streams...");
-    let api = parse(siddhi_app).expect("Failed to parse Siddhi app");
+    println!("\n🏗️ Step 2: Creating EventFlux app with multiple output streams...");
+    let api = parse(eventflux_app).expect("Failed to parse EventFlux app");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("Failed to create runtime");
 
@@ -105,7 +107,7 @@ applications:
     // Step 4: Send test events through the pipeline
     println!("\n🚀 Step 4: Sending test events...");
     let input_handler = runtime.get_input_handler("InputStream").unwrap();
-    
+
     // Send INFO event (should go to LogOutput)
     input_handler
         .lock()
@@ -143,10 +145,10 @@ applications:
     sleep(Duration::from_millis(100)).await;
 
     runtime.shutdown();
-    
+
     println!("\n🏁 Test completed successfully!");
     println!("   - Configuration loaded from YAML ✅");
-    println!("   - Siddhi app created with multiple streams ✅");
+    println!("   - EventFlux app created with multiple streams ✅");
     println!("   - Sinks auto-attached based on configuration ✅");
     println!("   - Events routed to appropriate sinks ✅");
     println!("\n📝 Expected output in console:");

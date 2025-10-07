@@ -1,4 +1,4 @@
-// Corresponds to package io.siddhi.query.api.execution.query.input.state
+// Corresponds to package io.eventflux.query.api.execution.query.input.state
 
 pub mod absent_stream_state_element;
 pub mod count_state_element;
@@ -28,6 +28,6 @@ pub use self::stream_state_element::StreamStateElement;
 //     Count(CountStateElement),
 //     Every(Box<EveryStateElement>), // Boxed due to recursion
 // }
-// Each struct will implement SiddhiElement.
+// Each struct will implement EventFluxElement.
 // The State.java class contains static factory methods to construct these StateElements.
 // These will be translated to associated functions on the `State` struct or directly on the `StateElement` enum.

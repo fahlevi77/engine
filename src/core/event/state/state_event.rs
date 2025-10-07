@@ -1,9 +1,9 @@
-// siddhi_rust/src/core/event/state/state_event.rs
-// Corresponds to io.siddhi.core.event.state.StateEvent
+// eventflux_rust/src/core/event/state/state_event.rs
+// Corresponds to io.eventflux.core.event.state.StateEvent
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent; // StateEvent holds StreamEvents
 use crate::core::event::value::AttributeValue;
-// use crate::core::util::siddhi_constants::{
+// use crate::core::util::eventflux_constants::{
 //     BEFORE_WINDOW_DATA_INDEX, CURRENT, LAST, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
 //     STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
 //     STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
@@ -103,9 +103,9 @@ impl StateEvent {
         }
     }
 
-    /// Retrieve a stream event based on Siddhi position array logic.
+    /// Retrieve a stream event based on EventFlux position array logic.
     pub fn get_stream_event_by_position(&self, position: &[i32]) -> Option<&StreamEvent> {
-        use crate::core::util::siddhi_constants::{
+        use crate::core::util::eventflux_constants::{
             CURRENT, LAST, STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
         };
         let mut stream_event = self
@@ -197,7 +197,7 @@ impl StateEvent {
     }
 
     pub fn get_attribute(&self, position: &[i32]) -> Option<&AttributeValue> {
-        use crate::core::util::siddhi_constants::{
+        use crate::core::util::eventflux_constants::{
             BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
             STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
         };
@@ -224,7 +224,7 @@ impl StateEvent {
     }
 
     pub fn set_attribute(&mut self, value: AttributeValue, position: &[i32]) -> Result<(), String> {
-        use crate::core::util::siddhi_constants::{
+        use crate::core::util::eventflux_constants::{
             BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
             STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
         };
@@ -244,7 +244,7 @@ impl StateEvent {
             }
         }
         let se_position = *position
-            .get(crate::core::util::siddhi_constants::STREAM_EVENT_CHAIN_INDEX)
+            .get(crate::core::util::eventflux_constants::STREAM_EVENT_CHAIN_INDEX)
             .ok_or("pos")? as usize;
         if se_position >= self.stream_events.len() {
             return Err("stream position out of bounds".into());

@@ -5,19 +5,19 @@ use std::time::Duration;
 
 use clap::Parser;
 
-use siddhi_rust::core::persistence::{
+use eventflux_rust::core::config::ConfigManager;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::persistence::{
     FilePersistenceStore, PersistenceStore, SqlitePersistenceStore,
 };
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::config::ConfigManager;
-use siddhi_rust::core::stream::output::sink::LogSink;
+use eventflux_rust::core::stream::output::sink::LogSink;
 use std::sync::Arc;
 
 #[derive(Parser, Debug)]
-#[command(about = "Run a SiddhiQL file", author, version)]
+#[command(about = "Run a EventFluxQL file", author, version)]
 struct Cli {
-    /// SiddhiQL file to execute
-    siddhi_file: PathBuf,
+    /// EventFluxQL file to execute
+    eventflux_file: PathBuf,
 
     /// Directory for file based persistence snapshots
     #[arg(long)]
@@ -53,15 +53,15 @@ async fn main() {
         }
     }
 
-    let content = match fs::read_to_string(&cli.siddhi_file) {
+    let content = match fs::read_to_string(&cli.eventflux_file) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Failed to read {}: {}", cli.siddhi_file.display(), e);
+            eprintln!("Failed to read {}: {}", cli.eventflux_file.display(), e);
             std::process::exit(1);
         }
     };
 
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
     if let Some(s) = store {
         manager.set_persistence_store(s);
     }
@@ -79,7 +79,10 @@ async fn main() {
             }
         }
     }
-    let runtime = match manager.create_siddhi_app_runtime_from_string(&content).await {
+    let runtime = match manager
+        .create_eventflux_app_runtime_from_string(&content)
+        .await
+    {
         Ok(rt) => rt,
         Err(e) => {
             eprintln!("Failed to create runtime: {e}");
@@ -92,7 +95,7 @@ async fn main() {
     }
 
     println!(
-        "Running Siddhi app '{}'. Press Ctrl+C to exit",
+        "Running EventFlux app '{}'. Press Ctrl+C to exit",
         runtime.name
     );
 

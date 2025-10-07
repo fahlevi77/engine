@@ -3,21 +3,21 @@
 //! Tests the crossbeam pipeline-based StreamJunction implementation
 //! for correctness, performance, and compatibility with existing code.
 
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
-    siddhi_query_context::SiddhiQueryContext,
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
+    eventflux_query_context::EventFluxQueryContext,
 };
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::stream::StreamEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::query::processor::{ProcessingMode, Processor};
-use siddhi_rust::core::stream::{
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::stream::StreamEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::query::processor::{ProcessingMode, Processor};
+use eventflux_rust::core::stream::{
     JunctionBenchmark, JunctionConfig, JunctionType, OptimizedStreamJunction, PerformanceLevel,
     StreamJunctionFactory,
 };
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::definition::StreamDefinition;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::StreamDefinition;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
@@ -84,24 +84,24 @@ impl Processor for PerformanceTestProcessor {
 
     fn set_next_processor(&mut self, _n: Option<Arc<Mutex<dyn Processor>>>) {}
 
-    fn clone_processor(&self, _c: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, _c: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(PerformanceTestProcessor::new(self.name.clone()))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::new(SiddhiAppContext::new(
-            Arc::new(SiddhiContext::new()),
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::new(EventFluxAppContext::new(
+            Arc::new(EventFluxContext::new()),
             "TestApp".to_string(),
-            Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+            Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                 "TestApp".to_string(),
             )),
             String::new(),
         ))
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::new(SiddhiQueryContext::new(
-            self.get_siddhi_app_context(),
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::new(EventFluxQueryContext::new(
+            self.get_eventflux_app_context(),
             "TestQuery".to_string(),
             None,
         ))
@@ -116,19 +116,19 @@ impl Processor for PerformanceTestProcessor {
     }
 }
 
-fn setup_test_context() -> (Arc<SiddhiAppContext>, Arc<StreamDefinition>) {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+fn setup_test_context() -> (Arc<EventFluxAppContext>, Arc<StreamDefinition>) {
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "TestApp".to_string(),
     ));
-    let mut app_ctx = SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let mut app_ctx = EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "TestApp".to_string(),
         Arc::clone(&app),
         String::new(),
     );
     app_ctx.root_metrics_level =
-        siddhi_rust::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC;
+        eventflux_rust::core::config::eventflux_app_context::MetricsLevelPlaceholder::BASIC;
 
     let stream_def = Arc::new(
         StreamDefinition::new("PerfTestStream".to_string())
@@ -285,24 +285,24 @@ fn test_synchronous_mode_ordering_guarantee() {
             None
         }
         fn set_next_processor(&mut self, _n: Option<Arc<Mutex<dyn Processor>>>) {}
-        fn clone_processor(&self, _c: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+        fn clone_processor(&self, _c: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
             Box::new(OrderTrackingProcessor {
                 received_order: Arc::clone(&self.received_order),
             })
         }
-        fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-            Arc::new(SiddhiAppContext::new(
-                Arc::new(SiddhiContext::new()),
+        fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+            Arc::new(EventFluxAppContext::new(
+                Arc::new(EventFluxContext::new()),
                 "TestApp".to_string(),
-                Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+                Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
                     "TestApp".to_string(),
                 )),
                 String::new(),
             ))
         }
-        fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-            Arc::new(SiddhiQueryContext::new(
-                self.get_siddhi_app_context(),
+        fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+            Arc::new(EventFluxQueryContext::new(
+                self.get_eventflux_app_context(),
                 "TestQuery".to_string(),
                 None,
             ))

@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
@@ -20,7 +20,8 @@ async fn async_partition_pool_order() {
         define stream Out (v int, p string);\n\
         from In select v, p insert into Out;\n";
     let runner = AppRunner::new(app, "Out").await;
-    for i in 0..10 { // Reduced to 10 for simpler test
+    for i in 0..10 {
+        // Reduced to 10 for simpler test
         let part = match i % 4 {
             0 => "a",
             1 => "b",

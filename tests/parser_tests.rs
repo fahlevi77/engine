@@ -5,7 +5,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 #[tokio::test]
 #[ignore = "WHERE filter syntax not yet supported in SQL parser"]
@@ -104,13 +104,13 @@ async fn test_builtin_function_in_query() {
 
 #[tokio::test]
 async fn test_udf_in_query() {
-    use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-    use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-    use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
-    use siddhi_rust::core::siddhi_manager::SiddhiManager;
-    use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-    
-    use siddhi_rust::query_compiler::parse;
+    use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+    use eventflux_rust::core::eventflux_manager::EventFluxManager;
+    use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+    use eventflux_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+    use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+
+    use eventflux_rust::query_compiler::parse;
     use std::sync::Arc;
 
     #[derive(Debug, Default)]
@@ -127,7 +127,7 @@ async fn test_udf_in_query() {
     impl ExpressionExecutor for PlusOneFn {
         fn execute(
             &self,
-            event: Option<&dyn siddhi_rust::core::event::complex_event::ComplexEvent>,
+            event: Option<&dyn eventflux_rust::core::event::complex_event::ComplexEvent>,
         ) -> Option<AttributeValue> {
             let v = self.arg.as_ref()?.execute(event)?;
             match v {
@@ -138,7 +138,7 @@ async fn test_udf_in_query() {
         fn get_return_type(&self) -> AttrType {
             AttrType::INT
         }
-        fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+        fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
             Box::new(self.clone())
         }
     }
@@ -146,7 +146,7 @@ async fn test_udf_in_query() {
         fn init(
             &mut self,
             args: &Vec<Box<dyn ExpressionExecutor>>,
-            ctx: &Arc<SiddhiAppContext>,
+            ctx: &Arc<EventFluxAppContext>,
         ) -> Result<(), String> {
             if args.len() != 1 {
                 return Err("plusOne expects one argument".to_string());
@@ -163,15 +163,15 @@ async fn test_udf_in_query() {
         }
     }
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_scalar_function_factory("plusOne".to_string(), Box::new(PlusOneFn::default()));
 
     let app_str = "\
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In select plusOne(v) as v insert into Out;\n";
-    use siddhi_rust::core::event::event::Event;
-    use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+    use eventflux_rust::core::event::event::Event;
+    use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
     use std::sync::Mutex;
 
     #[derive(Debug)]
@@ -189,7 +189,7 @@ async fn test_udf_in_query() {
 
     let api = parse(app_str).unwrap();
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .unwrap();
     let collected = Arc::new(Mutex::new(Vec::new()));
@@ -215,8 +215,8 @@ async fn test_udf_in_query() {
 
 #[test]
 fn test_parse_function_definition() {
-    use siddhi_rust::query_api::definition::attribute::Type;
-    use siddhi_rust::query_compiler::parse_function_definition;
+    use eventflux_rust::query_api::definition::attribute::Type;
+    use eventflux_rust::query_compiler::parse_function_definition;
     let def = parse_function_definition("define function foo [rust] return int 'body'").unwrap();
     assert_eq!(def.id, "foo");
     assert_eq!(def.language, "rust");
@@ -225,9 +225,9 @@ fn test_parse_function_definition() {
 
 #[test]
 fn test_query_with_group_by() {
-    use siddhi_rust::query_api::execution::query::selection::order_by_attribute::Order;
-    use siddhi_rust::query_api::execution::ExecutionElement;
-    use siddhi_rust::query_compiler::parse;
+    use eventflux_rust::query_api::execution::query::selection::order_by_attribute::Order;
+    use eventflux_rust::query_api::execution::ExecutionElement;
+    use eventflux_rust::query_compiler::parse;
 
     let app = "\
         define stream In (a int, b int);\n\

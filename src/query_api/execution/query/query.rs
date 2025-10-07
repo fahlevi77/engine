@@ -1,14 +1,14 @@
 use super::{OutputEventType, OutputRate, OutputStream}; // Use parent module's re-exports
 use crate::query_api::annotation::Annotation;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::execution_element::ExecutionElementTrait;
 use crate::query_api::execution::query::input::InputStream;
 use crate::query_api::execution::query::selection::Selector;
-use crate::query_api::siddhi_element::SiddhiElement;
 
-/// Defines a Siddhi query with input, selection, output, etc.
+/// Defines a EventFlux query with input, selection, output, etc.
 #[derive(Clone, Debug, PartialEq)] // Default will be custom or via new()
 pub struct Query {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub input_stream: Option<InputStream>,
     pub selector: Selector,
@@ -20,7 +20,7 @@ pub struct Query {
 impl Query {
     pub fn new() -> Self {
         Query {
-            siddhi_element: SiddhiElement::default(), // Initialize composed element
+            eventflux_element: EventFluxElement::default(), // Initialize composed element
             input_stream: None,
             selector: Selector::new(), // Java default
             output_stream: OutputStream::default_return_stream(), // Java default
@@ -119,7 +119,7 @@ mod tests {
         ); // Assumes OutputStream has PartialEq and a default
         assert!(q.get_output_rate().is_none());
         assert!(q.get_annotations().is_empty());
-        assert_eq!(q.siddhi_element.query_context_start_index, None);
+        assert_eq!(q.eventflux_element.query_context_start_index, None);
     }
 
     #[test]
@@ -219,7 +219,7 @@ impl Default for Query {
     }
 }
 
-// SiddhiElement is composed, access via `self.siddhi_element.query_context_start_index` etc.
+// EventFluxElement is composed, access via `self.eventflux_element.query_context_start_index` etc.
 // Or implement Deref/DerefMut if desired for direct access.
 
 // Implement ExecutionElementTrait for Query

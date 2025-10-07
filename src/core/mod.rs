@@ -1,9 +1,9 @@
-// siddhi_rust/src/core/mod.rs
+// eventflux_rust/src/core/mod.rs
 
-// Top-level files from Java io.siddhi.core
-pub mod siddhi_app_runtime; // For SiddhiAppRuntime.java (and Impl)
-pub mod siddhi_app_runtime_builder;
-pub mod siddhi_manager; // For SiddhiManager.java // Declare the module
+// Top-level files from Java io.eventflux.core
+pub mod eventflux_app_runtime; // For EventFluxAppRuntime.java (and Impl)
+pub mod eventflux_app_runtime_builder;
+pub mod eventflux_manager; // For EventFluxManager.java // Declare the module
 
 // Sub-packages, corresponding to Java packages
 pub mod aggregation;
@@ -28,7 +28,7 @@ pub mod window;
 
 // Re-export key public-facing structs from core
 pub use self::data_source::{DataSource, DataSourceConfig, SqliteDataSource};
-pub use self::siddhi_app_runtime::SiddhiAppRuntime;
-pub use self::siddhi_app_runtime_builder::SiddhiAppRuntimeBuilder;
-pub use self::siddhi_manager::SiddhiManager; // Added
-                                             // Other important re-exports will be added as these modules are built out.
+pub use self::eventflux_app_runtime::EventFluxAppRuntime;
+pub use self::eventflux_app_runtime_builder::EventFluxAppRuntimeBuilder;
+pub use self::eventflux_manager::EventFluxManager; // Added
+                                                   // Other important re-exports will be added as these modules are built out.

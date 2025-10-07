@@ -8,7 +8,7 @@
 
 ## Overview
 
-Developer guides and patterns for implementing new features and components in Siddhi Rust. This comprehensive reference covers all major component types with Java-to-Rust translation patterns.
+Developer guides and patterns for implementing new features and components in EventFlux Rust. This comprehensive reference covers all major component types with Java-to-Rust translation patterns.
 
 **Key Topics**:
 - Window processors and stream functions
@@ -432,7 +432,7 @@ fn test_state_persistence() {
 
 #### @Async Annotation Implementation Pattern
 
-The @Async annotation implementation demonstrates the complete pattern for adding annotation support to Siddhi Rust. This includes grammar rules, parser integration, and runtime configuration.
+The @Async annotation implementation demonstrates the complete pattern for adding annotation support to EventFlux Rust. This includes grammar rules, parser integration, and runtime configuration.
 
 **Grammar Pattern for Minimal and Parameterized Annotations:**
 ```lalrpop
@@ -457,7 +457,7 @@ KeyValue: (String, String) = { <k:Ident> "=" <v:STRING> => (k, v) };
 
 **Parser Integration Pattern:**
 ```rust
-// In siddhi_app_parser.rs - Complete @Async annotation processing
+// In eventflux_app_parser.rs - Complete @Async annotation processing
 for ann in &stream_def_arc.abstract_definition.annotations {
     match ann.name.to_lowercase().as_str() {
         "async" => {
@@ -479,7 +479,7 @@ for ann in &stream_def_arc.abstract_definition.annotations {
                         }
                     }
                     "batch_size_max" | "batchsizemax" => {
-                        // Compatibility with Java Siddhi
+                        // Compatibility with Java EventFlux
                     }
                     _ => {}
                 }
@@ -494,13 +494,13 @@ for ann in &stream_def_arc.abstract_definition.annotations {
 ```rust
 #[test]
 fn test_async_annotation_with_parameters() {
-    let mut manager = SiddhiManager::new();
-    let siddhi_app_string = r#"
+    let mut manager = EventFluxManager::new();
+    let eventflux_app_string = r#"
         @Async(buffer_size='1024', workers='2', batch_size_max='10')
         define stream TestStream (id int, value string);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string);
+    let result = manager.create_eventflux_app_runtime_from_string(eventflux_app_string);
     assert!(result.is_ok());
 }
 ```

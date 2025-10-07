@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/util/type_system_tests.rs
+// eventflux_rust/src/core/util/type_system_tests.rs
 // Comprehensive tests for the type system implementation
 
 #[cfg(test)]

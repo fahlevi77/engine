@@ -1,11 +1,11 @@
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::Variable;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 // Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]
 pub struct OutputAttribute {
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
     pub rename: Option<String>,
     pub expression: Expression,
 }
@@ -15,7 +15,7 @@ impl OutputAttribute {
     // Making rename Option<String> as per prompt and current code.
     pub fn new(rename: Option<String>, expression: Expression) -> Self {
         OutputAttribute {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             rename,
             expression,
         }
@@ -24,7 +24,7 @@ impl OutputAttribute {
     // Constructor for `OutputAttribute(Variable variable)`
     pub fn new_from_variable(variable: Variable) -> Self {
         OutputAttribute {
-            siddhi_element: SiddhiElement::default(), // Or copy from variable.siddhi_element?
+            eventflux_element: EventFluxElement::default(), // Or copy from variable.eventflux_element?
             rename: Some(variable.attribute_name.clone()),
             expression: Expression::Variable(variable),
         }

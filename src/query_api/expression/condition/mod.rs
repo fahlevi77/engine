@@ -1,4 +1,4 @@
-// Corresponds to the package io.siddhi.query.api.expression.condition
+// Corresponds to the package io.eventflux.query.api.expression.condition
 
 pub mod and;
 pub mod compare;
@@ -14,9 +14,9 @@ pub use self::is_null::IsNull;
 pub use self::not::Not;
 pub use self::or::Or;
 
-// Comments from before, updated for SiddhiElement composition:
+// Comments from before, updated for EventFluxElement composition:
 // Each condition struct (And, Or, etc.) will contain:
-// - siddhi_element: SiddhiElement
+// - eventflux_element: EventFluxElement
 // - Other specific fields, often Box<Expression> for operands.
 //
 // The Expression enum (in expression/expression.rs) will have variants

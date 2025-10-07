@@ -1,9 +1,9 @@
-// Corresponds to io.siddhi.query.api.annotation.Annotation & Element.java
-use crate::query_api::siddhi_element::SiddhiElement; // The struct to be composed
+// Corresponds to io.eventflux.query.api.annotation.Annotation & Element.java
+use crate::query_api::eventflux_element::EventFluxElement; // The struct to be composed
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Element {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
     pub key: String,
     pub value: String,
 }
@@ -11,25 +11,25 @@ pub struct Element {
 impl Element {
     pub fn new(key: String, value: String) -> Self {
         Element {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             key,
             value,
         }
     }
 }
 
-// If direct access to SiddhiElement fields is needed often:
+// If direct access to EventFluxElement fields is needed often:
 // impl std::ops::Deref for Element {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for Element {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Annotation {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub name: String,
     pub elements: Vec<Element>,
@@ -39,7 +39,7 @@ pub struct Annotation {
 impl Annotation {
     pub fn new(name: String) -> Self {
         Annotation {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             name,
             elements: Vec::new(),
             annotations: Vec::new(),
@@ -69,27 +69,27 @@ impl Annotation {
     }
 }
 
-// No longer need to impl SiddhiElement for Annotation/Element as they compose it.
-// Access to context indices would be via `my_annotation.siddhi_element.query_context_start_index`.
+// No longer need to impl EventFluxElement for Annotation/Element as they compose it.
+// Access to context indices would be via `my_annotation.eventflux_element.query_context_start_index`.
 // Or via Deref/DerefMut if implemented.
 
-// Note: The prompt had `pub element: SiddhiElement` for the composed field.
+// Note: The prompt had `pub element: EventFluxElement` for the composed field.
 // I used `element_context` in `Element` to avoid potential naming conflicts if `Element` itself
-// had methods named `element`. For `Annotation`, `siddhi_element` is fine.
-// I will stick to `siddhi_element` for consistency as per the general instruction.
+// had methods named `element`. For `Annotation`, `eventflux_element` is fine.
+// I will stick to `eventflux_element` for consistency as per the general instruction.
 
-// Re-adjusting Element to use `siddhi_element` for the composed field name.
+// Re-adjusting Element to use `eventflux_element` for the composed field name.
 // (This block is part of the same overwrite operation)
 // #[derive(Clone, Debug, PartialEq, Default)]
 // pub struct Element {
-//     pub siddhi_element: SiddhiElement,
+//     pub eventflux_element: EventFluxElement,
 //     pub key: String,
 //     pub value: String,
 // }
 // impl Element {
 //     pub fn new(key: String, value: String) -> Self {
 //         Element {
-//             siddhi_element: SiddhiElement::default(),
+//             eventflux_element: EventFluxElement::default(),
 //             key,
 //             value,
 //         }

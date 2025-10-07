@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_context::SiddhiContext;
+use crate::core::config::eventflux_context::EventFluxContext;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 pub struct JdbcTable {
     table_name: String,
     data_source_name: String,
-    siddhi_context: Arc<SiddhiContext>,
+    eventflux_context: Arc<EventFluxContext>,
     conn: Arc<Mutex<Connection>>,
 }
 
@@ -24,9 +24,9 @@ impl JdbcTable {
     pub fn new(
         table_name: String,
         data_source_name: String,
-        siddhi_context: Arc<SiddhiContext>,
+        eventflux_context: Arc<EventFluxContext>,
     ) -> Result<Self, String> {
-        let ds = siddhi_context
+        let ds = eventflux_context
             .get_data_source(&data_source_name)
             .ok_or_else(|| format!("DataSource '{data_source_name}' not found"))?;
         let conn_any = ds.get_connection()?;
@@ -42,7 +42,7 @@ impl JdbcTable {
         Ok(Self {
             table_name,
             data_source_name,
-            siddhi_context,
+            eventflux_context,
             conn: conn_arc,
         })
     }
@@ -464,7 +464,7 @@ impl Table for JdbcTable {
             JdbcTable::new(
                 self.table_name.clone(),
                 self.data_source_name.clone(),
-                Arc::clone(&self.siddhi_context),
+                Arc::clone(&self.eventflux_context),
             )
             .unwrap(),
         )
@@ -482,7 +482,7 @@ impl crate::core::extension::TableFactory for JdbcTableFactory {
         &self,
         table_name: String,
         mut properties: std::collections::HashMap<String, String>,
-        ctx: Arc<SiddhiContext>,
+        ctx: Arc<EventFluxContext>,
     ) -> Result<Arc<dyn Table>, String> {
         let ds = properties
             .remove("data_source")

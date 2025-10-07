@@ -1,15 +1,15 @@
 use std::sync::{Arc, Mutex};
-use siddhi_rust::core::config::{siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext};
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::extension::WindowProcessorFactory;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
-use siddhi_rust::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use siddhi_rust::core::query::processor::stream::window::WindowProcessor;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::execution::query::input::handler::WindowHandler;
+use eventflux_rust::core::config::{eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext};
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::extension::WindowProcessorFactory;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+use eventflux_rust::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
+use eventflux_rust::core::query::processor::stream::window::WindowProcessor;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::execution::query::input::handler::WindowHandler;
 
 #[derive(Debug)]
 struct DynWindowProcessor {
@@ -31,16 +31,16 @@ impl Processor for DynWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, q: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
-        Box::new(DynWindowProcessor { meta: CommonProcessorMeta::new(Arc::clone(&self.meta.siddhi_app_context), Arc::clone(q)) })
+    fn clone_processor(&self, q: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
+        Box::new(DynWindowProcessor { meta: CommonProcessorMeta::new(Arc::clone(&self.meta.eventflux_app_context), Arc::clone(q)) })
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::clone(&self.meta.siddhi_query_context)
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::clone(&self.meta.eventflux_query_context)
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -57,7 +57,7 @@ impl WindowProcessor for DynWindowProcessor {}
 struct DynWindowFactory;
 impl WindowProcessorFactory for DynWindowFactory {
     fn name(&self) -> &'static str { "dynWindow" }
-    fn create(&self, _h: &WindowHandler, app: Arc<SiddhiAppContext>, q: Arc<SiddhiQueryContext>) -> Result<Arc<Mutex<dyn Processor>>, String> {
+    fn create(&self, _h: &WindowHandler, app: Arc<EventFluxAppContext>, q: Arc<EventFluxQueryContext>) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(DynWindowProcessor { meta: CommonProcessorMeta::new(app, q) })))
     }
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory> { Box::new(self.clone()) }
@@ -79,12 +79,12 @@ impl ExpressionExecutor for DynPlusOne {
         }
     }
     fn get_return_type(&self) -> AttrType { AttrType::INT }
-    fn clone_executor(&self, _c: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _c: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }
 impl ScalarFunctionExecutor for DynPlusOne {
-    fn init(&mut self, args: &Vec<Box<dyn ExpressionExecutor>>, ctx: &Arc<SiddhiAppContext>) -> Result<(), String> {
+    fn init(&mut self, args: &Vec<Box<dyn ExpressionExecutor>>, ctx: &Arc<EventFluxAppContext>) -> Result<(), String> {
         if args.len() != 1 { return Err("dynPlusOne expects one argument".to_string()); }
         self.arg = Some(args[0].clone_executor(ctx));
         Ok(())
@@ -95,13 +95,13 @@ impl ScalarFunctionExecutor for DynPlusOne {
 }
 
 #[no_mangle]
-pub extern "C" fn register_windows(manager: &SiddhiManager) {
+pub extern "C" fn register_windows(manager: &EventFluxManager) {
     println!("[dyn_ext] register_windows called");
     manager.add_window_factory("dynWindow".to_string(), Box::new(DynWindowFactory));
 }
 
 #[no_mangle]
-pub extern "C" fn register_functions(manager: &SiddhiManager) {
+pub extern "C" fn register_functions(manager: &EventFluxManager) {
     println!("[dyn_ext] register_functions called");
     manager.add_scalar_function_factory("dynPlusOne".to_string(), Box::new(DynPlusOne::default()));
 }

@@ -1,7 +1,7 @@
 # Query Module
 
-This module contains the Rust translation of Siddhi's core `query` package.  It implements
-runtime structures that execute a single Siddhi query as well as the processors that
+This module contains the Rust translation of EventFlux's core `query` package.  It implements
+runtime structures that execute a single EventFlux query as well as the processors that
 form the internal processing chain.
 
 ## Key Components

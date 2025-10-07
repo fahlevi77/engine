@@ -1,11 +1,11 @@
-use rusqlite::Connection;
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
-use siddhi_rust::core::table::{
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
+use eventflux_rust::core::table::{
     InMemoryCompiledCondition, InMemoryCompiledUpdateSet, JdbcTable, Table,
 };
+use rusqlite::Connection;
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
@@ -28,7 +28,7 @@ impl DataSource for SqliteDataSource {
     }
     fn init(
         &mut self,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
         _id: &str,
         _cfg: DataSourceConfig,
     ) -> Result<(), String> {
@@ -47,7 +47,7 @@ impl DataSource for SqliteDataSource {
     }
 }
 
-fn setup_table(ctx: &Arc<SiddhiContext>) {
+fn setup_table(ctx: &Arc<EventFluxContext>) {
     let ds = ctx.get_data_source("DS1").unwrap();
     let conn_any = ds.get_connection().unwrap();
     let conn_arc = conn_any.downcast::<Arc<Mutex<Connection>>>().unwrap();
@@ -58,7 +58,7 @@ fn setup_table(ctx: &Arc<SiddhiContext>) {
 
 #[test]
 fn test_jdbc_table_crud() {
-    let ctx = Arc::new(SiddhiContext::new());
+    let ctx = Arc::new(EventFluxContext::new());
     ctx.add_data_source(
         "DS1".to_string(),
         Arc::new(SqliteDataSource::new(":memory:")),

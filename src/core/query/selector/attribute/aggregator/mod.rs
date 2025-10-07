@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -16,7 +16,7 @@ pub trait AttributeAggregatorExecutor: ExpressionExecutor {
         executors: Vec<Box<dyn ExpressionExecutor>>,
         processing_mode: ProcessingMode,
         expired_output: bool,
-        ctx: &SiddhiQueryContext,
+        ctx: &EventFluxQueryContext,
     ) -> Result<(), String>;
 
     fn process_add(&self, data: Option<AttributeValue>) -> Option<AttributeValue>;
@@ -52,7 +52,7 @@ pub struct SumAttributeAggregatorExecutor {
     arg_exec: Option<Box<dyn ExpressionExecutor>>,
     return_type: ApiAttributeType,
     state: Mutex<SumState>,
-    app_ctx: Option<Arc<SiddhiAppContext>>,
+    app_ctx: Option<Arc<EventFluxAppContext>>,
     state_holder: Option<SumAggregatorStateHolder>,
     // Shared state for persistence (same as used by state holder)
     shared_sum: Option<Arc<Mutex<f64>>>,
@@ -79,7 +79,7 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         mut executors: Vec<Box<dyn ExpressionExecutor>>,
         _mode: ProcessingMode,
         _expired_output: bool,
-        ctx: &SiddhiQueryContext,
+        ctx: &EventFluxQueryContext,
     ) -> Result<(), String> {
         if executors.len() != 1 {
             return Err("sum() requires exactly one argument".to_string());
@@ -92,25 +92,29 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         };
         self.return_type = rtype;
         self.arg_exec = Some(exec);
-        self.app_ctx = Some(Arc::clone(&ctx.siddhi_app_context));
+        self.app_ctx = Some(Arc::clone(&ctx.eventflux_app_context));
 
         // Initialize state holder for enterprise state management
         let sum_arc = Arc::new(Mutex::new(0.0f64));
         let count_arc = Arc::new(Mutex::new(0u64));
-        let component_id = format!("sum_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
-        
+        let component_id = format!(
+            "sum_aggregator_{}_{}",
+            ctx.name.as_str(),
+            uuid::Uuid::new_v4()
+        );
+
         let state_holder = SumAggregatorStateHolder::new(
             sum_arc.clone(),
             count_arc.clone(),
             component_id.clone(),
             rtype,
         );
-        
+
         // Register state holder with SnapshotService for persistence
-        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> =
             Arc::new(Mutex::new(state_holder.clone()));
         ctx.register_state_holder(component_id, state_holder_arc);
-        
+
         // Store shared state references for synchronized updates
         self.shared_sum = Some(sum_arc);
         self.shared_count = Some(count_arc);
@@ -123,26 +127,28 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
             // Update internal state with sync check for post-restoration scenarios
             let mut st = self.state.lock().unwrap();
-            
-            
+
             // Sync internal state with shared state before processing (only for non-group aggregators)
-            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+            if let (Some(ref shared_sum), Some(ref shared_count)) =
+                (&self.shared_sum, &self.shared_count)
+            {
                 let shared_sum_val = *shared_sum.lock().unwrap();
                 let shared_count_val = *shared_count.lock().unwrap();
-                
+
                 // Only sync if there's a significant difference (indicating restoration happened)
                 if (st.sum - shared_sum_val).abs() > 0.0001 || st.count != shared_count_val {
                     st.sum = shared_sum_val;
                     st.count = shared_count_val;
                 }
             }
-            
+
             st.sum += v;
             st.count += 1;
-            
 
             // Update shared state for persistence (only for non-group aggregators)
-            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+            if let (Some(ref shared_sum), Some(ref shared_count)) =
+                (&self.shared_sum, &self.shared_count)
+            {
                 *shared_sum.lock().unwrap() = st.sum;
                 *shared_count.lock().unwrap() = st.count;
             }
@@ -165,26 +171,30 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         if let Some(v) = data.as_ref().and_then(value_as_f64) {
             // Update internal state with sync check for post-restoration scenarios
             let mut st = self.state.lock().unwrap();
-            
+
             // Sync internal state with shared state before processing (only for non-group aggregators)
-            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+            if let (Some(ref shared_sum), Some(ref shared_count)) =
+                (&self.shared_sum, &self.shared_count)
+            {
                 let shared_sum_val = *shared_sum.lock().unwrap();
                 let shared_count_val = *shared_count.lock().unwrap();
-                
+
                 // Only sync if there's a significant difference (indicating restoration happened)
                 if (st.sum - shared_sum_val).abs() > 0.0001 || st.count != shared_count_val {
                     st.sum = shared_sum_val;
                     st.count = shared_count_val;
                 }
             }
-            
+
             st.sum -= v;
             if st.count > 0 {
                 st.count -= 1;
             }
 
             // Update shared state for persistence (only for non-group aggregators)
-            if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+            if let (Some(ref shared_sum), Some(ref shared_count)) =
+                (&self.shared_sum, &self.shared_count)
+            {
                 *shared_sum.lock().unwrap() = st.sum;
                 *shared_count.lock().unwrap() = st.count;
             }
@@ -207,12 +217,14 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
         let mut st = self.state.lock().unwrap();
         let old_sum = st.sum;
         let old_count = st.count;
-        
+
         st.sum = 0.0;
         st.count = 0;
 
         // Update shared state for persistence
-        if let (Some(ref shared_sum), Some(ref shared_count)) = (&self.shared_sum, &self.shared_count) {
+        if let (Some(ref shared_sum), Some(ref shared_count)) =
+            (&self.shared_sum, &self.shared_count)
+        {
             *shared_sum.lock().unwrap() = 0.0;
             *shared_count.lock().unwrap() = 0;
         }
@@ -227,9 +239,11 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
 
     fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> {
         let ctx = self.app_ctx.as_ref().unwrap();
-        
+
         // Always sync internal state with shared state before cloning to ensure consistency
-        let synchronized_state = if let (Some(shared_sum), Some(shared_count)) = (&self.shared_sum, &self.shared_count) {
+        let synchronized_state = if let (Some(shared_sum), Some(shared_count)) =
+            (&self.shared_sum, &self.shared_count)
+        {
             let shared_sum_val = *shared_sum.lock().unwrap();
             let shared_count_val = *shared_count.lock().unwrap();
             SumState {
@@ -240,18 +254,18 @@ impl AttributeAggregatorExecutor for SumAttributeAggregatorExecutor {
             let current_state = self.state.lock().unwrap().clone();
             current_state
         };
-        
+
         // Create independent shared state for each group to prevent cross-group interference
         let group_shared_sum = Arc::new(Mutex::new(synchronized_state.sum));
         let group_shared_count = Arc::new(Mutex::new(synchronized_state.count));
-        
+
         Box::new(SumAttributeAggregatorExecutor {
             arg_exec: self.arg_exec.as_ref().map(|e| e.clone_executor(ctx)),
             return_type: self.return_type,
             state: Mutex::new(synchronized_state),
             app_ctx: Some(Arc::clone(ctx)),
             state_holder: None, // Group aggregators don't need individual state holders
-            shared_sum: Some(group_shared_sum),   // Independent shared state per group
+            shared_sum: Some(group_shared_sum), // Independent shared state per group
             shared_count: Some(group_shared_count), // Independent shared state per group
         })
     }
@@ -273,7 +287,7 @@ impl ExpressionExecutor for SumAttributeAggregatorExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         self.clone_box()
     }
 
@@ -292,21 +306,32 @@ impl crate::core::persistence::state_holder::StateHolder for SumAttributeAggrega
         }
     }
 
-    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+    fn serialize_state(
+        &self,
+        hints: &crate::core::persistence::state_holder::SerializationHints,
+    ) -> Result<
+        crate::core::persistence::state_holder::StateSnapshot,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::SerializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::SerializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::state_holder::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             // First restore the state holder
             let result = state_holder.deserialize_state(snapshot);
-            
+
             // Then synchronize the executor's internal state with the restored state holder
             if result.is_ok() {
                 let restored_sum = state_holder.get_sum();
@@ -314,7 +339,7 @@ impl crate::core::persistence::state_holder::StateHolder for SumAttributeAggrega
                 let mut st = self.state.lock().unwrap();
                 st.sum = restored_sum;
                 st.count = restored_count;
-                
+
                 // Also synchronize shared state if available
                 if let Some(ref shared_sum) = self.shared_sum {
                     if let Ok(mut shared) = shared_sum.try_lock() {
@@ -327,30 +352,47 @@ impl crate::core::persistence::state_holder::StateHolder for SumAttributeAggrega
                     }
                 }
             }
-            
+
             result
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+    fn get_changelog(
+        &self,
+        since: crate::core::persistence::state_holder::CheckpointId,
+    ) -> Result<
+        crate::core::persistence::state_holder::ChangeLog,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::CheckpointNotFound { checkpoint_id: since })
+            Err(
+                crate::core::persistence::state_holder::StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                },
+            )
         }
     }
 
-    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn apply_changelog(
+        &mut self,
+        changes: &crate::core::persistence::state_holder::ChangeLog,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
@@ -380,7 +422,7 @@ impl crate::core::persistence::state_holder::StateHolder for SumAttributeAggrega
         } else {
             crate::core::persistence::state_holder::StateMetadata::new(
                 "unknown_sum_aggregator".to_string(),
-                "SumAttributeAggregatorExecutor".to_string()
+                "SumAttributeAggregatorExecutor".to_string(),
             )
         }
     }
@@ -396,7 +438,7 @@ struct AvgState {
 pub struct AvgAttributeAggregatorExecutor {
     arg_exec: Option<Box<dyn ExpressionExecutor>>,
     state: Mutex<AvgState>,
-    app_ctx: Option<Arc<SiddhiAppContext>>,
+    app_ctx: Option<Arc<EventFluxAppContext>>,
     state_holder: Option<AvgAggregatorStateHolder>,
 }
 
@@ -417,30 +459,30 @@ impl AttributeAggregatorExecutor for AvgAttributeAggregatorExecutor {
         mut execs: Vec<Box<dyn ExpressionExecutor>>,
         _m: ProcessingMode,
         _e: bool,
-        ctx: &SiddhiQueryContext,
+        ctx: &EventFluxQueryContext,
     ) -> Result<(), String> {
         if execs.len() != 1 {
             return Err("avg() requires one argument".to_string());
         }
         self.arg_exec = Some(execs.remove(0));
-        self.app_ctx = Some(Arc::clone(&ctx.siddhi_app_context));
+        self.app_ctx = Some(Arc::clone(&ctx.eventflux_app_context));
 
         // Initialize state holder for enterprise state management
         let sum_arc = Arc::new(Mutex::new(0.0f64));
         let count_arc = Arc::new(Mutex::new(0u64));
-        let component_id = format!("avg_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
-        
-        let state_holder = AvgAggregatorStateHolder::new(
-            sum_arc,
-            count_arc,
-            component_id.clone(),
+        let component_id = format!(
+            "avg_aggregator_{}_{}",
+            ctx.name.as_str(),
+            uuid::Uuid::new_v4()
         );
-        
+
+        let state_holder = AvgAggregatorStateHolder::new(sum_arc, count_arc, component_id.clone());
+
         // Register state holder with SnapshotService for persistence
-        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> =
             Arc::new(Mutex::new(state_holder.clone()));
         ctx.register_state_holder(component_id, state_holder_arc);
-        
+
         self.state_holder = Some(state_holder);
 
         Ok(())
@@ -490,7 +532,7 @@ impl AttributeAggregatorExecutor for AvgAttributeAggregatorExecutor {
         let mut st = self.state.lock().unwrap();
         let old_sum = st.sum;
         let old_count = st.count;
-        
+
         st.sum = 0.0;
         st.count = 0;
 
@@ -529,7 +571,7 @@ impl ExpressionExecutor for AvgAttributeAggregatorExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         self.clone_box()
     }
 
@@ -548,41 +590,69 @@ impl crate::core::persistence::state_holder::StateHolder for AvgAttributeAggrega
         }
     }
 
-    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+    fn serialize_state(
+        &self,
+        hints: &crate::core::persistence::state_holder::SerializationHints,
+    ) -> Result<
+        crate::core::persistence::state_holder::StateSnapshot,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::SerializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::SerializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::state_holder::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.deserialize_state(snapshot)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+    fn get_changelog(
+        &self,
+        since: crate::core::persistence::state_holder::CheckpointId,
+    ) -> Result<
+        crate::core::persistence::state_holder::ChangeLog,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::CheckpointNotFound { checkpoint_id: since })
+            Err(
+                crate::core::persistence::state_holder::StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                },
+            )
         }
     }
 
-    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn apply_changelog(
+        &mut self,
+        changes: &crate::core::persistence::state_holder::ChangeLog,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
@@ -612,7 +682,7 @@ impl crate::core::persistence::state_holder::StateHolder for AvgAttributeAggrega
         } else {
             crate::core::persistence::state_holder::StateMetadata::new(
                 "unknown_avg_aggregator".to_string(),
-                "AvgAttributeAggregatorExecutor".to_string()
+                "AvgAttributeAggregatorExecutor".to_string(),
             )
         }
     }
@@ -626,7 +696,7 @@ struct CountState {
 #[derive(Debug)]
 pub struct CountAttributeAggregatorExecutor {
     state: Mutex<CountState>,
-    app_ctx: Option<Arc<SiddhiAppContext>>,
+    app_ctx: Option<Arc<EventFluxAppContext>>,
     state_holder: Option<CountAggregatorStateHolder>,
     // Shared state for persistence (same as used by state holder)
     shared_count: Option<Arc<Mutex<i64>>>,
@@ -649,24 +719,25 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
         _e: Vec<Box<dyn ExpressionExecutor>>,
         _m: ProcessingMode,
         _ex: bool,
-        ctx: &SiddhiQueryContext,
+        ctx: &EventFluxQueryContext,
     ) -> Result<(), String> {
-        self.app_ctx = Some(Arc::clone(&ctx.siddhi_app_context));
+        self.app_ctx = Some(Arc::clone(&ctx.eventflux_app_context));
 
         // Initialize state holder for enterprise state management
         let count_arc = Arc::new(Mutex::new(0i64));
-        let component_id = format!("count_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
-        
-        let state_holder = CountAggregatorStateHolder::new(
-            count_arc.clone(),
-            component_id.clone(),
+        let component_id = format!(
+            "count_aggregator_{}_{}",
+            ctx.name.as_str(),
+            uuid::Uuid::new_v4()
         );
-        
+
+        let state_holder = CountAggregatorStateHolder::new(count_arc.clone(), component_id.clone());
+
         // Register state holder with SnapshotService for persistence
-        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> = 
+        let state_holder_arc: Arc<Mutex<dyn crate::core::persistence::StateHolder>> =
             Arc::new(Mutex::new(state_holder.clone()));
         ctx.register_state_holder(component_id, state_holder_arc);
-        
+
         // Store shared state reference for synchronized updates
         self.shared_count = Some(count_arc);
         self.state_holder = Some(state_holder);
@@ -676,20 +747,20 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
 
     fn process_add(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
-        
+
         // Sync internal state with shared state before processing (for post-restoration scenarios)
         if let Some(ref shared_count) = self.shared_count {
             let shared_count_val = *shared_count.lock().unwrap();
-            
+
             // Only sync if there's a significant difference (indicating restoration happened)
             if st.count != shared_count_val {
                 st.count = shared_count_val;
             }
         }
-        
+
         st.count += 1;
         let new_count = st.count;
-        
+
         // Synchronize with shared state for persistence
         if let Some(ref shared_count) = self.shared_count {
             if let Ok(mut shared) = shared_count.try_lock() {
@@ -706,20 +777,20 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
     }
     fn process_remove(&self, _d: Option<AttributeValue>) -> Option<AttributeValue> {
         let mut st = self.state.lock().unwrap();
-        
+
         // Sync internal state with shared state before processing (for post-restoration scenarios)
         if let Some(ref shared_count) = self.shared_count {
             let shared_count_val = *shared_count.lock().unwrap();
-            
+
             // Only sync if there's a significant difference (indicating restoration happened)
             if st.count != shared_count_val {
                 st.count = shared_count_val;
             }
         }
-        
+
         st.count -= 1;
         let new_count = st.count;
-        
+
         // Synchronize with shared state for persistence
         if let Some(ref shared_count) = self.shared_count {
             if let Ok(mut shared) = shared_count.try_lock() {
@@ -738,7 +809,7 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
         let mut st = self.state.lock().unwrap();
         let old_count = st.count;
         st.count = 0;
-        
+
         // Synchronize with shared state for persistence
         if let Some(ref shared_count) = self.shared_count {
             if let Ok(mut shared) = shared_count.try_lock() {
@@ -762,10 +833,10 @@ impl AttributeAggregatorExecutor for CountAttributeAggregatorExecutor {
         } else {
             self.state.lock().unwrap().clone()
         };
-        
+
         // Create independent shared state for each group to prevent cross-group interference
         let group_shared_count = Arc::new(Mutex::new(synchronized_state.count));
-        
+
         Box::new(CountAttributeAggregatorExecutor {
             state: Mutex::new(synchronized_state),
             app_ctx: self.app_ctx.as_ref().cloned(),
@@ -790,7 +861,7 @@ impl ExpressionExecutor for CountAttributeAggregatorExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         self.clone_box()
     }
 
@@ -809,27 +880,38 @@ impl crate::core::persistence::state_holder::StateHolder for CountAttributeAggre
         }
     }
 
-    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+    fn serialize_state(
+        &self,
+        hints: &crate::core::persistence::state_holder::SerializationHints,
+    ) -> Result<
+        crate::core::persistence::state_holder::StateSnapshot,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::SerializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::SerializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::state_holder::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             // First restore the state holder
             let result = state_holder.deserialize_state(snapshot);
-            
+
             // Then synchronize the executor's internal state with the restored state holder
             if result.is_ok() {
                 let restored_count = state_holder.get_count();
                 let mut st = self.state.lock().unwrap();
                 st.count = restored_count;
-                
+
                 // Also synchronize shared state if available
                 if let Some(ref shared_count) = self.shared_count {
                     if let Ok(mut shared) = shared_count.try_lock() {
@@ -837,30 +919,47 @@ impl crate::core::persistence::state_holder::StateHolder for CountAttributeAggre
                     }
                 }
             }
-            
+
             result
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+    fn get_changelog(
+        &self,
+        since: crate::core::persistence::state_holder::CheckpointId,
+    ) -> Result<
+        crate::core::persistence::state_holder::ChangeLog,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::CheckpointNotFound { checkpoint_id: since })
+            Err(
+                crate::core::persistence::state_holder::StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                },
+            )
         }
     }
 
-    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn apply_changelog(
+        &mut self,
+        changes: &crate::core::persistence::state_holder::ChangeLog,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
@@ -890,7 +989,7 @@ impl crate::core::persistence::state_holder::StateHolder for CountAttributeAggre
         } else {
             crate::core::persistence::state_holder::StateMetadata::new(
                 "unknown_count_aggregator".to_string(),
-                "CountAttributeAggregatorExecutor".to_string()
+                "CountAttributeAggregatorExecutor".to_string(),
             )
         }
     }
@@ -905,7 +1004,7 @@ struct DistinctCountState {
 pub struct DistinctCountAttributeAggregatorExecutor {
     arg_exec: Option<Box<dyn ExpressionExecutor>>,
     state: Mutex<DistinctCountState>,
-    app_ctx: Option<Arc<SiddhiAppContext>>,
+    app_ctx: Option<Arc<EventFluxAppContext>>,
     state_holder: Option<DistinctCountAggregatorStateHolder>,
 }
 
@@ -926,22 +1025,26 @@ impl AttributeAggregatorExecutor for DistinctCountAttributeAggregatorExecutor {
         mut e: Vec<Box<dyn ExpressionExecutor>>,
         _m: ProcessingMode,
         _ex: bool,
-        ctx: &SiddhiQueryContext,
+        ctx: &EventFluxQueryContext,
     ) -> Result<(), String> {
         if e.len() != 1 {
             return Err("distinctCount() requires one arg".to_string());
         }
         self.arg_exec = Some(e.remove(0));
-        self.app_ctx = Some(Arc::clone(&ctx.siddhi_app_context));
-        
+        self.app_ctx = Some(Arc::clone(&ctx.eventflux_app_context));
+
         // Initialize StateHolder
         let map_ref = Arc::new(Mutex::new(HashMap::new()));
-        let component_id = format!("distinctcount_aggregator_{}_{}", ctx.name.as_str(), uuid::Uuid::new_v4());
+        let component_id = format!(
+            "distinctcount_aggregator_{}_{}",
+            ctx.name.as_str(),
+            uuid::Uuid::new_v4()
+        );
         self.state_holder = Some(DistinctCountAggregatorStateHolder::new(
             map_ref.clone(),
             component_id,
         ));
-        
+
         Ok(())
     }
     fn process_add(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
@@ -951,7 +1054,7 @@ impl AttributeAggregatorExecutor for DistinctCountAttributeAggregatorExecutor {
             let old_count = st.map.get(&key).copied();
             let c = st.map.entry(key.clone()).or_insert(0);
             *c += 1;
-            
+
             // Record state change
             if let Some(ref state_holder) = self.state_holder {
                 state_holder.record_value_added(&key, old_count, *c);
@@ -974,7 +1077,7 @@ impl AttributeAggregatorExecutor for DistinctCountAttributeAggregatorExecutor {
                 } else {
                     Some(*c)
                 };
-                
+
                 // Record state change
                 if let Some(ref state_holder) = self.state_holder {
                     state_holder.record_value_removed(&key, old_count, new_count);
@@ -992,12 +1095,12 @@ impl AttributeAggregatorExecutor for DistinctCountAttributeAggregatorExecutor {
             st.map.clear();
             old_map
         };
-        
+
         // Record state change
         if let Some(ref state_holder) = self.state_holder {
             state_holder.record_reset(&old_map);
         }
-        
+
         Some(AttributeValue::Long(0))
     }
     fn clone_box(&self) -> Box<dyn AttributeAggregatorExecutor> {
@@ -1025,7 +1128,7 @@ impl ExpressionExecutor for DistinctCountAttributeAggregatorExecutor {
     fn get_return_type(&self) -> ApiAttributeType {
         ApiAttributeType::LONG
     }
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         self.clone_box()
     }
     fn is_attribute_aggregator(&self) -> bool {
@@ -1034,7 +1137,9 @@ impl ExpressionExecutor for DistinctCountAttributeAggregatorExecutor {
 }
 
 // StateHolder implementation for DistinctCountAttributeAggregatorExecutor
-impl crate::core::persistence::state_holder::StateHolder for DistinctCountAttributeAggregatorExecutor {
+impl crate::core::persistence::state_holder::StateHolder
+    for DistinctCountAttributeAggregatorExecutor
+{
     fn schema_version(&self) -> crate::core::persistence::state_holder::SchemaVersion {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.schema_version()
@@ -1043,41 +1148,69 @@ impl crate::core::persistence::state_holder::StateHolder for DistinctCountAttrib
         }
     }
 
-    fn serialize_state(&self, hints: &crate::core::persistence::state_holder::SerializationHints) -> Result<crate::core::persistence::state_holder::StateSnapshot, crate::core::persistence::state_holder::StateError> {
+    fn serialize_state(
+        &self,
+        hints: &crate::core::persistence::state_holder::SerializationHints,
+    ) -> Result<
+        crate::core::persistence::state_holder::StateSnapshot,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.serialize_state(hints)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::SerializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::SerializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::state_holder::StateSnapshot) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::state_holder::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.deserialize_state(snapshot)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
-    fn get_changelog(&self, since: crate::core::persistence::state_holder::CheckpointId) -> Result<crate::core::persistence::state_holder::ChangeLog, crate::core::persistence::state_holder::StateError> {
+    fn get_changelog(
+        &self,
+        since: crate::core::persistence::state_holder::CheckpointId,
+    ) -> Result<
+        crate::core::persistence::state_holder::ChangeLog,
+        crate::core::persistence::state_holder::StateError,
+    > {
         if let Some(ref state_holder) = self.state_holder {
             state_holder.get_changelog(since)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::CheckpointNotFound { checkpoint_id: since })
+            Err(
+                crate::core::persistence::state_holder::StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                },
+            )
         }
     }
 
-    fn apply_changelog(&mut self, changes: &crate::core::persistence::state_holder::ChangeLog) -> Result<(), crate::core::persistence::state_holder::StateError> {
+    fn apply_changelog(
+        &mut self,
+        changes: &crate::core::persistence::state_holder::ChangeLog,
+    ) -> Result<(), crate::core::persistence::state_holder::StateError> {
         if let Some(ref mut state_holder) = self.state_holder {
             state_holder.apply_changelog(changes)
         } else {
-            Err(crate::core::persistence::state_holder::StateError::DeserializationError {
-                message: "No state holder available".to_string(),
-            })
+            Err(
+                crate::core::persistence::state_holder::StateError::DeserializationError {
+                    message: "No state holder available".to_string(),
+                },
+            )
         }
     }
 
@@ -1107,7 +1240,7 @@ impl crate::core::persistence::state_holder::StateHolder for DistinctCountAttrib
         } else {
             crate::core::persistence::state_holder::StateMetadata::new(
                 "unknown_distinctcount_aggregator".to_string(),
-                "DistinctCountAttributeAggregatorExecutor".to_string()
+                "DistinctCountAttributeAggregatorExecutor".to_string(),
             )
         }
     }
@@ -1125,7 +1258,7 @@ macro_rules! minmax_exec {
             arg_exec: Option<Box<dyn ExpressionExecutor>>,
             return_type: ApiAttributeType,
             state: Mutex<MinMaxState>,
-            app_ctx: Option<Arc<SiddhiAppContext>>,
+            app_ctx: Option<Arc<EventFluxAppContext>>,
         }
         impl Default for $name {
             fn default() -> Self {
@@ -1143,7 +1276,7 @@ macro_rules! minmax_exec {
                 mut e: Vec<Box<dyn ExpressionExecutor>>,
                 _m: ProcessingMode,
                 _ex: bool,
-                ctx: &SiddhiQueryContext,
+                ctx: &EventFluxQueryContext,
             ) -> Result<(), String> {
                 if e.len() != 1 {
                     return Err("aggregator requires one arg".into());
@@ -1151,7 +1284,7 @@ macro_rules! minmax_exec {
                 let exec = e.remove(0);
                 self.return_type = exec.get_return_type();
                 self.arg_exec = Some(exec);
-                self.app_ctx = Some(Arc::clone(&ctx.siddhi_app_context));
+                self.app_ctx = Some(Arc::clone(&ctx.eventflux_app_context));
                 Ok(())
             }
             fn process_add(&self, data: Option<AttributeValue>) -> Option<AttributeValue> {
@@ -1199,7 +1332,10 @@ macro_rules! minmax_exec {
             fn get_return_type(&self) -> ApiAttributeType {
                 self.return_type
             }
-            fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+            fn clone_executor(
+                &self,
+                _ctx: &Arc<EventFluxAppContext>,
+            ) -> Box<dyn ExpressionExecutor> {
                 self.clone_box()
             }
             fn is_attribute_aggregator(&self) -> bool {

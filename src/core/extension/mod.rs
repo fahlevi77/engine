@@ -7,7 +7,7 @@ use crate::core::stream::input::mapper::SourceMapper;
 use crate::core::stream::output::mapper::SinkMapper;
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
 use crate::core::query::processor::Processor;
 use crate::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor;
@@ -18,8 +18,8 @@ pub trait WindowProcessorFactory: Debug + Send + Sync {
     fn create(
         &self,
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String>;
     fn clone_box(&self) -> Box<dyn WindowProcessorFactory>;
 }
@@ -101,7 +101,7 @@ pub trait TableFactory: Debug + Send + Sync {
         &self,
         table_name: String,
         properties: std::collections::HashMap<String, String>,
-        ctx: Arc<crate::core::config::siddhi_context::SiddhiContext>,
+        ctx: Arc<crate::core::config::eventflux_context::EventFluxContext>,
     ) -> Result<Arc<dyn crate::core::table::Table>, String>;
     fn clone_box(&self) -> Box<dyn TableFactory>;
 }
@@ -153,9 +153,9 @@ impl SinkFactory for LogSinkFactory {
 }
 
 /// FFI callback type used when dynamically loading extensions.
-pub type RegisterFn = unsafe extern "C" fn(&crate::core::siddhi_manager::SiddhiManager);
+pub type RegisterFn = unsafe extern "C" fn(&crate::core::eventflux_manager::EventFluxManager);
 
-/// Symbol names looked up by [`SiddhiManager::set_extension`].
+/// Symbol names looked up by [`EventFluxManager::set_extension`].
 pub const REGISTER_EXTENSION_FN: &[u8] = b"register_extension";
 pub const REGISTER_WINDOWS_FN: &[u8] = b"register_windows";
 pub const REGISTER_FUNCTIONS_FN: &[u8] = b"register_functions";

@@ -188,9 +188,7 @@ impl EventPipeline {
                         }
                         Err(e) => {
                             self.metrics.increment_processing_errors();
-                            return Err(format!(
-                                "Processing error at sequence {sequence}: {e}"
-                            ));
+                            return Err(format!("Processing error at sequence {sequence}: {e}"));
                         }
                     }
 

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: siddhi-redis
+    container_name: eventflux-redis
     ports:
       - "6379:6379"
     volumes:
@@ -11,7 +11,7 @@ services:
     command: >
       redis-server
       --appendonly yes
-      --appendfilename "siddhi-redis.aof"
+      --appendfilename "eventflux-redis.aof"
       --appendfsync everysec
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
@@ -22,11 +22,11 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - siddhi-network
+      - eventflux-network
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: siddhi-redis-commander
+    container_name: eventflux-redis-commander
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
@@ -36,12 +36,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - siddhi-network
+      - eventflux-network
 
 volumes:
   redis-data:
     driver: local
 
 networks:
-  siddhi-network:
+  eventflux-network:
     driver: bridge

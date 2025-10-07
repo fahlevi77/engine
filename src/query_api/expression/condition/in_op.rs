@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.expression.condition.In
+// Corresponds to io.eventflux.query.api.expression.condition.In
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct InOp {
     // Renamed from In to InOp
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // In specific fields
     pub expression: Box<Expression>,
@@ -15,7 +15,7 @@ pub struct InOp {
 impl InOp {
     pub fn new(expression: Expression, source_id: String) -> Self {
         InOp {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             expression: Box::new(expression),
             source_id,
         }

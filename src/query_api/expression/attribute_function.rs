@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.expression.AttributeFunction
+// Corresponds to io.eventflux.query.api.expression.AttributeFunction
 // This also implements Extension in Java, which means it has namespace and name.
 use super::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // Assuming expression.rs will define the Expression enum.
+use crate::query_api::eventflux_element::EventFluxElement; // Assuming expression.rs will define the Expression enum.
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct AttributeFunction {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Extension fields
     pub extension_namespace: Option<String>,
@@ -22,7 +22,7 @@ impl AttributeFunction {
         parameters: Vec<Expression>,
     ) -> Self {
         AttributeFunction {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             extension_namespace,
             function_name,
             parameters,
@@ -44,9 +44,9 @@ impl AttributeFunction {
 
 // Deref if needed:
 // impl std::ops::Deref for AttributeFunction {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for AttributeFunction {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }

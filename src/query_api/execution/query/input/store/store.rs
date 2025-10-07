@@ -1,13 +1,13 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.store.Store
+// Corresponds to io.eventflux.query.api.execution.query.input.store.Store
 // Extends SingleInputStream (conceptually) and implements InputStore in Java.
 
 use super::input_store::InputStoreTrait;
 // For new_with_id constructor
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::stream::SingleInputStream; // Changed
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 // For on() methods returning these types, which are then wrapped in InputStore enum
-// These will need to be refactored to compose SiddhiElement as well.
+// These will need to be refactored to compose EventFluxElement as well.
 use super::aggregation_input_store::AggregationInputStore;
 use super::condition_input_store::ConditionInputStore;
 
@@ -18,18 +18,18 @@ use crate::query_api::aggregation::Within;
 pub struct Store {
     // Composes SingleInputStream to inherit its stream-like properties
     pub single_input_stream: SingleInputStream, // Changed field name
-    // Store has its own SiddhiElement context, separate from SingleInputStream's inner one.
+    // Store has its own EventFluxElement context, separate from SingleInputStream's inner one.
     // However, Java Store directly uses context of SingleInputStream.
-    // Let's ensure `siddhi_element` is part of `Store` directly or consistently accessed.
-    // The current impl delegates SiddhiElement to basic_single_input_stream.
+    // Let's ensure `eventflux_element` is part of `Store` directly or consistently accessed.
+    // The current impl delegates EventFluxElement to basic_single_input_stream.
     // If Store needs its *own* context distinct from the stream it represents,
-    // it would need its own `siddhi_element: SiddhiElement` field.
+    // it would need its own `eventflux_element: EventFluxElement` field.
     // For now, assuming it shares context with its SingleInputStream representation.
-    // This means Store does not need its own siddhi_element field if SingleInputStream has one.
-    // SingleInputStream has `siddhi_element`.
-    // So, Store effectively gets its context via `single_input_stream.siddhi_element`.
-    // The `impl SiddhiElement for Store` was removed. Store uses its own siddhi_element field.
-    pub siddhi_element: SiddhiElement, // Store itself is a SiddhiElement
+    // This means Store does not need its own eventflux_element field if SingleInputStream has one.
+    // SingleInputStream has `eventflux_element`.
+    // So, Store effectively gets its context via `single_input_stream.eventflux_element`.
+    // The `impl EventFluxElement for Store` was removed. Store uses its own eventflux_element field.
+    pub eventflux_element: EventFluxElement, // Store itself is a EventFluxElement
 }
 
 impl Store {
@@ -37,7 +37,7 @@ impl Store {
     // Made pub(super) in previous version, now pub for direct use if needed.
     pub fn new_with_id(store_id: String) -> Self {
         Store {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             // BasicSingleInputStream::new functionality is now part of SingleInputStream::new_basic_from_id or similar.
             // Assuming a basic, non-fault, non-inner stream for a simple store definition.
             single_input_stream: SingleInputStream::new_basic(
@@ -52,7 +52,7 @@ impl Store {
 
     pub fn new_with_ref(store_reference_id: String, store_id: String) -> Self {
         Store {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             single_input_stream: SingleInputStream::new_basic(
                 store_id,
                 false,
@@ -94,16 +94,16 @@ impl Store {
     }
 }
 
-// Implement SiddhiElement for Store.
+// Implement EventFluxElement for Store.
 // It should have its own context, separate from the BasicSingleInputStream it composes if it's a distinct element.
 // Java's Store extends BasicSingleInputStream, so it *is* a BasicSingleInputStream and shares its context.
 // Our BasicSingleInputStream gets context via its `inner: SingleInputStream`.
-// The previous SiddhiElement impl for Store delegated to basic_single_input_stream.
-// If Store itself is a SiddhiElement, it should use its own `siddhi_element` field.
-// The prompt's example for `StoreQuery` has `element: SiddhiElement`, implying StoreQuery is the element,
+// The previous EventFluxElement impl for Store delegated to basic_single_input_stream.
+// If Store itself is a EventFluxElement, it should use its own `eventflux_element` field.
+// The prompt's example for `StoreQuery` has `element: EventFluxElement`, implying StoreQuery is the element,
 // not necessarily the `Store` struct itself if `Store` is just an ID wrapper.
-// Let's assume `Store` itself needs to be a `SiddhiElement`.
-// `impl SiddhiElement for Store` removed. Store uses its own `siddhi_element` field.
+// Let's assume `Store` itself needs to be a `EventFluxElement`.
+// `impl EventFluxElement for Store` removed. Store uses its own `eventflux_element` field.
 
 // Implement InputStoreTrait
 impl InputStoreTrait for Store {

@@ -1,12 +1,12 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.handler.Window
+// Corresponds to io.eventflux.query.api.execution.query.input.handler.Window
 // Implements StreamHandler and Extension in Java.
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Window {
     // Aliased as WindowHandler in handler/mod.rs
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Extension fields
     pub namespace: Option<String>,
@@ -20,7 +20,7 @@ impl Window {
     // Constructor requires name. Namespace and parameters can be defaulted.
     pub fn new(name: String, namespace: Option<String>, parameters: Vec<Expression>) -> Self {
         Window {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             namespace,
             name,
             parameters,

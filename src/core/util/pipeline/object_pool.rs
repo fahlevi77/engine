@@ -120,16 +120,16 @@ impl EventPool {
                 .current_size
                 .compare_exchange_weak(current, current + 1, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
-            {
-                self.total_allocated.fetch_add(1, Ordering::Relaxed);
-                // Create a new pooled event without pool reference for now
-                let pooled_event = PooledEvent {
-                    event: None,
-                    sequence: 0,
-                    pool: None, // We'll manage pool lifecycle differently
-                };
-                return Some(pooled_event);
-            }
+        {
+            self.total_allocated.fetch_add(1, Ordering::Relaxed);
+            // Create a new pooled event without pool reference for now
+            let pooled_event = PooledEvent {
+                event: None,
+                sequence: 0,
+                pool: None, // We'll manage pool lifecycle differently
+            };
+            return Some(pooled_event);
+        }
 
         // Pool exhausted
         None

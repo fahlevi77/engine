@@ -1,7 +1,7 @@
 # Writing Extensions
 
-This guide explains how to extend the Siddhi Rust runtime with custom
-components.  Extensions are registered with a `SiddhiManager` and become
+This guide explains how to extend the EventFlux Rust runtime with custom
+components.  Extensions are registered with a `EventFluxManager` and become
 available to applications via annotations like `@source`, `@sink` or `@store`.
 
 ## Table Extensions
@@ -10,8 +10,8 @@ A table extension implements the `Table` trait and provides a corresponding
 `TableFactory`.  The factory is registered under a unique name:
 
 ```rust
-use siddhi_rust::core::extension::TableFactory;
-use siddhi_rust::core::table::Table;
+use eventflux_rust::core::extension::TableFactory;
+use eventflux_rust::core::table::Table;
 
 pub struct MyTable;
 impl Table for MyTable { /* ... */ }
@@ -24,7 +24,7 @@ impl TableFactory for MyTableFactory {
         &self,
         name: String,
         props: std::collections::HashMap<String, String>,
-        ctx: std::sync::Arc<siddhi_rust::core::config::siddhi_context::SiddhiContext>,
+        ctx: std::sync::Arc<eventflux_rust::core::config::eventflux_context::EventFluxContext>,
     ) -> Result<std::sync::Arc<dyn Table>, String> {
         Ok(std::sync::Arc::new(MyTable))
     }
@@ -32,7 +32,7 @@ impl TableFactory for MyTableFactory {
 }
 ```
 
-After registering the factory with a `SiddhiManager`, applications can define a
+After registering the factory with a `EventFluxManager`, applications can define a
 table using `@store(type='myStore')`.
 
 ### Compiled Conditions
@@ -54,7 +54,7 @@ own compiled condition formats.
 ## Dynamic Extensions
 
 Extensions can also be distributed as separate crates compiled into dynamic
-libraries.  When the `SiddhiManager` loads a library via `set_extension` it will
+libraries.  When the `EventFluxManager` loads a library via `set_extension` it will
 try to invoke a set of registration callbacks if they are exported:
 
 ```text
@@ -68,20 +68,20 @@ register_source_mappers
 register_sink_mappers
 ```
 
-Each callback should have the type `unsafe extern "C" fn(&SiddhiManager)` and
+Each callback should have the type `unsafe extern "C" fn(&EventFluxManager)` and
 can register any number of factories.  Only the callbacks required by your
 extension need to be implemented.  A minimal crate might look like:
 
 ```rust
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
 
 #[no_mangle]
-pub extern "C" fn register_functions(manager: &SiddhiManager) {
+pub extern "C" fn register_functions(manager: &EventFluxManager) {
     manager.add_scalar_function_factory("myFn".to_string(), Box::new(MyFn));
 }
 
 #[no_mangle]
-pub extern "C" fn register_windows(manager: &SiddhiManager) {
+pub extern "C" fn register_windows(manager: &EventFluxManager) {
     manager.add_window_factory("myWindow".to_string(), Box::new(MyWindowFactory));
 }
 ```

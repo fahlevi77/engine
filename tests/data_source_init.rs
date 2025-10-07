@@ -1,6 +1,6 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::persistence::data_source::{DataSource, DataSourceConfig};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -24,7 +24,7 @@ impl DataSource for MockDataSource {
     }
     fn init(
         &mut self,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
         _id: &str,
         cfg: DataSourceConfig,
     ) -> Result<(), String> {
@@ -46,7 +46,7 @@ impl DataSource for MockDataSource {
 
 #[test]
 fn test_add_data_source_uses_config() {
-    let ctx = Arc::new(SiddhiContext::new());
+    let ctx = Arc::new(EventFluxContext::new());
     let mut props = HashMap::new();
     props.insert("url".to_string(), "mem".to_string());
     ctx.set_data_source_config(

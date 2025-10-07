@@ -1,10 +1,10 @@
-// Corresponds to io.siddhi.query.api.expression.condition.IsNull
+// Corresponds to io.eventflux.query.api.expression.condition.IsNull
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct IsNull {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // IsNull specific fields
     pub expression: Option<Box<Expression>>,
@@ -19,7 +19,7 @@ impl IsNull {
     // Constructor for `isNull(Expression expression)`
     pub fn new_with_expression(expression: Expression) -> Self {
         IsNull {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             expression: Some(Box::new(expression)),
             stream_id: None,
             stream_index: None,
@@ -36,7 +36,7 @@ impl IsNull {
         is_fault_stream: bool,
     ) -> Self {
         IsNull {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             expression: None,
             stream_id: Some(stream_id),
             stream_index,

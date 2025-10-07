@@ -1,8 +1,8 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
 use std::thread;
 use std::time::Duration;
 
@@ -19,9 +19,10 @@ async fn partition_async_ordered() {
         define stream In (v int, p string);\n\
         define stream Out (v int, p string);\n\
         from In select v, p insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let runner = AppRunner::new_with_manager(manager, app, "Out").await;
-    for i in 0..10 { // Reduced to 10 for simpler test
+    for i in 0..10 {
+        // Reduced to 10 for simpler test
         let p = if i % 2 == 0 { "a" } else { "b" };
         runner.send(
             "In",

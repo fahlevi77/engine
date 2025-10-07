@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.definition.TableDefinition
+// Corresponds to io.eventflux.query.api.definition.TableDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
 use crate::query_api::definition::attribute::{Attribute, Type as AttributeType}; // Assuming Annotation is defined
@@ -26,10 +26,18 @@ impl TableDefinition {
     // Builder-style methods, specific to TableDefinition
     pub fn attribute(mut self, attribute_name: String, attribute_type: AttributeType) -> Self {
         // Check for duplicate attribute names and warn
-        if self.abstract_definition.attribute_list.iter().any(|attr| attr.get_name() == &attribute_name) {
-            eprintln!("Warning: Duplicate attribute '{}' in table definition", attribute_name);
+        if self
+            .abstract_definition
+            .attribute_list
+            .iter()
+            .any(|attr| attr.get_name() == &attribute_name)
+        {
+            eprintln!(
+                "Warning: Duplicate attribute '{}' in table definition",
+                attribute_name
+            );
         }
-        
+
         self.abstract_definition
             .attribute_list
             .push(Attribute::new(attribute_name, attribute_type));
@@ -42,7 +50,7 @@ impl TableDefinition {
     }
 }
 
-// Provide access to AbstractDefinition fields and SiddhiElement fields
+// Provide access to AbstractDefinition fields and EventFluxElement fields
 impl AsRef<AbstractDefinition> for TableDefinition {
     fn as_ref(&self) -> &AbstractDefinition {
         &self.abstract_definition
@@ -55,16 +63,16 @@ impl AsMut<AbstractDefinition> for TableDefinition {
     }
 }
 
-// Through AbstractDefinition, can access SiddhiElement
-use crate::query_api::siddhi_element::SiddhiElement;
-impl AsRef<SiddhiElement> for TableDefinition {
-    fn as_ref(&self) -> &SiddhiElement {
+// Through AbstractDefinition, can access EventFluxElement
+use crate::query_api::eventflux_element::EventFluxElement;
+impl AsRef<EventFluxElement> for TableDefinition {
+    fn as_ref(&self) -> &EventFluxElement {
         self.abstract_definition.as_ref()
     }
 }
 
-impl AsMut<SiddhiElement> for TableDefinition {
-    fn as_mut(&mut self) -> &mut SiddhiElement {
+impl AsMut<EventFluxElement> for TableDefinition {
+    fn as_mut(&mut self) -> &mut EventFluxElement {
         self.abstract_definition.as_mut()
     }
 }

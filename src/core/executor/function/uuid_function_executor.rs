@@ -1,11 +1,11 @@
-// siddhi_rust/src/core/executor/function/uuid_function_executor.rs
-// Corresponds to io.siddhi.core.executor.function.UUIDFunctionExecutor
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/uuid_function_executor.rs
+// Corresponds to io.eventflux.core.executor.function.UUIDFunctionExecutor
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use crate::query_api::definition::attribute::Type as ApiAttributeType; // Import Type enum
-use std::sync::Arc; // For SiddhiAppContext in clone_executor
+use std::sync::Arc; // For EventFluxAppContext in clone_executor
 use uuid::Uuid; // Requires `uuid` crate with "v4" feature // For clone_executor
 
 // Java UUIDFunctionExecutor extends FunctionExecutor but is stateless and takes no arguments.
@@ -35,7 +35,7 @@ impl ExpressionExecutor for UuidFunctionExecutor {
 
     fn clone_executor(
         &self,
-        _siddhi_app_context: &Arc<SiddhiAppContext>,
+        _eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }

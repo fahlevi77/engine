@@ -1,10 +1,10 @@
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::PersistenceStore;
-use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::input::table_input_handler::TableInputHandler;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_app_runtime::EventFluxAppRuntime;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::persistence::PersistenceStore;
+use eventflux_rust::core::stream::input::table_input_handler::TableInputHandler;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -23,16 +23,16 @@ impl StreamCallback for CollectCallback {
 
 #[derive(Debug)]
 pub struct AppRunner {
-    runtime: Arc<SiddhiAppRuntime>,
+    runtime: Arc<EventFluxAppRuntime>,
     pub collected: Arc<Mutex<Vec<Vec<AttributeValue>>>>,
-    _manager: SiddhiManager,
+    _manager: EventFluxManager,
 }
 
 impl AppRunner {
     pub async fn new(app_string: &str, out_stream: &str) -> Self {
-        let manager = SiddhiManager::new();
+        let manager = EventFluxManager::new();
         let runtime = manager
-            .create_siddhi_app_runtime_from_string(app_string)
+            .create_eventflux_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -53,12 +53,12 @@ impl AppRunner {
     }
 
     pub async fn new_from_api(
-        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
+        app: eventflux_rust::query_api::eventflux_app::EventFluxApp,
         out_stream: &str,
     ) -> Self {
-        let manager = SiddhiManager::new();
+        let manager = EventFluxManager::new();
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_eventflux_app_runtime_from_api(Arc::new(app), None)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -79,14 +79,14 @@ impl AppRunner {
     }
 
     pub async fn new_from_api_with_store(
-        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
+        app: eventflux_rust::query_api::eventflux_app::EventFluxApp,
         out_stream: &str,
         store: Arc<dyn PersistenceStore>,
     ) -> Self {
-        let manager = SiddhiManager::new();
+        let manager = EventFluxManager::new();
         manager.set_persistence_store(store);
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_eventflux_app_runtime_from_api(Arc::new(app), None)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -107,12 +107,12 @@ impl AppRunner {
     }
 
     pub async fn new_from_api_with_manager(
-        manager: SiddhiManager,
-        app: siddhi_rust::query_api::siddhi_app::SiddhiApp,
+        manager: EventFluxManager,
+        app: eventflux_rust::query_api::eventflux_app::EventFluxApp,
         out_stream: &str,
     ) -> Self {
         let runtime = manager
-            .create_siddhi_app_runtime_from_api(Arc::new(app), None)
+            .create_eventflux_app_runtime_from_api(Arc::new(app), None)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -132,9 +132,13 @@ impl AppRunner {
         }
     }
 
-    pub async fn new_with_manager(manager: SiddhiManager, app_string: &str, out_stream: &str) -> Self {
+    pub async fn new_with_manager(
+        manager: EventFluxManager,
+        app_string: &str,
+        out_stream: &str,
+    ) -> Self {
         let runtime = manager
-            .create_siddhi_app_runtime_from_string(app_string)
+            .create_eventflux_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -159,10 +163,10 @@ impl AppRunner {
         out_stream: &str,
         store: Arc<dyn PersistenceStore>,
     ) -> Self {
-        let manager = SiddhiManager::new();
+        let manager = EventFluxManager::new();
         manager.set_persistence_store(store);
         let runtime = manager
-            .create_siddhi_app_runtime_from_string(app_string)
+            .create_eventflux_app_runtime_from_string(app_string)
             .await
             .expect("runtime");
         let collected = Arc::new(Mutex::new(Vec::new()));
@@ -238,7 +242,7 @@ impl AppRunner {
         self.runtime.restore(snap).expect("restore")
     }
 
-    pub fn runtime(&self) -> Arc<SiddhiAppRuntime> {
+    pub fn runtime(&self) -> Arc<EventFluxAppRuntime> {
         Arc::clone(&self.runtime)
     }
 
@@ -251,8 +255,8 @@ impl AppRunner {
     pub fn get_aggregation_data(
         &self,
         agg_id: &str,
-        within: Option<siddhi_rust::query_api::aggregation::Within>,
-        per: Option<siddhi_rust::query_api::aggregation::time_period::Duration>,
+        within: Option<eventflux_rust::query_api::aggregation::Within>,
+        per: Option<eventflux_rust::query_api::aggregation::time_period::Duration>,
     ) -> Vec<Vec<AttributeValue>> {
         self.runtime.query_aggregation(agg_id, within, per)
     }

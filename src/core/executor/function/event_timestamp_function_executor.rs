@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -30,7 +30,7 @@ impl ExpressionExecutor for EventTimestampFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(EventTimestampFunctionExecutor {
             event_executor: self.event_executor.as_ref().map(|e| e.clone_executor(ctx)),
         })

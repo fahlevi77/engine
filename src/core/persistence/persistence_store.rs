@@ -3,18 +3,18 @@ use std::sync::Mutex;
 
 /// Trait for simple persistence stores that save full snapshots.
 pub trait PersistenceStore: Send + Sync {
-    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]);
-    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>>;
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String>;
-    fn clear_all_revisions(&self, siddhi_app_id: &str);
+    fn save(&self, eventflux_app_id: &str, revision: &str, snapshot: &[u8]);
+    fn load(&self, eventflux_app_id: &str, revision: &str) -> Option<Vec<u8>>;
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String>;
+    fn clear_all_revisions(&self, eventflux_app_id: &str);
 }
 
 /// Trait for incremental persistence stores.
 pub trait IncrementalPersistenceStore: Send + Sync {
     fn save(&self, revision: &str, snapshot: &[u8]);
     fn load(&self, revision: &str) -> Option<Vec<u8>>;
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String>;
-    fn clear_all_revisions(&self, siddhi_app_id: &str);
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String>;
+    fn clear_all_revisions(&self, eventflux_app_id: &str);
 }
 
 /// Very small in-memory implementation useful for tests.
@@ -31,41 +31,41 @@ impl InMemoryPersistenceStore {
 }
 
 impl PersistenceStore for InMemoryPersistenceStore {
-    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
+    fn save(&self, eventflux_app_id: &str, revision: &str, snapshot: &[u8]) {
         let mut m = self.inner.lock().unwrap();
-        let entry = m.entry(siddhi_app_id.to_string()).or_default();
+        let entry = m.entry(eventflux_app_id.to_string()).or_default();
         entry.insert(revision.to_string(), snapshot.to_vec());
         self.last_revision
             .lock()
             .unwrap()
-            .insert(siddhi_app_id.to_string(), revision.to_string());
+            .insert(eventflux_app_id.to_string(), revision.to_string());
     }
 
-    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
+    fn load(&self, eventflux_app_id: &str, revision: &str) -> Option<Vec<u8>> {
         self.inner
             .lock()
             .unwrap()
-            .get(siddhi_app_id)
+            .get(eventflux_app_id)
             .and_then(|m| m.get(revision).cloned())
     }
 
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String> {
         self.last_revision
             .lock()
             .unwrap()
-            .get(siddhi_app_id)
+            .get(eventflux_app_id)
             .cloned()
     }
 
-    fn clear_all_revisions(&self, siddhi_app_id: &str) {
-        self.inner.lock().unwrap().remove(siddhi_app_id);
-        self.last_revision.lock().unwrap().remove(siddhi_app_id);
+    fn clear_all_revisions(&self, eventflux_app_id: &str) {
+        self.inner.lock().unwrap().remove(eventflux_app_id);
+        self.last_revision.lock().unwrap().remove(eventflux_app_id);
     }
 }
 
 impl IncrementalPersistenceStore for InMemoryPersistenceStore {
     fn save(&self, revision: &str, snapshot: &[u8]) {
-        // For tests we treat incremental same as full with siddhi_app_id="default"
+        // For tests we treat incremental same as full with eventflux_app_id="default"
         <Self as PersistenceStore>::save(self, "default", revision, snapshot);
     }
 
@@ -73,12 +73,12 @@ impl IncrementalPersistenceStore for InMemoryPersistenceStore {
         <Self as PersistenceStore>::load(self, "default", revision)
     }
 
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
-        PersistenceStore::get_last_revision(self, siddhi_app_id)
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String> {
+        PersistenceStore::get_last_revision(self, eventflux_app_id)
     }
 
-    fn clear_all_revisions(&self, siddhi_app_id: &str) {
-        PersistenceStore::clear_all_revisions(self, siddhi_app_id)
+    fn clear_all_revisions(&self, eventflux_app_id: &str) {
+        PersistenceStore::clear_all_revisions(self, eventflux_app_id)
     }
 }
 
@@ -107,19 +107,19 @@ impl FilePersistenceStore {
 }
 
 impl PersistenceStore for FilePersistenceStore {
-    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
-        let dir = self.base.join(siddhi_app_id);
+    fn save(&self, eventflux_app_id: &str, revision: &str, snapshot: &[u8]) {
+        let dir = self.base.join(eventflux_app_id);
         if let Err(e) = fs::create_dir_all(&dir) {
             eprintln!("FilePersistenceStore: cannot create dir: {e}");
             return;
         }
-        let path = self.file_path(siddhi_app_id, revision);
+        let path = self.file_path(eventflux_app_id, revision);
         match fs::write(&path, snapshot) {
             Ok(_) => {
                 self.last_revision
                     .lock()
                     .unwrap()
-                    .insert(siddhi_app_id.to_string(), revision.to_string());
+                    .insert(eventflux_app_id.to_string(), revision.to_string());
             }
             Err(e) => {
                 eprintln!("FilePersistenceStore: write failed: {e}");
@@ -127,23 +127,23 @@ impl PersistenceStore for FilePersistenceStore {
         }
     }
 
-    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
-        let path = self.file_path(siddhi_app_id, revision);
+    fn load(&self, eventflux_app_id: &str, revision: &str) -> Option<Vec<u8>> {
+        let path = self.file_path(eventflux_app_id, revision);
         fs::read(path).ok()
     }
 
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String> {
         self.last_revision
             .lock()
             .unwrap()
-            .get(siddhi_app_id)
+            .get(eventflux_app_id)
             .cloned()
     }
 
-    fn clear_all_revisions(&self, siddhi_app_id: &str) {
-        let dir = self.base.join(siddhi_app_id);
+    fn clear_all_revisions(&self, eventflux_app_id: &str) {
+        let dir = self.base.join(eventflux_app_id);
         let _ = fs::remove_dir_all(&dir);
-        self.last_revision.lock().unwrap().remove(siddhi_app_id);
+        self.last_revision.lock().unwrap().remove(eventflux_app_id);
     }
 }
 
@@ -167,39 +167,42 @@ impl SqlitePersistenceStore {
 }
 
 impl PersistenceStore for SqlitePersistenceStore {
-    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
+    fn save(&self, eventflux_app_id: &str, revision: &str, snapshot: &[u8]) {
         let conn = self.conn.lock().unwrap();
         if let Err(e) = conn.execute(
             "INSERT OR REPLACE INTO snapshots(app, rev, data) VALUES (?1, ?2, ?3)",
-            params![siddhi_app_id, revision, snapshot],
+            params![eventflux_app_id, revision, snapshot],
         ) {
             eprintln!("SqlitePersistenceStore: write failed: {e}");
         }
     }
 
-    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
+    fn load(&self, eventflux_app_id: &str, revision: &str) -> Option<Vec<u8>> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
             "SELECT data FROM snapshots WHERE app=?1 AND rev=?2",
-            params![siddhi_app_id, revision],
+            params![eventflux_app_id, revision],
             |row| row.get(0),
         )
         .ok()
     }
 
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
             "SELECT rev FROM snapshots WHERE app=?1 ORDER BY rowid DESC LIMIT 1",
-            params![siddhi_app_id],
+            params![eventflux_app_id],
             |row| row.get(0),
         )
         .ok()
     }
 
-    fn clear_all_revisions(&self, siddhi_app_id: &str) {
+    fn clear_all_revisions(&self, eventflux_app_id: &str) {
         let conn = self.conn.lock().unwrap();
-        let _ = conn.execute("DELETE FROM snapshots WHERE app=?1", params![siddhi_app_id]);
+        let _ = conn.execute(
+            "DELETE FROM snapshots WHERE app=?1",
+            params![eventflux_app_id],
+        );
     }
 }
 
@@ -215,13 +218,13 @@ impl RedisPersistenceStore {
         let backend = crate::core::distributed::RedisBackend::new();
         Self::new_with_backend(backend)
     }
-    
+
     /// Create a new Redis persistence store with custom Redis configuration
     pub fn new_with_config(config: crate::core::distributed::RedisConfig) -> Result<Self, String> {
         let backend = crate::core::distributed::RedisBackend::with_config(config);
         Self::new_with_backend(backend)
     }
-    
+
     fn new_with_backend(backend: crate::core::distributed::RedisBackend) -> Result<Self, String> {
         // Check if we're in an async runtime context
         let runtime = if tokio::runtime::Handle::try_current().is_ok() {
@@ -229,12 +232,11 @@ impl RedisPersistenceStore {
             None
         } else {
             // Create a dedicated runtime for Redis operations
-            Some(Arc::new(
-                tokio::runtime::Runtime::new()
-                    .map_err(|e| format!("Failed to create async runtime: {}", e))?
-            ))
+            Some(Arc::new(tokio::runtime::Runtime::new().map_err(|e| {
+                format!("Failed to create async runtime: {}", e)
+            })?))
         };
-        
+
         // Initialize the backend - handle runtime context properly
         if runtime.is_some() {
             // Use the dedicated runtime (we'll initialize later)
@@ -242,37 +244,37 @@ impl RedisPersistenceStore {
             // Skip initialization in async context - let it be lazy initialized
             // This avoids the "runtime within runtime" issue for tests
         }
-        
+
         Ok(Self {
             backend: Arc::new(tokio::sync::Mutex::new(backend)),
             runtime,
         })
     }
-    
+
     /// Get the revision key for Redis
-    fn revision_key(siddhi_app_id: &str, revision: &str) -> String {
-        format!("siddhi:app:{}:revision:{}", siddhi_app_id, revision)
+    fn revision_key(eventflux_app_id: &str, revision: &str) -> String {
+        format!("eventflux:app:{}:revision:{}", eventflux_app_id, revision)
     }
-    
+
     /// Get the last revision key for Redis  
-    fn last_revision_key(siddhi_app_id: &str) -> String {
-        format!("siddhi:app:{}:last_revision", siddhi_app_id)
+    fn last_revision_key(eventflux_app_id: &str) -> String {
+        format!("eventflux:app:{}:last_revision", eventflux_app_id)
     }
 }
 
 impl PersistenceStore for RedisPersistenceStore {
-    fn save(&self, siddhi_app_id: &str, revision: &str, snapshot: &[u8]) {
+    fn save(&self, eventflux_app_id: &str, revision: &str, snapshot: &[u8]) {
         let backend = Arc::clone(&self.backend);
-        let revision_key = Self::revision_key(siddhi_app_id, revision);
-        let last_rev_key = Self::last_revision_key(siddhi_app_id);
+        let revision_key = Self::revision_key(eventflux_app_id, revision);
+        let last_rev_key = Self::last_revision_key(eventflux_app_id);
         let snapshot = snapshot.to_vec();
         let revision = revision.to_string();
-        
+
         if let Some(ref runtime) = self.runtime {
             // Use dedicated runtime
             runtime.block_on(async move {
                 let mut backend = backend.lock().await;
-                
+
                 // Try to store the snapshot, initialize if needed
                 if let Err(_) = backend.set(&revision_key, snapshot.clone()).await {
                     // Initialize and retry
@@ -285,7 +287,7 @@ impl PersistenceStore for RedisPersistenceStore {
                         return;
                     }
                 }
-                
+
                 // Update last revision pointer
                 if let Err(e) = backend.set(&last_rev_key, revision.into_bytes()).await {
                     eprintln!("Failed to update last revision in Redis: {}", e);
@@ -297,7 +299,7 @@ impl PersistenceStore for RedisPersistenceStore {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
                     let mut backend = backend.lock().await;
-                    
+
                     // Try to store the snapshot, initialize if needed
                     if let Err(_) = backend.set(&revision_key, snapshot.clone()).await {
                         // Initialize and retry
@@ -310,7 +312,7 @@ impl PersistenceStore for RedisPersistenceStore {
                             return;
                         }
                     }
-                    
+
                     // Update last revision pointer
                     if let Err(e) = backend.set(&last_rev_key, revision.into_bytes()).await {
                         eprintln!("Failed to update last revision in Redis: {}", e);
@@ -320,16 +322,16 @@ impl PersistenceStore for RedisPersistenceStore {
             let _ = handle.join();
         }
     }
-    
-    fn load(&self, siddhi_app_id: &str, revision: &str) -> Option<Vec<u8>> {
+
+    fn load(&self, eventflux_app_id: &str, revision: &str) -> Option<Vec<u8>> {
         let backend = Arc::clone(&self.backend);
-        let revision_key = Self::revision_key(siddhi_app_id, revision);
-        
+        let revision_key = Self::revision_key(eventflux_app_id, revision);
+
         if let Some(ref runtime) = self.runtime {
             // Use dedicated runtime
             runtime.block_on(async move {
                 let mut backend = backend.lock().await;
-                
+
                 // Try to get data, initialize if needed
                 match backend.get(&revision_key).await {
                     Ok(data) => data,
@@ -355,7 +357,7 @@ impl PersistenceStore for RedisPersistenceStore {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
                     let mut backend = backend.lock().await;
-                    
+
                     // Try to get data, initialize if needed
                     match backend.get(&revision_key).await {
                         Ok(data) => data,
@@ -379,16 +381,16 @@ impl PersistenceStore for RedisPersistenceStore {
             handle.join().unwrap_or(None)
         }
     }
-    
-    fn get_last_revision(&self, siddhi_app_id: &str) -> Option<String> {
+
+    fn get_last_revision(&self, eventflux_app_id: &str) -> Option<String> {
         let backend = Arc::clone(&self.backend);
-        let last_rev_key = Self::last_revision_key(siddhi_app_id);
-        
+        let last_rev_key = Self::last_revision_key(eventflux_app_id);
+
         if let Some(ref runtime) = self.runtime {
             // Use dedicated runtime
             runtime.block_on(async move {
                 let mut backend = backend.lock().await;
-                
+
                 // Try to get data, initialize if needed
                 match backend.get(&last_rev_key).await {
                     Ok(Some(data)) => String::from_utf8(data).ok(),
@@ -416,7 +418,7 @@ impl PersistenceStore for RedisPersistenceStore {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
                     let mut backend = backend.lock().await;
-                    
+
                     // Try to get data, initialize if needed
                     match backend.get(&last_rev_key).await {
                         Ok(Some(data)) => String::from_utf8(data).ok(),
@@ -442,18 +444,18 @@ impl PersistenceStore for RedisPersistenceStore {
             handle.join().unwrap_or(None)
         }
     }
-    
-    fn clear_all_revisions(&self, siddhi_app_id: &str) {
+
+    fn clear_all_revisions(&self, eventflux_app_id: &str) {
         let backend = Arc::clone(&self.backend);
-        let _app_pattern = format!("siddhi:app:{}:*", siddhi_app_id);
-        
+        let _app_pattern = format!("eventflux:app:{}:*", eventflux_app_id);
+
         if let Some(ref runtime) = self.runtime {
             // Use dedicated runtime
             runtime.block_on(async move {
                 let mut backend = backend.lock().await;
-                
+
                 // Try to delete, initialize if needed
-                let last_rev_key = Self::last_revision_key(siddhi_app_id);
+                let last_rev_key = Self::last_revision_key(eventflux_app_id);
                 if let Err(_) = backend.delete(&last_rev_key).await {
                     // Initialize and retry
                     if let Err(e) = backend.initialize().await {
@@ -464,20 +466,20 @@ impl PersistenceStore for RedisPersistenceStore {
                         eprintln!("Failed to delete last revision from Redis: {}", e);
                     }
                 }
-                
+
                 // TODO: Implement pattern-based deletion for all revisions
                 // This would require iterating through keys matching the pattern
             });
         } else {
             // We're in an async context, use spawn_blocking
-            let siddhi_app_id = siddhi_app_id.to_string(); // Convert to owned string
+            let eventflux_app_id = eventflux_app_id.to_string(); // Convert to owned string
             let handle = std::thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
                     let mut backend = backend.lock().await;
-                    
+
                     // Try to delete, initialize if needed
-                    let last_rev_key = Self::last_revision_key(&siddhi_app_id);
+                    let last_rev_key = Self::last_revision_key(&eventflux_app_id);
                     if let Err(_) = backend.delete(&last_rev_key).await {
                         // Initialize and retry
                         if let Err(e) = backend.initialize().await {
@@ -488,7 +490,7 @@ impl PersistenceStore for RedisPersistenceStore {
                             eprintln!("Failed to delete last revision from Redis: {}", e);
                         }
                     }
-                    
+
                     // TODO: Implement pattern-based deletion for all revisions
                     // This would require iterating through keys matching the pattern
                 })
@@ -498,5 +500,5 @@ impl PersistenceStore for RedisPersistenceStore {
     }
 }
 
-use std::sync::Arc;
 use crate::core::distributed::StateBackend;
+use std::sync::Arc;

@@ -1,21 +1,21 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::query::output::callback_processor::CallbackProcessor;
-use siddhi_rust::core::stream::input::input_handler::InputHandler;
-use siddhi_rust::core::stream::output::{LogSink, Sink, StreamCallback};
-use siddhi_rust::core::stream::{Source, StreamJunction, TimerSource};
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::definition::stream_definition::StreamDefinition;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::query::output::callback_processor::CallbackProcessor;
+use eventflux_rust::core::stream::input::input_handler::InputHandler;
+use eventflux_rust::core::stream::output::{LogSink, Sink, StreamCallback};
+use eventflux_rust::core::stream::{Source, StreamJunction, TimerSource};
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::stream_definition::StreamDefinition;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[test]
 fn timer_source_to_log_sink() {
-    let ctx = Arc::new(SiddhiContext::new());
-    let app = Arc::new(SiddhiApp::new("TestApp".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
+    let ctx = Arc::new(EventFluxContext::new());
+    let app = Arc::new(EventFluxApp::new("TestApp".to_string()));
+    let app_ctx = Arc::new(EventFluxAppContext::new(
         Arc::clone(&ctx),
         "Test".to_string(),
         Arc::clone(&app),
@@ -49,7 +49,7 @@ fn timer_source_to_log_sink() {
     let cb_processor = Arc::new(Mutex::new(CallbackProcessor::new(
         callback,
         Arc::clone(&app_ctx),
-        Arc::new(SiddhiQueryContext::new(
+        Arc::new(EventFluxQueryContext::new(
             Arc::clone(&app_ctx),
             "cb".to_string(),
             None,

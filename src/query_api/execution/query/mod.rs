@@ -1,4 +1,4 @@
-// In siddhi_rust/src/query_api/execution/query/mod.rs
+// In eventflux_rust/src/query_api/execution/query/mod.rs
 
 // Existing modules
 pub mod input;

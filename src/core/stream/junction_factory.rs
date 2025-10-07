@@ -3,14 +3,13 @@
 //! Provides intelligent selection between original crossbeam_channel-based
 //! implementation and new high-performance crossbeam pipeline-based implementation.
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::stream::{OptimizedStreamJunction, StreamJunction};
 use crate::query_api::definition::StreamDefinition;
 use std::sync::{Arc, Mutex};
 
 /// Performance optimization levels for StreamJunction selection
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum PerformanceLevel {
     /// Use original crossbeam_channel implementation
     Standard,
@@ -20,7 +19,6 @@ pub enum PerformanceLevel {
     #[default]
     Auto,
 }
-
 
 /// Configuration for StreamJunction creation
 #[derive(Debug, Clone)]
@@ -83,7 +81,7 @@ impl JunctionConfig {
     ///
     /// # Example
     /// ```
-    /// use siddhi_rust::core::stream::JunctionConfig;
+    /// use eventflux_rust::core::stream::JunctionConfig;
     ///
     /// // Default: Synchronous processing (guaranteed ordering)
     /// let sync_config = JunctionConfig::new("stream".to_string());
@@ -164,23 +162,23 @@ impl StreamJunctionFactory {
     pub fn create(
         config: JunctionConfig,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>,
     ) -> Result<JunctionType, String> {
-        let should_optimize = Self::should_use_optimized_junction(&config, &siddhi_app_context);
+        let should_optimize = Self::should_use_optimized_junction(&config, &eventflux_app_context);
 
         if should_optimize {
             Self::create_optimized_junction(
                 config,
                 stream_definition,
-                siddhi_app_context,
+                eventflux_app_context,
                 fault_stream_junction,
             )
         } else {
             Self::create_standard_junction(
                 config,
                 stream_definition,
-                siddhi_app_context,
+                eventflux_app_context,
                 fault_stream_junction,
             )
         }
@@ -190,13 +188,13 @@ impl StreamJunctionFactory {
     pub fn create_standard_junction(
         config: JunctionConfig,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>,
     ) -> Result<JunctionType, String> {
         let junction = StreamJunction::new(
             config.stream_id,
             stream_definition,
-            siddhi_app_context,
+            eventflux_app_context,
             config.buffer_size,
             config.is_async,
             fault_stream_junction,
@@ -209,7 +207,7 @@ impl StreamJunctionFactory {
     pub fn create_optimized_junction(
         config: JunctionConfig,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         _fault_stream_junction: Option<Arc<Mutex<StreamJunction>>>,
     ) -> Result<JunctionType, String> {
         // For now, we'll keep fault junction as None for the optimized implementation
@@ -219,7 +217,7 @@ impl StreamJunctionFactory {
         let junction = OptimizedStreamJunction::new(
             config.stream_id,
             stream_definition,
-            siddhi_app_context,
+            eventflux_app_context,
             config.buffer_size,
             config.is_async,
             optimized_fault_junction,
@@ -231,19 +229,19 @@ impl StreamJunctionFactory {
     /// Determine if optimized junction should be used
     fn should_use_optimized_junction(
         config: &JunctionConfig,
-        siddhi_app_context: &SiddhiAppContext,
+        eventflux_app_context: &EventFluxAppContext,
     ) -> bool {
         match config.performance_level {
             PerformanceLevel::Standard => false,
             PerformanceLevel::HighPerformance => true,
-            PerformanceLevel::Auto => Self::auto_select_optimization(config, siddhi_app_context),
+            PerformanceLevel::Auto => Self::auto_select_optimization(config, eventflux_app_context),
         }
     }
 
     /// Automatic selection logic based on workload characteristics
     fn auto_select_optimization(
         config: &JunctionConfig,
-        _siddhi_app_context: &SiddhiAppContext,
+        _eventflux_app_context: &EventFluxAppContext,
     ) -> bool {
         let mut score = 0;
 
@@ -287,7 +285,7 @@ impl StreamJunctionFactory {
     pub fn create_with_hints(
         stream_id: String,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         expected_throughput: Option<u64>,
         subscriber_count: Option<usize>,
     ) -> Result<JunctionType, String> {
@@ -295,14 +293,14 @@ impl StreamJunctionFactory {
             .with_expected_throughput(expected_throughput.unwrap_or(0))
             .with_subscriber_count(subscriber_count.unwrap_or(1));
 
-        Self::create(config, stream_definition, siddhi_app_context, None)
+        Self::create(config, stream_definition, eventflux_app_context, None)
     }
 
     /// Create a high-performance junction for known high-throughput scenarios
     pub fn create_high_performance(
         stream_id: String,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         buffer_size: usize,
     ) -> Result<JunctionType, String> {
         let config = JunctionConfig::new(stream_id)
@@ -310,7 +308,7 @@ impl StreamJunctionFactory {
             .with_async(true)
             .with_performance_level(PerformanceLevel::HighPerformance);
 
-        Self::create(config, stream_definition, siddhi_app_context, None)
+        Self::create(config, stream_definition, eventflux_app_context, None)
     }
 }
 
@@ -406,16 +404,16 @@ impl BenchmarkResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::siddhi_context::SiddhiContext;
+    use crate::core::config::eventflux_context::EventFluxContext;
     use crate::query_api::definition::attribute::Type as AttrType;
 
-    fn create_test_context() -> Arc<SiddhiAppContext> {
-        let siddhi_context = Arc::new(SiddhiContext::new());
-        let app = Arc::new(crate::query_api::siddhi_app::SiddhiApp::new(
+    fn create_test_context() -> Arc<EventFluxAppContext> {
+        let eventflux_context = Arc::new(EventFluxContext::new());
+        let app = Arc::new(crate::query_api::eventflux_app::EventFluxApp::new(
             "TestApp".to_string(),
         ));
-        Arc::new(SiddhiAppContext::new(
-            siddhi_context,
+        Arc::new(EventFluxAppContext::new(
+            eventflux_context,
             "TestApp".to_string(),
             app,
             String::new(),

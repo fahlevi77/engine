@@ -1,10 +1,10 @@
 //! SQL to Query Converter
 //!
-//! Converts SQL statements to Siddhi query_api::Query structures.
+//! Converts SQL statements to EventFlux query_api::Query structures.
 
 use sqlparser::ast::{
-    Expr as SqlExpr, Select as SqlSelect, SetExpr, Statement, TableFactor,
-    BinaryOperator, UnaryOperator, OrderByExpr, JoinOperator, JoinConstraint,
+    BinaryOperator, Expr as SqlExpr, JoinConstraint, JoinOperator, OrderByExpr,
+    Select as SqlSelect, SetExpr, Statement, TableFactor, UnaryOperator,
 };
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
@@ -16,8 +16,8 @@ use crate::query_api::execution::query::output::output_stream::{
 };
 use crate::query_api::execution::query::selection::selector::Selector;
 use crate::query_api::execution::query::Query;
-use crate::query_api::expression::CompareOperator;
 use crate::query_api::expression::variable::Variable;
+use crate::query_api::expression::CompareOperator;
 use crate::query_api::expression::Expression;
 
 use super::catalog::SqlCatalog;
@@ -40,7 +40,9 @@ impl SqlConverter {
             .map_err(|e| ConverterError::ConversionFailed(format!("SQL parse error: {}", e)))?;
 
         if statements.is_empty() {
-            return Err(ConverterError::ConversionFailed("No SQL statements found".to_string()));
+            return Err(ConverterError::ConversionFailed(
+                "No SQL statements found".to_string(),
+            ));
         }
 
         // Step 3: Convert SELECT or INSERT INTO statement to Query
@@ -49,16 +51,25 @@ impl SqlConverter {
                 // Plain SELECT query - output to default "OutputStream"
                 Self::convert_query(query, catalog, preprocessed.window_clause.as_ref(), None)
             }
-            Statement::Insert { table_name, source, .. } => {
+            Statement::Insert {
+                table_name, source, ..
+            } => {
                 // INSERT INTO TargetStream SELECT ... - extract target stream name
                 let target_stream = table_name.to_string();
-                Self::convert_query(source, catalog, preprocessed.window_clause.as_ref(), Some(target_stream))
+                Self::convert_query(
+                    source,
+                    catalog,
+                    preprocessed.window_clause.as_ref(),
+                    Some(target_stream),
+                )
             }
-            _ => Err(ConverterError::UnsupportedFeature("Only SELECT and INSERT INTO queries supported in M1".to_string()))
+            _ => Err(ConverterError::UnsupportedFeature(
+                "Only SELECT and INSERT INTO queries supported in M1".to_string(),
+            )),
         }
     }
 
-    /// Convert sqlparser Query to Siddhi Query
+    /// Convert sqlparser Query to EventFlux Query
     fn convert_query(
         sql_query: &sqlparser::ast::Query,
         catalog: &SqlCatalog,
@@ -66,18 +77,18 @@ impl SqlConverter {
         output_stream_name: Option<String>,
     ) -> Result<Query, ConverterError> {
         match sql_query.body.as_ref() {
-            SetExpr::Select(select) => {
-                Self::convert_select(
-                    select,
-                    catalog,
-                    window_spec,
-                    &sql_query.order_by,
-                    sql_query.limit.as_ref(),
-                    sql_query.offset.as_ref(),
-                    output_stream_name,
-                )
-            }
-            _ => Err(ConverterError::UnsupportedFeature("Only simple SELECT supported in M1".to_string()))
+            SetExpr::Select(select) => Self::convert_select(
+                select,
+                catalog,
+                window_spec,
+                &sql_query.order_by,
+                sql_query.limit.as_ref(),
+                sql_query.offset.as_ref(),
+                output_stream_name,
+            ),
+            _ => Err(ConverterError::UnsupportedFeature(
+                "Only simple SELECT supported in M1".to_string(),
+            )),
         }
     }
 
@@ -102,16 +113,17 @@ impl SqlConverter {
             let stream_name = Self::extract_from_stream(&select.from)?;
 
             // Validate stream exists
-            catalog.get_stream(&stream_name)
+            catalog
+                .get_stream(&stream_name)
                 .map_err(|_| ConverterError::SchemaNotFound(stream_name.clone()))?;
 
             // Create InputStream
             let mut single_stream = SingleInputStream::new_basic(
                 stream_name.clone(),
-                false,  // is_inner_stream
-                false,  // is_fault_stream
-                None,   // stream_handler_id
-                Vec::new(),  // pre_window_handlers
+                false,      // is_inner_stream
+                false,      // is_fault_stream
+                None,       // stream_handler_id
+                Vec::new(), // pre_window_handlers
             );
 
             // Add WINDOW if present
@@ -140,7 +152,8 @@ impl SqlConverter {
             &select.projection,
             &stream_name_for_selector,
             catalog,
-        ).map_err(|e| ConverterError::ConversionFailed(e.to_string()))?;
+        )
+        .map_err(|e| ConverterError::ConversionFailed(e.to_string()))?;
 
         // Add GROUP BY if present
         if let sqlparser::ast::GroupByExpr::Expressions(group_exprs) = &select.group_by {
@@ -149,7 +162,7 @@ impl SqlConverter {
                     selector = selector.group_by(Variable::new(ident.value.clone()));
                 } else {
                     return Err(ConverterError::UnsupportedFeature(
-                        "Complex GROUP BY expressions not supported in M1".to_string()
+                        "Complex GROUP BY expressions not supported in M1".to_string(),
                     ));
                 }
             }
@@ -171,13 +184,15 @@ impl SqlConverter {
                         Variable::new(idents[0].value.clone())
                     } else {
                         return Err(ConverterError::UnsupportedFeature(
-                            "Qualified column names in ORDER BY not supported".to_string()
+                            "Qualified column names in ORDER BY not supported".to_string(),
                         ));
                     }
                 }
-                _ => return Err(ConverterError::UnsupportedFeature(
-                    "Complex expressions in ORDER BY not supported in M1".to_string()
-                ))
+                _ => {
+                    return Err(ConverterError::UnsupportedFeature(
+                        "Complex expressions in ORDER BY not supported in M1".to_string(),
+                    ))
+                }
             };
 
             // Determine order (ASC/DESC)
@@ -198,14 +213,16 @@ impl SqlConverter {
         // Add LIMIT
         if let Some(limit_expr) = limit {
             let limit_const = Self::convert_to_constant(limit_expr)?;
-            selector = selector.limit(limit_const)
+            selector = selector
+                .limit(limit_const)
                 .map_err(|e| ConverterError::ConversionFailed(format!("LIMIT error: {}", e)))?;
         }
 
         // Add OFFSET
         if let Some(offset_obj) = offset {
             let offset_const = Self::convert_to_constant(&offset_obj.value)?;
-            selector = selector.offset(offset_const)
+            selector = selector
+                .offset(offset_const)
                 .map_err(|e| ConverterError::ConversionFailed(format!("OFFSET error: {}", e)))?;
         }
 
@@ -216,10 +233,7 @@ impl SqlConverter {
             is_inner_stream: false,
             is_fault_stream: false,
         };
-        let output_stream = OutputStream::new(
-            OutputStreamAction::InsertInto(output_action),
-            None,
-        );
+        let output_stream = OutputStream::new(OutputStreamAction::InsertInto(output_action), None);
 
         // Build Query
         Ok(Query::query()
@@ -229,18 +243,26 @@ impl SqlConverter {
     }
 
     /// Extract stream name from FROM clause
-    fn extract_from_stream(from: &[sqlparser::ast::TableWithJoins]) -> Result<String, ConverterError> {
+    fn extract_from_stream(
+        from: &[sqlparser::ast::TableWithJoins],
+    ) -> Result<String, ConverterError> {
         if from.is_empty() {
-            return Err(ConverterError::ConversionFailed("No FROM clause found".to_string()));
+            return Err(ConverterError::ConversionFailed(
+                "No FROM clause found".to_string(),
+            ));
         }
 
         match &from[0].relation {
-            TableFactor::Table { name, .. } => {
-                name.0.last()
-                    .map(|ident| ident.value.clone())
-                    .ok_or_else(|| ConverterError::ConversionFailed("No table name in FROM".to_string()))
-            }
-            _ => Err(ConverterError::UnsupportedFeature("Complex FROM clauses not supported in M1".to_string()))
+            TableFactor::Table { name, .. } => name
+                .0
+                .last()
+                .map(|ident| ident.value.clone())
+                .ok_or_else(|| {
+                    ConverterError::ConversionFailed("No table name in FROM".to_string())
+                }),
+            _ => Err(ConverterError::UnsupportedFeature(
+                "Complex FROM clauses not supported in M1".to_string(),
+            )),
         }
     }
 
@@ -250,26 +272,38 @@ impl SqlConverter {
         where_clause: &Option<SqlExpr>,
         catalog: &SqlCatalog,
     ) -> Result<InputStream, ConverterError> {
-        use crate::query_api::execution::query::input::stream::join_input_stream::{JoinInputStream, Type as JoinType, EventTrigger};
+        use crate::query_api::execution::query::input::stream::join_input_stream::{
+            EventTrigger, JoinInputStream, Type as JoinType,
+        };
 
         if from.is_empty() || from[0].joins.is_empty() {
-            return Err(ConverterError::ConversionFailed("No JOIN found in FROM clause".to_string()));
+            return Err(ConverterError::ConversionFailed(
+                "No JOIN found in FROM clause".to_string(),
+            ));
         }
 
         // Extract left stream
         let left_stream_name = match &from[0].relation {
             TableFactor::Table { name, alias, .. } => {
-                let stream_name = name.0.last()
-                    .map(|ident| ident.value.clone())
-                    .ok_or_else(|| ConverterError::ConversionFailed("No left table name".to_string()))?;
+                let stream_name =
+                    name.0
+                        .last()
+                        .map(|ident| ident.value.clone())
+                        .ok_or_else(|| {
+                            ConverterError::ConversionFailed("No left table name".to_string())
+                        })?;
 
                 // Validate stream exists
-                catalog.get_stream(&stream_name)
+                catalog
+                    .get_stream(&stream_name)
                     .map_err(|_| ConverterError::SchemaNotFound(stream_name.clone()))?;
 
                 let mut left_stream = SingleInputStream::new_basic(
                     stream_name.clone(),
-                    false, false, None, Vec::new()
+                    false,
+                    false,
+                    None,
+                    Vec::new(),
                 );
 
                 // Add alias if present
@@ -279,7 +313,11 @@ impl SqlConverter {
 
                 left_stream
             }
-            _ => return Err(ConverterError::UnsupportedFeature("Complex left table in JOIN".to_string()))
+            _ => {
+                return Err(ConverterError::UnsupportedFeature(
+                    "Complex left table in JOIN".to_string(),
+                ))
+            }
         };
 
         // Get first JOIN (only support single JOIN for M1)
@@ -288,17 +326,25 @@ impl SqlConverter {
         // Extract right stream
         let right_stream_name = match &join.relation {
             TableFactor::Table { name, alias, .. } => {
-                let stream_name = name.0.last()
-                    .map(|ident| ident.value.clone())
-                    .ok_or_else(|| ConverterError::ConversionFailed("No right table name".to_string()))?;
+                let stream_name =
+                    name.0
+                        .last()
+                        .map(|ident| ident.value.clone())
+                        .ok_or_else(|| {
+                            ConverterError::ConversionFailed("No right table name".to_string())
+                        })?;
 
                 // Validate stream exists
-                catalog.get_stream(&stream_name)
+                catalog
+                    .get_stream(&stream_name)
                     .map_err(|_| ConverterError::SchemaNotFound(stream_name.clone()))?;
 
                 let mut right_stream = SingleInputStream::new_basic(
                     stream_name.clone(),
-                    false, false, None, Vec::new()
+                    false,
+                    false,
+                    None,
+                    Vec::new(),
                 );
 
                 // Add alias if present
@@ -308,7 +354,11 @@ impl SqlConverter {
 
                 right_stream
             }
-            _ => return Err(ConverterError::UnsupportedFeature("Complex right table in JOIN".to_string()))
+            _ => {
+                return Err(ConverterError::UnsupportedFeature(
+                    "Complex right table in JOIN".to_string(),
+                ))
+            }
         };
 
         // Extract join type
@@ -322,10 +372,10 @@ impl SqlConverter {
 
         // Extract ON condition
         let on_condition = match &join.join_operator {
-            JoinOperator::Inner(JoinConstraint::On(expr)) |
-            JoinOperator::LeftOuter(JoinConstraint::On(expr)) |
-            JoinOperator::RightOuter(JoinConstraint::On(expr)) |
-            JoinOperator::FullOuter(JoinConstraint::On(expr)) => {
+            JoinOperator::Inner(JoinConstraint::On(expr))
+            | JoinOperator::LeftOuter(JoinConstraint::On(expr))
+            | JoinOperator::RightOuter(JoinConstraint::On(expr))
+            | JoinOperator::FullOuter(JoinConstraint::On(expr)) => {
                 Some(Self::convert_expression(expr, catalog)?)
             }
             _ => None,
@@ -337,9 +387,9 @@ impl SqlConverter {
             join_type,
             right_stream_name,
             on_condition,
-            EventTrigger::All,  // Default trigger
-            None,  // No WITHIN clause for M1
-            None,  // No PER clause for M1
+            EventTrigger::All, // Default trigger
+            None,              // No WITHIN clause for M1
+            None,              // No PER clause for M1
         );
 
         Ok(InputStream::Join(Box::new(join_stream)))
@@ -355,40 +405,34 @@ impl SqlConverter {
         match &window.spec {
             WindowSpec::Tumbling { value, unit } => {
                 let time_expr = Self::create_time_expression(*value, unit)?;
-                Ok(stream.window(
-                    None,
-                    "timeBatch".to_string(),
-                    vec![time_expr],
-                ))
+                Ok(stream.window(None, "timeBatch".to_string(), vec![time_expr]))
             }
-            WindowSpec::Sliding { window_value, window_unit, slide_value: _, slide_unit: _ } => {
+            WindowSpec::Sliding {
+                window_value,
+                window_unit,
+                slide_value: _,
+                slide_unit: _,
+            } => {
                 let time_expr = Self::create_time_expression(*window_value, window_unit)?;
-                Ok(stream.window(
-                    None,
-                    "time".to_string(),
-                    vec![time_expr],
-                ))
+                Ok(stream.window(None, "time".to_string(), vec![time_expr]))
             }
-            WindowSpec::Length { size } => {
-                Ok(stream.window(
-                    None,
-                    "length".to_string(),
-                    vec![Expression::value_int(*size as i32)],
-                ))
-            }
+            WindowSpec::Length { size } => Ok(stream.window(
+                None,
+                "length".to_string(),
+                vec![Expression::value_int(*size as i32)],
+            )),
             WindowSpec::Session { value, unit } => {
                 let time_expr = Self::create_time_expression(*value, unit)?;
-                Ok(stream.window(
-                    None,
-                    "session".to_string(),
-                    vec![time_expr],
-                ))
+                Ok(stream.window(None, "session".to_string(), vec![time_expr]))
             }
         }
     }
 
     /// Create time expression from value and unit
-    fn create_time_expression(value: i64, unit: &super::preprocessor::TimeUnit) -> Result<Expression, ConverterError> {
+    fn create_time_expression(
+        value: i64,
+        unit: &super::preprocessor::TimeUnit,
+    ) -> Result<Expression, ConverterError> {
         use super::preprocessor::TimeUnit;
 
         let expr = match unit {
@@ -401,15 +445,13 @@ impl SqlConverter {
         Ok(expr)
     }
 
-    /// Convert SQL expression to Siddhi Expression
+    /// Convert SQL expression to EventFlux Expression
     pub fn convert_expression(
         expr: &SqlExpr,
         catalog: &SqlCatalog,
     ) -> Result<Expression, ConverterError> {
         match expr {
-            SqlExpr::Identifier(ident) => {
-                Ok(Expression::variable(ident.value.clone()))
-            }
+            SqlExpr::Identifier(ident) => Ok(Expression::variable(ident.value.clone())),
 
             SqlExpr::CompoundIdentifier(parts) => {
                 // Handle qualified identifiers like stream.column or alias.column
@@ -421,35 +463,37 @@ impl SqlConverter {
                     let var_with_stream = Variable::new(column_name).of_stream(stream_ref);
                     Ok(Expression::Variable(var_with_stream))
                 } else {
-                    Err(ConverterError::UnsupportedFeature("Multi-part identifiers not supported".to_string()))
+                    Err(ConverterError::UnsupportedFeature(
+                        "Multi-part identifiers not supported".to_string(),
+                    ))
                 }
             }
 
-            SqlExpr::Value(value) => {
-                match value {
-                    sqlparser::ast::Value::Number(n, _) => {
-                        if n.contains('.') {
-                            Ok(Expression::value_double(
-                                n.parse().map_err(|_| ConverterError::InvalidExpression(n.clone()))?
-                            ))
-                        } else {
-                            Ok(Expression::value_long(
-                                n.parse().map_err(|_| ConverterError::InvalidExpression(n.clone()))?
-                            ))
-                        }
+            SqlExpr::Value(value) => match value {
+                sqlparser::ast::Value::Number(n, _) => {
+                    if n.contains('.') {
+                        Ok(Expression::value_double(n.parse().map_err(|_| {
+                            ConverterError::InvalidExpression(n.clone())
+                        })?))
+                    } else {
+                        Ok(Expression::value_long(n.parse().map_err(|_| {
+                            ConverterError::InvalidExpression(n.clone())
+                        })?))
                     }
-                    sqlparser::ast::Value::SingleQuotedString(s) | sqlparser::ast::Value::DoubleQuotedString(s) => {
-                        Ok(Expression::value_string(s.clone()))
-                    }
-                    sqlparser::ast::Value::Boolean(b) => {
-                        Ok(Expression::value_bool(*b))
-                    }
-                    _ => Err(ConverterError::UnsupportedFeature(format!("Value type {:?}", value)))
                 }
-            }
+                sqlparser::ast::Value::SingleQuotedString(s)
+                | sqlparser::ast::Value::DoubleQuotedString(s) => {
+                    Ok(Expression::value_string(s.clone()))
+                }
+                sqlparser::ast::Value::Boolean(b) => Ok(Expression::value_bool(*b)),
+                _ => Err(ConverterError::UnsupportedFeature(format!(
+                    "Value type {:?}",
+                    value
+                ))),
+            },
 
             SqlExpr::Function(func) => {
-                // Convert SQL function calls to Siddhi function calls
+                // Convert SQL function calls to EventFlux function calls
                 Self::convert_function(func, catalog)
             }
 
@@ -459,12 +503,36 @@ impl SqlConverter {
 
                 match op {
                     // Comparison operators
-                    BinaryOperator::Gt => Ok(Expression::compare(left_expr, CompareOperator::GreaterThan, right_expr)),
-                    BinaryOperator::GtEq => Ok(Expression::compare(left_expr, CompareOperator::GreaterThanEqual, right_expr)),
-                    BinaryOperator::Lt => Ok(Expression::compare(left_expr, CompareOperator::LessThan, right_expr)),
-                    BinaryOperator::LtEq => Ok(Expression::compare(left_expr, CompareOperator::LessThanEqual, right_expr)),
-                    BinaryOperator::Eq => Ok(Expression::compare(left_expr, CompareOperator::Equal, right_expr)),
-                    BinaryOperator::NotEq => Ok(Expression::compare(left_expr, CompareOperator::NotEqual, right_expr)),
+                    BinaryOperator::Gt => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::GreaterThan,
+                        right_expr,
+                    )),
+                    BinaryOperator::GtEq => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::GreaterThanEqual,
+                        right_expr,
+                    )),
+                    BinaryOperator::Lt => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::LessThan,
+                        right_expr,
+                    )),
+                    BinaryOperator::LtEq => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::LessThanEqual,
+                        right_expr,
+                    )),
+                    BinaryOperator::Eq => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::Equal,
+                        right_expr,
+                    )),
+                    BinaryOperator::NotEq => Ok(Expression::compare(
+                        left_expr,
+                        CompareOperator::NotEqual,
+                        right_expr,
+                    )),
 
                     // Logical operators
                     BinaryOperator::And => Ok(Expression::and(left_expr, right_expr)),
@@ -475,9 +543,14 @@ impl SqlConverter {
                     BinaryOperator::Minus => Ok(Expression::subtract(left_expr, right_expr)),
                     BinaryOperator::Multiply => Ok(Expression::multiply(left_expr, right_expr)),
                     BinaryOperator::Divide => Ok(Expression::divide(left_expr, right_expr)),
-                    BinaryOperator::Modulo => Err(ConverterError::UnsupportedFeature("Modulo operator not yet supported".to_string())),
+                    BinaryOperator::Modulo => Err(ConverterError::UnsupportedFeature(
+                        "Modulo operator not yet supported".to_string(),
+                    )),
 
-                    _ => Err(ConverterError::UnsupportedFeature(format!("Binary operator {:?}", op)))
+                    _ => Err(ConverterError::UnsupportedFeature(format!(
+                        "Binary operator {:?}",
+                        op
+                    ))),
                 }
             }
 
@@ -486,15 +559,21 @@ impl SqlConverter {
 
                 match op {
                     UnaryOperator::Not => Ok(Expression::not(inner_expr)),
-                    _ => Err(ConverterError::UnsupportedFeature(format!("Unary operator {:?}", op)))
+                    _ => Err(ConverterError::UnsupportedFeature(format!(
+                        "Unary operator {:?}",
+                        op
+                    ))),
                 }
             }
 
-            _ => Err(ConverterError::UnsupportedFeature(format!("Expression type {:?}", expr)))
+            _ => Err(ConverterError::UnsupportedFeature(format!(
+                "Expression type {:?}",
+                expr
+            ))),
         }
     }
 
-    /// Convert SQL function to Siddhi function call
+    /// Convert SQL function to EventFlux function call
     fn convert_function(
         func: &sqlparser::ast::Function,
         catalog: &SqlCatalog,
@@ -505,23 +584,25 @@ impl SqlConverter {
         let mut args = Vec::new();
         for arg in &func.args {
             match arg {
-                sqlparser::ast::FunctionArg::Unnamed(sqlparser::ast::FunctionArgExpr::Expr(expr)) => {
+                sqlparser::ast::FunctionArg::Unnamed(sqlparser::ast::FunctionArgExpr::Expr(
+                    expr,
+                )) => {
                     args.push(Self::convert_expression(expr, catalog)?);
                 }
                 sqlparser::ast::FunctionArg::Unnamed(sqlparser::ast::FunctionArgExpr::Wildcard) => {
                     // Handle COUNT(*) - no arguments needed
-                    // Siddhi count() takes no arguments
+                    // EventFlux count() takes no arguments
                 }
                 _ => {
-                    return Err(ConverterError::UnsupportedFeature(
-                        format!("Function argument type not supported")
-                    ));
+                    return Err(ConverterError::UnsupportedFeature(format!(
+                        "Function argument type not supported"
+                    )));
                 }
             }
         }
 
-        // Map SQL function names to Siddhi function names
-        let siddhi_func_name = match func_name.as_str() {
+        // Map SQL function names to EventFlux function names
+        let eventflux_func_name = match func_name.as_str() {
             "count" => "count",
             "sum" => "sum",
             "avg" => "avg",
@@ -536,28 +617,38 @@ impl SqlConverter {
             "lower" => "lower",
             "length" => "length",
             "concat" => "concat",
-            _ => return Err(ConverterError::UnsupportedFeature(
-                format!("Function '{}' not supported in M1", func_name)
-            ))
+            _ => {
+                return Err(ConverterError::UnsupportedFeature(format!(
+                    "Function '{}' not supported in M1",
+                    func_name
+                )))
+            }
         };
 
-        Ok(Expression::function_no_ns(siddhi_func_name.to_string(), args))
+        Ok(Expression::function_no_ns(
+            eventflux_func_name.to_string(),
+            args,
+        ))
     }
 
     /// Convert SQL expression to Constant (for LIMIT/OFFSET)
-    fn convert_to_constant(expr: &SqlExpr) -> Result<crate::query_api::expression::constant::Constant, ConverterError> {
+    fn convert_to_constant(
+        expr: &SqlExpr,
+    ) -> Result<crate::query_api::expression::constant::Constant, ConverterError> {
         match expr {
             SqlExpr::Value(sqlparser::ast::Value::Number(n, _)) => {
                 // Try to parse as i64 for LIMIT/OFFSET
-                let num = n.parse::<i64>()
-                    .map_err(|_| ConverterError::ConversionFailed(
-                        format!("Invalid number for LIMIT/OFFSET: {}", n)
-                    ))?;
+                let num = n.parse::<i64>().map_err(|_| {
+                    ConverterError::ConversionFailed(format!(
+                        "Invalid number for LIMIT/OFFSET: {}",
+                        n
+                    ))
+                })?;
                 Ok(crate::query_api::expression::constant::Constant::long(num))
             }
             _ => Err(ConverterError::UnsupportedFeature(
-                "LIMIT/OFFSET must be numeric constants".to_string()
-            ))
+                "LIMIT/OFFSET must be numeric constants".to_string(),
+            )),
         }
     }
 }
@@ -575,7 +666,9 @@ mod tests {
             .attribute("price".to_string(), AttributeType::DOUBLE)
             .attribute("volume".to_string(), AttributeType::INT);
 
-        catalog.register_stream("StockStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("StockStream".to_string(), stream)
+            .unwrap();
         catalog
     }
 

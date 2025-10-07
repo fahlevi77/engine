@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -51,7 +51,7 @@ impl ExpressionExecutor for BuiltinScalarFunction {
             .unwrap_or(ApiAttributeType::OBJECT)
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         let mut cloned = Self::new(self.name, self.builder);
         if let Some(exec) = &self.executor {
             cloned.executor = Some(exec.clone_executor(ctx));
@@ -64,7 +64,7 @@ impl ScalarFunctionExecutor for BuiltinScalarFunction {
     fn init(
         &mut self,
         args: &Vec<Box<dyn ExpressionExecutor>>,
-        ctx: &Arc<SiddhiAppContext>,
+        ctx: &Arc<EventFluxAppContext>,
     ) -> Result<(), String> {
         let cloned: Vec<Box<dyn ExpressionExecutor>> =
             args.iter().map(|e| e.clone_executor(ctx)).collect();
@@ -311,8 +311,10 @@ fn build_event_timestamp(
     }
 }
 
-/// Register default builtin scalar functions into the provided SiddhiContext.
-pub fn register_builtin_scalar_functions(ctx: &crate::core::config::siddhi_context::SiddhiContext) {
+/// Register default builtin scalar functions into the provided EventFluxContext.
+pub fn register_builtin_scalar_functions(
+    ctx: &crate::core::config::eventflux_context::EventFluxContext,
+) {
     ctx.add_scalar_function_factory(
         "cast".to_string(),
         Box::new(BuiltinScalarFunction::new("cast", build_cast)),
