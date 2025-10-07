@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod abstract_definition;
 pub mod aggregation_definition;
 pub mod attribute;

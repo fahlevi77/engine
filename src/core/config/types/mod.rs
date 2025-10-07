@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Configuration Type Definitions
 //!
 //! This module defines all configuration structures for EventFlux Rust,

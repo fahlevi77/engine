@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod aggregation_input_processor;
 pub mod aggregation_runtime;
 pub mod base_incremental_value_store;

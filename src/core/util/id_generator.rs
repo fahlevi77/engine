@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/util/id_generator.rs
 // Lightweight equivalent of io.eventflux.core.util.IdGenerator.
 use std::sync::atomic::{AtomicU64, Ordering};

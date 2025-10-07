@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod order_by_attribute;
 pub mod output_attribute;
 pub mod selector;

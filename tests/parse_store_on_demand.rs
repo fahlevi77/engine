@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::query_api::execution::query::input::store::InputStore;
 use eventflux_rust::query_api::execution::query::output::stream::UpdateSet;
 use eventflux_rust::query_api::execution::query::selection::Selector;

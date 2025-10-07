@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::partition_type::PartitionType;
 use crate::query_api::annotation::Annotation; // Using actual Annotation
 use crate::query_api::execution::query::Query; // Actual Query

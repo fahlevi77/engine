@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.core.EventFluxAppRuntime (interface)
 // and io.eventflux.core.EventFluxAppRuntimeImpl (implementation)
 

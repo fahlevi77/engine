@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! SQL Catalog - Schema Management System
 //!
 //! Provides schema management for SQL queries, tracking stream and table definitions.

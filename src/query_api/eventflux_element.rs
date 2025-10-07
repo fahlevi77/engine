@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.EventFluxElement
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Default)] // Added Eq, Hash, Default

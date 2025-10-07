@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/state/meta_state_event.rs
 // Corresponds to io.eventflux.core.event.state.MetaStateEvent
 use crate::core::event::stream::MetaStreamEvent; // Uses MetaStreamEvent

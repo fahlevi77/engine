@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use serde::{de::DeserializeOwned, Serialize};
 
 /// Serialize any serde serializable object to bytes using bincode.

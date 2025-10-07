@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use eventflux_rust::core::config::eventflux_context::EventFluxContext;
 use eventflux_rust::core::event::event::Event as CoreEvent;
 use eventflux_rust::core::event::value::AttributeValue as CoreAttributeValue;

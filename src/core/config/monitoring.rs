@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Configuration Monitoring & Health Checks
 //!
 //! Provides comprehensive monitoring configuration for EventFlux applications,

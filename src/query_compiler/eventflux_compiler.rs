@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Note: query_api types are used for return types.
 // Ensure these paths are correct based on query_api module structure and re-exports.
 use crate::query_api::{

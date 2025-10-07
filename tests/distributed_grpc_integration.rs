@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Integration test for gRPC transport in distributed mode
 
 use eventflux_rust::core::distributed::grpc::simple_transport::{

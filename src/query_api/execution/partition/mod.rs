@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod partition;
 pub mod partition_type;
 pub mod range_partition_type;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Verification test to check if automatic sink initialization is working
 
 #[path = "common/mod.rs"]

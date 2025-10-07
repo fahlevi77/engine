@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.definition.WindowDefinition
 use crate::query_api::definition::stream_definition::StreamDefinition;
 use crate::query_api::execution::query::input::handler::WindowHandler; // Use the re-exported WindowHandler

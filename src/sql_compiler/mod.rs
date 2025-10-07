@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! SQL Compiler Module
 //!
 //! This module provides SQL parsing and compilation capabilities for EventFlux Rust.

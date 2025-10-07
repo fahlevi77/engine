@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/mod.rs
 
 // Top-level files from Java io.eventflux.core

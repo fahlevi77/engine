@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/stream/stream_event_factory.rs
 // Corresponds to io.eventflux.core.event.stream.StreamEventFactory
 use super::meta_stream_event::MetaStreamEvent;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.execution.query.input.state.State (factory class)
 use super::absent_stream_state_element::AbsentStreamStateElement;
 use super::count_state_element::{CountStateElement, ANY_COUNT};

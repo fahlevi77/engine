@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::input_handler::InputProcessor;
 use crate::core::event::event::Event;
 use std::sync::{Arc, Mutex};

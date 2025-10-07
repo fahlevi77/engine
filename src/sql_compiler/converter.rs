@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! SQL to Query Converter
 //!
 //! Converts SQL statements to EventFlux query_api::Query structures.

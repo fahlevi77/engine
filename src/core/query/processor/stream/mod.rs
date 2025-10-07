@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/query/processor/stream/mod.rs
 pub mod filter;
 pub mod join;

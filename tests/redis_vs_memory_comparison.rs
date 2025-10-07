@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // tests/redis_vs_memory_comparison.rs
 
 //! Direct comparison test between InMemory and Redis persistence stores

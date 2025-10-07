@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/stream/populater/complex_event_populater.rs
 use crate::core::event::{complex_event::ComplexEvent, value::AttributeValue};
 

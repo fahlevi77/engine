@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/executor/condition/is_null_expression_executor.rs
 // Corresponds to io.eventflux.core.executor.condition.IsNullConditionExpressionExecutor
 use crate::core::config::eventflux_app_context::EventFluxAppContext;

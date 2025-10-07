@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod events_output_rate;
 pub mod output_rate;
 pub mod snapshot_output_rate;

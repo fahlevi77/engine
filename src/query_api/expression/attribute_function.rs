@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.expression.AttributeFunction
 // This also implements Extension in Java, which means it has namespace and name.
 use super::Expression;

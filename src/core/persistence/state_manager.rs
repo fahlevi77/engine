@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/persistence/state_manager.rs
 
 //! Unified State Manager - Central coordinator for state management operations

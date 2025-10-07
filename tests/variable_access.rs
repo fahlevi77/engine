@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: NOT PART OF M1 - All variable access tests use old EventFluxQL syntax
 // Tests use "define stream", "define table", "define aggregation" which are not supported by SQL parser.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.

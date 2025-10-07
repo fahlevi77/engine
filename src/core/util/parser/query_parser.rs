@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/util/parser/query_parser.rs
 use super::expression_parser::{parse_expression, ExpressionParserContext};
 use crate::core::config::eventflux_app_context::EventFluxAppContext;

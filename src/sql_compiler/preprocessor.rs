@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! SQL Preprocessor - Extract Streaming Extensions
 //!
 //! Preprocesses SQL to extract streaming-specific clauses (like WINDOW)

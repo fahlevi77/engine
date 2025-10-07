@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // tests/redis_eventflux_persistence.rs
 
 //! Integration tests for Redis-backed EventFlux application state persistence

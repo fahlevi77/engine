@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Crossbeam-based High-Performance Event Pipeline
 //!
 //! This provides a lock-free, high-throughput event processing pipeline using

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Pipeline Performance Metrics
 //!
 //! Comprehensive metrics collection for monitoring pipeline performance,

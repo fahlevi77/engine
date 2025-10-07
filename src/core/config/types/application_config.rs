@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Application Configuration Types
 //!
 //! Defines per-application configuration structures with definition-level granularity.

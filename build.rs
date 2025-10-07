@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 fn main() {
     // Generate LALRPOP parser
     match lalrpop::process_root() {

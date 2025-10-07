@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! # Configuration Management
 //!
 //! This module provides comprehensive configuration management for EventFlux applications.

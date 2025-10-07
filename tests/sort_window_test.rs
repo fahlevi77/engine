@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: Sort window tests converted to SQL syntax
 // Sort window is implemented, ready for testing with SQL syntax
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.

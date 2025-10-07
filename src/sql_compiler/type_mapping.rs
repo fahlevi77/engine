@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Type Mapping - SQL Types to AttributeType Conversion
 //!
 //! Maps SQL data types to EventFlux's AttributeType system.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Optimized StreamJunction with Crossbeam-Based High-Performance Pipeline
 //!
 //! This implementation replaces the original crossbeam_channel-based StreamJunction

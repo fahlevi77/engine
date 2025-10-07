@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Integration tests for Kubernetes configuration management
 //!
 //! These tests demonstrate how the configuration system works with Kubernetes

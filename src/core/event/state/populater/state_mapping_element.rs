@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/event/state/populater/state_mapping_element.rs
 #[derive(Debug, Clone)]
 pub struct StateMappingElement {

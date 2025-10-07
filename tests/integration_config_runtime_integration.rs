@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! End-to-End Configuration Integration Tests
 //!
 //! Tests the complete flow from YAML configuration loading to runtime component behavior

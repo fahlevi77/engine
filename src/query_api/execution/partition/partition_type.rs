@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::range_partition_type::RangePartitionType;
 use super::value_partition_type::ValuePartitionType;
 

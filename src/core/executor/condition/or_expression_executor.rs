@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/executor/condition/or_expression_executor.rs
 // Corresponds to io.eventflux.core.executor.condition.OrConditionExpressionExecutor
 use crate::core::config::eventflux_app_context::EventFluxAppContext;

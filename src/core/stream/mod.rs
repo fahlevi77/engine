@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod input;
 pub mod junction_factory;
 pub mod optimized_stream_junction;

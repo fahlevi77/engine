@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 pub mod logical_processor;
 pub mod sequence_processor;
 

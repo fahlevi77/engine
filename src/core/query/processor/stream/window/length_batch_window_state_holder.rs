@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // eventflux_rust/src/core/query/processor/stream/window/length_batch_window_state_holder.rs
 
 //! Enhanced StateHolder implementation for LengthBatchWindowProcessor

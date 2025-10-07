@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // NOTE: Some tests at the end of this file use old EventFluxQL syntax and are disabled for M1.
 // Tests using programmatic API (not parser) remain enabled and passing.
 

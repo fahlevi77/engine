@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Backpressure Management for Event Pipeline
 //!
 //! Provides sophisticated backpressure handling strategies to maintain

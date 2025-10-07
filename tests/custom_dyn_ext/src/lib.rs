@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use std::sync::{Arc, Mutex};
 use eventflux_rust::core::config::{eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext};
 use eventflux_rust::core::event::complex_event::ComplexEvent;

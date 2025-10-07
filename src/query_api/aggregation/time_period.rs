@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use crate::query_api::eventflux_element::EventFluxElement;
 // Expression is not directly part of TimePeriod fields, but Duration might be associated with values if not just enum.
 // However, Java's TimePeriod.Duration is just an enum.

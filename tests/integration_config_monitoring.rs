@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Integration tests for monitoring and health check configuration
 //!
 //! These tests demonstrate how the monitoring configuration system works with

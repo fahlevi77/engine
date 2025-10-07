@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! SELECT Expansion - Expand SELECT * using Schema
 //!
 //! Expands wildcard SELECT items using schema information from the catalog.

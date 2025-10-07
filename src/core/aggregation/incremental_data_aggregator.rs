@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use super::aggregation_runtime::AggregationRuntime;
 use crate::core::event::value::AttributeValue;
 use crate::query_api::aggregation::time_period::Duration as TimeDuration;

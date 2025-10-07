@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // TODO: NOT PART OF M1 - All table tests disabled for M1
 // Table support (DEFINE TABLE, @store annotations, cache/JDBC tables, stream-table joins)
 // is not part of the M1 milestone. M1 focuses on:

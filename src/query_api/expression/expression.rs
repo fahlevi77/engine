@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // Corresponds to io.eventflux.query.api.expression.Expression (the abstract class)
 // In Rust, this is represented as an enum.
 

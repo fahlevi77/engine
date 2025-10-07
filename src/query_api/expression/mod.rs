@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 // This is the main mod.rs for the expression module (eventflux_rust/src/query_api/expression/mod.rs)
 
 // Declare sub-modules for different expression categories
