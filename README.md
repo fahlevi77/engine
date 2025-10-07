@@ -622,8 +622,10 @@ The Redis backend integrates seamlessly with:
 
 #### Testing
 
+Redis tests automatically skip if Redis is not available, making the test suite work in any environment:
+
 ```bash
-# Run Redis persistence tests (requires Redis running)
+# Run Redis persistence tests (gracefully skips if Redis not running)
 cargo test redis_persistence
 
 # Run all Redis backend tests
@@ -631,6 +633,22 @@ cargo test redis_backend
 
 # Integration tests
 cargo test test_redis_eventflux_persistence
+
+# Skip all ignored tests (most Redis tests use old EventFluxQL syntax)
+cargo test
+```
+
+**GitHub Actions**: The CI workflow includes a Redis service container, so all Redis tests run automatically in CI without manual setup.
+
+**Local Development**: If Redis is not installed locally, tests will print "Redis not available, skipping test" and pass. To run Redis tests locally:
+
+```bash
+# Quick start with Docker
+docker-compose up -d
+cargo test redis
+
+# Or install Redis natively
+brew install redis && brew services start redis  # macOS
 ```
 
 #### Status and Limitations
@@ -841,20 +859,20 @@ cargo test distributed_redis_state
 
 #### Manual Testing
 
-If you have Redis installed locally:
+Tests gracefully skip if Redis is not available:
 
 ```bash
-# Ensure Redis is running locally
-redis-cli ping
-
-# Run Redis-specific tests
+# Run Redis-specific tests (skips if Redis not running)
 cargo test distributed_redis_state
 
 # All distributed state tests
 cargo test distributed.*state
+
+# Verify Redis is available (optional)
+redis-cli ping
 ```
 
-**Note**: Tests automatically skip if Redis is not available, making the test suite resilient to different development environments.
+**Note**: Tests automatically skip if Redis is not available, making the test suite resilient to different development environments. GitHub Actions runs these tests with a Redis service container.
 
 📖 **For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
 
