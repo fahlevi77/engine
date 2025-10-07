@@ -1,6 +1,6 @@
 # Stream Module
 
-This module contains the Rust translations of Siddhi's core stream package.
+This module contains the Rust translations of EventFlux's core stream package.
 The focus is on providing a minimal, but faithful, port of the Java
 implementation.  Many advanced features such as metrics, error stores and
 thread barriers are represented by placeholders.
@@ -15,7 +15,7 @@ thread barriers are represented by placeholders.
 * `Publisher` – equivalent to the Java inner class. Implements the
   `InputProcessor` trait so it can be used by the input subsystem.
 * `InputHandler`, `InputManager`, `InputDistributor` and `InputEntryValve` –
-  provide the event injection path into Siddhi.  They mirror the original Java
+  provide the event injection path into EventFlux.  They mirror the original Java
   classes in structure, though many behaviours are simplified.
 * `ServiceDeploymentInfo` – basic representation of service deployment metadata.
 

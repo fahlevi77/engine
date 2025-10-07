@@ -1,39 +1,39 @@
-//! Global Siddhi Configuration Types
-//! 
-//! Defines global runtime configuration for Siddhi applications.
+//! Global EventFlux Configuration Types
+//!
+//! Defines global runtime configuration for EventFlux applications.
 
+use super::duration_serde;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use super::duration_serde;
 
-/// Global Siddhi runtime configuration
+/// Global EventFlux runtime configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SiddhiGlobalConfig {
+pub struct EventFluxGlobalConfig {
     /// Runtime configuration
     pub runtime: RuntimeConfig,
-    
+
     /// Distributed processing configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distributed: Option<DistributedConfig>,
-    
+
     /// Security configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security: Option<SecurityConfig>,
-    
+
     /// Observability configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub observability: Option<ObservabilityConfig>,
-    
+
     /// Monitoring configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monitoring: Option<crate::core::config::monitoring::MonitoringConfig>,
-    
+
     /// Extensions configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extensions: Option<ExtensionsConfig>,
 }
 
-impl Default for SiddhiGlobalConfig {
+impl Default for EventFluxGlobalConfig {
     fn default() -> Self {
         Self {
             runtime: RuntimeConfig::default(),
@@ -46,14 +46,14 @@ impl Default for SiddhiGlobalConfig {
     }
 }
 
-impl SiddhiGlobalConfig {
+impl EventFluxGlobalConfig {
     /// Merge another global configuration into this one
-    /// 
+    ///
     /// The other configuration takes precedence for conflicting values.
-    pub fn merge(&mut self, other: SiddhiGlobalConfig) {
+    pub fn merge(&mut self, other: EventFluxGlobalConfig) {
         // Deep merge runtime configuration
         self.runtime.merge(other.runtime);
-        
+
         // For optional configurations, other takes precedence if present
         if other.distributed.is_some() {
             match (&mut self.distributed, other.distributed) {
@@ -66,7 +66,7 @@ impl SiddhiGlobalConfig {
                 _ => {}
             }
         }
-        
+
         if other.security.is_some() {
             match (&mut self.security, other.security) {
                 (Some(ref mut self_sec), Some(other_sec)) => {
@@ -78,7 +78,7 @@ impl SiddhiGlobalConfig {
                 _ => {}
             }
         }
-        
+
         if other.observability.is_some() {
             match (&mut self.observability, other.observability) {
                 (Some(ref mut self_obs), Some(other_obs)) => {
@@ -90,7 +90,7 @@ impl SiddhiGlobalConfig {
                 _ => {}
             }
         }
-        
+
         if other.monitoring.is_some() {
             match (&mut self.monitoring, other.monitoring) {
                 (Some(ref mut self_mon), Some(other_mon)) => {
@@ -102,7 +102,7 @@ impl SiddhiGlobalConfig {
                 _ => {}
             }
         }
-        
+
         if other.extensions.is_some() {
             match (&mut self.extensions, other.extensions) {
                 (Some(ref mut self_ext), Some(other_ext)) => {
@@ -123,10 +123,10 @@ impl SiddhiGlobalConfig {
 pub enum RuntimeMode {
     /// Single-node mode (default, zero overhead)
     SingleNode,
-    
+
     /// Distributed mode with cluster coordination
     Distributed,
-    
+
     /// Hybrid mode (local processing with distributed state)
     Hybrid,
 }
@@ -142,10 +142,10 @@ impl Default for RuntimeMode {
 pub struct RuntimeConfig {
     /// Runtime mode selection
     pub mode: RuntimeMode,
-    
+
     /// Performance configuration
     pub performance: PerformanceConfig,
-    
+
     /// Resource limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resources: Option<ResourceConfig>,
@@ -166,10 +166,10 @@ impl RuntimeConfig {
     pub fn merge(&mut self, other: RuntimeConfig) {
         // Other's mode takes precedence
         self.mode = other.mode;
-        
+
         // Deep merge performance configuration
         self.performance.merge(other.performance);
-        
+
         // Other's resources take precedence if present
         if other.resources.is_some() {
             match (&mut self.resources, other.resources) {
@@ -190,22 +190,22 @@ impl RuntimeConfig {
 pub struct PerformanceConfig {
     /// Number of threads in the thread pool
     pub thread_pool_size: usize,
-    
+
     /// Size of event buffer for each stream
     pub event_buffer_size: usize,
-    
+
     /// Enable batch processing for improved throughput
     #[serde(default = "default_true")]
     pub batch_processing: bool,
-    
+
     /// Batch size for batch processing
     #[serde(skip_serializing_if = "Option::is_none")]
     pub batch_size: Option<usize>,
-    
+
     /// Enable async processing mode
     #[serde(default)]
     pub async_processing: bool,
-    
+
     /// Backpressure strategy
     #[serde(default)]
     pub backpressure_strategy: BackpressureStrategy,
@@ -233,7 +233,7 @@ impl PerformanceConfig {
         self.batch_processing = other.batch_processing;
         self.async_processing = other.async_processing;
         self.backpressure_strategy = other.backpressure_strategy;
-        
+
         // Other's batch size takes precedence if present
         if other.batch_size.is_some() {
             self.batch_size = other.batch_size;
@@ -247,10 +247,10 @@ impl PerformanceConfig {
 pub enum BackpressureStrategy {
     /// Drop new events when buffer is full
     Drop,
-    
+
     /// Block producers when buffer is full
     Block,
-    
+
     /// Use exponential backoff
     ExponentialBackoff,
 }
@@ -267,15 +267,15 @@ pub struct ResourceConfig {
     /// Memory limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory: Option<MemoryConfig>,
-    
+
     /// CPU limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu: Option<CpuConfig>,
-    
+
     /// Network limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network: Option<NetworkConfig>,
-    
+
     /// Storage limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<StorageConfig>,
@@ -296,7 +296,7 @@ impl ResourceConfig {
                 _ => {}
             }
         }
-        
+
         // Merge CPU configuration
         if other.cpu.is_some() {
             match (&mut self.cpu, other.cpu) {
@@ -309,7 +309,7 @@ impl ResourceConfig {
                 _ => {}
             }
         }
-        
+
         // Merge network configuration
         if other.network.is_some() {
             match (&mut self.network, other.network) {
@@ -322,7 +322,7 @@ impl ResourceConfig {
                 _ => {}
             }
         }
-        
+
         // Merge storage configuration
         if other.storage.is_some() {
             match (&mut self.storage, other.storage) {
@@ -343,11 +343,11 @@ impl ResourceConfig {
 pub struct MemoryConfig {
     /// Maximum heap size (e.g., "2Gi", "512Mi")
     pub max_heap: String,
-    
+
     /// Initial heap size (e.g., "1Gi", "256Mi")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_heap: Option<String>,
-    
+
     /// Memory management strategy
     #[serde(default)]
     pub gc_strategy: GcStrategy,
@@ -359,7 +359,7 @@ impl MemoryConfig {
         // Other values take precedence
         self.max_heap = other.max_heap;
         self.gc_strategy = other.gc_strategy;
-        
+
         // Other's initial heap takes precedence if present
         if other.initial_heap.is_some() {
             self.initial_heap = other.initial_heap;
@@ -373,10 +373,10 @@ impl MemoryConfig {
 pub enum GcStrategy {
     /// Adaptive memory management
     Adaptive,
-    
+
     /// Conservative memory management
     Conservative,
-    
+
     /// Aggressive memory cleanup
     Aggressive,
 }
@@ -392,7 +392,7 @@ impl Default for GcStrategy {
 pub struct CpuConfig {
     /// Maximum CPU cores (e.g., "2", "500m")
     pub max_cpu: String,
-    
+
     /// CPU requests (e.g., "1", "100m")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requests: Option<String>,
@@ -403,7 +403,7 @@ impl CpuConfig {
     pub fn merge(&mut self, other: CpuConfig) {
         // Other values take precedence
         self.max_cpu = other.max_cpu;
-        
+
         // Other's requests take precedence if present
         if other.requests.is_some() {
             self.requests = other.requests;
@@ -416,7 +416,7 @@ impl CpuConfig {
 pub struct NetworkConfig {
     /// Maximum network bandwidth (bytes/sec)
     pub max_bandwidth: u64,
-    
+
     /// Connection limits
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_connections: Option<usize>,
@@ -427,7 +427,7 @@ impl NetworkConfig {
     pub fn merge(&mut self, other: NetworkConfig) {
         // Other values take precedence
         self.max_bandwidth = other.max_bandwidth;
-        
+
         // Other's max connections take precedence if present
         if other.max_connections.is_some() {
             self.max_connections = other.max_connections;
@@ -440,7 +440,7 @@ impl NetworkConfig {
 pub struct StorageConfig {
     /// Maximum storage capacity
     pub max_capacity: String,
-    
+
     /// Storage class
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_class: Option<String>,
@@ -451,7 +451,7 @@ impl StorageConfig {
     pub fn merge(&mut self, other: StorageConfig) {
         // Other values take precedence
         self.max_capacity = other.max_capacity;
-        
+
         // Other's storage class takes precedence if present
         if other.storage_class.is_some() {
             self.storage_class = other.storage_class;
@@ -465,15 +465,15 @@ pub struct SecurityConfig {
     /// Authentication configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<AuthenticationConfig>,
-    
+
     /// Authorization configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authorization: Option<AuthorizationConfig>,
-    
+
     /// TLS configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tls: Option<TlsConfig>,
-    
+
     /// Audit configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audit: Option<AuditConfig>,
@@ -486,15 +486,15 @@ impl SecurityConfig {
         if other.authentication.is_some() {
             self.authentication = other.authentication;
         }
-        
+
         if other.authorization.is_some() {
             self.authorization = other.authorization;
         }
-        
+
         if other.tls.is_some() {
             self.tls = other.tls;
         }
-        
+
         if other.audit.is_some() {
             self.audit = other.audit;
         }
@@ -506,7 +506,7 @@ impl SecurityConfig {
 pub struct AuthenticationConfig {
     /// Authentication method
     pub method: AuthenticationMethod,
-    
+
     /// Provider-specific configuration
     #[serde(flatten)]
     pub provider_config: serde_yaml::Value,
@@ -518,16 +518,16 @@ pub struct AuthenticationConfig {
 pub enum AuthenticationMethod {
     /// Mutual TLS authentication
     MutualTls,
-    
+
     /// OAuth2/OIDC
     OAuth2,
-    
+
     /// JWT tokens
     Jwt,
-    
+
     /// API keys
     ApiKey,
-    
+
     /// Basic authentication
     Basic,
 }
@@ -538,10 +538,10 @@ pub struct AuthorizationConfig {
     /// Enable authorization
     #[serde(default)]
     pub enabled: bool,
-    
+
     /// Authorization provider
     pub provider: AuthorizationProvider,
-    
+
     /// Default policy
     #[serde(default)]
     pub default_policy: AuthorizationPolicy,
@@ -553,10 +553,10 @@ pub struct AuthorizationConfig {
 pub enum AuthorizationProvider {
     /// Role-based access control
     Rbac,
-    
+
     /// Attribute-based access control
     Abac,
-    
+
     /// Open Policy Agent
     Opa,
 }
@@ -581,21 +581,21 @@ pub struct TlsConfig {
     /// Enable TLS
     #[serde(default)]
     pub enabled: bool,
-    
+
     /// Certificate file path
     pub cert_file: String,
-    
+
     /// Private key file path
     pub key_file: String,
-    
+
     /// CA certificate file path
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ca_file: Option<String>,
-    
+
     /// Verify peer certificates
     #[serde(default = "default_true")]
     pub verify_peer: bool,
-    
+
     /// Minimum TLS version
     #[serde(default)]
     pub min_version: TlsVersion,
@@ -623,11 +623,11 @@ pub struct AuditConfig {
     /// Enable audit logging
     #[serde(default)]
     pub enabled: bool,
-    
+
     /// Audit log level
     #[serde(default)]
     pub level: AuditLevel,
-    
+
     /// Audit log destination
     pub destination: AuditDestination,
 }
@@ -662,11 +662,11 @@ pub struct ObservabilityConfig {
     /// Metrics configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metrics: Option<MetricsConfig>,
-    
+
     /// Tracing configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tracing: Option<TracingConfig>,
-    
+
     /// Logging configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logging: Option<LoggingConfig>,
@@ -679,11 +679,11 @@ impl ObservabilityConfig {
         if other.metrics.is_some() {
             self.metrics = other.metrics;
         }
-        
+
         if other.tracing.is_some() {
             self.tracing = other.tracing;
         }
-        
+
         if other.logging.is_some() {
             self.logging = other.logging;
         }
@@ -696,23 +696,23 @@ pub struct MetricsConfig {
     /// Enable metrics collection
     #[serde(default = "default_true")]
     pub enabled: bool,
-    
+
     /// Metrics provider
     #[serde(default)]
     pub provider: MetricsProvider,
-    
+
     /// Metrics server port
     #[serde(default = "default_metrics_port")]
     pub port: u16,
-    
+
     /// Metrics endpoint path
     #[serde(default = "default_metrics_path")]
     pub path: String,
-    
+
     /// Collection interval
     #[serde(with = "duration_serde", default = "default_metrics_interval")]
     pub interval: Duration,
-    
+
     /// Custom labels for all metrics
     #[serde(default)]
     pub labels: std::collections::HashMap<String, String>,
@@ -752,13 +752,13 @@ pub struct TracingConfig {
     /// Enable distributed tracing
     #[serde(default)]
     pub enabled: bool,
-    
+
     /// Tracing provider
     pub provider: TracingProvider,
-    
+
     /// Tracing endpoint
     pub endpoint: String,
-    
+
     /// Sample rate (0.0 to 1.0)
     #[serde(default = "default_sample_rate")]
     pub sample_rate: f64,
@@ -779,19 +779,19 @@ pub struct LoggingConfig {
     /// Log level
     #[serde(default)]
     pub level: LogLevel,
-    
+
     /// Log format
     #[serde(default)]
     pub format: LogFormat,
-    
+
     /// Log output destination
     #[serde(default)]
     pub output: LogOutput,
-    
+
     /// Include correlation ID in logs
     #[serde(default = "default_true")]
     pub correlation_id: bool,
-    
+
     /// Structured logging fields
     #[serde(default)]
     pub fields: std::collections::HashMap<String, String>,
@@ -862,11 +862,11 @@ pub struct ExtensionsConfig {
     /// Directories to search for extensions
     #[serde(default)]
     pub directories: Vec<String>,
-    
+
     /// Explicitly loaded extensions
     #[serde(default)]
     pub extensions: std::collections::HashMap<String, ExtensionConfig>,
-    
+
     /// Extension security settings
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security: Option<ExtensionSecurityConfig>,
@@ -877,10 +877,10 @@ impl ExtensionsConfig {
     pub fn merge(&mut self, other: ExtensionsConfig) {
         // Merge directories (other's directories are appended)
         self.directories.extend(other.directories);
-        
+
         // Merge extensions (other takes precedence for conflicts)
         self.extensions.extend(other.extensions);
-        
+
         // Other's security takes precedence if present
         if other.security.is_some() {
             self.security = other.security;
@@ -893,11 +893,11 @@ impl ExtensionsConfig {
 pub struct ExtensionConfig {
     /// Path to extension library
     pub path: String,
-    
+
     /// Extension-specific configuration
     #[serde(default)]
     pub config: serde_yaml::Value,
-    
+
     /// Enable/disable extension
     #[serde(default = "default_true")]
     pub enabled: bool,
@@ -909,11 +909,11 @@ pub struct ExtensionSecurityConfig {
     /// Allow loading unsigned extensions
     #[serde(default)]
     pub allow_unsigned: bool,
-    
+
     /// Trusted extension publishers
     #[serde(default)]
     pub trusted_publishers: Vec<String>,
-    
+
     /// Extension sandboxing
     #[serde(default = "default_true")]
     pub sandboxing: bool,
@@ -946,39 +946,39 @@ use super::distributed_config::DistributedConfig;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_global_config_default() {
-        let config = SiddhiGlobalConfig::default();
+        let config = EventFluxGlobalConfig::default();
         assert_eq!(config.runtime.mode, RuntimeMode::SingleNode);
         assert_eq!(config.runtime.performance.thread_pool_size, num_cpus::get());
         assert!(config.distributed.is_none());
     }
-    
+
     #[test]
     fn test_runtime_mode_serde() {
         let mode = RuntimeMode::Distributed;
         let yaml = serde_yaml::to_string(&mode).unwrap();
         assert_eq!(yaml.trim(), "distributed");
-        
+
         let deserialized: RuntimeMode = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(deserialized, mode);
     }
-    
+
     #[test]
     fn test_backpressure_strategy_serde() {
         let strategy = BackpressureStrategy::ExponentialBackoff;
         let yaml = serde_yaml::to_string(&strategy).unwrap();
         assert_eq!(yaml.trim(), "exponential-backoff");
     }
-    
+
     #[test]
     fn test_performance_config() {
         let config = PerformanceConfig::default();
         assert!(config.batch_processing);
         assert_eq!(config.backpressure_strategy, BackpressureStrategy::Block);
     }
-    
+
     #[test]
     fn test_metrics_config_default() {
         let config = MetricsConfig::default();

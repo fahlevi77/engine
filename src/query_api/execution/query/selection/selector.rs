@@ -1,14 +1,14 @@
 use super::order_by_attribute::{Order as OrderByOrder, OrderByAttribute};
 use super::output_attribute::OutputAttribute;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
 use crate::query_api::expression::Expression;
 use crate::query_api::expression::Variable;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 /// Handles the SELECT part of a query, including projections, group by, etc.
 #[derive(Clone, Debug, PartialEq)] // Default is implemented manually
 pub struct Selector {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Selector fields
     pub selection_list: Vec<OutputAttribute>,
@@ -22,7 +22,7 @@ pub struct Selector {
 impl Selector {
     pub fn new() -> Self {
         Selector {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             selection_list: Vec::new(),
             group_by_list: Vec::new(),
             having_expression: None,
@@ -40,12 +40,17 @@ impl Selector {
     // Builder methods with validation
     pub fn select(mut self, rename: String, expression: Expression) -> Self {
         // Check for duplicate rename and print warning
-        if self.selection_list.iter().any(|attr| {
-            attr.get_rename().as_ref().map_or(false, |r| r == &rename)
-        }) {
-            eprintln!("Warning: Duplicate column name '{}' in select clause", rename);
+        if self
+            .selection_list
+            .iter()
+            .any(|attr| attr.get_rename().as_ref().map_or(false, |r| r == &rename))
+        {
+            eprintln!(
+                "Warning: Duplicate column name '{}' in select clause",
+                rename
+            );
         }
-        
+
         self.selection_list
             .push(OutputAttribute::new(Some(rename), expression));
         self
@@ -54,15 +59,20 @@ impl Selector {
     pub fn select_variable(mut self, variable: Variable) -> Self {
         // Check for duplicate variable names and print warning
         let var_name = variable.get_attribute_name();
-        if self.selection_list.iter().any(|attr| {
-            match attr.get_expression() {
+        if self
+            .selection_list
+            .iter()
+            .any(|attr| match attr.get_expression() {
                 Expression::Variable(var) => var.get_attribute_name() == var_name,
                 _ => false,
-            }
-        }) {
-            eprintln!("Warning: Duplicate variable '{}' in select clause", var_name);
+            })
+        {
+            eprintln!(
+                "Warning: Duplicate variable '{}' in select clause",
+                var_name
+            );
         }
-        
+
         self.selection_list
             .push(OutputAttribute::new_from_variable(variable));
         self
@@ -74,20 +84,35 @@ impl Selector {
             if let Some(new_rename) = new_attr.get_rename() {
                 // Check against existing selections
                 if self.selection_list.iter().any(|attr| {
-                    attr.get_rename().as_ref().map_or(false, |r| r == new_rename)
+                    attr.get_rename()
+                        .as_ref()
+                        .map_or(false, |r| r == new_rename)
                 }) {
-                    eprintln!("Warning: Duplicate column name '{}' in select clause", new_rename);
+                    eprintln!(
+                        "Warning: Duplicate column name '{}' in select clause",
+                        new_rename
+                    );
                 }
-                
+
                 // Check against other items in the same list
-                if projection_list.iter().filter(|attr| {
-                    attr.get_rename().as_ref().map_or(false, |r| r == new_rename)
-                }).count() > 1 {
-                    eprintln!("Warning: Duplicate column name '{}' in select clause", new_rename);
+                if projection_list
+                    .iter()
+                    .filter(|attr| {
+                        attr.get_rename()
+                            .as_ref()
+                            .map_or(false, |r| r == new_rename)
+                    })
+                    .count()
+                    > 1
+                {
+                    eprintln!(
+                        "Warning: Duplicate column name '{}' in select clause",
+                        new_rename
+                    );
                 }
             }
         }
-        
+
         self.selection_list.extend(projection_list);
         self
     }
@@ -176,7 +201,7 @@ impl Default for Selector {
     }
 }
 
-// SiddhiElement is composed. Access via self.siddhi_element.
+// EventFluxElement is composed. Access via self.eventflux_element.
 
 #[cfg(test)]
 mod tests {
@@ -198,7 +223,7 @@ mod tests {
         assert!(s.get_order_by_list().is_empty());
         assert!(s.get_limit().is_none());
         assert!(s.get_offset().is_none());
-        assert_eq!(s.siddhi_element.query_context_start_index, None);
+        assert_eq!(s.eventflux_element.query_context_start_index, None);
     }
 
     #[test]
@@ -345,21 +370,21 @@ mod tests {
         // Test duplicate column name detection - now just warns
         let expr1 = Expression::Constant(Constant::string("val1".to_string()));
         let expr2 = Expression::Constant(Constant::string("val2".to_string()));
-        
+
         let result = Selector::selector()
             .select("col1".to_string(), expr1.clone())
             .select("col1".to_string(), expr2.clone()); // This will warn
-        
+
         assert_eq!(result.get_selection_list().len(), 2); // Both added but warned
 
         // Test duplicate variable detection - now just warns
         let var1 = Variable::new("attr1".to_string());
         let var2 = Variable::new("attr1".to_string());
-        
+
         let result = Selector::selector()
             .select_variable(var1)
             .select_variable(var2); // This will warn
-        
+
         assert_eq!(result.get_selection_list().len(), 2); // Both added but warned
     }
 }

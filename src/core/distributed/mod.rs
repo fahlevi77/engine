@@ -1,47 +1,47 @@
-// siddhi_rust/src/core/distributed/mod.rs
+// eventflux_rust/src/core/distributed/mod.rs
 
 //! Distributed Processing Framework
-//! 
-//! This module implements the distributed processing capabilities for Siddhi Rust,
+//!
+//! This module implements the distributed processing capabilities for EventFlux Rust,
 //! following the Single-Node First philosophy from the architecture design.
 //! The system provides zero-overhead single-node mode by default with progressive
 //! enhancement to distributed mode through configuration.
 
-pub mod runtime_mode;
-pub mod processing_engine;
 pub mod distributed_runtime;
-pub mod transport;
 pub mod grpc;
+pub mod processing_engine;
+pub mod runtime_mode;
 pub mod state_backend;
-pub use state_backend::{StateBackend, InMemoryBackend, RedisBackend, RedisConfig};
+pub mod transport;
+pub use state_backend::{InMemoryBackend, RedisBackend, RedisConfig, StateBackend};
 pub mod coordinator;
 pub mod message_broker;
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use serde::{Deserialize, Serialize};
 
 /// Configuration for distributed processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DistributedConfig {
     /// Runtime mode selection
     pub mode: RuntimeMode,
-    
+
     /// Node configuration (for distributed mode)
     pub node: Option<NodeConfig>,
-    
+
     /// Cluster configuration (for distributed mode)
     pub cluster: Option<ClusterConfig>,
-    
+
     /// Transport configuration
     pub transport: TransportConfig,
-    
+
     /// State backend configuration
     pub state_backend: StateBackendConfig,
-    
+
     /// Coordination configuration
     pub coordination: CoordinationConfig,
-    
+
     /// Message broker configuration
     pub message_broker: Option<MessageBrokerConfig>,
 }
@@ -65,10 +65,10 @@ impl Default for DistributedConfig {
 pub enum RuntimeMode {
     /// Single-node mode (default, zero overhead)
     SingleNode,
-    
+
     /// Distributed mode with cluster coordination
     Distributed,
-    
+
     /// Hybrid mode (local processing with distributed state)
     Hybrid,
 }
@@ -84,13 +84,13 @@ impl Default for RuntimeMode {
 pub struct NodeConfig {
     /// Unique node identifier
     pub node_id: String,
-    
+
     /// Node endpoints for communication
     pub endpoints: Vec<String>,
-    
+
     /// Node capabilities
     pub capabilities: NodeCapabilities,
-    
+
     /// Resource limits
     pub resources: ResourceLimits,
 }
@@ -100,16 +100,16 @@ pub struct NodeConfig {
 pub struct NodeCapabilities {
     /// Can this node act as coordinator
     pub can_coordinate: bool,
-    
+
     /// Can this node process queries
     pub can_process: bool,
-    
+
     /// Can this node store state
     pub can_store_state: bool,
-    
+
     /// Supported transport protocols
     pub transport_protocols: Vec<String>,
-    
+
     /// Custom capabilities (extensible)
     pub custom: std::collections::HashMap<String, String>,
 }
@@ -131,13 +131,13 @@ impl Default for NodeCapabilities {
 pub struct ResourceLimits {
     /// Maximum memory usage in bytes
     pub max_memory: usize,
-    
+
     /// Maximum CPU cores
     pub max_cpu_cores: usize,
-    
+
     /// Maximum network bandwidth in bytes/sec
     pub max_network_bandwidth: usize,
-    
+
     /// Maximum storage capacity in bytes
     pub max_storage: usize,
 }
@@ -148,7 +148,7 @@ impl Default for ResourceLimits {
             max_memory: 8 * 1024 * 1024 * 1024, // 8GB
             max_cpu_cores: 8,
             max_network_bandwidth: 1024 * 1024 * 1024, // 1Gbps
-            max_storage: 100 * 1024 * 1024 * 1024, // 100GB
+            max_storage: 100 * 1024 * 1024 * 1024,     // 100GB
         }
     }
 }
@@ -158,22 +158,22 @@ impl Default for ResourceLimits {
 pub struct ClusterConfig {
     /// Cluster name
     pub cluster_name: String,
-    
+
     /// Seed nodes for discovery
     pub seed_nodes: Vec<String>,
-    
+
     /// Minimum nodes required for operation
     pub min_nodes: usize,
-    
+
     /// Expected cluster size
     pub expected_size: usize,
-    
+
     /// Heartbeat interval
     pub heartbeat_interval: Duration,
-    
+
     /// Failure detection timeout
     pub failure_timeout: Duration,
-    
+
     /// Partition handling strategy
     pub partition_handling: PartitionHandling,
 }
@@ -181,7 +181,7 @@ pub struct ClusterConfig {
 impl Default for ClusterConfig {
     fn default() -> Self {
         Self {
-            cluster_name: "siddhi-cluster".to_string(),
+            cluster_name: "eventflux-cluster".to_string(),
             seed_nodes: vec![],
             min_nodes: 1,
             expected_size: 3,
@@ -197,13 +197,13 @@ impl Default for ClusterConfig {
 pub enum PartitionHandling {
     /// Allow minority partition to continue (AP mode)
     AllowMinority,
-    
+
     /// Require majority for operations (CP mode)
     RequireMajority,
-    
+
     /// Custom quorum size
     CustomQuorum { size: usize },
-    
+
     /// Shut down on partition
     ShutdownOnPartition,
 }
@@ -219,16 +219,16 @@ impl Default for PartitionHandling {
 pub struct TransportConfig {
     /// Transport implementation
     pub implementation: TransportImplementation,
-    
+
     /// Connection pool size
     pub pool_size: usize,
-    
+
     /// Request timeout
     pub request_timeout: Duration,
-    
+
     /// Enable compression
     pub compression: bool,
-    
+
     /// Enable encryption
     pub encryption: bool,
 }
@@ -250,16 +250,16 @@ impl Default for TransportConfig {
 pub enum TransportImplementation {
     /// TCP sockets (default)
     Tcp,
-    
+
     /// gRPC
     Grpc,
-    
+
     /// RDMA (for high-performance networks)
     Rdma,
-    
+
     /// InfiniBand
     InfiniBand,
-    
+
     /// Custom implementation
     Custom { name: String },
 }
@@ -269,16 +269,16 @@ pub enum TransportImplementation {
 pub struct StateBackendConfig {
     /// Backend implementation
     pub implementation: StateBackendImplementation,
-    
+
     /// Checkpoint interval
     pub checkpoint_interval: Duration,
-    
+
     /// State TTL
     pub state_ttl: Option<Duration>,
-    
+
     /// Enable incremental checkpoints
     pub incremental_checkpoints: bool,
-    
+
     /// Compression for state
     pub compression: CompressionType,
 }
@@ -300,19 +300,19 @@ impl Default for StateBackendConfig {
 pub enum StateBackendImplementation {
     /// In-memory state (single-node)
     InMemory,
-    
+
     /// Redis
     Redis { endpoints: Vec<String> },
-    
+
     /// Apache Ignite
     Ignite { endpoints: Vec<String> },
-    
+
     /// Hazelcast
     Hazelcast { endpoints: Vec<String> },
-    
+
     /// RocksDB (embedded)
     RocksDB { path: String },
-    
+
     /// Custom backend
     Custom { name: String, config: String },
 }
@@ -331,13 +331,13 @@ pub enum CompressionType {
 pub struct CoordinationConfig {
     /// Coordination implementation
     pub implementation: CoordinationImplementation,
-    
+
     /// Leader election timeout
     pub election_timeout: Duration,
-    
+
     /// Session timeout
     pub session_timeout: Duration,
-    
+
     /// Consensus level
     pub consensus_level: ConsensusLevel,
 }
@@ -358,16 +358,16 @@ impl Default for CoordinationConfig {
 pub enum CoordinationImplementation {
     /// Built-in Raft implementation
     Raft,
-    
+
     /// Etcd
     Etcd { endpoints: Vec<String> },
-    
+
     /// Zookeeper
     Zookeeper { endpoints: Vec<String> },
-    
+
     /// Consul
     Consul { endpoints: Vec<String> },
-    
+
     /// Custom coordination
     Custom { name: String },
 }
@@ -377,13 +377,13 @@ pub enum CoordinationImplementation {
 pub enum ConsensusLevel {
     /// Single node acknowledgment
     One,
-    
+
     /// Majority of nodes
     Majority,
-    
+
     /// All nodes must acknowledge
     All,
-    
+
     /// Custom quorum
     Quorum { size: usize },
 }
@@ -393,10 +393,10 @@ pub enum ConsensusLevel {
 pub struct MessageBrokerConfig {
     /// Broker implementation
     pub implementation: MessageBrokerImplementation,
-    
+
     /// Producer configuration
     pub producer: ProducerConfig,
-    
+
     /// Consumer configuration
     pub consumer: ConsumerConfig,
 }
@@ -406,16 +406,16 @@ pub struct MessageBrokerConfig {
 pub enum MessageBrokerImplementation {
     /// Apache Kafka
     Kafka { brokers: Vec<String> },
-    
+
     /// Apache Pulsar
     Pulsar { service_url: String },
-    
+
     /// NATS
     Nats { servers: Vec<String> },
-    
+
     /// RabbitMQ
     RabbitMQ { endpoints: Vec<String> },
-    
+
     /// Custom broker
     Custom { name: String },
 }
@@ -425,13 +425,13 @@ pub enum MessageBrokerImplementation {
 pub struct ProducerConfig {
     /// Batch size for sending
     pub batch_size: usize,
-    
+
     /// Linger time before sending
     pub linger_ms: u64,
-    
+
     /// Compression type
     pub compression: CompressionType,
-    
+
     /// Acknowledgment level
     pub acks: AcknowledgmentLevel,
 }
@@ -452,13 +452,13 @@ impl Default for ProducerConfig {
 pub struct ConsumerConfig {
     /// Consumer group ID
     pub group_id: String,
-    
+
     /// Auto-commit interval
     pub auto_commit_interval: Duration,
-    
+
     /// Max poll records
     pub max_poll_records: usize,
-    
+
     /// Session timeout
     pub session_timeout: Duration,
 }
@@ -466,7 +466,7 @@ pub struct ConsumerConfig {
 impl Default for ConsumerConfig {
     fn default() -> Self {
         Self {
-            group_id: "siddhi-consumer".to_string(),
+            group_id: "eventflux-consumer".to_string(),
             auto_commit_interval: Duration::from_secs(5),
             max_poll_records: 500,
             session_timeout: Duration::from_secs(30),
@@ -479,10 +479,10 @@ impl Default for ConsumerConfig {
 pub enum AcknowledgmentLevel {
     /// No acknowledgment
     None,
-    
+
     /// Leader acknowledgment only
     Leader,
-    
+
     /// All in-sync replicas
     All,
 }
@@ -492,31 +492,31 @@ pub enum AcknowledgmentLevel {
 pub struct DistributedStats {
     /// Total events processed across cluster
     pub total_events: u64,
-    
+
     /// Events processed by this node
     pub node_events: u64,
-    
+
     /// Number of active nodes
     pub active_nodes: usize,
-    
+
     /// Number of running queries
     pub running_queries: usize,
-    
+
     /// Network messages sent
     pub messages_sent: u64,
-    
+
     /// Network messages received
     pub messages_received: u64,
-    
+
     /// State synchronization operations
     pub state_syncs: u64,
-    
+
     /// Checkpoint operations
     pub checkpoints: u64,
-    
+
     /// Leader elections
     pub leader_elections: u64,
-    
+
     /// Network partitions detected
     pub partitions_detected: u64,
 }
@@ -529,31 +529,31 @@ pub type DistributedResult<T> = Result<T, DistributedError>;
 pub enum DistributedError {
     #[error("Network error: {message}")]
     NetworkError { message: String },
-    
+
     #[error("Coordination error: {message}")]
     CoordinationError { message: String },
-    
+
     #[error("State synchronization error: {message}")]
     StateSyncError { message: String },
-    
+
     #[error("Node not found: {node_id}")]
     NodeNotFound { node_id: String },
-    
+
     #[error("Cluster not ready: {reason}")]
     ClusterNotReady { reason: String },
-    
+
     #[error("Partition detected: {details}")]
     PartitionDetected { details: String },
-    
+
     #[error("Configuration error: {message}")]
     ConfigurationError { message: String },
-    
+
     #[error("Transport error: {message}")]
     TransportError { message: String },
-    
+
     #[error("Broker error: {message}")]
     BrokerError { message: String },
-    
+
     #[error("State error: {message}")]
     StateError { message: String },
 }

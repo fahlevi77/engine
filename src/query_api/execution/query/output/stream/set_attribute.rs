@@ -1,10 +1,10 @@
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::expression::Variable;
-use crate::query_api::siddhi_element::SiddhiElement; // Corrected path
+use crate::query_api::expression::Variable; // Corrected path
 
 #[derive(Clone, Debug, PartialEq)] // Default is tricky due to Variable and Expression
 pub struct SetAttribute {
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
     pub table_column: Variable, // Java uses Variable, not String.
     pub value_to_set: Expression,
 }
@@ -12,14 +12,14 @@ pub struct SetAttribute {
 impl SetAttribute {
     pub fn new(table_column: Variable, value_to_set: Expression) -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             table_column,
             value_to_set,
         }
     }
 }
 
-// SetAttribute in Java is a SiddhiElement. So this struct also composes/implements it.
+// SetAttribute in Java is a EventFluxElement. So this struct also composes/implements it.
 // Default derive removed as Variable and Expression don't have trivial defaults for this context.
 
 // The UpdateSet class from Java would be a separate struct, likely in its own file (e.g., update_set.rs)

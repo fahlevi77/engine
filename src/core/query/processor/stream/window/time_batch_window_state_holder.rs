@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/query/processor/stream/window/time_batch_window_state_holder.rs
+// eventflux_rust/src/core/query/processor/stream/window/time_batch_window_state_holder.rs
 
 //! Enhanced StateHolder implementation for TimeBatchWindowProcessor
-//! 
+//!
 //! This implementation provides enterprise-grade state management for time batch windows
 //! with versioning, incremental checkpointing, and comprehensive metadata.
 
@@ -9,42 +9,41 @@ use std::sync::{Arc, Mutex};
 
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::persistence::state_holder::{
-    StateHolder, StateSnapshot, StateError, StateSize, AccessPattern,
-    SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
-    CompressionType, StateOperation
+    AccessPattern, ChangeLog, CheckpointId, CompressionType, SchemaVersion, SerializationHints,
+    StateError, StateHolder, StateMetadata, StateOperation, StateSize, StateSnapshot,
 };
-use crate::core::util::event_serialization::{
-    EventSerializationService, StorageStrategy
+use crate::core::util::compression::{
+    CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange,
 };
-use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
+use crate::core::util::event_serialization::{EventSerializationService, StorageStrategy};
 
 /// Enhanced state holder for TimeBatchWindowProcessor with StateHolder capabilities
 #[derive(Debug, Clone)]
 pub struct TimeBatchWindowStateHolder {
     /// Current batch buffer
     buffer: Arc<Mutex<Vec<StreamEvent>>>,
-    
-    /// Expired batch buffer 
+
+    /// Expired batch buffer
     expired: Arc<Mutex<Vec<StreamEvent>>>,
-    
+
     /// Batch start time tracking
     start_time: Arc<Mutex<Option<i64>>>,
-    
+
     /// Component identifier
     component_id: String,
-    
+
     /// Batch duration in milliseconds
     duration_ms: i64,
-    
+
     /// Last checkpoint ID for incremental tracking
     last_checkpoint_id: Arc<Mutex<Option<CheckpointId>>>,
-    
+
     /// Change log for incremental checkpointing
     change_log: Arc<Mutex<Vec<StateOperation>>>,
-    
+
     /// Event counter for size estimation
     total_events_processed: Arc<Mutex<u64>>,
-    
+
     /// Event serialization service with proper AttributeValue handling
     serialization_service: EventSerializationService,
 }
@@ -75,7 +74,7 @@ impl TimeBatchWindowStateHolder {
     pub fn record_event_added(&self, event: &StreamEvent) {
         let mut change_log = self.change_log.lock().unwrap();
         let event_data = self.serialize_event(event);
-        
+
         change_log.push(StateOperation::Insert {
             key: self.generate_event_key(event, "current_batch"),
             value: event_data,
@@ -86,23 +85,36 @@ impl TimeBatchWindowStateHolder {
     }
 
     /// Record a batch flush for incremental checkpointing  
-    pub fn record_batch_flushed(&self, current_batch: &[StreamEvent], expired_batch: &[StreamEvent], timestamp: i64) {
+    pub fn record_batch_flushed(
+        &self,
+        current_batch: &[StreamEvent],
+        expired_batch: &[StreamEvent],
+        timestamp: i64,
+    ) {
         let mut change_log = self.change_log.lock().unwrap();
-        
+
         // Record batch transition with timing information
         change_log.push(StateOperation::Delete {
             key: b"time_batch_flush_marker".to_vec(),
-            old_value: self.serialize_time_batch_transition(current_batch, expired_batch, timestamp),
+            old_value: self.serialize_time_batch_transition(
+                current_batch,
+                expired_batch,
+                timestamp,
+            ),
         });
     }
 
     /// Record start time change for incremental checkpointing
-    pub fn record_start_time_updated(&self, old_start_time: Option<i64>, new_start_time: Option<i64>) {
+    pub fn record_start_time_updated(
+        &self,
+        old_start_time: Option<i64>,
+        new_start_time: Option<i64>,
+    ) {
         let mut change_log = self.change_log.lock().unwrap();
-        
+
         let old_data = self.serialize_start_time(old_start_time);
         let new_data = self.serialize_start_time(new_start_time);
-        
+
         change_log.push(StateOperation::Update {
             key: b"start_time".to_vec(),
             old_value: old_data,
@@ -117,11 +129,11 @@ impl TimeBatchWindowStateHolder {
         key.extend_from_slice(buffer_type.as_bytes());
         key.push(b'_');
         key.extend_from_slice(&event.timestamp.to_le_bytes());
-        
+
         // Add a simple hash of the event data
         let data_hash = self.hash_event_data(&event.before_window_data);
         key.extend_from_slice(&data_hash.to_le_bytes());
-        
+
         key
     }
 
@@ -129,19 +141,19 @@ impl TimeBatchWindowStateHolder {
     fn hash_event_data(&self, data: &[crate::core::event::value::AttributeValue]) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
-        
+
         // Hash the length first
         data.len().hash(&mut hasher);
-        
+
         // Hash each attribute value
         for attr in data {
             // Create a string representation for hashing
             let attr_str = format!("{attr:?}");
             attr_str.hash(&mut hasher);
         }
-        
+
         hasher.finish()
     }
 
@@ -153,16 +165,21 @@ impl TimeBatchWindowStateHolder {
     }
 
     /// Serialize time batch transition for changelog
-    fn serialize_time_batch_transition(&self, current_batch: &[StreamEvent], expired_batch: &[StreamEvent], flush_time: i64) -> Vec<u8> {
+    fn serialize_time_batch_transition(
+        &self,
+        current_batch: &[StreamEvent],
+        expired_batch: &[StreamEvent],
+        flush_time: i64,
+    ) -> Vec<u8> {
         use crate::core::util::to_bytes;
-        
+
         let transition_data = (
             current_batch.len(),
             expired_batch.len(),
             flush_time,
             self.duration_ms,
         );
-        
+
         to_bytes(&transition_data).unwrap_or_default()
     }
 
@@ -192,22 +209,25 @@ impl StateHolder for TimeBatchWindowStateHolder {
 
     fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
         use crate::core::util::to_bytes;
-        
+
         let start_time = *self.start_time.lock().unwrap();
-        
+
         // Determine storage strategy based on hints
-        let storage_strategy = hints.prefer_compression
+        let storage_strategy = hints
+            .prefer_compression
             .as_ref()
             .map(|_| StorageStrategy::Compressed)
             .unwrap_or(StorageStrategy::Essential);
-        
+
         // Serialize current batch events
         let current_batch = {
             let buffer = self.buffer.lock().unwrap();
             let mut serialized_events = Vec::new();
             for event in buffer.iter() {
-                match self.serialization_service
-                    .serialize_event_with_strategy(event, storage_strategy.clone()) {
+                match self
+                    .serialization_service
+                    .serialize_event_with_strategy(event, storage_strategy.clone())
+                {
                     Ok(data) => serialized_events.push(data),
                     Err(_e) => {
                         // Warning: Failed to serialize event, skipping
@@ -217,14 +237,16 @@ impl StateHolder for TimeBatchWindowStateHolder {
             }
             serialized_events
         };
-        
+
         // Serialize expired batch events
         let expired_batch = {
             let expired = self.expired.lock().unwrap();
             let mut serialized_events = Vec::new();
             for event in expired.iter() {
-                match self.serialization_service
-                    .serialize_event_with_strategy(event, storage_strategy.clone()) {
+                match self
+                    .serialization_service
+                    .serialize_event_with_strategy(event, storage_strategy.clone())
+                {
                     Ok(data) => serialized_events.push(data),
                     Err(_e) => {
                         // Warning: Failed to serialize expired event, skipping
@@ -234,7 +256,7 @@ impl StateHolder for TimeBatchWindowStateHolder {
             }
             serialized_events
         };
-        
+
         let state_data = TimeBatchWindowStateData {
             current_batch,
             expired_batch,
@@ -242,34 +264,35 @@ impl StateHolder for TimeBatchWindowStateHolder {
             start_time,
             total_events_processed: *self.total_events_processed.lock().unwrap(),
         };
-        
+
         // Serialize to bytes
         let mut data = to_bytes(&state_data).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize time batch window state: {e}"),
         })?;
-        
+
         // Apply compression if requested using the shared compression utility
-        let (compressed_data, compression_type) = if let Some(ref compression) = hints.prefer_compression {
-            match self.compress_state_data(&data, Some(compression.clone())) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => {
-                    // Fall back to no compression if compression fails
-                    (data, CompressionType::None)
+        let (compressed_data, compression_type) =
+            if let Some(ref compression) = hints.prefer_compression {
+                match self.compress_state_data(&data, Some(compression.clone())) {
+                    Ok((compressed, comp_type)) => (compressed, comp_type),
+                    Err(_) => {
+                        // Fall back to no compression if compression fails
+                        (data, CompressionType::None)
+                    }
                 }
-            }
-        } else {
-            // Use intelligent compression selection
-            match self.compress_state_data(&data, None) {
-                Ok((compressed, comp_type)) => (compressed, comp_type),
-                Err(_) => (data, CompressionType::None)
-            }
-        };
-        
+            } else {
+                // Use intelligent compression selection
+                match self.compress_state_data(&data, None) {
+                    Ok((compressed, comp_type)) => (compressed, comp_type),
+                    Err(_) => (data, CompressionType::None),
+                }
+            };
+
         let data = compressed_data;
         let compression = compression_type;
-        
+
         let checksum = StateSnapshot::calculate_checksum(&data);
-        
+
         Ok(StateSnapshot {
             version: self.schema_version(),
             checkpoint_id: 0, // Will be set by the checkpoint coordinator
@@ -282,27 +305,26 @@ impl StateHolder for TimeBatchWindowStateHolder {
 
     fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
         use crate::core::util::from_bytes;
-        
+
         // Verify integrity
         if !snapshot.verify_integrity() {
             return Err(StateError::ChecksumMismatch);
         }
-        
+
         // Decompress data if needed using the shared compression utility
         let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
-        
+
         // Deserialize state data
-        let state_data: TimeBatchWindowStateData = from_bytes(&data).map_err(|e| {
-            StateError::DeserializationError {
+        let state_data: TimeBatchWindowStateData =
+            from_bytes(&data).map_err(|e| StateError::DeserializationError {
                 message: format!("Failed to deserialize time batch window state: {e}"),
-            }
-        })?;
-        
+            })?;
+
         // Deserialize and restore current batch events
         {
             let mut buffer = self.buffer.lock().unwrap();
             buffer.clear();
-            
+
             for serialized_event in state_data.current_batch {
                 match self.deserialize_event(&serialized_event) {
                     Ok(event) => buffer.push(event),
@@ -313,12 +335,12 @@ impl StateHolder for TimeBatchWindowStateHolder {
                 }
             }
         }
-        
+
         // Deserialize and restore expired batch events
         {
             let mut expired = self.expired.lock().unwrap();
             expired.clear();
-            
+
             for serialized_event in state_data.expired_batch {
                 match self.deserialize_event(&serialized_event) {
                     Ok(event) => expired.push(event),
@@ -329,33 +351,35 @@ impl StateHolder for TimeBatchWindowStateHolder {
                 }
             }
         }
-        
+
         // Restore timing state
         *self.start_time.lock().unwrap() = state_data.start_time;
-        
+
         // Restore metadata
         self.duration_ms = state_data.duration_ms;
         *self.total_events_processed.lock().unwrap() = state_data.total_events_processed;
-        
+
         Ok(())
     }
 
     fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
         let last_checkpoint = self.last_checkpoint_id.lock().unwrap();
-        
+
         if let Some(last_id) = *last_checkpoint {
             if since > last_id {
-                return Err(StateError::CheckpointNotFound { checkpoint_id: since });
+                return Err(StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                });
             }
         }
-        
+
         let change_log = self.change_log.lock().unwrap();
         let mut changelog = ChangeLog::new(since, since + 1);
-        
+
         for operation in change_log.iter() {
             changelog.add_operation(operation.clone());
         }
-        
+
         Ok(changelog)
     }
 
@@ -363,13 +387,13 @@ impl StateHolder for TimeBatchWindowStateHolder {
         // For time batch windows, we could apply incremental changes
         // For now, this is a simplified implementation
         // Note: Applying {} state operations to time batch window
-        
+
         // In a full implementation, we would:
         // 1. Parse each operation
         // 2. Apply inserts/deletes to the buffers
         // 3. Handle time-based batch operations
         // 4. Update start time changes properly
-        
+
         Ok(())
     }
 
@@ -377,11 +401,11 @@ impl StateHolder for TimeBatchWindowStateHolder {
         let buffer = self.buffer.lock().unwrap();
         let expired = self.expired.lock().unwrap();
         let entries = buffer.len() + expired.len();
-        
+
         // Estimate bytes per event (rough calculation)
         let estimated_bytes_per_event = 200; // Conservative estimate
         let total_bytes = entries * estimated_bytes_per_event;
-        
+
         // Estimate growth rate based on time duration
         // Time batch windows have variable growth based on event rate
         let start_time = *self.start_time.lock().unwrap();
@@ -391,7 +415,7 @@ impl StateHolder for TimeBatchWindowStateHolder {
         } else {
             estimated_bytes_per_event as f64
         };
-        
+
         StateSize {
             bytes: total_bytes,
             entries,
@@ -406,24 +430,37 @@ impl StateHolder for TimeBatchWindowStateHolder {
     }
 
     fn component_metadata(&self) -> StateMetadata {
-        let mut metadata = StateMetadata::new(self.component_id.clone(), "TimeBatchWindowProcessor".to_string());
+        let mut metadata = StateMetadata::new(
+            self.component_id.clone(),
+            "TimeBatchWindowProcessor".to_string(),
+        );
         metadata.access_pattern = self.access_pattern();
         metadata.size_estimation = self.estimate_size();
-        
+
         // Add custom metadata
-        metadata.custom_metadata.insert("duration_ms".to_string(), self.duration_ms.to_string());
-        metadata.custom_metadata.insert("window_type".to_string(), "timeBatch".to_string());
-        
+        metadata
+            .custom_metadata
+            .insert("duration_ms".to_string(), self.duration_ms.to_string());
+        metadata
+            .custom_metadata
+            .insert("window_type".to_string(), "timeBatch".to_string());
+
         let buffer_len = self.buffer.lock().unwrap().len();
         let expired_len = self.expired.lock().unwrap().len();
-        metadata.custom_metadata.insert("current_batch_size".to_string(), buffer_len.to_string());
-        metadata.custom_metadata.insert("expired_batch_size".to_string(), expired_len.to_string());
-        
+        metadata
+            .custom_metadata
+            .insert("current_batch_size".to_string(), buffer_len.to_string());
+        metadata
+            .custom_metadata
+            .insert("expired_batch_size".to_string(), expired_len.to_string());
+
         let start_time = *self.start_time.lock().unwrap();
         if let Some(start) = start_time {
-            metadata.custom_metadata.insert("batch_start_time".to_string(), start.to_string());
+            metadata
+                .custom_metadata
+                .insert("batch_start_time".to_string(), start.to_string());
         }
-        
+
         metadata
     }
 }
@@ -440,7 +477,6 @@ impl CompressibleStateHolder for TimeBatchWindowStateHolder {
         }
     }
 }
-
 
 /// Serializable state data for TimeBatchWindowProcessor
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -471,7 +507,7 @@ mod tests {
             "test_time_batch_window".to_string(),
             5000, // 5 second window
         );
-        
+
         assert_eq!(holder.schema_version(), SchemaVersion::new(1, 0, 0));
         assert_eq!(holder.access_pattern(), AccessPattern::Sequential);
     }
@@ -481,7 +517,7 @@ mod tests {
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let expired = Arc::new(Mutex::new(Vec::new()));
         let start_time = Arc::new(Mutex::new(Some(1000)));
-        
+
         // Add some test events to current batch
         {
             let mut buf = buffer.lock().unwrap();
@@ -491,7 +527,7 @@ mod tests {
                 AttributeValue::Int(42),
             ];
             buf.push(event1);
-            
+
             let mut event2 = StreamEvent::new(2000, 2, 0, 0);
             event2.before_window_data = vec![
                 AttributeValue::String("test2".to_string()),
@@ -499,7 +535,7 @@ mod tests {
             ];
             buf.push(event2);
         }
-        
+
         // Add some test events to expired batch
         {
             let mut exp = expired.lock().unwrap();
@@ -508,7 +544,7 @@ mod tests {
             event3.event_type = ComplexEventType::Expired;
             exp.push(event3);
         }
-        
+
         let mut holder = TimeBatchWindowStateHolder::new(
             buffer,
             expired,
@@ -516,17 +552,17 @@ mod tests {
             "test_time_batch_window".to_string(),
             5000,
         );
-        
+
         let hints = SerializationHints::default();
-        
+
         // Test serialization
         let snapshot = holder.serialize_state(&hints).unwrap();
         assert!(snapshot.verify_integrity());
-        
+
         // Test deserialization
         let result = holder.deserialize_state(&snapshot);
         assert!(result.is_ok());
-        
+
         // Verify the events were properly restored
         let buffer = holder.buffer.lock().unwrap();
         let expired = holder.expired.lock().unwrap();
@@ -534,13 +570,13 @@ mod tests {
         assert_eq!(buffer.len(), 2); // Current batch events should be restored
         assert_eq!(expired.len(), 1); // Expired batch events should be restored
         assert_eq!(start_time, Some(1000));
-        
+
         // Verify event data integrity
         if let Some(event) = buffer.get(0) {
             assert_eq!(event.timestamp, 1000);
             assert_eq!(event.before_window_data.len(), 2);
         }
-        
+
         if let Some(event) = expired.get(0) {
             assert_eq!(event.timestamp, 3000);
             assert_eq!(event.before_window_data.len(), 1);
@@ -559,33 +595,33 @@ mod tests {
             "test_time_batch_window".to_string(),
             3000,
         );
-        
+
         // Create test events
         let mut event1 = StreamEvent::new(1000, 1, 0, 0);
         event1.before_window_data = vec![AttributeValue::Int(42)];
-        
+
         let mut event2 = StreamEvent::new(2000, 1, 0, 0);
         event2.before_window_data = vec![AttributeValue::Int(84)];
-        
+
         // Record event additions
         holder.record_event_added(&event1);
         holder.record_event_added(&event2);
-        
+
         // Get changelog
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 2);
-        
+
         // Record batch flush
         let current_batch = vec![event1, event2];
         let expired_batch = vec![];
         holder.record_batch_flushed(&current_batch, &expired_batch, 4000);
-        
+
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 3);
-        
+
         // Record start time change
         holder.record_start_time_updated(None, Some(1000));
-        
+
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 4);
     }
@@ -602,12 +638,12 @@ mod tests {
             "test_time_batch_window".to_string(),
             5000, // 5 second window
         );
-        
+
         // Test empty state
         let size = holder.estimate_size();
         assert_eq!(size.entries, 0);
         assert_eq!(size.bytes, 0);
-        
+
         // Add some events to current batch
         {
             let mut buf = buffer.lock().unwrap();
@@ -617,7 +653,7 @@ mod tests {
                 buf.push(event);
             }
         }
-        
+
         // Add one expired event
         {
             let mut exp = expired.lock().unwrap();
@@ -625,10 +661,10 @@ mod tests {
             event.before_window_data = vec![AttributeValue::Int(99)];
             exp.push(event);
         }
-        
+
         // Set start time to simulate active batch
         *start_time.lock().unwrap() = Some(1000);
-        
+
         let size = holder.estimate_size();
         assert_eq!(size.entries, 4); // 3 current + 1 expired
         assert_eq!(size.bytes, 4 * 200); // 200 bytes per event estimate
@@ -640,7 +676,7 @@ mod tests {
         let buffer = Arc::new(Mutex::new(Vec::new()));
         let expired = Arc::new(Mutex::new(Vec::new()));
         let start_time = Arc::new(Mutex::new(Some(1000)));
-        
+
         // Add some events to both buffers
         {
             let mut buf = buffer.lock().unwrap();
@@ -650,14 +686,14 @@ mod tests {
                 buf.push(event);
             }
         }
-        
+
         {
             let mut exp = expired.lock().unwrap();
             let mut event = StreamEvent::new(500, 1, 0, 0);
             event.before_window_data = vec![AttributeValue::Int(99)];
             exp.push(event);
         }
-        
+
         let holder = TimeBatchWindowStateHolder::new(
             buffer,
             expired,
@@ -665,13 +701,25 @@ mod tests {
             "test_time_batch_window".to_string(),
             5000,
         );
-        
+
         let metadata = holder.component_metadata();
         assert_eq!(metadata.component_type, "TimeBatchWindowProcessor");
         assert_eq!(metadata.custom_metadata.get("duration_ms").unwrap(), "5000");
-        assert_eq!(metadata.custom_metadata.get("window_type").unwrap(), "timeBatch");
-        assert_eq!(metadata.custom_metadata.get("current_batch_size").unwrap(), "2");
-        assert_eq!(metadata.custom_metadata.get("expired_batch_size").unwrap(), "1");
-        assert_eq!(metadata.custom_metadata.get("batch_start_time").unwrap(), "1000");
+        assert_eq!(
+            metadata.custom_metadata.get("window_type").unwrap(),
+            "timeBatch"
+        );
+        assert_eq!(
+            metadata.custom_metadata.get("current_batch_size").unwrap(),
+            "2"
+        );
+        assert_eq!(
+            metadata.custom_metadata.get("expired_batch_size").unwrap(),
+            "1"
+        );
+        assert_eq!(
+            metadata.custom_metadata.get("batch_start_time").unwrap(),
+            "1000"
+        );
     }
 }

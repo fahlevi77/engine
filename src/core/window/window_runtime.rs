@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/window/window_runtime.rs
+// eventflux_rust/src/core/window/window_runtime.rs
 
 use crate::core::query::processor::Processor;
 use crate::query_api::definition::WindowDefinition;

@@ -1,4 +1,4 @@
-// Corresponds to package io.siddhi.query.api.execution.query.input.handler
+// Corresponds to package io.eventflux.query.api.execution.query.input.handler
 
 pub mod filter;
 pub mod stream_function;
@@ -17,7 +17,7 @@ pub use self::window::Window as WindowHandler; // Alias to avoid conflicts if ne
 //     Function(StreamFunction),
 //     Window(WindowHandler),
 // }
-// Each struct (Filter, StreamFunction, WindowHandler) will implement SiddhiElement
-// and potentially a common trait if methods beyond SiddhiElement are shared from Java's StreamHandler.
-// Java's StreamHandler has `getParameters()` and SiddhiElement context.
+// Each struct (Filter, StreamFunction, WindowHandler) will implement EventFluxElement
+// and potentially a common trait if methods beyond EventFluxElement are shared from Java's StreamHandler.
+// Java's StreamHandler has `getParameters()` and EventFluxElement context.
 // The Extension interface is implemented by StreamFunction and Window.

@@ -7,7 +7,7 @@ use std::sync::RwLock;
 
 mod cache_table;
 mod jdbc_table;
-use crate::core::config::siddhi_context::SiddhiContext;
+use crate::core::config::eventflux_context::EventFluxContext;
 use crate::core::extension::TableFactory;
 pub use cache_table::{CacheTable, CacheTableFactory};
 pub use jdbc_table::{JdbcTable, JdbcTableFactory};
@@ -345,7 +345,7 @@ impl TableFactory for InMemoryTableFactory {
         &self,
         _name: String,
         _properties: HashMap<String, String>,
-        _ctx: Arc<SiddhiContext>,
+        _ctx: Arc<EventFluxContext>,
     ) -> Result<Arc<dyn Table>, String> {
         Ok(Arc::new(InMemoryTable::new()))
     }

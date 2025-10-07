@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 // TODO: NOT PART OF M1 - Pattern/Sequence matching not in M1
 // This test uses pattern sequence syntax ("from A -> B") which is an advanced CEP feature.
@@ -63,23 +63,23 @@ async fn every_sequence() {
     );
 }
 
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-use siddhi_rust::query_api::execution::query::input::state::State;
-use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-use siddhi_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::query_api::execution::query::input::state::State;
+use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use eventflux_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::execution::ExecutionElement;
-use siddhi_rust::query_api::expression::{constant::TimeUtil, variable::Variable, Expression};
+use eventflux_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::execution::ExecutionElement;
+use eventflux_rust::query_api::expression::{constant::TimeUtil, variable::Variable, Expression};
 use std::sync::Arc;
 
 #[tokio::test]
 async fn kleene_star_pattern() {
-    let mut app = siddhi_rust::query_api::siddhi_app::SiddhiApp::new("Kleene".to_string());
+    let mut app = eventflux_rust::query_api::eventflux_app::EventFluxApp::new("Kleene".to_string());
     let a_def = StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT);
     let b_def = StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT);
     let out_def = StreamDefinition::new("Out".to_string())
@@ -136,7 +136,8 @@ async fn kleene_star_pattern() {
 
 #[tokio::test]
 async fn sequence_with_timeout() {
-    let mut app = siddhi_rust::query_api::siddhi_app::SiddhiApp::new("Timeout".to_string());
+    let mut app =
+        eventflux_rust::query_api::eventflux_app::EventFluxApp::new("Timeout".to_string());
     let a_def = StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT);
     let b_def = StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT);
     let out_def = StreamDefinition::new("Out".to_string())
@@ -193,18 +194,18 @@ async fn sequence_with_timeout() {
 
 #[tokio::test]
 async fn sequence_api() {
-    use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-    use siddhi_rust::query_api::execution::query::input::state::State;
-    use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-    use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-    use siddhi_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
-    use siddhi_rust::query_api::execution::query::output::output_stream::{
+    use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+    use eventflux_rust::query_api::execution::query::input::state::State;
+    use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+    use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+    use eventflux_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
+    use eventflux_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
     };
-    use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
-    use siddhi_rust::query_api::execution::query::Query;
-    use siddhi_rust::query_api::execution::ExecutionElement;
-    let mut app = siddhi_rust::query_api::siddhi_app::SiddhiApp::new("SeqAPI".to_string());
+    use eventflux_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+    use eventflux_rust::query_api::execution::query::Query;
+    use eventflux_rust::query_api::execution::ExecutionElement;
+    let mut app = eventflux_rust::query_api::eventflux_app::EventFluxApp::new("SeqAPI".to_string());
     let a_def = StreamDefinition::new("A".to_string()).attribute("val".to_string(), AttrType::INT);
     let b_def = StreamDefinition::new("B".to_string()).attribute("val".to_string(), AttrType::INT);
     let out_def = StreamDefinition::new("Out".to_string())

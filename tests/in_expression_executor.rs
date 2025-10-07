@@ -1,24 +1,24 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::executor::condition::InExpressionExecutor;
-use siddhi_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::table::{InMemoryTable, Table};
-use siddhi_rust::query_api::definition::attribute::Type as ApiAttributeType;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::executor::condition::InExpressionExecutor;
+use eventflux_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::table::{InMemoryTable, Table};
+use eventflux_rust::query_api::definition::attribute::Type as ApiAttributeType;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
 use std::sync::Arc;
 
-fn make_context_with_table() -> Arc<SiddhiAppContext> {
-    let ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+fn make_context_with_table() -> Arc<EventFluxAppContext> {
+    let ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "test_app".to_string(),
-        Arc::new(SiddhiApp::new("test".to_string())),
+        Arc::new(EventFluxApp::new("test".to_string())),
         String::new(),
     ));
     let table: Arc<dyn Table> = Arc::new(InMemoryTable::new());
     table.insert(&[AttributeValue::Int(1)]);
-    ctx.get_siddhi_context()
+    ctx.get_eventflux_context()
         .add_table("MyTable".to_string(), table);
     ctx
 }

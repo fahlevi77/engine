@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/query/processor/stream/window/length_window_state_holder.rs
+// eventflux_rust/src/core/query/processor/stream/window/length_window_state_holder.rs
 
 //! Enhanced StateHolder implementation for LengthWindowProcessor
-//! 
+//!
 //! This implementation provides enterprise-grade state management for length windows
 //! with versioning, incremental checkpointing, and comprehensive metadata.
 
@@ -11,30 +11,31 @@ use std::sync::{Arc, Mutex};
 use crate::core::event::complex_event::ComplexEventType;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::persistence::state_holder::{
-    StateHolder, StateSnapshot, StateError, StateSize, AccessPattern,
-    SerializationHints, ChangeLog, CheckpointId, SchemaVersion, StateMetadata,
-    StateOperation
+    AccessPattern, ChangeLog, CheckpointId, SchemaVersion, SerializationHints, StateError,
+    StateHolder, StateMetadata, StateOperation, StateSize, StateSnapshot,
 };
-use crate::core::util::compression::{CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange};
+use crate::core::util::compression::{
+    CompressibleStateHolder, CompressionHints, DataCharacteristics, DataSizeRange,
+};
 
 /// Enhanced state holder for LengthWindowProcessor with StateHolder capabilities
 #[derive(Debug, Clone)]
 pub struct LengthWindowStateHolder {
     /// Window buffer containing events
     buffer: Arc<Mutex<VecDeque<Arc<StreamEvent>>>>,
-    
+
     /// Component identifier
     component_id: String,
-    
+
     /// Window length configuration
     window_length: usize,
-    
+
     /// Last checkpoint ID for incremental tracking
     last_checkpoint_id: Arc<Mutex<Option<CheckpointId>>>,
-    
+
     /// Change log for incremental checkpointing
     change_log: Arc<Mutex<Vec<StateOperation>>>,
-    
+
     /// Event counter for size estimation
     total_events_processed: Arc<Mutex<u64>>,
 }
@@ -60,7 +61,7 @@ impl LengthWindowStateHolder {
     pub fn record_event_added(&self, event: &StreamEvent) {
         let mut change_log = self.change_log.lock().unwrap();
         let event_data = self.serialize_event(event);
-        
+
         change_log.push(StateOperation::Insert {
             key: self.generate_event_key(event),
             value: event_data,
@@ -74,7 +75,7 @@ impl LengthWindowStateHolder {
     pub fn record_event_removed(&self, event: &StreamEvent) {
         let mut change_log = self.change_log.lock().unwrap();
         let event_data = self.serialize_event(event);
-        
+
         change_log.push(StateOperation::Delete {
             key: self.generate_event_key(event),
             old_value: event_data,
@@ -86,11 +87,11 @@ impl LengthWindowStateHolder {
         // Use timestamp and a hash of the event data as key
         let mut key = Vec::new();
         key.extend_from_slice(&event.timestamp.to_le_bytes());
-        
+
         // Add a simple hash of the event data
         let data_hash = self.hash_event_data(&event.before_window_data);
         key.extend_from_slice(&data_hash.to_le_bytes());
-        
+
         key
     }
 
@@ -98,43 +99,45 @@ impl LengthWindowStateHolder {
     fn hash_event_data(&self, data: &[crate::core::event::value::AttributeValue]) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
-        
+
         // Hash the length first
         data.len().hash(&mut hasher);
-        
+
         // Hash each attribute value
         for attr in data {
             // Create a string representation for hashing
             let attr_str = format!("{attr:?}");
             attr_str.hash(&mut hasher);
         }
-        
+
         hasher.finish()
     }
 
     /// Serialize an event to bytes
     fn serialize_event(&self, event: &StreamEvent) -> Vec<u8> {
         use crate::core::util::to_bytes;
-        
+
         // Simple serialization using bincode
         // Serialize the essential event data directly
         let event_data = (
             event.timestamp,
             &event.before_window_data,
-            event.event_type == ComplexEventType::Expired
+            event.event_type == ComplexEventType::Expired,
         );
-        
+
         to_bytes(&event_data).unwrap_or_default()
     }
 
     /// Deserialize an event from bytes
     fn deserialize_event(&self, data: &[u8]) -> Result<StreamEvent, StateError> {
         use crate::core::util::from_bytes;
-        
+
         // Deserialize using bincode - direct approach
-        if let Ok((timestamp, data, is_expired)) = from_bytes::<(i64, Vec<crate::core::event::value::AttributeValue>, bool)>(data) {
+        if let Ok((timestamp, data, is_expired)) =
+            from_bytes::<(i64, Vec<crate::core::event::value::AttributeValue>, bool)>(data)
+        {
             let mut se = StreamEvent::new(timestamp, data.len(), 0, 0);
             se.before_window_data = data;
             se.event_type = if is_expired {
@@ -144,7 +147,7 @@ impl LengthWindowStateHolder {
             };
             return Ok(se);
         }
-        
+
         Err(StateError::DeserializationError {
             message: "Failed to deserialize StreamEvent".to_string(),
         })
@@ -165,42 +168,41 @@ impl StateHolder for LengthWindowStateHolder {
 
     fn serialize_state(&self, hints: &SerializationHints) -> Result<StateSnapshot, StateError> {
         use crate::core::util::to_bytes;
-        
+
         // Create state data structure by gathering data with minimal lock time
         let (serialized_events, total_events) = {
             let buffer = self.buffer.lock().unwrap();
-            
+
             // Serialize all events in the buffer
             let mut serialized_events = Vec::new();
             for event in buffer.iter() {
                 let event_data = self.serialize_event(event);
                 serialized_events.push(event_data);
             }
-            
+
             let total_events = *self.total_events_processed.lock().unwrap();
             (serialized_events, total_events)
         }; // Release buffer lock early
-        
+
         let state_data = LengthWindowStateData {
             events: serialized_events,
             window_length: self.window_length,
             total_events_processed: total_events,
         };
-        
-        
+
         // Serialize to bytes
         let data = to_bytes(&state_data).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize length window state: {e}"),
         })?;
-        
-        
-        let (compressed_data, compression_type) = self.compress_state_data(&data, hints.prefer_compression.clone())?;
-        
+
+        let (compressed_data, compression_type) =
+            self.compress_state_data(&data, hints.prefer_compression.clone())?;
+
         let data = compressed_data;
         let compression = compression_type;
-        
+
         let checksum = StateSnapshot::calculate_checksum(&data);
-        
+
         Ok(StateSnapshot {
             version: self.schema_version(),
             checkpoint_id: 0, // Will be set by the checkpoint coordinator
@@ -213,26 +215,25 @@ impl StateHolder for LengthWindowStateHolder {
 
     fn deserialize_state(&mut self, snapshot: &StateSnapshot) -> Result<(), StateError> {
         use crate::core::util::from_bytes;
-        
+
         // Verify integrity
         if !snapshot.verify_integrity() {
             return Err(StateError::ChecksumMismatch);
         }
-        
+
         // Decompress data if needed using the shared compression utility
         let data = self.decompress_state_data(&snapshot.data, snapshot.compression.clone())?;
-        
+
         // Deserialize state data
-        let state_data: LengthWindowStateData = from_bytes(&data).map_err(|e| {
-            StateError::DeserializationError {
+        let state_data: LengthWindowStateData =
+            from_bytes(&data).map_err(|e| StateError::DeserializationError {
                 message: format!("Failed to deserialize length window state: {e}"),
-            }
-        })?;
-        
+            })?;
+
         // Restore window buffer
         let mut buffer = self.buffer.lock().unwrap();
         buffer.clear();
-        
+
         for event_data in &state_data.events {
             match self.deserialize_event(event_data) {
                 Ok(event) => buffer.push_back(Arc::new(event)),
@@ -242,30 +243,32 @@ impl StateHolder for LengthWindowStateHolder {
                 }
             }
         }
-        
+
         // Restore metadata
         self.window_length = state_data.window_length;
         *self.total_events_processed.lock().unwrap() = state_data.total_events_processed;
-        
+
         Ok(())
     }
 
     fn get_changelog(&self, since: CheckpointId) -> Result<ChangeLog, StateError> {
         let last_checkpoint = self.last_checkpoint_id.lock().unwrap();
-        
+
         if let Some(last_id) = *last_checkpoint {
             if since > last_id {
-                return Err(StateError::CheckpointNotFound { checkpoint_id: since });
+                return Err(StateError::CheckpointNotFound {
+                    checkpoint_id: since,
+                });
             }
         }
-        
+
         let change_log = self.change_log.lock().unwrap();
         let mut changelog = ChangeLog::new(since, since + 1);
-        
+
         for operation in change_log.iter() {
             changelog.add_operation(operation.clone());
         }
-        
+
         Ok(changelog)
     }
 
@@ -273,12 +276,12 @@ impl StateHolder for LengthWindowStateHolder {
         // For length windows, we could apply incremental changes
         // For now, this is a simplified implementation
         // Note: Applying {} state operations to length window
-        
+
         // In a full implementation, we would:
         // 1. Parse each operation
         // 2. Apply inserts/deletes to the buffer
         // 3. Maintain window size constraints
-        
+
         Ok(())
     }
 
@@ -289,11 +292,11 @@ impl StateHolder for LengthWindowStateHolder {
             // Return conservative estimate if buffer is locked to avoid hanging
             5 // Conservative estimate
         };
-        
+
         // Estimate bytes per event (rough calculation)
         let estimated_bytes_per_event = 200; // Conservative estimate
         let total_bytes = entries * estimated_bytes_per_event;
-        
+
         // Estimate growth rate based on window length
         let growth_rate = if self.window_length > 0 {
             // If we're at capacity, growth rate is 0 (stable)
@@ -306,7 +309,7 @@ impl StateHolder for LengthWindowStateHolder {
         } else {
             estimated_bytes_per_event as f64
         };
-        
+
         StateSize {
             bytes: total_bytes,
             entries,
@@ -321,14 +324,21 @@ impl StateHolder for LengthWindowStateHolder {
     }
 
     fn component_metadata(&self) -> StateMetadata {
-        let mut metadata = StateMetadata::new(self.component_id.clone(), "LengthWindowProcessor".to_string());
+        let mut metadata = StateMetadata::new(
+            self.component_id.clone(),
+            "LengthWindowProcessor".to_string(),
+        );
         metadata.access_pattern = self.access_pattern();
         metadata.size_estimation = self.estimate_size();
-        
+
         // Add custom metadata
-        metadata.custom_metadata.insert("window_length".to_string(), self.window_length.to_string());
-        metadata.custom_metadata.insert("window_type".to_string(), "length".to_string());
-        
+        metadata
+            .custom_metadata
+            .insert("window_length".to_string(), self.window_length.to_string());
+        metadata
+            .custom_metadata
+            .insert("window_type".to_string(), "length".to_string());
+
         metadata
     }
 }
@@ -339,7 +349,7 @@ impl CompressibleStateHolder for LengthWindowStateHolder {
             prefer_speed: true, // Length windows need low latency for real-time processing
             prefer_ratio: false,
             data_type: DataCharacteristics::ModeratelyRepetitive, // Event streams have moderate patterns
-            target_latency_ms: Some(1), // Target < 1ms compression time
+            target_latency_ms: Some(1),                           // Target < 1ms compression time
             min_compression_ratio: Some(0.3), // At least 30% space savings to be worthwhile
             expected_size_range: DataSizeRange::Small, // Length windows typically have small state
         }
@@ -358,18 +368,14 @@ struct LengthWindowStateData {
 mod tests {
     use super::*;
     use crate::core::event::value::AttributeValue;
-    use std::sync::Arc;
     use std::collections::VecDeque;
+    use std::sync::Arc;
 
     #[test]
     fn test_length_window_state_holder_creation() {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        let holder = LengthWindowStateHolder::new(
-            buffer,
-            "test_length_window".to_string(),
-            10,
-        );
-        
+        let holder = LengthWindowStateHolder::new(buffer, "test_length_window".to_string(), 10);
+
         assert_eq!(holder.schema_version(), SchemaVersion::new(1, 0, 0));
         assert_eq!(holder.access_pattern(), AccessPattern::Sequential);
     }
@@ -377,7 +383,7 @@ mod tests {
     #[test]
     fn test_state_serialization_and_deserialization() {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        
+
         // Add some test events
         {
             let mut buf = buffer.lock().unwrap();
@@ -388,23 +394,23 @@ mod tests {
             ];
             buf.push_back(Arc::new(event));
         }
-        
-        let mut holder = LengthWindowStateHolder::new(
-            buffer,
-            "test_length_window".to_string(),
-            10,
-        );
-        
+
+        let mut holder = LengthWindowStateHolder::new(buffer, "test_length_window".to_string(), 10);
+
         let hints = SerializationHints::default();
-        
+
         // Test serialization with shared compression utility
-        let snapshot = holder.serialize_state(&hints).expect("Serialization should succeed");
-        
+        let snapshot = holder
+            .serialize_state(&hints)
+            .expect("Serialization should succeed");
+
         assert!(snapshot.verify_integrity());
-        
+
         // Test deserialization
-        holder.deserialize_state(&snapshot).expect("Deserialization should succeed");
-        
+        holder
+            .deserialize_state(&snapshot)
+            .expect("Deserialization should succeed");
+
         // Verify the data was restored
         let buffer = holder.buffer.lock().unwrap();
         assert_eq!(buffer.len(), 1);
@@ -413,26 +419,22 @@ mod tests {
     #[test]
     fn test_change_log_tracking() {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        let holder = LengthWindowStateHolder::new(
-            buffer,
-            "test_length_window".to_string(),
-            10,
-        );
-        
+        let holder = LengthWindowStateHolder::new(buffer, "test_length_window".to_string(), 10);
+
         // Create a test event
         let mut event = StreamEvent::new(1000, 1, 0, 0);
         event.before_window_data = vec![AttributeValue::Int(42)];
-        
+
         // Record event addition
         holder.record_event_added(&event);
-        
+
         // Get changelog
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 1);
-        
+
         // Record event removal
         holder.record_event_removed(&event);
-        
+
         let changelog = holder.get_changelog(0).unwrap();
         assert_eq!(changelog.operations.len(), 2);
     }
@@ -440,17 +442,14 @@ mod tests {
     #[test]
     fn test_size_estimation() {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
-        let holder = LengthWindowStateHolder::new(
-            buffer.clone(),
-            "test_length_window".to_string(),
-            5,
-        );
-        
+        let holder =
+            LengthWindowStateHolder::new(buffer.clone(), "test_length_window".to_string(), 5);
+
         // Test empty window
         let size = holder.estimate_size();
         assert_eq!(size.entries, 0);
         assert_eq!(size.bytes, 0);
-        
+
         // Add some events
         {
             let mut buf = buffer.lock().unwrap();
@@ -460,7 +459,7 @@ mod tests {
                 buf.push_back(Arc::new(event));
             }
         }
-        
+
         let size = holder.estimate_size();
         assert_eq!(size.entries, 3);
         assert_eq!(size.bytes, 3 * 200); // 200 bytes per event estimate

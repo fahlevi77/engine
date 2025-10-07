@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::event::Event;
 use crate::core::event::value::AttributeValue;
 use crate::core::table::{InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table};
@@ -6,14 +6,14 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct TableInputHandler {
-    pub siddhi_app_context: Arc<SiddhiAppContext>,
+    pub eventflux_app_context: Arc<EventFluxAppContext>,
     table: Arc<dyn Table>,
 }
 
 impl TableInputHandler {
-    pub fn new(table: Arc<dyn Table>, siddhi_app_context: Arc<SiddhiAppContext>) -> Self {
+    pub fn new(table: Arc<dyn Table>, eventflux_app_context: Arc<EventFluxAppContext>) -> Self {
         Self {
-            siddhi_app_context,
+            eventflux_app_context,
             table,
         }
     }

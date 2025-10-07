@@ -6,14 +6,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::core::event::value::AttributeValue;
-use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::complex_event::ComplexEventType;
+use crate::core::event::stream::stream_event::StreamEvent;
+use crate::core::event::value::AttributeValue;
 use crate::core::persistence::state_holder::StateError;
 
 /// Storage strategy for event serialization based on use case
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum StorageStrategy {
     /// Store complete event data for full recovery
     Full,
@@ -25,7 +24,6 @@ pub enum StorageStrategy {
     /// Store compressed event data
     Compressed,
 }
-
 
 /// Serializable representation of AttributeValue that handles all types safely
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,7 +63,7 @@ impl From<&AttributeValue> for SerializableAttributeValue {
                     // In a production system, we would register known object types
                     serialized_data: None,
                 }
-            },
+            }
             AttributeValue::Null => SerializableAttributeValue::Null,
         }
     }
@@ -89,7 +87,7 @@ impl From<SerializableAttributeValue> for AttributeValue {
                 } else {
                     AttributeValue::Object(None)
                 }
-            },
+            }
             SerializableAttributeValue::Null => AttributeValue::Null,
         }
     }
@@ -132,38 +130,42 @@ impl SerializableEventData {
     /// Create serializable event data from a StreamEvent with specified strategy
     pub fn from_stream_event(event: &StreamEvent, strategy: StorageStrategy) -> Self {
         let before_window_data = match strategy {
-            StorageStrategy::Full | StorageStrategy::Essential => {
-                event.before_window_data.iter()
-                    .map(SerializableAttributeValue::from)
-                    .collect()
-            },
+            StorageStrategy::Full | StorageStrategy::Essential => event
+                .before_window_data
+                .iter()
+                .map(SerializableAttributeValue::from)
+                .collect(),
             StorageStrategy::Reference => {
                 // Store only basic types, skip complex objects entirely
-                event.before_window_data.iter()
+                event
+                    .before_window_data
+                    .iter()
                     .filter_map(|attr| {
                         match attr {
                             AttributeValue::Object(_) => None, // Skip objects in reference mode
-                            _ => Some(SerializableAttributeValue::from(attr))
+                            _ => Some(SerializableAttributeValue::from(attr)),
                         }
                     })
                     .collect()
-            },
+            }
             StorageStrategy::Compressed => {
                 // Similar to essential but with additional compression hints
-                event.before_window_data.iter()
+                event
+                    .before_window_data
+                    .iter()
                     .map(SerializableAttributeValue::from)
                     .collect()
             }
         };
 
-        let on_after_window_data = event.on_after_window_data.iter()
+        let on_after_window_data = event
+            .on_after_window_data
+            .iter()
             .map(SerializableAttributeValue::from)
             .collect();
 
         let output_data = match &event.output_data {
-            Some(data) => data.iter()
-                .map(SerializableAttributeValue::from)
-                .collect(),
+            Some(data) => data.iter().map(SerializableAttributeValue::from).collect(),
             None => Vec::new(),
         };
 
@@ -185,15 +187,21 @@ impl SerializableEventData {
 
     /// Convert back to StreamEvent
     pub fn to_stream_event(&self) -> StreamEvent {
-        let before_window_data: Vec<AttributeValue> = self.before_window_data.iter()
+        let before_window_data: Vec<AttributeValue> = self
+            .before_window_data
+            .iter()
             .map(|attr| AttributeValue::from(attr.clone()))
             .collect();
 
-        let on_after_window_data: Vec<AttributeValue> = self.on_after_window_data.iter()
+        let on_after_window_data: Vec<AttributeValue> = self
+            .on_after_window_data
+            .iter()
             .map(|attr| AttributeValue::from(attr.clone()))
             .collect();
 
-        let output_data: Vec<AttributeValue> = self.output_data.iter()
+        let output_data: Vec<AttributeValue> = self
+            .output_data
+            .iter()
             .map(|attr| AttributeValue::from(attr.clone()))
             .collect();
 
@@ -223,7 +231,7 @@ impl SerializableEventData {
     /// Serialize to bytes with compression support
     pub fn to_bytes(&self) -> Result<Vec<u8>, StateError> {
         use crate::core::util::to_bytes;
-        
+
         to_bytes(self).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize event data: {e}"),
         })
@@ -232,7 +240,7 @@ impl SerializableEventData {
     /// Deserialize from bytes
     pub fn from_bytes(data: &[u8]) -> Result<Self, StateError> {
         use crate::core::util::from_bytes;
-        
+
         from_bytes(data).map_err(|e| StateError::DeserializationError {
             message: format!("Failed to deserialize event data: {e}"),
         })
@@ -242,9 +250,10 @@ impl SerializableEventData {
     pub fn estimate_size(&self) -> usize {
         // Rough estimate based on data
         let base_size = std::mem::size_of::<Self>();
-        let data_size = (self.before_window_data.len() + 
-                        self.on_after_window_data.len() + 
-                        self.output_data.len()) * 50; // Rough estimate per attribute
+        let data_size = (self.before_window_data.len()
+            + self.on_after_window_data.len()
+            + self.output_data.len())
+            * 50; // Rough estimate per attribute
         base_size + data_size
     }
 }
@@ -294,7 +303,7 @@ impl EventBatch {
     /// Serialize batch to bytes
     pub fn to_bytes(&self) -> Result<Vec<u8>, StateError> {
         use crate::core::util::to_bytes;
-        
+
         to_bytes(self).map_err(|e| StateError::SerializationError {
             message: format!("Failed to serialize event batch: {e}"),
         })
@@ -303,7 +312,7 @@ impl EventBatch {
     /// Deserialize batch from bytes
     pub fn from_bytes(data: &[u8]) -> Result<Self, StateError> {
         use crate::core::util::from_bytes;
-        
+
         from_bytes(data).map_err(|e| StateError::DeserializationError {
             message: format!("Failed to deserialize event batch: {e}"),
         })
@@ -311,7 +320,8 @@ impl EventBatch {
 
     /// Convert all events to StreamEvents
     pub fn to_stream_events(&self) -> Vec<StreamEvent> {
-        self.events.iter()
+        self.events
+            .iter()
             .map(|event_data| event_data.to_stream_event())
             .collect()
     }
@@ -319,9 +329,7 @@ impl EventBatch {
     /// Estimate total storage size
     pub fn estimate_size(&self) -> usize {
         let base_size = std::mem::size_of::<Self>();
-        let events_size: usize = self.events.iter()
-            .map(|e| e.estimate_size())
-            .sum();
+        let events_size: usize = self.events.iter().map(|e| e.estimate_size()).sum();
         base_size + events_size
     }
 }
@@ -339,7 +347,8 @@ impl EventSerializationService {
 
     /// Serialize a single event with default strategy
     pub fn serialize_event(&self, event: &StreamEvent) -> Result<Vec<u8>, StateError> {
-        let serializable = SerializableEventData::from_stream_event(event, self.default_strategy.clone());
+        let serializable =
+            SerializableEventData::from_stream_event(event, self.default_strategy.clone());
         serializable.to_bytes()
     }
 
@@ -361,8 +370,11 @@ impl EventSerializationService {
 
     /// Serialize a batch of events
     pub fn serialize_event_batch(&self, events: &[StreamEvent]) -> Result<Vec<u8>, StateError> {
-        let serializable_events: Vec<SerializableEventData> = events.iter()
-            .map(|event| SerializableEventData::from_stream_event(event, self.default_strategy.clone()))
+        let serializable_events: Vec<SerializableEventData> = events
+            .iter()
+            .map(|event| {
+                SerializableEventData::from_stream_event(event, self.default_strategy.clone())
+            })
             .collect();
 
         let batch = EventBatch::new(serializable_events, self.default_strategy.clone());
@@ -377,9 +389,11 @@ impl EventSerializationService {
 
     /// Get storage size estimate for events
     pub fn estimate_storage_size(&self, events: &[StreamEvent]) -> usize {
-        events.iter()
+        events
+            .iter()
             .map(|event| {
-                let serializable = SerializableEventData::from_stream_event(event, self.default_strategy.clone());
+                let serializable =
+                    SerializableEventData::from_stream_event(event, self.default_strategy.clone());
                 serializable.estimate_size()
             })
             .sum()
@@ -402,7 +416,7 @@ mod tests {
         let attr = AttributeValue::String("test".to_string());
         let serializable = SerializableAttributeValue::from(&attr);
         let converted_back = AttributeValue::from(serializable);
-        
+
         match converted_back {
             AttributeValue::String(s) => assert_eq!(s, "test"),
             _ => panic!("Conversion failed"),
@@ -413,15 +427,15 @@ mod tests {
     fn test_object_attribute_value_handling() {
         let attr = AttributeValue::Object(None);
         let serializable = SerializableAttributeValue::from(&attr);
-        
+
         match serializable {
             SerializableAttributeValue::Object { is_some, .. } => assert!(!is_some),
             _ => panic!("Expected Object variant"),
         }
-        
+
         let converted_back = AttributeValue::from(serializable);
         match converted_back {
-            AttributeValue::Object(None) => {}, // Expected
+            AttributeValue::Object(None) => {} // Expected
             _ => panic!("Object conversion failed"),
         }
     }
@@ -439,12 +453,12 @@ mod tests {
 
         assert_eq!(reconstructed.timestamp, 1000);
         assert_eq!(reconstructed.before_window_data.len(), 2);
-        
+
         match &reconstructed.before_window_data[0] {
             AttributeValue::String(s) => assert_eq!(s, "test"),
             _ => panic!("First attribute should be string"),
         }
-        
+
         match &reconstructed.before_window_data[1] {
             AttributeValue::Int(i) => assert_eq!(*i, 42),
             _ => panic!("Second attribute should be int"),
@@ -460,11 +474,12 @@ mod tests {
             AttributeValue::Object(None), // This should be filtered out
         ];
 
-        let serializable = SerializableEventData::from_stream_event(&event, StorageStrategy::Reference);
-        
+        let serializable =
+            SerializableEventData::from_stream_event(&event, StorageStrategy::Reference);
+
         // Should only have 2 attributes (Object filtered out)
         assert_eq!(serializable.before_window_data.len(), 2);
-        
+
         let reconstructed = serializable.to_stream_event();
         assert_eq!(reconstructed.before_window_data.len(), 2);
     }
@@ -473,13 +488,13 @@ mod tests {
     fn test_event_batch_serialization() {
         let mut event1 = StreamEvent::new(1000, 1, 0, 0);
         event1.before_window_data = vec![AttributeValue::Int(1)];
-        
+
         let mut event2 = StreamEvent::new(2000, 1, 0, 0);
         event2.before_window_data = vec![AttributeValue::Int(2)];
 
         let events = vec![event1, event2];
         let service = EventSerializationService::default();
-        
+
         let serialized = service.serialize_event_batch(&events).unwrap();
         let deserialized = service.deserialize_event_batch(&serialized).unwrap();
 
@@ -497,7 +512,7 @@ mod tests {
         ];
 
         let service = EventSerializationService::new(StorageStrategy::Essential);
-        
+
         let serialized = service.serialize_event(&event).unwrap();
         let deserialized = service.deserialize_event(&serialized).unwrap();
 
@@ -512,7 +527,7 @@ mod tests {
 
         let service = EventSerializationService::default();
         let estimated_size = service.estimate_storage_size(&[event]);
-        
+
         assert!(estimated_size > 0);
         assert!(estimated_size < 10000); // Reasonable upper bound
     }

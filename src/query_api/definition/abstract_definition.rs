@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.definition.AbstractDefinition
+// Corresponds to io.eventflux.query.api.definition.AbstractDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::attribute::Attribute;
-use crate::query_api::siddhi_element::SiddhiElement; // Assuming Annotation is defined as per previous steps
+use crate::query_api::eventflux_element::EventFluxElement; // Assuming Annotation is defined as per previous steps
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct AbstractDefinition {
-    pub siddhi_element: SiddhiElement, // Renamed from 'element' and uses default initialization
+    pub eventflux_element: EventFluxElement, // Renamed from 'element' and uses default initialization
 
     // AbstractDefinition fields
     pub id: String,
@@ -19,7 +19,7 @@ pub struct AbstractDefinition {
 impl AbstractDefinition {
     pub fn new(id: String) -> Self {
         AbstractDefinition {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             id,
             attribute_list: Vec::new(),
             annotations: Vec::new(),
@@ -48,15 +48,15 @@ impl AbstractDefinition {
 }
 
 // AsRef and AsMut implementations are good if direct delegation is preferred over field access.
-// If siddhi_element is public, direct access `my_def.siddhi_element` is also possible.
-impl AsRef<SiddhiElement> for AbstractDefinition {
-    fn as_ref(&self) -> &SiddhiElement {
-        &self.siddhi_element
+// If eventflux_element is public, direct access `my_def.eventflux_element` is also possible.
+impl AsRef<EventFluxElement> for AbstractDefinition {
+    fn as_ref(&self) -> &EventFluxElement {
+        &self.eventflux_element
     }
 }
 
-impl AsMut<SiddhiElement> for AbstractDefinition {
-    fn as_mut(&mut self) -> &mut SiddhiElement {
-        &mut self.siddhi_element
+impl AsMut<EventFluxElement> for AbstractDefinition {
+    fn as_mut(&mut self) -> &mut EventFluxElement {
+        &mut self.eventflux_element
     }
 }

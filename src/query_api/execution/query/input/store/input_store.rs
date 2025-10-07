@@ -1,5 +1,5 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.store.InputStore (interface)
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.execution.query.input.store.InputStore (interface)
+use crate::query_api::eventflux_element::EventFluxElement;
 
 // Import specific store types that will be variants of the InputStore enum
 use super::store::Store;
@@ -10,7 +10,7 @@ use super::condition_input_store::ConditionInputStore;
 
 // Trait for common InputStore behavior
 pub trait InputStoreTrait {
-    // Removed SiddhiElement supertrait
+    // Removed EventFluxElement supertrait
     fn get_store_id(&self) -> &str;
     fn get_store_reference_id(&self) -> Option<&str>;
 }
@@ -33,24 +33,24 @@ impl InputStore {
         Store::new_with_ref(store_reference_id, store_id) // Assuming Store::new_with_ref exists
     }
 
-    // Helper to access the composed siddhi_element from variants
-    fn siddhi_element_ref(&self) -> &SiddhiElement {
+    // Helper to access the composed eventflux_element from variants
+    fn eventflux_element_ref(&self) -> &EventFluxElement {
         match self {
-            InputStore::Store(s) => &s.siddhi_element,
-            InputStore::Condition(c) => &c.siddhi_element,
-            InputStore::Aggregation(a) => &a.siddhi_element,
+            InputStore::Store(s) => &s.eventflux_element,
+            InputStore::Condition(c) => &c.eventflux_element,
+            InputStore::Aggregation(a) => &a.eventflux_element,
         }
     }
-    fn siddhi_element_mut_ref(&mut self) -> &mut SiddhiElement {
+    fn eventflux_element_mut_ref(&mut self) -> &mut EventFluxElement {
         match self {
-            InputStore::Store(s) => &mut s.siddhi_element,
-            InputStore::Condition(c) => &mut c.siddhi_element,
-            InputStore::Aggregation(a) => &mut a.siddhi_element,
+            InputStore::Store(s) => &mut s.eventflux_element,
+            InputStore::Condition(c) => &mut c.eventflux_element,
+            InputStore::Aggregation(a) => &mut a.eventflux_element,
         }
     }
 }
 
-// `impl SiddhiElement for InputStore` removed.
+// `impl EventFluxElement for InputStore` removed.
 
 // Implement InputStoreTrait for the enum
 impl InputStoreTrait for InputStore {
@@ -73,7 +73,7 @@ impl InputStoreTrait for InputStore {
 
 // Note: The structs Store, ConditionInputStore, AggregationInputStore
 // must be refactored to:
-// 1. Compose `siddhi_element: SiddhiElement`.
+// 1. Compose `eventflux_element: EventFluxElement`.
 // 2. Implement `InputStoreTrait`.
 // ConditionInputStore and AggregationInputStore were not part of this subtask's explicit file list to create/refactor,
 // but they are used by this enum. They were created in subtask 0005. Their review is pending.

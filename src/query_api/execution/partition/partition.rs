@@ -10,7 +10,7 @@ use crate::query_api::expression::Expression;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Partition {
-    // SiddhiElement fields for Partition itself
+    // EventFluxElement fields for Partition itself
     pub query_context_start_index: Option<(i32, i32)>,
     pub query_context_end_index: Option<(i32, i32)>,
 
@@ -47,9 +47,12 @@ impl Partition {
     pub fn with_value_partition(mut self, stream_id: String, expression: Expression) -> Self {
         // Check for duplicate stream partition definition and warn
         if self.partition_type_map.contains_key(&stream_id) {
-            eprintln!("Warning: Duplicate partition definition for stream '{}'", stream_id);
+            eprintln!(
+                "Warning: Duplicate partition definition for stream '{}'",
+                stream_id
+            );
         }
-        
+
         let value_partition = ValuePartitionType::new(stream_id.clone(), expression);
         self.partition_type_map
             .insert(stream_id, PartitionType::new_value(value_partition));
@@ -64,9 +67,12 @@ impl Partition {
     ) -> Self {
         // Check for duplicate stream partition definition and warn
         if self.partition_type_map.contains_key(&stream_id) {
-            eprintln!("Warning: Duplicate partition definition for stream '{}'", stream_id);
+            eprintln!(
+                "Warning: Duplicate partition definition for stream '{}'",
+                stream_id
+            );
         }
-        
+
         let range_partition = RangePartitionType::new(stream_id.clone(), range_props);
         self.partition_type_map
             .insert(stream_id, PartitionType::new_range(range_partition));
@@ -76,12 +82,15 @@ impl Partition {
     // Builder method `with(PartitionType partitionType)`
     pub fn with_partition_type(mut self, partition_type: PartitionType) -> Self {
         let stream_id = partition_type.get_stream_id().to_string();
-        
+
         // Check for duplicate stream partition definition and warn
         if self.partition_type_map.contains_key(&stream_id) {
-            eprintln!("Warning: Duplicate partition definition for stream '{}'", stream_id);
+            eprintln!(
+                "Warning: Duplicate partition definition for stream '{}'",
+                stream_id
+            );
         }
-        
+
         self.partition_type_map.insert(stream_id, partition_type);
         self
     }
@@ -94,18 +103,21 @@ impl Partition {
             for existing_query in &self.query_list {
                 if let Some(existing_name) = self.extract_query_name(existing_query) {
                     if existing_name == query_name {
-                        eprintln!("Warning: Duplicate query name '{}' in partition", query_name);
+                        eprintln!(
+                            "Warning: Duplicate query name '{}' in partition",
+                            query_name
+                        );
                         break;
                     }
                 }
             }
         }
-        
+
         self.query_list.push(query);
         self
     }
-    
-    // Helper method to extract query name from annotations  
+
+    // Helper method to extract query name from annotations
     fn extract_query_name(&self, query: &Query) -> Option<String> {
         for annotation in query.get_annotations() {
             if annotation.name == "info" {

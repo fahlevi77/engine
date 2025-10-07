@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use super::sequence_processor::SequenceSide;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::{
     stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
@@ -36,8 +36,8 @@ impl LogicalProcessor {
         logical_type: LogicalType,
         first_attr_count: usize,
         second_attr_count: usize,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -170,13 +170,13 @@ impl Processor for LogicalProcessorSide {
         self.parent.lock().unwrap().next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         let parent = self.parent.lock().unwrap();
         let cloned = LogicalProcessor::new(
             parent.logical_type,
             parent.first_attr_count,
             parent.second_attr_count,
-            Arc::clone(&parent.meta.siddhi_app_context),
+            Arc::clone(&parent.meta.eventflux_app_context),
             Arc::clone(ctx),
         );
         let arc = Arc::new(Mutex::new(cloned));
@@ -186,12 +186,21 @@ impl Processor for LogicalProcessorSide {
         })
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        self.parent.lock().unwrap().meta.siddhi_app_context.clone()
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .eventflux_app_context
+            .clone()
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.parent.lock().unwrap().meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

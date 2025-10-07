@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.stream.SingleInputStream
+// Corresponds to io.eventflux.query.api.execution.query.input.stream.SingleInputStream
 use super::input_stream::InputStreamTrait;
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::query::input::handler::{
     Filter, StreamFunction, StreamHandler, WindowHandler,
 };
 use crate::query_api::execution::query::Query;
-use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // For AnonymousInputStream part
+use crate::query_api::expression::Expression; // For AnonymousInputStream part
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SingleInputStreamKind {
@@ -40,7 +40,7 @@ impl Default for SingleInputStreamKind {
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct SingleInputStream {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
     pub kind: SingleInputStreamKind,
 }
 
@@ -48,7 +48,7 @@ impl SingleInputStream {
     // Private constructor to be used by specific factory methods
     fn new(kind: SingleInputStreamKind) -> Self {
         SingleInputStream {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             kind,
         }
     }
@@ -194,7 +194,7 @@ impl SingleInputStream {
     }
 }
 
-// SiddhiElement is composed: access via self.siddhi_element
+// EventFluxElement is composed: access via self.eventflux_element
 // InputStreamTrait implementation
 impl InputStreamTrait for SingleInputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

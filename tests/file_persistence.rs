@@ -1,8 +1,8 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::{
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::persistence::{
     FilePersistenceStore, PersistenceStore, SqlitePersistenceStore,
 };
 use std::sync::Arc;

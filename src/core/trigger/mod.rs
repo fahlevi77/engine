@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/trigger/mod.rs
+// eventflux_rust/src/core/trigger/mod.rs
 
 //! Basic trigger runtime implementation.
 

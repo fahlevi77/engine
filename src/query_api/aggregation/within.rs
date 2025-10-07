@@ -1,10 +1,10 @@
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 #[derive(Clone, Debug, PartialEq)] // Default is tricky due to required fields
 #[derive(Default)]
 pub struct Within {
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
     // In Java, timeRange can hold one (pattern) or two (start, end) expressions.
     // We can model this as an enum or distinct fields.
     // Using distinct fields for clarity, matching the two factory methods.
@@ -17,7 +17,7 @@ impl Within {
     // Corresponds to Java's within(Expression pattern)
     pub fn new_with_pattern(pattern: Expression) -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             pattern_expression: Some(Box::new(pattern)),
             start_expression: None,
             end_expression: None,
@@ -27,7 +27,7 @@ impl Within {
     // Corresponds to Java's within(Expression start, Expression end)
     pub fn new_with_range(start: Expression, end: Expression) -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             pattern_expression: None,
             start_expression: Some(Box::new(start)),
             end_expression: Some(Box::new(end)),

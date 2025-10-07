@@ -1,4 +1,4 @@
-// Corresponds to package io.siddhi.query.api.execution.query.input
+// Corresponds to package io.eventflux.query.api.execution.query.input
 
 pub mod handler;
 pub mod state;

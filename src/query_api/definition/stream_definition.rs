@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.definition.StreamDefinition
+// Corresponds to io.eventflux.query.api.definition.StreamDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::abstract_definition::AbstractDefinition;
 use crate::query_api::definition::attribute::{Attribute, Type as AttributeType}; // Assuming Annotation is defined
@@ -27,10 +27,18 @@ impl StreamDefinition {
     // Builder-style methods, specific to StreamDefinition
     pub fn attribute(mut self, attribute_name: String, attribute_type: AttributeType) -> Self {
         // Check for duplicate attribute names and warn
-        if self.abstract_definition.attribute_list.iter().any(|attr| attr.get_name() == &attribute_name) {
-            eprintln!("Warning: Duplicate attribute '{}' in stream definition", attribute_name);
+        if self
+            .abstract_definition
+            .attribute_list
+            .iter()
+            .any(|attr| attr.get_name() == &attribute_name)
+        {
+            eprintln!(
+                "Warning: Duplicate attribute '{}' in stream definition",
+                attribute_name
+            );
         }
-        
+
         self.abstract_definition
             .attribute_list
             .push(Attribute::new(attribute_name, attribute_type));
@@ -45,7 +53,7 @@ impl StreamDefinition {
     // The `clone()` method from Java is handled by `#[derive(Clone)]`.
 }
 
-// Provide access to AbstractDefinition fields and SiddhiElement fields
+// Provide access to AbstractDefinition fields and EventFluxElement fields
 // These are useful for treating StreamDefinition polymorphically if needed.
 impl AsRef<AbstractDefinition> for StreamDefinition {
     fn as_ref(&self) -> &AbstractDefinition {
@@ -59,17 +67,17 @@ impl AsMut<AbstractDefinition> for StreamDefinition {
     }
 }
 
-// Through AbstractDefinition, can access SiddhiElement
-use crate::query_api::siddhi_element::SiddhiElement;
-impl AsRef<SiddhiElement> for StreamDefinition {
-    fn as_ref(&self) -> &SiddhiElement {
-        // Accessing SiddhiElement composed within AbstractDefinition
+// Through AbstractDefinition, can access EventFluxElement
+use crate::query_api::eventflux_element::EventFluxElement;
+impl AsRef<EventFluxElement> for StreamDefinition {
+    fn as_ref(&self) -> &EventFluxElement {
+        // Accessing EventFluxElement composed within AbstractDefinition
         self.abstract_definition.as_ref()
     }
 }
 
-impl AsMut<SiddhiElement> for StreamDefinition {
-    fn as_mut(&mut self) -> &mut SiddhiElement {
+impl AsMut<EventFluxElement> for StreamDefinition {
+    fn as_mut(&mut self) -> &mut EventFluxElement {
         self.abstract_definition.as_mut()
     }
 }
@@ -96,11 +104,11 @@ mod tests {
         assert_eq!(attributes[1].get_name(), "value");
         assert_eq!(attributes[1].get_type(), &AttributeType::INT);
 
-        // Also check default SiddhiElement from composed AbstractDefinition
+        // Also check default EventFluxElement from composed AbstractDefinition
         assert_eq!(
             stream_def
                 .abstract_definition
-                .siddhi_element
+                .eventflux_element
                 .query_context_start_index,
             None
         );

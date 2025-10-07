@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/add.rs
+// eventflux_rust/src/core/executor/math/add.rs
 use super::common::CoerceNumeric;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
@@ -96,13 +96,13 @@ impl ExpressionExecutor for AddExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(AddExpressionExecutor {
-            left_executor: self.left_executor.clone_executor(siddhi_app_context),
-            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            left_executor: self.left_executor.clone_executor(eventflux_app_context),
+            right_executor: self.right_executor.clone_executor(eventflux_app_context),
             return_type: self.return_type,
         })
     }
@@ -114,7 +114,7 @@ mod tests {
     use crate::core::event::value::AttributeValue;
     use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
     // ApiAttributeType is imported in the outer scope
-    use crate::core::config::siddhi_app_context::SiddhiAppContext;
+    use crate::core::config::eventflux_app_context::EventFluxAppContext;
     use crate::core::executor::expression_executor::ExpressionExecutor;
     use std::sync::Arc;
 
@@ -181,7 +181,7 @@ mod tests {
         ));
         let add_exec = AddExpressionExecutor::new(left_exec, right_exec).unwrap();
 
-        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let app_ctx_placeholder = Arc::new(EventFluxAppContext::default_for_testing());
         let cloned_add_exec = add_exec.clone_executor(&app_ctx_placeholder);
 
         assert_eq!(cloned_add_exec.get_return_type(), ApiAttributeType::INT);

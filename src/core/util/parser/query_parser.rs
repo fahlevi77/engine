@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/util/parser/query_parser.rs
+// eventflux_rust/src/core/util/parser/query_parser.rs
 use super::expression_parser::{parse_expression, ExpressionParserContext};
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::stream::meta_stream_event::MetaStreamEvent;
 use crate::core::query::input::stream::join::{JoinProcessor, JoinSide, TableJoinProcessor};
 use crate::core::query::output::insert_into_stream_processor::InsertIntoStreamProcessor;
@@ -29,7 +29,7 @@ pub struct QueryParser;
 impl QueryParser {
     pub fn parse_query(
         api_query: &ApiQuery,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
         stream_junction_map: &HashMap<String, Arc<Mutex<StreamJunction>>>,
         table_def_map: &HashMap<String, Arc<crate::query_api::definition::TableDefinition>>,
         aggregation_map: &HashMap<String, Arc<Mutex<crate::core::aggregation::AggregationRuntime>>>,
@@ -44,15 +44,15 @@ impl QueryParser {
             .map(|el| el.value.clone())
             .unwrap_or_else(|| format!("query_{}", uuid::Uuid::new_v4().hyphenated()));
 
-        let mut siddhi_query_context = SiddhiQueryContext::new(
-            Arc::clone(siddhi_app_context),
+        let mut eventflux_query_context = EventFluxQueryContext::new(
+            Arc::clone(eventflux_app_context),
             query_name.clone(),
             partition_id.clone(),
         );
         if partition_id.is_some() {
-            siddhi_query_context.set_partitioned(true);
+            eventflux_query_context.set_partitioned(true);
         }
-        let siddhi_query_context = Arc::new(siddhi_query_context);
+        let eventflux_query_context = Arc::new(eventflux_query_context);
 
         // 2. Identify input stream & get its junction
         let input_stream_api = api_query
@@ -103,8 +103,8 @@ impl QueryParser {
                 // registering tables here to prevent variable lookup ambiguity.
                 let table_meta_map = HashMap::new();
                 let ctx = ExpressionParserContext {
-                    siddhi_app_context: Arc::clone(siddhi_app_context),
-                    siddhi_query_context: Arc::clone(&siddhi_query_context),
+                    eventflux_app_context: Arc::clone(eventflux_app_context),
+                    eventflux_query_context: Arc::clone(&eventflux_query_context),
                     stream_meta_map,
                     table_meta_map,
                     window_meta_map: HashMap::new(),
@@ -124,8 +124,8 @@ impl QueryParser {
                         crate::query_api::execution::query::input::handler::StreamHandler::Window(w) => {
                             let win_proc = create_window_processor(
                                 w.as_ref(),
-                                Arc::clone(siddhi_app_context),
-                                Arc::clone(&siddhi_query_context),
+                                Arc::clone(eventflux_app_context),
+                                Arc::clone(&eventflux_query_context),
                             )?;
                             link_processor(win_proc);
                         }
@@ -134,8 +134,8 @@ impl QueryParser {
                                 parse_expression(&f.filter_expression, &ctx).map_err(|e| e.to_string())?;
                             let filter_processor = Arc::new(Mutex::new(FilterProcessor::new(
                                 condition_executor,
-                                Arc::clone(siddhi_app_context),
-                                Arc::clone(&siddhi_query_context),
+                                Arc::clone(eventflux_app_context),
+                                Arc::clone(&eventflux_query_context),
                             )?));
                             link_processor(filter_processor);
                         }
@@ -173,8 +173,8 @@ impl QueryParser {
                         .get(&table_id)
                         .ok_or_else(|| format!("Table definition '{table_id}' not found"))?
                         .clone();
-                    let table = siddhi_app_context
-                        .get_siddhi_context()
+                    let table = eventflux_app_context
+                        .get_eventflux_context()
                         .get_table(&table_id)
                         .ok_or_else(|| format!("Table '{table_id}' not found"))?;
 
@@ -204,8 +204,8 @@ impl QueryParser {
                             parse_expression(
                                 expr,
                                 &ExpressionParserContext {
-                                    siddhi_app_context: Arc::clone(siddhi_app_context),
-                                    siddhi_query_context: Arc::clone(&siddhi_query_context),
+                                    eventflux_app_context: Arc::clone(eventflux_app_context),
+                                    eventflux_query_context: Arc::clone(&eventflux_query_context),
                                     stream_meta_map: stream_meta_map.clone(),
                                     table_meta_map: table_meta_map.clone(),
                                     window_meta_map: HashMap::new(),
@@ -244,16 +244,15 @@ impl QueryParser {
                         stream_len,
                         table_len,
                         table,
-                        Arc::clone(siddhi_app_context),
-                        Arc::clone(&siddhi_query_context),
+                        Arc::clone(eventflux_app_context),
+                        Arc::clone(&eventflux_query_context),
                     )));
                     stream_junction.lock().unwrap().subscribe(join_proc.clone());
                     link_processor(join_proc.clone());
 
-                    
                     ExpressionParserContext {
-                        siddhi_app_context: Arc::clone(siddhi_app_context),
-                        siddhi_query_context: Arc::clone(&siddhi_query_context),
+                        eventflux_app_context: Arc::clone(eventflux_app_context),
+                        eventflux_query_context: Arc::clone(&eventflux_query_context),
                         stream_meta_map,
                         table_meta_map,
                         window_meta_map: HashMap::new(),
@@ -302,8 +301,8 @@ impl QueryParser {
                             parse_expression(
                                 expr,
                                 &ExpressionParserContext {
-                                    siddhi_app_context: Arc::clone(siddhi_app_context),
-                                    siddhi_query_context: Arc::clone(&siddhi_query_context),
+                                    eventflux_app_context: Arc::clone(eventflux_app_context),
+                                    eventflux_query_context: Arc::clone(&eventflux_query_context),
                                     stream_meta_map: stream_meta_map.clone(),
                                     table_meta_map: table_meta_map.clone(),
                                     window_meta_map: HashMap::new(),
@@ -330,8 +329,8 @@ impl QueryParser {
                         cond_exec,
                         left_len,
                         right_len,
-                        Arc::clone(siddhi_app_context),
-                        Arc::clone(&siddhi_query_context),
+                        Arc::clone(eventflux_app_context),
+                        Arc::clone(&eventflux_query_context),
                     )));
                     let left_side =
                         JoinProcessor::create_side_processor(&join_proc, JoinSide::Left);
@@ -343,10 +342,9 @@ impl QueryParser {
 
                     link_processor(left_side.clone());
 
-                    
                     ExpressionParserContext {
-                        siddhi_app_context: Arc::clone(siddhi_app_context),
-                        siddhi_query_context: Arc::clone(&siddhi_query_context),
+                        eventflux_app_context: Arc::clone(eventflux_app_context),
+                        eventflux_query_context: Arc::clone(&eventflux_query_context),
                         stream_meta_map,
                         table_meta_map,
                         window_meta_map: HashMap::new(),
@@ -447,20 +445,18 @@ impl QueryParser {
                         }
                     }
                     StateElement::Logical(log_elem) => {
-                        let (s1, _, _) =
-                            extract_stream_state_with_count(&log_elem.stream_state_element_1)
-                                .ok_or_else(|| {
-                                    format!(
-                                        "Query '{query_name}': Unsupported Logical pattern structure"
-                                    )
-                                })?;
-                        let (s2, _, _) =
-                            extract_stream_state_with_count(&log_elem.stream_state_element_2)
-                                .ok_or_else(|| {
-                                    format!(
-                                        "Query '{query_name}': Unsupported Logical pattern structure"
-                                    )
-                                })?;
+                        let (s1, _, _) = extract_stream_state_with_count(
+                            &log_elem.stream_state_element_1,
+                        )
+                        .ok_or_else(|| {
+                            format!("Query '{query_name}': Unsupported Logical pattern structure")
+                        })?;
+                        let (s2, _, _) = extract_stream_state_with_count(
+                            &log_elem.stream_state_element_2,
+                        )
+                        .ok_or_else(|| {
+                            format!("Query '{query_name}': Unsupported Logical pattern structure")
+                        })?;
                         let logical_type = match log_elem.logical_type {
                             ApiLogicalType::And => LogicalType::And,
                             ApiLogicalType::Or => LogicalType::Or,
@@ -550,8 +546,8 @@ impl QueryParser {
                             second_min,
                             second_max,
                             within,
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         )));
                         let first_side = SequenceProcessor::create_side_processor(
                             &seq_proc,
@@ -571,8 +567,8 @@ impl QueryParser {
                         link_processor(first_side.clone());
 
                         ExpressionParserContext {
-                            siddhi_app_context: Arc::clone(siddhi_app_context),
-                            siddhi_query_context: Arc::clone(&siddhi_query_context),
+                            eventflux_app_context: Arc::clone(eventflux_app_context),
+                            eventflux_query_context: Arc::clone(&eventflux_query_context),
                             stream_meta_map,
                             table_meta_map,
                             window_meta_map: HashMap::new(),
@@ -597,8 +593,8 @@ impl QueryParser {
                             logical_type,
                             first_len,
                             second_len,
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         )));
                         let first_side =
                             LogicalProcessor::create_side_processor(&log_proc, SequenceSide::First);
@@ -616,8 +612,8 @@ impl QueryParser {
                         link_processor(first_side.clone());
 
                         ExpressionParserContext {
-                            siddhi_app_context: Arc::clone(siddhi_app_context),
-                            siddhi_query_context: Arc::clone(&siddhi_query_context),
+                            eventflux_app_context: Arc::clone(eventflux_app_context),
+                            eventflux_query_context: Arc::clone(&eventflux_query_context),
                             stream_meta_map,
                             table_meta_map,
                             window_meta_map: HashMap::new(),
@@ -669,9 +665,7 @@ impl QueryParser {
             .output_stream
             .get_target_id() // output_stream is not Option
             .ok_or_else(|| {
-                format!(
-                    "Query '{query_name}' must have a target output stream for INSERT INTO"
-                )
+                format!("Query '{query_name}' must have a target output stream for INSERT INTO")
             })?;
 
         let mut temp_def =
@@ -717,8 +711,8 @@ impl QueryParser {
             api_selector,
             true,
             true,
-            Arc::clone(siddhi_app_context),
-            Arc::clone(&siddhi_query_context),
+            Arc::clone(eventflux_app_context),
+            Arc::clone(&eventflux_query_context),
             oaps,
             select_output_stream_def,
             having_executor,
@@ -732,8 +726,8 @@ impl QueryParser {
             if let crate::query_api::execution::query::output::ratelimit::OutputRateVariant::Events(ev, beh) = &rate.variant {
                 let limiter = Arc::new(Mutex::new(OutputRateLimiter::new(
                     None,
-                    Arc::clone(siddhi_app_context),
-                    Arc::clone(&siddhi_query_context),
+                    Arc::clone(eventflux_app_context),
+                    Arc::clone(&eventflux_query_context),
                     ev.event_count as usize,
                     *beh,
                 )));
@@ -748,16 +742,16 @@ impl QueryParser {
                 if let Some(target_junction) = stream_junction_map.get(&insert_action.target_id) {
                     let insert_processor = Arc::new(Mutex::new(InsertIntoStreamProcessor::new(
                         target_junction.clone(),
-                        Arc::clone(siddhi_app_context),
-                        Arc::clone(&siddhi_query_context),
+                        Arc::clone(eventflux_app_context),
+                        Arc::clone(&eventflux_query_context),
                     )));
                     link_processor(insert_processor);
-                } else if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&insert_action.target_id) {
+                } else if let Some(table) = eventflux_app_context.get_eventflux_context().get_table(&insert_action.target_id) {
                     let insert_processor = Arc::new(Mutex::new(
                         crate::core::query::output::InsertIntoTableProcessor::new(
                             table,
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         ),
                     ));
                     link_processor(insert_processor);
@@ -765,8 +759,8 @@ impl QueryParser {
                     let insert_processor = Arc::new(Mutex::new(
                         crate::core::query::output::InsertIntoAggregationProcessor::new(
                             Arc::clone(agg),
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         ),
                     ));
                     link_processor(insert_processor);
@@ -778,12 +772,12 @@ impl QueryParser {
                 }
             }
             crate::query_api::execution::query::output::output_stream::OutputStreamAction::Update(update_action) => {
-                if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&update_action.target_id) {
+                if let Some(table) = eventflux_app_context.get_eventflux_context().get_table(&update_action.target_id) {
                     let update_processor = Arc::new(Mutex::new(
                         crate::core::query::output::UpdateTableProcessor::new(
                             table,
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         ),
                     ));
                     link_processor(update_processor);
@@ -795,12 +789,12 @@ impl QueryParser {
                 }
             }
             crate::query_api::execution::query::output::output_stream::OutputStreamAction::Delete(delete_action) => {
-                if let Some(table) = siddhi_app_context.get_siddhi_context().get_table(&delete_action.target_id) {
+                if let Some(table) = eventflux_app_context.get_eventflux_context().get_table(&delete_action.target_id) {
                     let delete_processor = Arc::new(Mutex::new(
                         crate::core::query::output::DeleteTableProcessor::new(
                             table,
-                            Arc::clone(siddhi_app_context),
-                            Arc::clone(&siddhi_query_context),
+                            Arc::clone(eventflux_app_context),
+                            Arc::clone(&eventflux_query_context),
                         ),
                     ));
                     link_processor(delete_processor);
@@ -818,7 +812,7 @@ impl QueryParser {
         let mut query_runtime = QueryRuntime::new_with_context(
             query_name.clone(),
             Arc::new(api_query.clone()),
-            Arc::clone(&siddhi_query_context),
+            Arc::clone(&eventflux_query_context),
         );
         query_runtime.processor_chain_head = processor_chain_head;
 

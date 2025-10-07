@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/function/instance_of_checkers.rs
+// eventflux_rust/src/core/executor/function/instance_of_checkers.rs
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -40,13 +40,13 @@ macro_rules! define_instance_of_executor {
 
             fn clone_executor(
                 &self,
-                siddhi_app_context: &std::sync::Arc<
-                    crate::core::config::siddhi_app_context::SiddhiAppContext,
+                eventflux_app_context: &std::sync::Arc<
+                    crate::core::config::eventflux_app_context::EventFluxAppContext,
                 >,
             ) -> Box<dyn ExpressionExecutor> {
                 Box::new(Self {
                     // Using Self works within macro
-                    executor: self.executor.clone_executor(siddhi_app_context),
+                    executor: self.executor.clone_executor(eventflux_app_context),
                 })
             }
         }
@@ -62,7 +62,7 @@ define_instance_of_executor!(InstanceOfDoubleExpressionExecutor, Double);
 
 // InstanceOfObjectFunctionExecutor in Java would check if `data != null`.
 // This is slightly different as our AttributeValue::Object can hold None.
-// For `instanceOfObject(arg)`, it should return true if `arg` is not siddhi `null` AND its type is OBJECT.
+// For `instanceOfObject(arg)`, it should return true if `arg` is not eventflux `null` AND its type is OBJECT.
 // However, the Java `InstanceOf*` functions check against specific Java types.
 // `instanceOfObject` is not a standard one in the provided list, usually it's specific types.
 // If it means "is this an AttributeValue::Object variant (regardless of inner Option)":

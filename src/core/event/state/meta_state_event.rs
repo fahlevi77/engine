@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/state/meta_state_event.rs
-// Corresponds to io.siddhi.core.event.state.MetaStateEvent
+// eventflux_rust/src/core/event/state/meta_state_event.rs
+// Corresponds to io.eventflux.core.event.state.MetaStateEvent
 use crate::core::event::stream::MetaStreamEvent; // Uses MetaStreamEvent
 use crate::query_api::definition::StreamDefinition; // For outputStreamDefinition
 use std::sync::Arc; // If definitions are shared

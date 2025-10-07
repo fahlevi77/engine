@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/query/selector/select_processor.rs
+// eventflux_rust/src/core/query/selector/select_processor.rs
 use super::attribute::OutputAttributeProcessor;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
@@ -27,8 +27,8 @@ struct GroupState {
 #[derive(Debug)]
 pub struct OutputRateLimiter {
     pub next_processor: Option<Arc<Mutex<dyn Processor>>>,
-    pub siddhi_app_context: Arc<SiddhiAppContext>,
-    pub siddhi_query_context: Arc<SiddhiQueryContext>,
+    pub eventflux_app_context: Arc<EventFluxAppContext>,
+    pub eventflux_query_context: Arc<EventFluxQueryContext>,
     batch_size: usize,
     behavior: crate::query_api::execution::query::output::ratelimit::OutputRateBehavior,
     buffer: Arc<Mutex<Vec<Box<dyn ComplexEvent>>>>,
@@ -58,8 +58,11 @@ impl StateHolder for OutputRateLimiterStateHolder {
     fn schema_version(&self) -> crate::core::persistence::SchemaVersion {
         crate::core::persistence::SchemaVersion::new(1, 0, 0)
     }
-    
-    fn serialize_state(&self, _hints: &crate::core::persistence::SerializationHints) -> Result<crate::core::persistence::StateSnapshot, crate::core::persistence::StateError> {
+
+    fn serialize_state(
+        &self,
+        _hints: &crate::core::persistence::SerializationHints,
+    ) -> Result<crate::core::persistence::StateSnapshot, crate::core::persistence::StateError> {
         let count = *self.counter.lock().unwrap();
         let events = self
             .buffer
@@ -73,12 +76,14 @@ impl StateHolder for OutputRateLimiterStateHolder {
             })
             .collect();
         let snap = LimiterSnapshot { count, events };
-        let data = crate::core::util::to_bytes(&snap).map_err(|e| crate::core::persistence::StateError::SerializationError {
-            message: format!("Failed to serialize OutputRateLimiter state: {e}"),
+        let data = crate::core::util::to_bytes(&snap).map_err(|e| {
+            crate::core::persistence::StateError::SerializationError {
+                message: format!("Failed to serialize OutputRateLimiter state: {e}"),
+            }
         })?;
-        
+
         let checksum = crate::core::persistence::StateSnapshot::calculate_checksum(&data);
-        
+
         Ok(crate::core::persistence::StateSnapshot {
             version: self.schema_version(),
             checkpoint_id: 0,
@@ -88,16 +93,21 @@ impl StateHolder for OutputRateLimiterStateHolder {
             metadata: self.component_metadata(),
         })
     }
-    
-    fn deserialize_state(&mut self, snapshot: &crate::core::persistence::StateSnapshot) -> Result<(), crate::core::persistence::StateError> {
+
+    fn deserialize_state(
+        &mut self,
+        snapshot: &crate::core::persistence::StateSnapshot,
+    ) -> Result<(), crate::core::persistence::StateError> {
         if !snapshot.verify_integrity() {
             return Err(crate::core::persistence::StateError::ChecksumMismatch);
         }
-        
-        let snap: LimiterSnapshot = crate::core::util::from_bytes(&snapshot.data).map_err(|e| crate::core::persistence::StateError::DeserializationError {
-            message: format!("Failed to deserialize OutputRateLimiter state: {e}"),
+
+        let snap: LimiterSnapshot = crate::core::util::from_bytes(&snapshot.data).map_err(|e| {
+            crate::core::persistence::StateError::DeserializationError {
+                message: format!("Failed to deserialize OutputRateLimiter state: {e}"),
+            }
         })?;
-        
+
         *self.counter.lock().unwrap() = snap.count;
         let mut buf = self.buffer.lock().unwrap();
         buf.clear();
@@ -113,21 +123,27 @@ impl StateHolder for OutputRateLimiterStateHolder {
         }
         Ok(())
     }
-    
-    fn get_changelog(&self, _since: crate::core::persistence::CheckpointId) -> Result<crate::core::persistence::ChangeLog, crate::core::persistence::StateError> {
+
+    fn get_changelog(
+        &self,
+        _since: crate::core::persistence::CheckpointId,
+    ) -> Result<crate::core::persistence::ChangeLog, crate::core::persistence::StateError> {
         // OutputRateLimiter doesn't support incremental changes
         Err(crate::core::persistence::StateError::SerializationError {
             message: "OutputRateLimiter doesn't support incremental checkpointing".to_string(),
         })
     }
-    
-    fn apply_changelog(&mut self, _changes: &crate::core::persistence::ChangeLog) -> Result<(), crate::core::persistence::StateError> {
+
+    fn apply_changelog(
+        &mut self,
+        _changes: &crate::core::persistence::ChangeLog,
+    ) -> Result<(), crate::core::persistence::StateError> {
         // OutputRateLimiter doesn't support incremental changes
         Err(crate::core::persistence::StateError::DeserializationError {
             message: "OutputRateLimiter doesn't support incremental changes".to_string(),
         })
     }
-    
+
     fn estimate_size(&self) -> crate::core::persistence::StateSize {
         let buffer_size = self.buffer.lock().unwrap().len();
         crate::core::persistence::StateSize {
@@ -136,11 +152,11 @@ impl StateHolder for OutputRateLimiterStateHolder {
             estimated_growth_rate: 0.0,
         }
     }
-    
+
     fn access_pattern(&self) -> crate::core::persistence::AccessPattern {
         crate::core::persistence::AccessPattern::Hot // Rate limiter is frequently accessed
     }
-    
+
     fn component_metadata(&self) -> crate::core::persistence::StateMetadata {
         crate::core::persistence::StateMetadata::new(
             "output_rate_limiter".to_string(),
@@ -152,8 +168,8 @@ impl StateHolder for OutputRateLimiterStateHolder {
 impl OutputRateLimiter {
     pub fn new(
         next_processor: Option<Arc<Mutex<dyn Processor>>>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
-        siddhi_query_context: Arc<SiddhiQueryContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
+        eventflux_query_context: Arc<EventFluxQueryContext>,
         batch_size: usize,
         behavior: crate::query_api::execution::query::output::ratelimit::OutputRateBehavior,
     ) -> Self {
@@ -163,11 +179,11 @@ impl OutputRateLimiter {
             buffer: Arc::clone(&buffer),
             counter: Arc::clone(&counter),
         }));
-        siddhi_query_context.register_state_holder("output_rate_limiter".into(), holder);
+        eventflux_query_context.register_state_holder("output_rate_limiter".into(), holder);
         Self {
             next_processor,
-            siddhi_app_context,
-            siddhi_query_context,
+            eventflux_app_context,
+            eventflux_query_context,
             batch_size,
             behavior,
             buffer,
@@ -249,23 +265,23 @@ impl Processor for OutputRateLimiter {
 
     fn clone_processor(
         &self,
-        siddhi_query_context: &Arc<SiddhiQueryContext>,
+        eventflux_query_context: &Arc<EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         Box::new(OutputRateLimiter::new(
             self.next_processor.as_ref().map(Arc::clone),
-            Arc::clone(&self.siddhi_app_context),
-            Arc::clone(siddhi_query_context),
+            Arc::clone(&self.eventflux_app_context),
+            Arc::clone(eventflux_query_context),
             self.batch_size,
             self.behavior,
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::clone(&self.siddhi_query_context)
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::clone(&self.eventflux_query_context)
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -327,8 +343,8 @@ impl SelectProcessor {
         api_selector: &crate::query_api::execution::query::selection::Selector,
         current_on: bool,
         expired_on: bool,
-        siddhi_app_context: Arc<SiddhiAppContext>,
-        siddhi_query_context: Arc<SiddhiQueryContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
+        eventflux_query_context: Arc<EventFluxQueryContext>,
         output_attribute_processors: Vec<OutputAttributeProcessor>,
         output_stream_definition: Arc<ApiStreamDefinition>,
         having_executor: Option<
@@ -338,13 +354,13 @@ impl SelectProcessor {
         order_by_comparator: Option<OrderByEventComparator>,
         batching_enabled: Option<bool>,
     ) -> Self {
-        let _query_name = siddhi_query_context.name.clone();
+        let _query_name = eventflux_query_context.name.clone();
         let contains_aggregator_flag = output_attribute_processors
             .iter()
             .any(|oap| oap.is_aggregator());
 
         Self {
-            meta: CommonProcessorMeta::new(siddhi_app_context, siddhi_query_context),
+            meta: CommonProcessorMeta::new(eventflux_app_context, eventflux_query_context),
             current_on,
             expired_on,
             contains_aggregator: contains_aggregator_flag,
@@ -401,7 +417,6 @@ impl SelectProcessor {
     }
 }
 
-
 impl Processor for SelectProcessor {
     fn process(&self, complex_event_chunk: Option<Box<dyn ComplexEvent>>) {
         let mut input_event_opt = complex_event_chunk;
@@ -435,18 +450,16 @@ impl Processor for SelectProcessor {
                     .as_ref()
                     .and_then(|g| g.construct_event_key(event_box.as_ref()))
                     .unwrap_or_default();
-                let state = map.entry(key.clone()).or_insert_with(|| {
-                    GroupState {
-                        oaps: self
-                            .output_attribute_processors
-                            .iter()
-                            .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
-                            .collect(),
-                        having_exec: self
-                            .having_condition_executor
-                            .as_ref()
-                            .map(|e| e.clone_executor(&self.meta.siddhi_app_context)),
-                    }
+                let state = map.entry(key.clone()).or_insert_with(|| GroupState {
+                    oaps: self
+                        .output_attribute_processors
+                        .iter()
+                        .map(|oap| oap.clone_oap(&self.meta.eventflux_app_context))
+                        .collect(),
+                    having_exec: self
+                        .having_condition_executor
+                        .as_ref()
+                        .map(|e| e.clone_executor(&self.meta.eventflux_app_context)),
                 });
                 for oap in &state.oaps {
                     out.push(oap.process(Some(event_box.as_ref())));
@@ -538,22 +551,22 @@ impl Processor for SelectProcessor {
 
     fn clone_processor(
         &self,
-        siddhi_query_context: &Arc<SiddhiQueryContext>,
+        eventflux_query_context: &Arc<EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         let cloned_oaps = self
             .output_attribute_processors
             .iter()
-            .map(|oap| oap.clone_oap(&self.meta.siddhi_app_context))
+            .map(|oap| oap.clone_oap(&self.meta.eventflux_app_context))
             .collect();
         let cloned_having = self
             .having_condition_executor
             .as_ref()
-            .map(|exec| exec.clone_executor(&self.meta.siddhi_app_context));
+            .map(|exec| exec.clone_executor(&self.meta.eventflux_app_context));
 
         Box::new(SelectProcessor {
             meta: CommonProcessorMeta::new(
-                Arc::clone(&self.meta.siddhi_app_context),
-                Arc::clone(siddhi_query_context),
+                Arc::clone(&self.meta.eventflux_app_context),
+                Arc::clone(eventflux_query_context),
             ),
             current_on: self.current_on,
             expired_on: self.expired_on,
@@ -572,12 +585,12 @@ impl Processor for SelectProcessor {
         })
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -596,7 +609,7 @@ impl Processor for SelectProcessor {
     fn is_stateful(&self) -> bool {
         self.contains_aggregator || self.is_group_by // Simplified
     }
-    
+
     fn clear_group_states(&self) {
         // Clear group states for SelectProcessor
         if let Ok(mut group_states) = self.group_states.lock() {

@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.expression.Expression (the abstract class)
+// Corresponds to io.eventflux.query.api.expression.Expression (the abstract class)
 // In Rust, this is represented as an enum.
 
 // Import all the specific expression types
@@ -8,7 +8,7 @@ use super::constant::{Constant, TimeUtil as ConstantTimeUtil}; // Corrected Cons
 use super::math::{Add, Divide, ModOp, Multiply, Subtract};
 use super::variable::Variable; // Renamed Operator to CompareOperator
 
-/// Represents various types of expressions in a Siddhi query.
+/// Represents various types of expressions in a EventFlux query.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     Constant(Constant),
@@ -141,83 +141,85 @@ impl Expression {
     }
 }
 
-// Accessing SiddhiElement context from the composed field in each variant's struct.
+// Accessing EventFluxElement context from the composed field in each variant's struct.
 impl Expression {
     pub fn get_query_context_start_index(&self) -> Option<(i32, i32)> {
         match self {
-            Expression::Constant(c) => c.siddhi_element.query_context_start_index,
-            Expression::Variable(v) => v.siddhi_element.query_context_start_index,
-            Expression::AttributeFunction(af) => af.siddhi_element.query_context_start_index,
-            Expression::Add(a) => a.siddhi_element.query_context_start_index,
-            Expression::Subtract(s) => s.siddhi_element.query_context_start_index,
-            Expression::Multiply(m) => m.siddhi_element.query_context_start_index,
-            Expression::Divide(d) => d.siddhi_element.query_context_start_index,
-            Expression::Mod(m) => m.siddhi_element.query_context_start_index,
-            Expression::And(a) => a.siddhi_element.query_context_start_index,
-            Expression::Or(o) => o.siddhi_element.query_context_start_index,
-            Expression::Not(n) => n.siddhi_element.query_context_start_index,
-            Expression::Compare(c) => c.siddhi_element.query_context_start_index,
-            Expression::In(i) => i.siddhi_element.query_context_start_index,
-            Expression::IsNull(i) => i.siddhi_element.query_context_start_index,
+            Expression::Constant(c) => c.eventflux_element.query_context_start_index,
+            Expression::Variable(v) => v.eventflux_element.query_context_start_index,
+            Expression::AttributeFunction(af) => af.eventflux_element.query_context_start_index,
+            Expression::Add(a) => a.eventflux_element.query_context_start_index,
+            Expression::Subtract(s) => s.eventflux_element.query_context_start_index,
+            Expression::Multiply(m) => m.eventflux_element.query_context_start_index,
+            Expression::Divide(d) => d.eventflux_element.query_context_start_index,
+            Expression::Mod(m) => m.eventflux_element.query_context_start_index,
+            Expression::And(a) => a.eventflux_element.query_context_start_index,
+            Expression::Or(o) => o.eventflux_element.query_context_start_index,
+            Expression::Not(n) => n.eventflux_element.query_context_start_index,
+            Expression::Compare(c) => c.eventflux_element.query_context_start_index,
+            Expression::In(i) => i.eventflux_element.query_context_start_index,
+            Expression::IsNull(i) => i.eventflux_element.query_context_start_index,
         }
     }
 
     pub fn set_query_context_start_index(&mut self, index: Option<(i32, i32)>) {
         match self {
-            Expression::Constant(c) => c.siddhi_element.query_context_start_index = index,
-            Expression::Variable(v) => v.siddhi_element.query_context_start_index = index,
+            Expression::Constant(c) => c.eventflux_element.query_context_start_index = index,
+            Expression::Variable(v) => v.eventflux_element.query_context_start_index = index,
             Expression::AttributeFunction(af) => {
-                af.siddhi_element.query_context_start_index = index
+                af.eventflux_element.query_context_start_index = index
             }
-            Expression::Add(a) => a.siddhi_element.query_context_start_index = index,
-            Expression::Subtract(s) => s.siddhi_element.query_context_start_index = index,
-            Expression::Multiply(m) => m.siddhi_element.query_context_start_index = index,
-            Expression::Divide(d) => d.siddhi_element.query_context_start_index = index,
-            Expression::Mod(m) => m.siddhi_element.query_context_start_index = index,
-            Expression::And(a) => a.siddhi_element.query_context_start_index = index,
-            Expression::Or(o) => o.siddhi_element.query_context_start_index = index,
-            Expression::Not(n) => n.siddhi_element.query_context_start_index = index,
-            Expression::Compare(c) => c.siddhi_element.query_context_start_index = index,
-            Expression::In(i) => i.siddhi_element.query_context_start_index = index,
-            Expression::IsNull(i) => i.siddhi_element.query_context_start_index = index,
+            Expression::Add(a) => a.eventflux_element.query_context_start_index = index,
+            Expression::Subtract(s) => s.eventflux_element.query_context_start_index = index,
+            Expression::Multiply(m) => m.eventflux_element.query_context_start_index = index,
+            Expression::Divide(d) => d.eventflux_element.query_context_start_index = index,
+            Expression::Mod(m) => m.eventflux_element.query_context_start_index = index,
+            Expression::And(a) => a.eventflux_element.query_context_start_index = index,
+            Expression::Or(o) => o.eventflux_element.query_context_start_index = index,
+            Expression::Not(n) => n.eventflux_element.query_context_start_index = index,
+            Expression::Compare(c) => c.eventflux_element.query_context_start_index = index,
+            Expression::In(i) => i.eventflux_element.query_context_start_index = index,
+            Expression::IsNull(i) => i.eventflux_element.query_context_start_index = index,
         }
     }
 
     pub fn get_query_context_end_index(&self) -> Option<(i32, i32)> {
         match self {
-            Expression::Constant(c) => c.siddhi_element.query_context_end_index,
-            Expression::Variable(v) => v.siddhi_element.query_context_end_index,
-            Expression::AttributeFunction(af) => af.siddhi_element.query_context_end_index,
-            Expression::Add(a) => a.siddhi_element.query_context_end_index,
-            Expression::Subtract(s) => s.siddhi_element.query_context_end_index,
-            Expression::Multiply(m) => m.siddhi_element.query_context_end_index,
-            Expression::Divide(d) => d.siddhi_element.query_context_end_index,
-            Expression::Mod(m) => m.siddhi_element.query_context_end_index,
-            Expression::And(a) => a.siddhi_element.query_context_end_index,
-            Expression::Or(o) => o.siddhi_element.query_context_end_index,
-            Expression::Not(n) => n.siddhi_element.query_context_end_index,
-            Expression::Compare(c) => c.siddhi_element.query_context_end_index,
-            Expression::In(i) => i.siddhi_element.query_context_end_index,
-            Expression::IsNull(i) => i.siddhi_element.query_context_end_index,
+            Expression::Constant(c) => c.eventflux_element.query_context_end_index,
+            Expression::Variable(v) => v.eventflux_element.query_context_end_index,
+            Expression::AttributeFunction(af) => af.eventflux_element.query_context_end_index,
+            Expression::Add(a) => a.eventflux_element.query_context_end_index,
+            Expression::Subtract(s) => s.eventflux_element.query_context_end_index,
+            Expression::Multiply(m) => m.eventflux_element.query_context_end_index,
+            Expression::Divide(d) => d.eventflux_element.query_context_end_index,
+            Expression::Mod(m) => m.eventflux_element.query_context_end_index,
+            Expression::And(a) => a.eventflux_element.query_context_end_index,
+            Expression::Or(o) => o.eventflux_element.query_context_end_index,
+            Expression::Not(n) => n.eventflux_element.query_context_end_index,
+            Expression::Compare(c) => c.eventflux_element.query_context_end_index,
+            Expression::In(i) => i.eventflux_element.query_context_end_index,
+            Expression::IsNull(i) => i.eventflux_element.query_context_end_index,
         }
     }
 
     pub fn set_query_context_end_index(&mut self, index: Option<(i32, i32)>) {
         match self {
-            Expression::Constant(c) => c.siddhi_element.query_context_end_index = index,
-            Expression::Variable(v) => v.siddhi_element.query_context_end_index = index,
-            Expression::AttributeFunction(af) => af.siddhi_element.query_context_end_index = index,
-            Expression::Add(a) => a.siddhi_element.query_context_end_index = index,
-            Expression::Subtract(s) => s.siddhi_element.query_context_end_index = index,
-            Expression::Multiply(m) => m.siddhi_element.query_context_end_index = index,
-            Expression::Divide(d) => d.siddhi_element.query_context_end_index = index,
-            Expression::Mod(m) => m.siddhi_element.query_context_end_index = index,
-            Expression::And(a) => a.siddhi_element.query_context_end_index = index,
-            Expression::Or(o) => o.siddhi_element.query_context_end_index = index,
-            Expression::Not(n) => n.siddhi_element.query_context_end_index = index,
-            Expression::Compare(c) => c.siddhi_element.query_context_end_index = index,
-            Expression::In(i) => i.siddhi_element.query_context_end_index = index,
-            Expression::IsNull(i) => i.siddhi_element.query_context_end_index = index,
+            Expression::Constant(c) => c.eventflux_element.query_context_end_index = index,
+            Expression::Variable(v) => v.eventflux_element.query_context_end_index = index,
+            Expression::AttributeFunction(af) => {
+                af.eventflux_element.query_context_end_index = index
+            }
+            Expression::Add(a) => a.eventflux_element.query_context_end_index = index,
+            Expression::Subtract(s) => s.eventflux_element.query_context_end_index = index,
+            Expression::Multiply(m) => m.eventflux_element.query_context_end_index = index,
+            Expression::Divide(d) => d.eventflux_element.query_context_end_index = index,
+            Expression::Mod(m) => m.eventflux_element.query_context_end_index = index,
+            Expression::And(a) => a.eventflux_element.query_context_end_index = index,
+            Expression::Or(o) => o.eventflux_element.query_context_end_index = index,
+            Expression::Not(n) => n.eventflux_element.query_context_end_index = index,
+            Expression::Compare(c) => c.eventflux_element.query_context_end_index = index,
+            Expression::In(i) => i.eventflux_element.query_context_end_index = index,
+            Expression::IsNull(i) => i.eventflux_element.query_context_end_index = index,
         }
     }
 }

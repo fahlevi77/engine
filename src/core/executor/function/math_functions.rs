@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/math_functions.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/math_functions.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -43,7 +43,7 @@ impl ExpressionExecutor for SqrtFunctionExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(SqrtFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
         })
@@ -88,7 +88,7 @@ impl ExpressionExecutor for LogFunctionExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(LogFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
         })
@@ -122,7 +122,7 @@ impl ExpressionExecutor for SinFunctionExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(SinFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
         })
@@ -156,7 +156,7 @@ impl ExpressionExecutor for TanFunctionExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(TanFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
         })
@@ -179,7 +179,7 @@ impl ExpressionExecutor for RoundFunctionExecutor {
         ApiAttributeType::DOUBLE
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(RoundFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
         })

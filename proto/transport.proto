@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package siddhi.transport;
+package eventflux.transport;
 
 // Transport service definition
 service Transport {

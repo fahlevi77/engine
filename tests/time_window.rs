@@ -1,10 +1,10 @@
 #[path = "common/mod.rs"]
 mod common;
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::query_compiler::parse;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::query_compiler::parse;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -24,10 +24,10 @@ async fn test_time_window_expiry() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#window:time(100) select v insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));

@@ -1,4 +1,4 @@
-# Siddhi Rust SQL Grammar - Complete Reference
+# EventFlux Rust SQL Grammar - Complete Reference
 
 **Last Updated**: 2025-10-06
 **Implementation Status**: ✅ **M1 COMPLETE** (SQL-Only Engine)
@@ -35,7 +35,7 @@
 
 ### Engine Mode
 
-**SQL-Only Engine** - The Siddhi Rust engine now **exclusively uses SQL syntax** via sqlparser-rs:
+**SQL-Only Engine** - The EventFlux Rust engine now **exclusively uses SQL syntax** via sqlparser-rs:
 
 ```rust
 // ✅ SQL Syntax (Current)
@@ -43,11 +43,11 @@ let app = r#"
     CREATE STREAM StockStream (symbol VARCHAR, price DOUBLE);
     SELECT symbol, price FROM StockStream WHERE price > 100;
 "#;
-let runtime = manager.create_siddhi_app_runtime_from_string(app).await?;
+let runtime = manager.create_eventflux_app_runtime_from_string(app).await?;
 ```
 
 ```rust
-// ❌ Old SiddhiQL Syntax (Not Supported)
+// ❌ Old EventFluxQL Syntax (Not Supported)
 let app = "define stream StockStream (symbol string, price double);";
 // This will fail - use SQL syntax instead
 ```
@@ -311,7 +311,7 @@ SqlConverter
     ├─ HAVING → Selector having
     └─ Expression tree conversion
     ↓
-SiddhiApp (Query API)
+EventFluxApp (Query API)
     ↓
 QueryParser → QueryRuntime
     ↓
@@ -458,7 +458,7 @@ pub fn parse_sql_application(sql: &str) -> Result<SqlApplication> {
     // Parse multiple SQL statements
     // Route CREATE STREAM to DDL parser
     // Route SELECT to query converter
-    // Build SiddhiApp
+    // Build EventFluxApp
 }
 ```
 
@@ -570,12 +570,12 @@ let runtime = manager.create_runtime_from_sql(sql, app_name).await?;
 **Level 2: SQL Application API**
 ```rust
 let sql_app = parse_sql_application(sql)?;
-let siddhi_app = sql_app.to_siddhi_app("MyApp".to_string());
+let eventflux_app = sql_app.to_eventflux_app("MyApp".to_string());
 ```
 
 **Level 3: Direct Query API**
 ```rust
-let mut app = SiddhiApp::new("MyApp");
+let mut app = EventFluxApp::new("MyApp");
 // Manual Query API construction
 ```
 
@@ -705,12 +705,12 @@ SELECT * FROM HighPriceStocks;
 
 ## Migration Guide
 
-### From Old SiddhiQL to SQL
+### From Old EventFluxQL to SQL
 
 #### Stream Definitions
 
-```siddhi
--- Old SiddhiQL
+```eventflux
+-- Old EventFluxQL
 define stream StockStream (symbol string, price double, volume int);
 ```
 
@@ -721,8 +721,8 @@ CREATE STREAM StockStream (symbol VARCHAR, price DOUBLE, volume INT);
 
 #### Basic Queries
 
-```siddhi
--- Old SiddhiQL
+```eventflux
+-- Old EventFluxQL
 from StockStream[price > 100]
 select symbol, price
 insert into OutputStream;
@@ -738,8 +738,8 @@ WHERE price > 100;
 
 #### Windows
 
-```siddhi
--- Old SiddhiQL
+```eventflux
+-- Old EventFluxQL
 from StockStream#window:length(100)
 select symbol, count() as trade_count
 group by symbol
@@ -757,8 +757,8 @@ GROUP BY symbol;
 
 #### Joins
 
-```siddhi
--- Old SiddhiQL
+```eventflux
+-- Old EventFluxQL
 from Trades join News on Trades.symbol == News.symbol
 select Trades.price, News.headline
 insert into OutputStream;
@@ -776,13 +776,13 @@ JOIN News ON Trades.symbol = News.symbol;
 
 ```rust
 // Old (LALRPOP parser - reference only)
-use siddhi_rust::query_compiler::parse;
+use eventflux_rust::query_compiler::parse;
 let app = parse("define stream ...").unwrap();
 
 // New (SQL parser - production)
-use siddhi_rust::sql_compiler::parse_sql_application;
+use eventflux_rust::sql_compiler::parse_sql_application;
 let sql_app = parse_sql_application("CREATE STREAM ...").unwrap();
-let siddhi_app = sql_app.to_siddhi_app("MyApp".to_string());
+let eventflux_app = sql_app.to_eventflux_app("MyApp".to_string());
 ```
 
 ### Test Migration
@@ -866,7 +866,7 @@ cargo test
 
 ## Conclusion
 
-**Siddhi Rust SQL Grammar Implementation: PRODUCTION READY** ✅
+**EventFlux Rust SQL Grammar Implementation: PRODUCTION READY** ✅
 
 **Achievements**:
 - ✅ 100% M1 feature completion (10/10 core queries)

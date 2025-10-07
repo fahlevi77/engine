@@ -1,6 +1,6 @@
 # Stream Event Module (`core::event::stream`)
 
-Rust equivalent of the Java `io.siddhi.core.event.stream` package.
+Rust equivalent of the Java `io.eventflux.core.event.stream` package.
 
 ## Implemented Components
 
@@ -10,7 +10,7 @@ Rust equivalent of the Java `io.siddhi.core.event.stream` package.
   including before/after window data and output data.
 - `StreamEventFactory` – convenience for creating `StreamEvent` objects based on
   meta information.
-- `Operation` – small helper struct mirroring Siddhi's `Operation` class.
+- `Operation` – small helper struct mirroring EventFlux's `Operation` class.
 
 ## Missing Parts
 

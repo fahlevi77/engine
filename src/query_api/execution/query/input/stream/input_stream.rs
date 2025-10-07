@@ -1,5 +1,5 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.stream.InputStream (abstract class)
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.execution.query.input.stream.InputStream (abstract class)
+use crate::query_api::eventflux_element::EventFluxElement;
 
 // Import specific stream types that will be variants of the InputStream enum
 use super::join_input_stream::{
@@ -18,7 +18,7 @@ use crate::query_api::expression::Expression; // Actual Within struct
 
 // Trait for common methods of InputStream (from Java's InputStream abstract class)
 pub trait InputStreamTrait {
-    // Removed : SiddhiElement as SiddhiElement is directly implemented by the enum
+    // Removed : EventFluxElement as EventFluxElement is directly implemented by the enum
     fn get_all_stream_ids(&self) -> Vec<String>;
     fn get_unique_stream_ids(&self) -> Vec<String>;
 }
@@ -30,28 +30,28 @@ pub enum InputStream {
     State(Box<StateInputStream>),
 }
 
-// SiddhiElement implementation for the InputStream enum
+// EventFluxElement implementation for the InputStream enum
 impl InputStream {
     // These helpers assume that SingleInputStream, JoinInputStream, StateInputStream
-    // will be refactored to compose `siddhi_element: SiddhiElement`.
-    fn siddhi_element_ref(&self) -> &SiddhiElement {
+    // will be refactored to compose `eventflux_element: EventFluxElement`.
+    fn eventflux_element_ref(&self) -> &EventFluxElement {
         match self {
-            InputStream::Single(s) => &s.siddhi_element,
-            InputStream::Join(j) => &j.siddhi_element,
-            InputStream::State(st) => &st.siddhi_element,
+            InputStream::Single(s) => &s.eventflux_element,
+            InputStream::Join(j) => &j.eventflux_element,
+            InputStream::State(st) => &st.eventflux_element,
         }
     }
 
-    fn siddhi_element_mut_ref(&mut self) -> &mut SiddhiElement {
+    fn eventflux_element_mut_ref(&mut self) -> &mut EventFluxElement {
         match self {
-            InputStream::Single(s) => &mut s.siddhi_element,
-            InputStream::Join(j) => &mut j.siddhi_element,
-            InputStream::State(st) => &mut st.siddhi_element,
+            InputStream::Single(s) => &mut s.eventflux_element,
+            InputStream::Join(j) => &mut j.eventflux_element,
+            InputStream::State(st) => &mut st.eventflux_element,
         }
     }
 }
 
-// `impl SiddhiElement for InputStream` removed.
+// `impl EventFluxElement for InputStream` removed.
 
 impl InputStreamTrait for InputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

@@ -1,6 +1,6 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.LogicalStateElement
+// Corresponds to io.eventflux.query.api.execution.query.input.state.LogicalStateElement
 use super::state_element::StateElement;
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 #[derive(Default)]
@@ -11,10 +11,9 @@ pub enum Type {
     // NOT is not part of Java's LogicalStateElement.Type; it's handled by AbsentStreamStateElement.
 }
 
-
 #[derive(Clone, Debug, PartialEq)] // Default is complex due to Box<StateElement>
 pub struct LogicalStateElement {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // LogicalStateElement fields
     pub stream_state_element_1: Box<StateElement>,
@@ -40,7 +39,7 @@ impl LogicalStateElement {
         }
 
         LogicalStateElement {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             stream_state_element_1: Box::new(sse1),
             logical_type,
             stream_state_element_2: Box::new(sse2),
@@ -57,7 +56,7 @@ impl LogicalStateElement {
 // impl Default for LogicalStateElement {
 //     fn default() -> Self {
 //         Self {
-//             siddhi_element: SiddhiElement::default(),
+//             eventflux_element: EventFluxElement::default(),
 //             stream_state_element_1: Box::new(StateElement::default()), // Requires StateElement::default()
 //             logical_type: Type::default(),
 //             stream_state_element_2: Box::new(StateElement::default()), // Requires StateElement::default()

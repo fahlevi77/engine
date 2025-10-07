@@ -1,10 +1,13 @@
-use siddhi_rust::core::event::{value::AttributeValue, Event};
-use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore, SnapshotService};
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::core::util::{event_from_bytes, event_to_bytes};
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-use siddhi_rust::query_api::execution::{
+use eventflux_rust::core::event::{value::AttributeValue, Event};
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::persistence::{
+    InMemoryPersistenceStore, PersistenceStore, SnapshotService,
+};
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::util::{event_from_bytes, event_to_bytes};
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::execution::{
     query::{
         input::stream::{single_input_stream::SingleInputStream, InputStream},
         output::output_stream::{InsertIntoStreamAction, OutputStream, OutputStreamAction},
@@ -13,7 +16,6 @@ use siddhi_rust::query_api::execution::{
     },
     ExecutionElement,
 };
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
 use std::sync::{Arc, Mutex};
 
 #[test]
@@ -63,11 +65,11 @@ impl StreamCallback for CountingCallback {
 #[tokio::test]
 async fn test_runtime_persist_restore() {
     let store = Arc::new(InMemoryPersistenceStore::new());
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let store_arc: Arc<dyn PersistenceStore> = store.clone();
     manager.set_persistence_store(store_arc);
 
-    let mut app = SiddhiApp::new("PersistApp".to_string());
+    let mut app = EventFluxApp::new("PersistApp".to_string());
     let in_def =
         StreamDefinition::new("InStream".to_string()).attribute("v".to_string(), AttrType::INT);
     let out_def =
@@ -81,7 +83,7 @@ async fn test_runtime_persist_restore() {
         .window(
             None,
             "length".to_string(),
-            vec![siddhi_rust::query_api::expression::Expression::value_int(2)],
+            vec![eventflux_rust::query_api::expression::Expression::value_int(2)],
         );
     let input = InputStream::Single(si);
     let selector = Selector::new();
@@ -100,10 +102,13 @@ async fn test_runtime_persist_restore() {
 
     let app = Arc::new(app);
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::clone(&app), None)
+        .create_eventflux_app_runtime_from_api(Arc::clone(&app), None)
         .await
         .unwrap();
-    let svc = runtime.siddhi_app_context.get_snapshot_service().unwrap();
+    let svc = runtime
+        .eventflux_app_context
+        .get_snapshot_service()
+        .unwrap();
     let count = Arc::new(Mutex::new(0u32));
     runtime
         .add_callback(
@@ -129,7 +134,7 @@ async fn test_runtime_persist_restore() {
         .unwrap();
     assert_eq!(*count.lock().unwrap(), 2);
 
-    let key = manager.get_siddhi_app_runtimes_keys()[0].clone();
+    let key = manager.get_eventflux_app_runtimes_keys()[0].clone();
     let rev = manager.persist_app(&key).unwrap();
     handler
         .lock()

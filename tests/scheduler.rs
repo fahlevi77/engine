@@ -1,4 +1,4 @@
-use siddhi_rust::core::util::{ExecutorService, Schedulable, Scheduler};
+use eventflux_rust::core::util::{ExecutorService, Schedulable, Scheduler};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 

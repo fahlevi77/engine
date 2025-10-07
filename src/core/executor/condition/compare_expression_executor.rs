@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/condition/compare_expression_executor.rs
-// Corresponds to io.siddhi.core.executor.condition.compare.CompareConditionExpressionExecutor (abstract class)
+// eventflux_rust/src/core/executor/condition/compare_expression_executor.rs
+// Corresponds to io.eventflux.core.executor.condition.compare.CompareConditionExpressionExecutor (abstract class)
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -227,13 +227,13 @@ impl ExpressionExecutor for CompareExpressionExecutor {
 
     fn clone_executor(
         &self,
-        siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(CompareExpressionExecutor {
-            left_executor: self.left_executor.clone_executor(siddhi_app_context),
-            right_executor: self.right_executor.clone_executor(siddhi_app_context),
+            left_executor: self.left_executor.clone_executor(eventflux_app_context),
+            right_executor: self.right_executor.clone_executor(eventflux_app_context),
             operator: self.operator,
             cmp_type: self.cmp_type,
         })
@@ -247,7 +247,7 @@ mod tests {
     use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
     use crate::query_api::expression::condition::compare::Operator as ApiCompareOperator;
     // ApiAttributeType is imported in the outer scope
-    use crate::core::config::siddhi_app_context::SiddhiAppContext;
+    use crate::core::config::eventflux_app_context::EventFluxAppContext;
     use crate::core::executor::expression_executor::ExpressionExecutor;
     use std::sync::Arc;
 
@@ -376,7 +376,7 @@ mod tests {
         )
         .unwrap();
 
-        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let app_ctx_placeholder = Arc::new(EventFluxAppContext::default_for_testing());
         let cloned_exec = cmp_exec.clone_executor(&app_ctx_placeholder);
 
         let result = cloned_exec.execute(None);

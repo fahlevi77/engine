@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -46,7 +46,7 @@ impl ExpressionExecutor for IncrementalUnixTimeFunctionExecutor {
         ApiAttributeType::LONG
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(Self {
             arg_executor: self.arg_executor.clone_executor(ctx),
         })
@@ -81,7 +81,7 @@ mod tests {
             ApiAttributeType::STRING,
         ));
         let exec = IncrementalUnixTimeFunctionExecutor::new(arg).unwrap();
-        let ctx = Arc::new(SiddhiAppContext::default_for_testing());
+        let ctx = Arc::new(EventFluxAppContext::default_for_testing());
         let cloned = exec.clone_executor(&ctx);
         let res = cloned.execute(None);
         let dt = chrono::NaiveDateTime::parse_from_str("2017-06-01 04:05:50", "%Y-%m-%d %H:%M:%S")

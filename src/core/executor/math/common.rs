@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/executor/math/common.rs
+// eventflux_rust/src/core/executor/math/common.rs
 use crate::core::event::value::AttributeValue;
 
 // Helper trait for AttributeValue to handle coercion for math operations

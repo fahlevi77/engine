@@ -1,9 +1,9 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.stream.JoinInputStream
+// Corresponds to io.eventflux.query.api.execution.query.input.stream.JoinInputStream
 use super::input_stream::InputStreamTrait;
 use super::single_input_stream::SingleInputStream;
 use crate::query_api::aggregation::Within;
-use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // Using the actual Within struct
+use crate::query_api::eventflux_element::EventFluxElement;
+use crate::query_api::expression::Expression; // Using the actual Within struct
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 #[derive(Default)]
@@ -16,7 +16,6 @@ pub enum Type {
     FullOuterJoin,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)] // Added Eq, Hash, Copy
 #[derive(Default)]
 pub enum EventTrigger {
@@ -26,11 +25,10 @@ pub enum EventTrigger {
     All,
 }
 
-
 #[derive(Clone, Debug, PartialEq)] // Default will be custom
 #[derive(Default)]
 pub struct JoinInputStream {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     pub left_input_stream: Box<SingleInputStream>,
     pub join_type: Type,
@@ -53,7 +51,7 @@ impl JoinInputStream {
         per: Option<Expression>,
     ) -> Self {
         JoinInputStream {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             left_input_stream: Box::new(left_input_stream),
             join_type,
             right_input_stream: Box::new(right_input_stream),
@@ -64,7 +62,6 @@ impl JoinInputStream {
         }
     }
 }
-
 
 impl InputStreamTrait for JoinInputStream {
     fn get_all_stream_ids(&self) -> Vec<String> {

@@ -1,7 +1,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 // TODO: NOT PART OF M1 - PARTITION feature not in M1
 // This test uses "partition with" syntax which is an advanced feature not included in M1.

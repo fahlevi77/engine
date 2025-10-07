@@ -1,26 +1,28 @@
 // TODO: NOT PART OF M1 - All @Async annotation tests disabled
-// These tests use old SiddhiQL syntax with @Async, @config, and @app annotations.
+// These tests use old EventFluxQL syntax with @Async, @config, and @app annotations.
 // Annotation support is not part of M1. M1 focuses on:
 // - Basic queries, Windows, Joins, GROUP BY, HAVING, ORDER BY, LIMIT
 // Annotation support will be implemented in Phase 2.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 
 // Tests for @Async annotation parsing and stream creation
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_api::definition::attribute::Type as AttributeType;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::query_api::definition::attribute::Type as AttributeType;
 
 #[tokio::test]
 #[ignore = "@Async annotation not part of M1"]
 async fn test_async_annotation_basic() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @Async(buffer_size='1024', workers='2', batch_size_max='10')
         define stream StockStream (symbol string, price float, volume long);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse @Async annotation: {:?}",
@@ -28,7 +30,7 @@ async fn test_async_annotation_basic() {
     );
 
     let app_runtime = result.unwrap();
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
 
     assert!(stream_definitions.contains_key("StockStream"));
     let stream_def = stream_definitions.get("StockStream").unwrap();
@@ -73,14 +75,16 @@ async fn test_async_annotation_basic() {
 #[tokio::test]
 #[ignore = "@Async annotation not part of M1"]
 async fn test_async_annotation_minimal() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @Async
         define stream MinimalAsyncStream (id int, value string);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse minimal @Async annotation: {:?}",
@@ -88,7 +92,7 @@ async fn test_async_annotation_minimal() {
     );
 
     let app_runtime = result.unwrap();
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
 
     assert!(stream_definitions.contains_key("MinimalAsyncStream"));
     let stream_def = stream_definitions.get("MinimalAsyncStream").unwrap();
@@ -109,14 +113,16 @@ async fn test_async_annotation_minimal() {
 #[tokio::test]
 #[ignore = "@config annotation not part of M1"]
 async fn test_config_annotation_async() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @config(async='true')
         define stream ConfigAsyncStream (symbol string, price float);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse @config annotation: {:?}",
@@ -124,7 +130,7 @@ async fn test_config_annotation_async() {
     );
 
     let app_runtime = result.unwrap();
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
 
     assert!(stream_definitions.contains_key("ConfigAsyncStream"));
     let stream_def = stream_definitions.get("ConfigAsyncStream").unwrap();
@@ -153,9 +159,9 @@ async fn test_config_annotation_async() {
 #[tokio::test]
 #[ignore = "@app annotation not part of M1"]
 async fn test_app_level_async_annotation() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @app(async='true')
         
         define stream AutoAsyncStream (id int, value string);
@@ -163,7 +169,9 @@ async fn test_app_level_async_annotation() {
         define stream RegularStream (name string, count int);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse app-level @app annotation: {:?}",
@@ -173,7 +181,7 @@ async fn test_app_level_async_annotation() {
     let app_runtime = result.unwrap();
 
     // Both streams should exist
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
     assert!(stream_definitions.contains_key("AutoAsyncStream"));
     assert!(stream_definitions.contains_key("RegularStream"));
 }
@@ -181,9 +189,9 @@ async fn test_app_level_async_annotation() {
 #[tokio::test]
 #[ignore = "@Async annotation not part of M1"]
 async fn test_multiple_async_streams() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @Async(buffer_size='512')
         define stream Stream1 (id int);
         
@@ -193,7 +201,9 @@ async fn test_multiple_async_streams() {
         define stream Stream3 (value float);
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse multiple async streams: {:?}",
@@ -201,7 +211,7 @@ async fn test_multiple_async_streams() {
     );
 
     let app_runtime = result.unwrap();
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
 
     // Check Stream1 has correct buffer size
     let stream1 = stream_definitions.get("Stream1").unwrap();
@@ -255,9 +265,9 @@ async fn test_multiple_async_streams() {
 #[tokio::test]
 #[ignore = "@Async annotation not part of M1"]
 async fn test_async_annotation_with_query() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app_string = r#"
+    let eventflux_app_string = r#"
         @Async(buffer_size='1024')
         define stream InputStream (symbol string, price float, volume long);
         
@@ -268,7 +278,9 @@ async fn test_async_annotation_with_query() {
         insert into OutputStream;
     "#;
 
-    let result = manager.create_siddhi_app_runtime_from_string(siddhi_app_string).await;
+    let result = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
+        .await;
     assert!(
         result.is_ok(),
         "Failed to parse async stream with query: {:?}",
@@ -276,7 +288,7 @@ async fn test_async_annotation_with_query() {
     );
 
     let app_runtime = result.unwrap();
-    let stream_definitions = &app_runtime.siddhi_app.stream_definition_map;
+    let stream_definitions = &app_runtime.eventflux_app.stream_definition_map;
 
     assert!(stream_definitions.contains_key("InputStream"));
     assert!(stream_definitions.contains_key("OutputStream"));

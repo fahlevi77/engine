@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/util/executor_service.rs
+// eventflux_rust/src/core/util/executor_service.rs
 // Simple executor service backed by rayon thread pool.
 
 use rayon::ThreadPool;
@@ -14,7 +14,7 @@ pub struct ExecutorService {
 
 impl Default for ExecutorService {
     fn default() -> Self {
-        let threads = std::env::var("SIDDHI_EXECUTOR_THREADS")
+        let threads = std::env::var("EVENTFLUX_EXECUTOR_THREADS")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or_else(|| num_cpus::get().max(1));
@@ -55,9 +55,9 @@ impl Drop for ExecutorService {
 }
 
 /// Determine thread count from an environment variable of the form
-/// `SIDDHI_POOL_<NAME>_THREADS`. Falls back to the provided default.
+/// `EVENTFLUX_POOL_<NAME>_THREADS`. Falls back to the provided default.
 pub fn pool_size_from_env(name: &str, default: usize) -> usize {
-    let var = format!("SIDDHI_POOL_{}_THREADS", name.to_uppercase());
+    let var = format!("EVENTFLUX_POOL_{}_THREADS", name.to_uppercase());
     std::env::var(&var)
         .ok()
         .and_then(|v| v.parse::<usize>().ok())

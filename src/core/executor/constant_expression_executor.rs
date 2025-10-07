@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/constant_expression_executor.rs
-// Corresponds to io.siddhi.core.executor.ConstantExpressionExecutor
+// eventflux_rust/src/core/executor/constant_expression_executor.rs
+// Corresponds to io.eventflux.core.executor.ConstantExpressionExecutor
 use super::expression_executor::ExpressionExecutor;
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue; // Enum for actual data
@@ -40,8 +40,8 @@ impl ExpressionExecutor for ConstantExpressionExecutor {
 
     fn clone_executor(
         &self,
-        _siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        _eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
@@ -53,7 +53,7 @@ mod tests {
     use super::*;
     use crate::core::event::value::AttributeValue;
     // ApiAttributeType is already imported in the outer scope
-    use crate::core::config::siddhi_app_context::SiddhiAppContext; // For clone_executor signature
+    use crate::core::config::eventflux_app_context::EventFluxAppContext; // For clone_executor signature
     use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
     use std::sync::Arc;
 
@@ -82,7 +82,7 @@ mod tests {
             AttributeValue::String("clone_me".to_string()),
             ApiAttributeType::STRING,
         );
-        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let app_ctx_placeholder = Arc::new(EventFluxAppContext::default_for_testing());
         let cloned_exec = exec.clone_executor(&app_ctx_placeholder);
 
         let result = cloned_exec.execute(None);

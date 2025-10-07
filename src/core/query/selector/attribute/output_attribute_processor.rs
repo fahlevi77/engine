@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/query/selector/attribute/output_attribute_processor.rs
-// Corresponds to io.siddhi.core.query.selector.attribute.processor.AttributeProcessor
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For cloning executor
+// eventflux_rust/src/core/query/selector/attribute/output_attribute_processor.rs
+// Corresponds to io.eventflux.core.query.selector.attribute.processor.AttributeProcessor
+use crate::core::config::eventflux_app_context::EventFluxAppContext; // For cloning executor
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor; // Trait
@@ -44,9 +44,11 @@ impl OutputAttributeProcessor {
 
     // Needed for SelectProcessor::clone_processor
     // Requires ExpressionExecutor to have clone_executor method.
-    pub fn clone_oap(&self, siddhi_app_context: &Arc<SiddhiAppContext>) -> Self {
+    pub fn clone_oap(&self, eventflux_app_context: &Arc<EventFluxAppContext>) -> Self {
         Self {
-            expression_executor: self.expression_executor.clone_executor(siddhi_app_context),
+            expression_executor: self
+                .expression_executor
+                .clone_executor(eventflux_app_context),
             // output_position: self.output_position, // Removed
             return_type: self.return_type,
         }

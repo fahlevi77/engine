@@ -1,25 +1,25 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::expression::Expression;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-fn make_app_ctx() -> Arc<SiddhiAppContext> {
-    Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+fn make_app_ctx() -> Arc<EventFluxAppContext> {
+    Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "test".to_string(),
-        Arc::new(SiddhiApp::new("app".to_string())),
+        Arc::new(EventFluxApp::new("app".to_string())),
         String::new(),
     ))
 }
 
-fn make_query_ctx(name: &str) -> Arc<SiddhiQueryContext> {
-    Arc::new(SiddhiQueryContext::new(
+fn make_query_ctx(name: &str) -> Arc<EventFluxQueryContext> {
+    Arc::new(EventFluxQueryContext::new(
         make_app_ctx(),
         name.to_string(),
         None,
@@ -28,8 +28,8 @@ fn make_query_ctx(name: &str) -> Arc<SiddhiQueryContext> {
 
 fn empty_ctx(query: &str) -> ExpressionParserContext {
     ExpressionParserContext {
-        siddhi_app_context: make_app_ctx(),
-        siddhi_query_context: make_query_ctx(query),
+        eventflux_app_context: make_app_ctx(),
+        eventflux_query_context: make_query_ctx(query),
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),

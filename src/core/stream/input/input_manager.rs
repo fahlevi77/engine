@@ -5,13 +5,13 @@ use super::input_distributor::InputDistributor;
 use super::input_entry_valve::InputEntryValve;
 use super::input_handler::{InputHandler, InputProcessor};
 use super::table_input_handler::TableInputHandler;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::stream::stream_junction::StreamJunction;
 use crate::core::util::thread_barrier::ThreadBarrier;
 
 #[derive(Debug)]
 pub struct InputManager {
-    siddhi_app_context: Arc<SiddhiAppContext>,
+    eventflux_app_context: Arc<EventFluxAppContext>,
     input_handlers: Mutex<HashMap<String, Arc<Mutex<InputHandler>>>>,
     table_input_handlers: Mutex<HashMap<String, TableInputHandler>>,
     stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
@@ -22,20 +22,20 @@ pub struct InputManager {
 
 impl InputManager {
     pub fn new(
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         stream_junction_map: HashMap<String, Arc<Mutex<StreamJunction>>>,
     ) -> Self {
         let distributor: Arc<Mutex<InputDistributor>> =
             Arc::new(Mutex::new(InputDistributor::default()));
         let distributor_for_valve: Arc<Mutex<dyn InputProcessor>> = distributor.clone();
-        let barrier = siddhi_app_context
+        let barrier = eventflux_app_context
             .get_thread_barrier()
             .unwrap_or_else(|| Arc::new(ThreadBarrier::new()));
         let entry_valve: Arc<Mutex<dyn InputProcessor>> = Arc::new(Mutex::new(
             InputEntryValve::new(barrier, distributor_for_valve),
         ));
         Self {
-            siddhi_app_context,
+            eventflux_app_context,
             input_handlers: Mutex::new(HashMap::new()),
             table_input_handlers: Mutex::new(HashMap::new()),
             stream_junction_map,
@@ -66,7 +66,7 @@ impl InputManager {
             stream_id.to_string(),
             self.input_handlers.lock().unwrap().len(),
             self.input_entry_valve.clone(),
-            Arc::clone(&self.siddhi_app_context),
+            Arc::clone(&self.eventflux_app_context),
         )));
         self.input_handlers
             .lock()
@@ -94,11 +94,11 @@ impl InputManager {
         table_id: &str,
     ) -> Result<TableInputHandler, String> {
         let table = self
-            .siddhi_app_context
-            .get_siddhi_context()
+            .eventflux_app_context
+            .get_eventflux_context()
             .get_table(table_id)
             .ok_or_else(|| format!("Table '{table_id}' not found"))?;
-        let handler = TableInputHandler::new(table, Arc::clone(&self.siddhi_app_context));
+        let handler = TableInputHandler::new(table, Arc::clone(&self.eventflux_app_context));
         self.table_input_handlers
             .lock()
             .unwrap()

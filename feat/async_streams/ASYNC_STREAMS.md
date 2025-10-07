@@ -8,9 +8,9 @@
 
 ## Overview
 
-Siddhi Rust provides high-performance async stream processing capabilities that can handle >1M events/second through lock-free crossbeam-based event pipelines. The async streams feature can be configured in two ways:
+EventFlux Rust provides high-performance async stream processing capabilities that can handle >1M events/second through lock-free crossbeam-based event pipelines. The async streams feature can be configured in two ways:
 
-1. **Query-Based**: Using `@Async` annotations directly in SiddhiQL queries
+1. **Query-Based**: Using `@Async` annotations directly in EventFluxQL queries
 2. **Rust API**: Programmatically configuring streams using the Rust API
 
 **Key Features**:
@@ -183,13 +183,13 @@ insert into AlertStream;
 ### Creating Async Streams Programmatically
 
 ```rust
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::junction_factory::{JunctionConfig, BackpressureStrategy};
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::stream::junction_factory::{JunctionConfig, BackpressureStrategy};
 
-let manager = SiddhiManager::new();
+let manager = EventFluxManager::new();
 
-// Method 1: Using SiddhiQL with @Async annotations
-let siddhi_app = r#"
+// Method 1: Using EventFluxQL with @Async annotations
+let eventflux_app = r#"
     @Async(buffer_size='1024', workers='2')
     define stream HighThroughputStream (symbol string, price float, volume long);
 
@@ -198,7 +198,7 @@ let siddhi_app = r#"
     insert into FilteredStream;
 "#;
 
-let app_runtime = manager.create_siddhi_app_runtime_from_string(siddhi_app)?;
+let app_runtime = manager.create_eventflux_app_runtime_from_string(eventflux_app)?;
 
 // Method 2: Programmatic configuration with JunctionConfig
 let config = JunctionConfig::new("MyAsyncStream".to_string())
@@ -214,9 +214,9 @@ let config = JunctionConfig::new("MyAsyncStream".to_string())
 ### Advanced Rust API Configuration
 
 ```rust
-use siddhi_rust::core::stream::optimized_stream_junction::OptimizedStreamJunction;
-use siddhi_rust::core::util::pipeline::{EventPipeline, PipelineConfig};
-use siddhi_rust::core::util::pipeline::backpressure::BackpressureStrategy;
+use eventflux_rust::core::stream::optimized_stream_junction::OptimizedStreamJunction;
+use eventflux_rust::core::util::pipeline::{EventPipeline, PipelineConfig};
+use eventflux_rust::core::util::pipeline::backpressure::BackpressureStrategy;
 
 // Create high-performance pipeline configuration
 let pipeline_config = PipelineConfig::new()
@@ -241,10 +241,10 @@ let junction_config = JunctionConfig::new("HighPerfStream".to_string())
 ### Monitoring and Metrics
 
 ```rust
-use siddhi_rust::core::util::pipeline::metrics::PipelineMetrics;
+use eventflux_rust::core::util::pipeline::metrics::PipelineMetrics;
 
 // Access pipeline metrics
-let app_runtime = manager.create_siddhi_app_runtime_from_string(siddhi_app)?;
+let app_runtime = manager.create_eventflux_app_runtime_from_string(eventflux_app)?;
 
 // Get stream junction metrics (if available)
 if let Some(junction) = app_runtime.stream_junction_map.get("HighThroughputStream") {
@@ -257,7 +257,7 @@ if let Some(junction) = app_runtime.stream_junction_map.get("HighThroughputStrea
 ### Custom Backpressure Strategies
 
 ```rust
-use siddhi_rust::core::util::pipeline::backpressure::BackpressureStrategy;
+use eventflux_rust::core::util::pipeline::backpressure::BackpressureStrategy;
 
 // Configure different backpressure strategies based on use case
 
@@ -880,9 +880,9 @@ insert into OutputStream;
 ```rust
 #[test]
 fn test_async_stream_performance() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
 
-    let siddhi_app = r#"
+    let eventflux_app = r#"
         @Async(buffer_size='1024', workers='2')
         define stream TestStream (id int, value string);
 
@@ -891,7 +891,7 @@ fn test_async_stream_performance() {
         insert into OutputStream;
     "#;
 
-    let app_runtime = manager.create_siddhi_app_runtime_from_string(siddhi_app).unwrap();
+    let app_runtime = manager.create_eventflux_app_runtime_from_string(eventflux_app).unwrap();
     app_runtime.start();
 
     // Send high-frequency test data

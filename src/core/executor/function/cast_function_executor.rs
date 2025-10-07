@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/cast_function_executor.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/cast_function_executor.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -117,7 +117,7 @@ impl ExpressionExecutor for CastFunctionExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(CastFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
             return_type: self.return_type,

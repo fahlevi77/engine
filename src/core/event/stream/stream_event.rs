@@ -1,8 +1,8 @@
-// siddhi_rust/src/core/event/stream/stream_event.rs
-// Corresponds to io.siddhi.core.event.stream.StreamEvent
+// eventflux_rust/src/core/event/stream/stream_event.rs
+// Corresponds to io.eventflux.core.event.stream.StreamEvent
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::value::AttributeValue;
-use crate::core::util::siddhi_constants::{
+use crate::core::util::eventflux_constants::{
     BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
     STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
 };
@@ -73,7 +73,7 @@ impl StreamEvent {
         }
     }
 
-    /// Retrieve an attribute using the Siddhi position array convention.
+    /// Retrieve an attribute using the EventFlux position array convention.
     /// Only `position[STREAM_ATTRIBUTE_TYPE_INDEX]` and
     /// `position[STREAM_ATTRIBUTE_INDEX_IN_TYPE]` are respected.
     pub fn get_attribute_by_position(&self, position: &[i32]) -> Option<&AttributeValue> {
@@ -86,7 +86,7 @@ impl StreamEvent {
         }
     }
 
-    /// Set an attribute value using a Siddhi style position array.
+    /// Set an attribute value using a EventFlux style position array.
     pub fn set_attribute_by_position(
         &mut self,
         value: AttributeValue,

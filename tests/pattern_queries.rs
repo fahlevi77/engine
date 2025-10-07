@@ -1,33 +1,33 @@
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
 };
-use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::core::util::parser::QueryParser;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::definition::StreamDefinition;
-use siddhi_rust::query_api::execution::query::input::state::{State, StateElement};
-use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-use siddhi_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::core::stream::stream_junction::StreamJunction;
+use eventflux_rust::core::util::parser::QueryParser;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::StreamDefinition;
+use eventflux_rust::query_api::execution::query::input::state::{State, StateElement};
+use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use eventflux_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::expression::Expression;
+use eventflux_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::expression::Expression;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 fn setup_context() -> (
-    Arc<SiddhiAppContext>,
+    Arc<EventFluxAppContext>,
     HashMap<String, Arc<Mutex<StreamJunction>>>,
 ) {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "TestApp".to_string(),
     ));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "TestApp".to_string(),
         Arc::clone(&app),
         String::new(),
@@ -92,14 +92,14 @@ fn build_sequence_query() -> Query {
         OutputAttribute::new(
             Some("aval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("AStream".to_string()),
             ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("BStream".to_string()),
             ),
         ),

@@ -8,7 +8,7 @@
 
 ## Overview
 
-Siddhi Rust's state management system provides enterprise-grade persistence with capabilities that **exceed Apache Flink**:
+EventFlux Rust's state management system provides enterprise-grade persistence with capabilities that **exceed Apache Flink**:
 
 - **90-95% Compression**: LZ4, Snappy, Zstd support with intelligent selection
 - **Incremental Checkpointing**: WAL-based with delta compression
@@ -134,7 +134,7 @@ Batch Append:   2M ops/sec,   <0.5ms latency
 
 **Usage**:
 ```rust
-use siddhi::persistence::incremental::WriteAheadLog;
+use eventflux::persistence::incremental::WriteAheadLog;
 
 let wal = WriteAheadLog::new("/data/wal")?;
 
@@ -159,7 +159,7 @@ wal.append_batch(&changes)?;
 
 **Usage**:
 ```rust
-use siddhi::persistence::incremental::CheckpointMerger;
+use eventflux::persistence::incremental::CheckpointMerger;
 
 let merger = CheckpointMerger::new(
     compression: CompressionType::Zstd,
@@ -175,7 +175,7 @@ let merged = merger.merge_checkpoints(&checkpoints)?;
 **Parallel Recovery with Point-in-Time**:
 
 ```rust
-use siddhi::persistence::incremental::RecoveryEngine;
+use eventflux::persistence::incremental::RecoveryEngine;
 
 let engine = RecoveryEngine::new(
     num_threads: 4,
@@ -206,7 +206,7 @@ Speedup: 5x with 4 threads
 ### File Backend (Default)
 
 ```rust
-use siddhi::persistence::incremental::FileBackend;
+use eventflux::persistence::incremental::FileBackend;
 
 let backend = FileBackend::new("/data/checkpoints")?;
 
@@ -229,12 +229,12 @@ let checkpoints = backend.list_checkpoints()?;
 ### Redis Backend (Distributed)
 
 ```rust
-use siddhi::persistence::RedisPersistenceStore;
+use eventflux::persistence::RedisPersistenceStore;
 
 let store = RedisPersistenceStore::new(RedisConfig {
     url: "redis://cluster:6379".to_string(),
     pool_size: 20,
-    key_prefix: "siddhi:state".to_string(),
+    key_prefix: "eventflux:state".to_string(),
     compression: CompressionType::Zstd,
     ..Default::default()
 })?;
@@ -260,7 +260,7 @@ let state_data = store.load("my_window")?;
 // Future implementation
 let backend = CloudBackend::new(CloudConfig {
     provider: CloudProvider::S3,
-    bucket: "siddhi-checkpoints".to_string(),
+    bucket: "eventflux-checkpoints".to_string(),
     region: "us-west-2".to_string(),
     credentials: CredentialsProvider::IAM,
 })?;
@@ -301,8 +301,8 @@ let backend = CloudBackend::new(CloudConfig {
 **LengthWindowProcessor** (complete implementation):
 
 ```rust
-use siddhi::persistence::{StateHolder, StateError};
-use siddhi::util::compression::CompressibleStateHolder;
+use eventflux::persistence::{StateHolder, StateError};
+use eventflux::util::compression::CompressibleStateHolder;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LengthWindowState {
@@ -390,7 +390,7 @@ impl CompressibleStateHolder for LengthWindowProcessor {}
 
 **Usage**:
 ```rust
-use siddhi::persistence::incremental::DistributedCoordinator;
+use eventflux::persistence::incremental::DistributedCoordinator;
 
 let coordinator = DistributedCoordinator::new(
     node_id: "node-1".to_string(),
@@ -411,8 +411,8 @@ coordinator.wait_for_consensus().await?;
 ### Basic State Persistence
 
 ```rust
-use siddhi::SiddhiAppRuntimeBuilder;
-use siddhi::persistence::FileBackend;
+use eventflux::EventFluxAppRuntimeBuilder;
+use eventflux::persistence::FileBackend;
 
 let app = "@app:name('StatefulApp')
     define stream InputStream (id string, value double);
@@ -422,7 +422,7 @@ let app = "@app:name('StatefulApp')
 
 let backend = FileBackend::new("/data/checkpoints")?;
 
-let runtime = SiddhiAppRuntimeBuilder::new(app)
+let runtime = EventFluxAppRuntimeBuilder::new(app)
     .with_persistence_backend(Box::new(backend))
     .build()?;
 
@@ -443,7 +443,7 @@ runtime.restore_last_revision()?;
 ### Incremental Checkpointing
 
 ```rust
-use siddhi::persistence::incremental::*;
+use eventflux::persistence::incremental::*;
 
 // Setup incremental checkpointing
 let wal = WriteAheadLog::new("/data/wal")?;
@@ -469,8 +469,8 @@ backend.save_checkpoint(merged)?;
 ### Distributed State Management
 
 ```rust
-use siddhi::distributed::*;
-use siddhi::persistence::RedisPersistenceStore;
+use eventflux::distributed::*;
+use eventflux::persistence::RedisPersistenceStore;
 
 // Redis state backend for distributed deployment
 let redis_store = RedisPersistenceStore::new(RedisConfig {
@@ -634,7 +634,7 @@ cargo test state -- --nocapture
 ```rust
 // Enable debug logging
 env_logger::Builder::from_default_env()
-    .filter_module("siddhi::persistence", log::LevelFilter::Debug)
+    .filter_module("eventflux::persistence", log::LevelFilter::Debug)
     .init();
 
 // Check StateHolder registration

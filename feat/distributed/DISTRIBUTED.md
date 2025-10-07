@@ -8,7 +8,7 @@
 
 ## Overview
 
-Siddhi Rust's distributed processing enables horizontal scaling from single-node deployments to 10+ node clusters with:
+EventFlux Rust's distributed processing enables horizontal scaling from single-node deployments to 10+ node clusters with:
 - **Zero-overhead single-node mode** (default, 1.46M events/sec)
 - **Progressive enhancement** to distributed via configuration
 - **Linear scaling** targeting 85-90% efficiency
@@ -26,7 +26,7 @@ Siddhi Rust's distributed processing enables horizontal scaling from single-node
 ┌─────────────────────────────────────────────────────┐
 │                 User Application                     │
 ├─────────────────────────────────────────────────────┤
-│            SiddhiAppRuntime (Unified API)            │
+│            EventFluxAppRuntime (Unified API)            │
 ├──────────────────┬──────────────────────────────────┤
 │  Single-Node     │       Distributed Mode           │
 │     Mode         │                                  │
@@ -54,7 +54,7 @@ Siddhi Rust's distributed processing enables horizontal scaling from single-node
 
 **Distributed**:
 ```yaml
-siddhi:
+eventflux:
   distributed:
     node_id: "node-1"
     cluster:
@@ -129,10 +129,10 @@ siddhi:
 ### YAML Structure
 
 ```yaml
-apiVersion: siddhi.io/v1
-kind: SiddhiConfig
+apiVersion: eventflux.io/v1
+kind: EventFluxConfig
 
-siddhi:
+eventflux:
   distributed:
     # Node Configuration
     node:
@@ -145,10 +145,10 @@ siddhi:
 
     # Cluster Configuration
     cluster:
-      cluster_name: "siddhi-cluster"
+      cluster_name: "eventflux-cluster"
       seed_nodes:
-        - "node-0.siddhi.svc.cluster.local:8080"
-        - "node-1.siddhi.svc.cluster.local:8080"
+        - "node-0.eventflux.svc.cluster.local:8080"
+        - "node-1.eventflux.svc.cluster.local:8080"
       min_nodes: 2
       heartbeat_interval: "1s"
       failure_timeout: "10s"
@@ -161,8 +161,8 @@ siddhi:
       compression: true
       tls:
         enabled: true
-        cert_path: "/etc/siddhi/certs/server.crt"
-        key_path: "/etc/siddhi/certs/server.key"
+        cert_path: "/etc/eventflux/certs/server.crt"
+        key_path: "/etc/eventflux/certs/server.key"
 
     # State Backend Configuration
     state_backend:
@@ -198,11 +198,11 @@ siddhi:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: siddhi-config
+  name: eventflux-config
   namespace: production
 data:
-  siddhi.yaml: |
-    siddhi:
+  eventflux.yaml: |
+    eventflux:
       distributed:
         cluster:
           cluster_name: "prod-cluster"
@@ -210,9 +210,9 @@ data:
 
 **Example - Environment Variables**:
 ```bash
-export SIDDHI_NODE_ID="node-1"
-export SIDDHI_REDIS_ENDPOINTS="redis:6379"
-export SIDDHI_TRANSPORT="grpc"
+export EVENTFLUX_NODE_ID="node-1"
+export EVENTFLUX_REDIS_ENDPOINTS="redis:6379"
+export EVENTFLUX_TRANSPORT="grpc"
 ```
 
 ### Secrets Management
@@ -221,7 +221,7 @@ export SIDDHI_TRANSPORT="grpc"
 
 ```yaml
 # Reference secrets from Vault
-siddhi:
+eventflux:
   distributed:
     state_backend:
       endpoints: "vault://secret/redis/endpoints"
@@ -233,7 +233,7 @@ siddhi:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: siddhi-redis-credentials
+  name: eventflux-redis-credentials
 type: Opaque
 stringData:
   password: "super-secret-password"
@@ -245,7 +245,7 @@ env:
   - name: REDIS_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: siddhi-redis-credentials
+        name: eventflux-redis-credentials
         key: password
 ```
 
@@ -268,13 +268,13 @@ cargo test distributed_redis_state
 
 ### Services
 
-**Redis** (`siddhi-redis`):
+**Redis** (`eventflux-redis`):
 - Port: 6379
 - Persistent storage with AOF
 - Memory limit: 256MB (LRU eviction)
 - Health checks enabled
 
-**Redis Commander** (`siddhi-redis-commander`):
+**Redis Commander** (`eventflux-redis-commander`):
 - Port: 8081
 - Web UI: http://localhost:8081
 - Redis management and debugging
@@ -286,7 +286,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: siddhi-redis
+    container_name: eventflux-redis
     ports:
       - "6379:6379"
     command: >
@@ -302,17 +302,17 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - siddhi-network
+      - eventflux-network
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: siddhi-redis-commander
+    container_name: eventflux-redis-commander
     ports:
       - "8081:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
     networks:
-      - siddhi-network
+      - eventflux-network
     depends_on:
       - redis
 
@@ -320,7 +320,7 @@ volumes:
   redis-data:
 
 networks:
-  siddhi-network:
+  eventflux-network:
     driver: bridge
 ```
 
@@ -331,16 +331,16 @@ networks:
 docker-compose up -d          # Start services
 docker-compose down           # Stop services
 docker-compose down -v        # Remove everything including data
-docker logs siddhi-redis      # View Redis logs
+docker logs eventflux-redis      # View Redis logs
 
 # Redis operations
-docker exec -it siddhi-redis redis-cli           # Connect to CLI
-docker exec siddhi-redis redis-cli keys '*'      # List all keys
-docker exec siddhi-redis redis-cli monitor       # Monitor activity
-docker exec siddhi-redis redis-cli info          # Get Redis info
+docker exec -it eventflux-redis redis-cli           # Connect to CLI
+docker exec eventflux-redis redis-cli keys '*'      # List all keys
+docker exec eventflux-redis redis-cli monitor       # Monitor activity
+docker exec eventflux-redis redis-cli info          # Get Redis info
 
 # Cleanup
-docker exec siddhi-redis redis-cli FLUSHALL     # Clear all data
+docker exec eventflux-redis redis-cli FLUSHALL     # Clear all data
 ```
 
 ---
@@ -353,22 +353,22 @@ docker exec siddhi-redis redis-cli FLUSHALL     # Clear all data
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: siddhi
+  name: eventflux
   namespace: production
 spec:
-  serviceName: "siddhi"
+  serviceName: "eventflux"
   replicas: 3
   selector:
     matchLabels:
-      app: siddhi
+      app: eventflux
   template:
     metadata:
       labels:
-        app: siddhi
+        app: eventflux
     spec:
       containers:
-      - name: siddhi
-        image: siddhi/siddhi-rust:latest
+      - name: eventflux
+        image: eventflux/eventflux-rust:latest
         ports:
         - containerPort: 8080
           name: transport
@@ -383,7 +383,7 @@ spec:
               fieldPath: metadata.name
         volumeMounts:
         - name: config
-          mountPath: /etc/siddhi
+          mountPath: /etc/eventflux
         resources:
           requests:
             memory: "2Gi"
@@ -394,17 +394,17 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: siddhi-config
+          name: eventflux-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: siddhi
+  name: eventflux
   namespace: production
 spec:
   clusterIP: None  # Headless service for StatefulSet
   selector:
-    app: siddhi
+    app: eventflux
   ports:
   - port: 8080
     name: transport
@@ -414,9 +414,9 @@ spec:
 
 StatefulSet provides predictable DNS names:
 ```
-siddhi-0.siddhi.production.svc.cluster.local
-siddhi-1.siddhi.production.svc.cluster.local
-siddhi-2.siddhi.production.svc.cluster.local
+eventflux-0.eventflux.production.svc.cluster.local
+eventflux-1.eventflux.production.svc.cluster.local
+eventflux-2.eventflux.production.svc.cluster.local
 ```
 
 Use these in `seed_nodes` configuration.
@@ -428,14 +428,14 @@ Use these in `seed_nodes` configuration.
 ### Single-Node (Default)
 
 ```rust
-use siddhi::SiddhiAppRuntimeBuilder;
+use eventflux::EventFluxAppRuntimeBuilder;
 
 let app = "@app:name('SimpleApp')
     define stream InputStream (id string, value double);
     from InputStream[value > 100]
     select * insert into OutputStream;";
 
-let runtime = SiddhiAppRuntimeBuilder::new(app)
+let runtime = EventFluxAppRuntimeBuilder::new(app)
     .build()?;
 
 runtime.start();
@@ -445,7 +445,7 @@ runtime.start();
 ### Distributed Mode
 
 ```rust
-use siddhi::distributed::*;
+use eventflux::distributed::*;
 
 let config = DistributedConfig {
     mode: RuntimeMode::Distributed,
@@ -483,7 +483,7 @@ runtime.start();
 ### Redis State Persistence
 
 ```rust
-use siddhi::persistence::RedisPersistenceStore;
+use eventflux::persistence::RedisPersistenceStore;
 
 // Create Redis backend
 let redis_store = RedisPersistenceStore::new(RedisConfig {
@@ -493,7 +493,7 @@ let redis_store = RedisPersistenceStore::new(RedisConfig {
 })?;
 
 // Build runtime with persistence
-let runtime = SiddhiAppRuntimeBuilder::new(app)
+let runtime = EventFluxAppRuntimeBuilder::new(app)
     .with_persistence_store(Box::new(redis_store))
     .build()?;
 
@@ -527,22 +527,22 @@ runtime.restore_last_revision()?;
 **Issue**: Connection refused to seed nodes
 ```bash
 # Check network connectivity
-kubectl exec -it siddhi-0 -- nc -zv siddhi-1.siddhi.svc.cluster.local 8080
+kubectl exec -it eventflux-0 -- nc -zv eventflux-1.eventflux.svc.cluster.local 8080
 
 # Verify DNS resolution
-kubectl exec -it siddhi-0 -- nslookup siddhi-1.siddhi.svc.cluster.local
+kubectl exec -it eventflux-0 -- nslookup eventflux-1.eventflux.svc.cluster.local
 ```
 
 **Issue**: Redis connection failures
 ```bash
 # Test Redis connectivity
-docker exec siddhi-redis redis-cli ping
+docker exec eventflux-redis redis-cli ping
 
 # Check Redis logs
-docker logs siddhi-redis
+docker logs eventflux-redis
 
 # Verify network
-docker network inspect siddhi-network
+docker network inspect eventflux-network
 ```
 
 **Issue**: State not persisting
@@ -567,8 +567,8 @@ runtime.persist_state()
 1. **Configuration**:
    ```bash
    # Verify config loaded correctly
-   kubectl describe configmap siddhi-config
-   kubectl get secret siddhi-redis-credentials -o yaml
+   kubectl describe configmap eventflux-config
+   kubectl get secret eventflux-redis-credentials -o yaml
    ```
 
 2. **Network**:
@@ -577,25 +577,25 @@ runtime.persist_state()
    kubectl get pods -o wide
 
    # Test connectivity
-   kubectl exec -it siddhi-0 -- ping siddhi-1
+   kubectl exec -it eventflux-0 -- ping eventflux-1
    ```
 
 3. **State Backend**:
    ```bash
    # Verify Redis keys
-   docker exec siddhi-redis redis-cli keys '*'
+   docker exec eventflux-redis redis-cli keys '*'
 
    # Check key content
-   docker exec siddhi-redis redis-cli get "siddhi:state:my_window"
+   docker exec eventflux-redis redis-cli get "eventflux:state:my_window"
    ```
 
 4. **Logs**:
    ```bash
    # Application logs
-   kubectl logs siddhi-0 --tail=100 -f
+   kubectl logs eventflux-0 --tail=100 -f
 
    # Previous crash logs
-   kubectl logs siddhi-0 --previous
+   kubectl logs eventflux-0 --previous
    ```
 
 ---

@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/string_functions.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/string_functions.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -33,7 +33,7 @@ impl ExpressionExecutor for LengthFunctionExecutor {
         ApiAttributeType::INT
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(LengthFunctionExecutor {
             expr: self.expr.clone_executor(ctx),
         })
@@ -76,7 +76,7 @@ impl ExpressionExecutor for ConcatFunctionExecutor {
         ApiAttributeType::STRING
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(ConcatFunctionExecutor {
             executors: self
                 .executors
@@ -124,7 +124,7 @@ impl ExpressionExecutor for LowerFunctionExecutor {
         ApiAttributeType::STRING
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(LowerFunctionExecutor {
             expr: self.expr.clone_executor(ctx),
         })
@@ -158,7 +158,7 @@ impl ExpressionExecutor for UpperFunctionExecutor {
         ApiAttributeType::STRING
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(UpperFunctionExecutor {
             expr: self.expr.clone_executor(ctx),
         })
@@ -231,7 +231,7 @@ impl ExpressionExecutor for SubstringFunctionExecutor {
         ApiAttributeType::STRING
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(SubstringFunctionExecutor {
             value_executor: self.value_executor.clone_executor(ctx),
             start_executor: self.start_executor.clone_executor(ctx),

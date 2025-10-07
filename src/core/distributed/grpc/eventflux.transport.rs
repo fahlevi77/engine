@@ -416,11 +416,11 @@ pub mod transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/siddhi.transport.Transport/SendMessage",
+                "/eventflux.transport.Transport/SendMessage",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("siddhi.transport.Transport", "SendMessage"));
+                .insert(GrpcMethod::new("eventflux.transport.Transport", "SendMessage"));
             self.inner.unary(req, path, codec).await
         }
         /// Bidirectional streaming for persistent connections
@@ -442,11 +442,13 @@ pub mod transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/siddhi.transport.Transport/StreamMessages",
+                "/eventflux.transport.Transport/StreamMessages",
             );
             let mut req = request.into_streaming_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("siddhi.transport.Transport", "StreamMessages"));
+                .insert(
+                    GrpcMethod::new("eventflux.transport.Transport", "StreamMessages"),
+                );
             self.inner.streaming(req, path, codec).await
         }
         /// Server streaming for events/broadcasts
@@ -468,11 +470,13 @@ pub mod transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/siddhi.transport.Transport/StreamEvents",
+                "/eventflux.transport.Transport/StreamEvents",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("siddhi.transport.Transport", "StreamEvents"));
+                .insert(
+                    GrpcMethod::new("eventflux.transport.Transport", "StreamEvents"),
+                );
             self.inner.server_streaming(req, path, codec).await
         }
         /// Heartbeat/health check
@@ -494,11 +498,11 @@ pub mod transport_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/siddhi.transport.Transport/Heartbeat",
+                "/eventflux.transport.Transport/Heartbeat",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("siddhi.transport.Transport", "Heartbeat"));
+                .insert(GrpcMethod::new("eventflux.transport.Transport", "Heartbeat"));
             self.inner.unary(req, path, codec).await
         }
     }
@@ -635,7 +639,7 @@ pub mod transport_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/siddhi.transport.Transport/SendMessage" => {
+                "/eventflux.transport.Transport/SendMessage" => {
                     #[allow(non_camel_case_types)]
                     struct SendMessageSvc<T: Transport>(pub Arc<T>);
                     impl<
@@ -681,7 +685,7 @@ pub mod transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/siddhi.transport.Transport/StreamMessages" => {
+                "/eventflux.transport.Transport/StreamMessages" => {
                     #[allow(non_camel_case_types)]
                     struct StreamMessagesSvc<T: Transport>(pub Arc<T>);
                     impl<
@@ -730,7 +734,7 @@ pub mod transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/siddhi.transport.Transport/StreamEvents" => {
+                "/eventflux.transport.Transport/StreamEvents" => {
                     #[allow(non_camel_case_types)]
                     struct StreamEventsSvc<T: Transport>(pub Arc<T>);
                     impl<
@@ -777,7 +781,7 @@ pub mod transport_server {
                     };
                     Box::pin(fut)
                 }
-                "/siddhi.transport.Transport/Heartbeat" => {
+                "/eventflux.transport.Transport/Heartbeat" => {
                     #[allow(non_camel_case_types)]
                     struct HeartbeatSvc<T: Transport>(pub Arc<T>);
                     impl<
@@ -861,6 +865,6 @@ pub mod transport_server {
         }
     }
     impl<T: Transport> tonic::server::NamedService for TransportServer<T> {
-        const NAME: &'static str = "siddhi.transport.Transport";
+        const NAME: &'static str = "eventflux.transport.Transport";
     }
 }

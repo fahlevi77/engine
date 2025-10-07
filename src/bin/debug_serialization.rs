@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Minimal test to reproduce the serialization hang
@@ -48,7 +48,7 @@ struct TestSerializableSessionState {
 
 fn main() {
     println!("Creating test data...");
-    
+
     // Create simple test data
     let event = TestSerializableStreamEvent {
         timestamp: 1000,
@@ -59,14 +59,14 @@ fn main() {
         output_data: None,
         event_type: 0,
     };
-    
+
     let chunk = TestSerializableSessionChunk {
         events: vec![event],
         start_timestamp: 1000,
         end_timestamp: 2000,
         alive_timestamp: 2000,
     };
-    
+
     let container = TestSerializableSessionContainer {
         current_session: chunk.clone(),
         previous_session: TestSerializableSessionChunk {
@@ -76,10 +76,10 @@ fn main() {
             alive_timestamp: 0,
         },
     };
-    
+
     let mut session_map = HashMap::new();
     session_map.insert("session1".to_string(), container);
-    
+
     let state = TestSerializableSessionState {
         session_map,
         expired_event_chunk: TestSerializableSessionChunk {
@@ -89,17 +89,17 @@ fn main() {
             alive_timestamp: 0,
         },
     };
-    
+
     println!("About to serialize...");
-    
+
     match bincode::serialize(&state) {
         Ok(data) => {
             println!("Serialization successful! {} bytes", data.len());
-        },
+        }
         Err(e) => {
             println!("Serialization failed: {}", e);
         }
     }
-    
+
     println!("Done!");
 }

@@ -1,7 +1,7 @@
 //! High-Performance Shared Compression Utility
 //!
 //! This module provides enterprise-grade compression capabilities for all StateHolders
-//! in the Siddhi Rust CEP engine. It implements industry-standard compression algorithms
+//! in the EventFlux Rust CEP engine. It implements industry-standard compression algorithms
 //! (LZ4, Snappy, Zstd) with performance optimizations including:
 //!
 //! - Thread-local context caching for zero-allocation compression
@@ -16,17 +16,17 @@
 //!
 //! # Usage
 //! ```rust,no_run
-//! use siddhi_rust::core::util::compression::{GLOBAL_COMPRESSION_ENGINE, CompressionHints, CompressionEngine};
-//! use siddhi_rust::core::persistence::state_holder::CompressionType;
+//! use eventflux_rust::core::util::compression::{GLOBAL_COMPRESSION_ENGINE, CompressionHints, CompressionEngine};
+//! use eventflux_rust::core::persistence::state_holder::CompressionType;
 //!
 //! let data = b"some data to compress";
 //! let hints = CompressionHints::default();
 //! let algorithm = GLOBAL_COMPRESSION_ENGINE.select_optimal_algorithm(data, &hints);
-//! 
+//!
 //! let compressed = GLOBAL_COMPRESSION_ENGINE.compress(data, algorithm.clone())?;
 //! let decompressed = GLOBAL_COMPRESSION_ENGINE.decompress(&compressed, algorithm)?;
 //! assert_eq!(data, decompressed.as_slice());
-//! # Ok::<(), siddhi_rust::core::persistence::state_holder::StateError>(())
+//! # Ok::<(), eventflux_rust::core::persistence::state_holder::StateError>(())
 //! ```
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -39,36 +39,36 @@ use thread_local::ThreadLocal;
 use crate::core::persistence::state_holder::{CompressionType, StateError};
 
 /// Global compression engine singleton optimized for high-performance access
-pub static GLOBAL_COMPRESSION_ENGINE: Lazy<OptimizedCompressionEngine> = 
+pub static GLOBAL_COMPRESSION_ENGINE: Lazy<OptimizedCompressionEngine> =
     Lazy::new(OptimizedCompressionEngine::new);
 
 /// High-performance compression engine with adaptive algorithm selection
 pub trait CompressionEngine: Send + Sync {
     /// Compress data with the specified algorithm
-    /// 
+    ///
     /// # Performance
     /// Uses thread-local contexts to avoid allocation overhead on hot paths
     fn compress(&self, data: &[u8], algorithm: CompressionType) -> Result<Vec<u8>, StateError>;
-    
+
     /// Decompress data with the specified algorithm
-    /// 
+    ///
     /// # Performance  
     /// Optimized for minimal memory allocation and maximum throughput
     fn decompress(&self, data: &[u8], algorithm: CompressionType) -> Result<Vec<u8>, StateError>;
-    
+
     /// Select optimal compression algorithm based on data characteristics and hints
-    /// 
+    ///
     /// Uses advanced heuristics to balance compression ratio vs speed based on:
     /// - Data size and entropy
     /// - User preferences (speed vs ratio)
     /// - Target latency requirements
     fn select_optimal_algorithm(&self, data: &[u8], hints: &CompressionHints) -> CompressionType;
-    
+
     /// Benchmark all compression algorithms on sample data
-    /// 
+    ///
     /// Returns comprehensive performance metrics to guide algorithm selection
     fn benchmark_algorithms(&self, sample_data: &[u8]) -> CompressionBenchmark;
-    
+
     /// Get current compression performance metrics
     fn get_metrics(&self) -> CompressionMetrics;
 }
@@ -240,15 +240,15 @@ impl OptimizedCompressionEngine {
         // Sample analysis for performance - analyze first 1KB or entire data if smaller
         let sample_size = len.min(1024);
         let sample = &data[..sample_size];
-        
+
         // Calculate entropy and repetition patterns
         let mut byte_counts = [0u32; 256];
         let mut repeated_sequences = 0u32;
-        
+
         for &byte in sample {
             byte_counts[byte as usize] += 1;
         }
-        
+
         // Check for repeated 4-byte sequences (simple heuristic)
         if sample.len() >= 8 {
             for window in sample.windows(4) {
@@ -260,7 +260,7 @@ impl OptimizedCompressionEngine {
                 }
             }
         }
-        
+
         // Calculate entropy (simplified)
         let mut entropy = 0.0f32;
         for &count in &byte_counts {
@@ -269,7 +269,7 @@ impl OptimizedCompressionEngine {
                 entropy -= p * p.log2();
             }
         }
-        
+
         // Classify based on entropy and patterns
         match entropy {
             e if e < 4.0 => {
@@ -302,7 +302,7 @@ impl OptimizedCompressionEngine {
     fn classify_data_size(&self, size: usize) -> DataSizeRange {
         match size {
             0..=1024 => DataSizeRange::Small,
-            1025..=65536 => DataSizeRange::Medium,  
+            1025..=65536 => DataSizeRange::Medium,
             65537..=1048576 => DataSizeRange::Large,
             _ => DataSizeRange::VeryLarge,
         }
@@ -316,20 +316,30 @@ impl OptimizedCompressionEngine {
         result: &Result<Vec<u8>, StateError>,
         duration: Duration,
     ) {
-        self.metrics.total_compressions.fetch_add(1, Ordering::Relaxed);
-        self.metrics.total_bytes_in.fetch_add(input_size as u64, Ordering::Relaxed);
-        self.metrics.total_compression_time_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
-        
+        self.metrics
+            .total_compressions
+            .fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .total_bytes_in
+            .fetch_add(input_size as u64, Ordering::Relaxed);
+        self.metrics
+            .total_compression_time_ns
+            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+
         if let Ok(output) = result {
-            self.metrics.total_bytes_out.fetch_add(output.len() as u64, Ordering::Relaxed);
+            self.metrics
+                .total_bytes_out
+                .fetch_add(output.len() as u64, Ordering::Relaxed);
         }
-        
+
         match algorithm {
             CompressionType::LZ4 => {
                 self.metrics.lz4_operations.fetch_add(1, Ordering::Relaxed);
             }
             CompressionType::Snappy => {
-                self.metrics.snappy_operations.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .snappy_operations
+                    .fetch_add(1, Ordering::Relaxed);
             }
             CompressionType::Zstd => {
                 self.metrics.zstd_operations.fetch_add(1, Ordering::Relaxed);
@@ -342,26 +352,28 @@ impl OptimizedCompressionEngine {
 
     /// Update metrics atomically after decompression operation
     fn update_decompression_metrics(&self, duration: Duration) {
-        self.metrics.total_decompressions.fetch_add(1, Ordering::Relaxed);
-        self.metrics.total_decompression_time_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.metrics
+            .total_decompressions
+            .fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .total_decompression_time_ns
+            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
     }
 
     /// High-performance LZ4 compression using thread-local context
     fn compress_lz4(&self, data: &[u8]) -> Result<Vec<u8>, StateError> {
         self.lz4_contexts.get_or(|| LZ4Context { _placeholder: 0 });
-        
-        lz4::block::compress(data, None, true)
-            .map_err(|e| StateError::CompressionError {
-                message: format!("LZ4 compression failed: {e}"),
-            })
+
+        lz4::block::compress(data, None, true).map_err(|e| StateError::CompressionError {
+            message: format!("LZ4 compression failed: {e}"),
+        })
     }
 
     /// High-performance LZ4 decompression
     fn decompress_lz4(&self, data: &[u8]) -> Result<Vec<u8>, StateError> {
-        lz4::block::decompress(data, None)
-            .map_err(|e| StateError::CompressionError {
-                message: format!("LZ4 decompression failed: {e}"),
-            })
+        lz4::block::decompress(data, None).map_err(|e| StateError::CompressionError {
+            message: format!("LZ4 decompression failed: {e}"),
+        })
     }
 
     /// High-performance Snappy compression using thread-local context
@@ -386,54 +398,53 @@ impl OptimizedCompressionEngine {
 
     /// High-performance Zstd compression with optimal settings
     fn compress_zstd(&self, data: &[u8]) -> Result<Vec<u8>, StateError> {
-        self.zstd_contexts.get_or(|| ZstdContext { _placeholder: 0 });
-        
+        self.zstd_contexts
+            .get_or(|| ZstdContext { _placeholder: 0 });
+
         // Use compression level 3 for optimal balance of speed and ratio
-        zstd::encode_all(data, 3)
-            .map_err(|e| StateError::CompressionError {
-                message: format!("Zstd compression failed: {e}"),
-            })
+        zstd::encode_all(data, 3).map_err(|e| StateError::CompressionError {
+            message: format!("Zstd compression failed: {e}"),
+        })
     }
 
     /// High-performance Zstd decompression
     fn decompress_zstd(&self, data: &[u8]) -> Result<Vec<u8>, StateError> {
-        zstd::decode_all(data)
-            .map_err(|e| StateError::CompressionError {
-                message: format!("Zstd decompression failed: {e}"),
-            })
+        zstd::decode_all(data).map_err(|e| StateError::CompressionError {
+            message: format!("Zstd decompression failed: {e}"),
+        })
     }
 }
 
 impl CompressionEngine for OptimizedCompressionEngine {
     fn compress(&self, data: &[u8], algorithm: CompressionType) -> Result<Vec<u8>, StateError> {
         let start_time = Instant::now();
-        
+
         let result = match algorithm {
             CompressionType::None => Ok(data.to_vec()),
             CompressionType::LZ4 => self.compress_lz4(data),
             CompressionType::Snappy => self.compress_snappy(data),
             CompressionType::Zstd => self.compress_zstd(data),
         };
-        
+
         let duration = start_time.elapsed();
         self.update_compression_metrics(algorithm, data.len(), &result, duration);
-        
+
         result
     }
 
     fn decompress(&self, data: &[u8], algorithm: CompressionType) -> Result<Vec<u8>, StateError> {
         let start_time = Instant::now();
-        
+
         let result = match algorithm {
             CompressionType::None => Ok(data.to_vec()),
             CompressionType::LZ4 => self.decompress_lz4(data),
             CompressionType::Snappy => self.decompress_snappy(data),
             CompressionType::Zstd => self.decompress_zstd(data),
         };
-        
+
         let duration = start_time.elapsed();
         self.update_decompression_metrics(duration);
-        
+
         result
     }
 
@@ -456,7 +467,9 @@ impl CompressionEngine for OptimizedCompressionEngine {
 
         if hints.prefer_ratio {
             return match data_characteristics {
-                DataCharacteristics::HighlyRepetitive | DataCharacteristics::TextBased => CompressionType::Zstd,
+                DataCharacteristics::HighlyRepetitive | DataCharacteristics::TextBased => {
+                    CompressionType::Zstd
+                }
                 DataCharacteristics::RandomBinary => CompressionType::None, // Don't bother compressing random data
                 _ => CompressionType::Zstd,
             };
@@ -465,24 +478,37 @@ impl CompressionEngine for OptimizedCompressionEngine {
         // Intelligent selection based on data characteristics and size
         match (data_characteristics, size_range) {
             // Highly repetitive data benefits from Zstd
-            (DataCharacteristics::HighlyRepetitive, DataSizeRange::Large | DataSizeRange::VeryLarge) => CompressionType::Zstd,
+            (
+                DataCharacteristics::HighlyRepetitive,
+                DataSizeRange::Large | DataSizeRange::VeryLarge,
+            ) => CompressionType::Zstd,
             (DataCharacteristics::HighlyRepetitive, _) => CompressionType::Snappy,
-            
+
             // Text data compresses well with Zstd
-            (DataCharacteristics::TextBased, DataSizeRange::Medium | DataSizeRange::Large | DataSizeRange::VeryLarge) => CompressionType::Zstd,
+            (
+                DataCharacteristics::TextBased,
+                DataSizeRange::Medium | DataSizeRange::Large | DataSizeRange::VeryLarge,
+            ) => CompressionType::Zstd,
             (DataCharacteristics::TextBased, DataSizeRange::Small) => CompressionType::LZ4,
-            
+
             // Random binary data doesn't compress well
             (DataCharacteristics::RandomBinary, _) => CompressionType::None,
-            
+
             // Numeric data has good patterns for Snappy
             (DataCharacteristics::Numeric, _) => CompressionType::Snappy,
-            
+
             // Moderate repetitive data - balance speed and ratio
-            (DataCharacteristics::ModeratelyRepetitive, DataSizeRange::Small) => CompressionType::LZ4,
-            (DataCharacteristics::ModeratelyRepetitive, DataSizeRange::Medium) => CompressionType::Snappy,
-            (DataCharacteristics::ModeratelyRepetitive, DataSizeRange::Large | DataSizeRange::VeryLarge) => CompressionType::Zstd,
-            
+            (DataCharacteristics::ModeratelyRepetitive, DataSizeRange::Small) => {
+                CompressionType::LZ4
+            }
+            (DataCharacteristics::ModeratelyRepetitive, DataSizeRange::Medium) => {
+                CompressionType::Snappy
+            }
+            (
+                DataCharacteristics::ModeratelyRepetitive,
+                DataSizeRange::Large | DataSizeRange::VeryLarge,
+            ) => CompressionType::Zstd,
+
             // Mixed data - conservative approach
             (DataCharacteristics::Mixed, DataSizeRange::Small) => CompressionType::LZ4,
             (DataCharacteristics::Mixed, _) => CompressionType::Snappy,
@@ -491,52 +517,72 @@ impl CompressionEngine for OptimizedCompressionEngine {
 
     fn benchmark_algorithms(&self, sample_data: &[u8]) -> CompressionBenchmark {
         let original_size = sample_data.len();
-        
+
         // Benchmark LZ4
         let start = Instant::now();
-        let lz4_compressed = self.compress_lz4(sample_data).unwrap_or_else(|_| sample_data.to_vec());
+        let lz4_compressed = self
+            .compress_lz4(sample_data)
+            .unwrap_or_else(|_| sample_data.to_vec());
         let lz4_compression_time = start.elapsed().as_nanos() as u64;
-        
+
         let start = Instant::now();
         let _lz4_decompressed = self.decompress_lz4(&lz4_compressed).unwrap_or_default();
         let lz4_decompression_time = start.elapsed().as_nanos() as u64;
-        
+
         // Benchmark Snappy
         let start = Instant::now();
-        let snappy_compressed = self.compress_snappy(sample_data).unwrap_or_else(|_| sample_data.to_vec());
+        let snappy_compressed = self
+            .compress_snappy(sample_data)
+            .unwrap_or_else(|_| sample_data.to_vec());
         let snappy_compression_time = start.elapsed().as_nanos() as u64;
-        
+
         let start = Instant::now();
-        let _snappy_decompressed = self.decompress_snappy(&snappy_compressed).unwrap_or_default();
+        let _snappy_decompressed = self
+            .decompress_snappy(&snappy_compressed)
+            .unwrap_or_default();
         let snappy_decompression_time = start.elapsed().as_nanos() as u64;
-        
+
         // Benchmark Zstd
         let start = Instant::now();
-        let zstd_compressed = self.compress_zstd(sample_data).unwrap_or_else(|_| sample_data.to_vec());
+        let zstd_compressed = self
+            .compress_zstd(sample_data)
+            .unwrap_or_else(|_| sample_data.to_vec());
         let zstd_compression_time = start.elapsed().as_nanos() as u64;
-        
+
         let start = Instant::now();
         let _zstd_decompressed = self.decompress_zstd(&zstd_compressed).unwrap_or_default();
         let zstd_decompression_time = start.elapsed().as_nanos() as u64;
-        
+
         // Calculate compression ratios
         let lz4_ratio = 1.0 - (lz4_compressed.len() as f32 / original_size as f32);
         let snappy_ratio = 1.0 - (snappy_compressed.len() as f32 / original_size as f32);
         let zstd_ratio = 1.0 - (zstd_compressed.len() as f32 / original_size as f32);
-        
+
         // Select recommended algorithm based on balanced score
         let lz4_score = lz4_ratio * 0.3 + (1.0 / (lz4_compression_time as f32 / 1_000_000.0)) * 0.7;
-        let snappy_score = snappy_ratio * 0.4 + (1.0 / (snappy_compression_time as f32 / 1_000_000.0)) * 0.6;
-        let zstd_score = zstd_ratio * 0.6 + (1.0 / (zstd_compression_time as f32 / 1_000_000.0)) * 0.4;
-        
-        let (recommended_algorithm, recommendation_reason) = if zstd_score > snappy_score && zstd_score > lz4_score {
-            (CompressionType::Zstd, "Best overall balance of compression ratio and acceptable speed".to_string())
-        } else if snappy_score > lz4_score {
-            (CompressionType::Snappy, "Good balance of speed and compression ratio".to_string())
-        } else {
-            (CompressionType::LZ4, "Fastest compression with acceptable ratio".to_string())
-        };
-        
+        let snappy_score =
+            snappy_ratio * 0.4 + (1.0 / (snappy_compression_time as f32 / 1_000_000.0)) * 0.6;
+        let zstd_score =
+            zstd_ratio * 0.6 + (1.0 / (zstd_compression_time as f32 / 1_000_000.0)) * 0.4;
+
+        let (recommended_algorithm, recommendation_reason) =
+            if zstd_score > snappy_score && zstd_score > lz4_score {
+                (
+                    CompressionType::Zstd,
+                    "Best overall balance of compression ratio and acceptable speed".to_string(),
+                )
+            } else if snappy_score > lz4_score {
+                (
+                    CompressionType::Snappy,
+                    "Good balance of speed and compression ratio".to_string(),
+                )
+            } else {
+                (
+                    CompressionType::LZ4,
+                    "Fastest compression with acceptable ratio".to_string(),
+                )
+            };
+
         CompressionBenchmark {
             original_size,
             lz4_compressed_size: lz4_compressed.len(),
@@ -561,27 +607,35 @@ impl CompressionEngine for OptimizedCompressionEngine {
         let total_decompressions = self.metrics.total_decompressions.load(Ordering::Relaxed);
         let total_bytes_in = self.metrics.total_bytes_in.load(Ordering::Relaxed);
         let total_bytes_out = self.metrics.total_bytes_out.load(Ordering::Relaxed);
-        let total_compression_time_ns = self.metrics.total_compression_time_ns.load(Ordering::Relaxed);
-        let total_decompression_time_ns = self.metrics.total_decompression_time_ns.load(Ordering::Relaxed);
-        
+        let total_compression_time_ns = self
+            .metrics
+            .total_compression_time_ns
+            .load(Ordering::Relaxed);
+        let total_decompression_time_ns = self
+            .metrics
+            .total_decompression_time_ns
+            .load(Ordering::Relaxed);
+
         let average_compression_ratio = if total_bytes_in > 0 {
             1.0 - (total_bytes_out as f32 / total_bytes_in as f32)
         } else {
             0.0
         };
-        
+
         let average_compression_speed_mbps = if total_compression_time_ns > 0 {
-            (total_bytes_in as f32 / 1_000_000.0) / (total_compression_time_ns as f32 / 1_000_000_000.0)
+            (total_bytes_in as f32 / 1_000_000.0)
+                / (total_compression_time_ns as f32 / 1_000_000_000.0)
         } else {
             0.0
         };
-        
+
         let average_decompression_speed_mbps = if total_decompression_time_ns > 0 {
-            (total_bytes_out as f32 / 1_000_000.0) / (total_decompression_time_ns as f32 / 1_000_000_000.0)
+            (total_bytes_out as f32 / 1_000_000.0)
+                / (total_decompression_time_ns as f32 / 1_000_000_000.0)
         } else {
             0.0
         };
-        
+
         CompressionMetrics {
             total_compressions,
             total_decompressions,
@@ -611,42 +665,45 @@ pub trait CompressibleStateHolder {
     fn compression_engine(&self) -> &dyn CompressionEngine {
         &*GLOBAL_COMPRESSION_ENGINE
     }
-    
+
     /// Get compression hints based on StateHolder characteristics
     fn compression_hints(&self) -> CompressionHints;
-    
+
     /// Compress state data using optimal settings for this StateHolder
-    /// 
+    ///
     /// This method intelligently selects the compression algorithm unless overridden
     fn compress_state_data(
-        &self, 
-        data: &[u8], 
-        preferred_type: Option<CompressionType>
+        &self,
+        data: &[u8],
+        preferred_type: Option<CompressionType>,
     ) -> Result<(Vec<u8>, CompressionType), StateError> {
         // Handle explicit None request first
         if let Some(CompressionType::None) = preferred_type {
             return Ok((data.to_vec(), CompressionType::None));
         }
-        
+
         // Skip compression for very small data
         if data.len() < 100 {
             return Ok((data.to_vec(), CompressionType::None));
         }
-        
+
         let algorithm = preferred_type.unwrap_or_else(|| {
             let hints = self.compression_hints();
-            self.compression_engine().select_optimal_algorithm(data, &hints)
+            self.compression_engine()
+                .select_optimal_algorithm(data, &hints)
         });
-        
-        let compressed = self.compression_engine().compress(data, algorithm.clone())?;
+
+        let compressed = self
+            .compression_engine()
+            .compress(data, algorithm.clone())?;
         Ok((compressed, algorithm))
     }
-    
+
     /// Decompress state data
     fn decompress_state_data(
-        &self, 
-        data: &[u8], 
-        algorithm: CompressionType
+        &self,
+        data: &[u8],
+        algorithm: CompressionType,
     ) -> Result<Vec<u8>, StateError> {
         self.compression_engine().decompress(data, algorithm)
     }
@@ -661,7 +718,9 @@ mod tests {
             DataCharacteristics::HighlyRepetitive => {
                 // Create data with high repetition
                 let base_pattern = b"event_timestamp_12345_data_value_abcde";
-                (0..size).map(|i| base_pattern[i % base_pattern.len()]).collect()
+                (0..size)
+                    .map(|i| base_pattern[i % base_pattern.len()])
+                    .collect()
             }
             DataCharacteristics::TextBased => {
                 // Create text-like data
@@ -672,11 +731,13 @@ mod tests {
                 // Create random data (poorly compressible)
                 use std::collections::hash_map::DefaultHasher;
                 use std::hash::{Hash, Hasher};
-                (0..size).map(|i| {
-                    let mut hasher = DefaultHasher::new();
-                    i.hash(&mut hasher);
-                    (hasher.finish() & 0xFF) as u8
-                }).collect()
+                (0..size)
+                    .map(|i| {
+                        let mut hasher = DefaultHasher::new();
+                        i.hash(&mut hasher);
+                        (hasher.finish() & 0xFF) as u8
+                    })
+                    .collect()
             }
             DataCharacteristics::Numeric => {
                 // Create numeric patterns
@@ -693,10 +754,12 @@ mod tests {
     fn test_compression_roundtrip_lz4() {
         let engine = OptimizedCompressionEngine::new();
         let original = generate_test_data(1024, DataCharacteristics::ModeratelyRepetitive);
-        
+
         let compressed = engine.compress(&original, CompressionType::LZ4).unwrap();
-        let decompressed = engine.decompress(&compressed, CompressionType::LZ4).unwrap();
-        
+        let decompressed = engine
+            .decompress(&compressed, CompressionType::LZ4)
+            .unwrap();
+
         assert_eq!(original, decompressed);
         // Should achieve some compression on repetitive data
         assert!(compressed.len() < original.len());
@@ -706,10 +769,12 @@ mod tests {
     fn test_compression_roundtrip_snappy() {
         let engine = OptimizedCompressionEngine::new();
         let original = generate_test_data(2048, DataCharacteristics::TextBased);
-        
+
         let compressed = engine.compress(&original, CompressionType::Snappy).unwrap();
-        let decompressed = engine.decompress(&compressed, CompressionType::Snappy).unwrap();
-        
+        let decompressed = engine
+            .decompress(&compressed, CompressionType::Snappy)
+            .unwrap();
+
         assert_eq!(original, decompressed);
         assert!(compressed.len() < original.len());
     }
@@ -718,10 +783,12 @@ mod tests {
     fn test_compression_roundtrip_zstd() {
         let engine = OptimizedCompressionEngine::new();
         let original = generate_test_data(4096, DataCharacteristics::HighlyRepetitive);
-        
+
         let compressed = engine.compress(&original, CompressionType::Zstd).unwrap();
-        let decompressed = engine.decompress(&compressed, CompressionType::Zstd).unwrap();
-        
+        let decompressed = engine
+            .decompress(&compressed, CompressionType::Zstd)
+            .unwrap();
+
         assert_eq!(original, decompressed);
         assert!(compressed.len() < original.len());
     }
@@ -729,58 +796,74 @@ mod tests {
     #[test]
     fn test_adaptive_algorithm_selection() {
         let engine = OptimizedCompressionEngine::new();
-        
+
         // Small data should prefer LZ4 or None
         let small_data = vec![1, 2, 3, 4, 5];
         let hints = CompressionHints::default();
         let algorithm = engine.select_optimal_algorithm(&small_data, &hints);
         assert!(matches!(algorithm, CompressionType::None));
-        
+
         // Highly repetitive data should prefer good compression
         let repetitive_data = generate_test_data(10000, DataCharacteristics::HighlyRepetitive);
-        let hints = CompressionHints { prefer_ratio: true, ..Default::default() };
+        let hints = CompressionHints {
+            prefer_ratio: true,
+            ..Default::default()
+        };
         let algorithm = engine.select_optimal_algorithm(&repetitive_data, &hints);
         assert_eq!(algorithm, CompressionType::Zstd);
-        
+
         // Speed preference should select fast algorithms
         let mixed_data = generate_test_data(5000, DataCharacteristics::Mixed);
-        let hints = CompressionHints { prefer_speed: true, ..Default::default() };
+        let hints = CompressionHints {
+            prefer_speed: true,
+            ..Default::default()
+        };
         let algorithm = engine.select_optimal_algorithm(&mixed_data, &hints);
-        assert!(matches!(algorithm, CompressionType::LZ4 | CompressionType::Snappy));
+        assert!(matches!(
+            algorithm,
+            CompressionType::LZ4 | CompressionType::Snappy
+        ));
     }
 
     #[test]
     fn test_data_characteristics_analysis() {
         let engine = OptimizedCompressionEngine::new();
-        
+
         // Test repetitive data detection
         let repetitive = generate_test_data(1000, DataCharacteristics::HighlyRepetitive);
         let characteristics = engine.analyze_data_characteristics(&repetitive);
-        assert!(matches!(characteristics, DataCharacteristics::HighlyRepetitive | DataCharacteristics::ModeratelyRepetitive));
-        
+        assert!(matches!(
+            characteristics,
+            DataCharacteristics::HighlyRepetitive | DataCharacteristics::ModeratelyRepetitive
+        ));
+
         // Test text data detection
-        let text_data = "Hello world! This is a text string with normal English content.".repeat(10);
+        let text_data =
+            "Hello world! This is a text string with normal English content.".repeat(10);
         let characteristics = engine.analyze_data_characteristics(text_data.as_bytes());
-        assert!(matches!(characteristics, DataCharacteristics::TextBased | DataCharacteristics::ModeratelyRepetitive));
+        assert!(matches!(
+            characteristics,
+            DataCharacteristics::TextBased | DataCharacteristics::ModeratelyRepetitive
+        ));
     }
 
     #[test]
     fn test_compression_benchmark() {
         let engine = OptimizedCompressionEngine::new();
         let test_data = generate_test_data(8192, DataCharacteristics::ModeratelyRepetitive);
-        
+
         let benchmark = engine.benchmark_algorithms(&test_data);
-        
+
         // Verify all algorithms were benchmarked
         assert!(benchmark.lz4_compression_time_ns > 0);
         assert!(benchmark.snappy_compression_time_ns > 0);
         assert!(benchmark.zstd_compression_time_ns > 0);
-        
+
         // Verify compression ratios are reasonable
         assert!(benchmark.lz4_ratio >= 0.0 && benchmark.lz4_ratio < 1.0);
         assert!(benchmark.snappy_ratio >= 0.0 && benchmark.snappy_ratio < 1.0);
         assert!(benchmark.zstd_ratio >= 0.0 && benchmark.zstd_ratio < 1.0);
-        
+
         // Should have recommended an algorithm
         assert!(matches!(
             benchmark.recommended_algorithm,
@@ -792,13 +875,15 @@ mod tests {
     fn test_compression_metrics_tracking() {
         let engine = OptimizedCompressionEngine::new();
         let test_data = generate_test_data(1000, DataCharacteristics::Mixed);
-        
+
         // Perform some operations
         let _compressed_lz4 = engine.compress(&test_data, CompressionType::LZ4).unwrap();
-        let _compressed_snappy = engine.compress(&test_data, CompressionType::Snappy).unwrap();
-        
+        let _compressed_snappy = engine
+            .compress(&test_data, CompressionType::Snappy)
+            .unwrap();
+
         let metrics = engine.get_metrics();
-        
+
         // Verify metrics were updated
         assert_eq!(metrics.total_compressions, 2);
         assert_eq!(metrics.lz4_operations, 1);
@@ -811,50 +896,68 @@ mod tests {
     fn test_compression_performance_targets() {
         let engine = OptimizedCompressionEngine::new();
         let test_data = generate_test_data(1_000_000, DataCharacteristics::ModeratelyRepetitive); // 1MB
-        
+
         // Test LZ4 performance target: < 1ms per MB
         let start = Instant::now();
         let _compressed = engine.compress(&test_data, CompressionType::LZ4).unwrap();
         let lz4_time = start.elapsed();
-        assert!(lz4_time.as_millis() < 10, "LZ4 compression took {:?}, should be < 10ms for 1MB", lz4_time);
-        
+        assert!(
+            lz4_time.as_millis() < 10,
+            "LZ4 compression took {:?}, should be < 10ms for 1MB",
+            lz4_time
+        );
+
         // Test Snappy performance target: < 2ms per MB
         let start = Instant::now();
-        let _compressed = engine.compress(&test_data, CompressionType::Snappy).unwrap();
+        let _compressed = engine
+            .compress(&test_data, CompressionType::Snappy)
+            .unwrap();
         let snappy_time = start.elapsed();
-        assert!(snappy_time.as_millis() < 20, "Snappy compression took {:?}, should be < 20ms for 1MB", snappy_time);
-        
+        assert!(
+            snappy_time.as_millis() < 20,
+            "Snappy compression took {:?}, should be < 20ms for 1MB",
+            snappy_time
+        );
+
         // Test Zstd performance target: < 5ms per MB
         let start = Instant::now();
         let _compressed = engine.compress(&test_data, CompressionType::Zstd).unwrap();
         let zstd_time = start.elapsed();
-        assert!(zstd_time.as_millis() < 50, "Zstd compression took {:?}, should be < 50ms for 1MB", zstd_time);
+        assert!(
+            zstd_time.as_millis() < 50,
+            "Zstd compression took {:?}, should be < 50ms for 1MB",
+            zstd_time
+        );
     }
 
     #[test]
     fn test_thread_safety() {
-        use std::thread;
         use std::sync::Arc;
-        
+        use std::thread;
+
         let engine = Arc::new(OptimizedCompressionEngine::new());
         let test_data = Arc::new(generate_test_data(1024, DataCharacteristics::Mixed));
-        
+
         // Test concurrent compression from multiple threads
-        let handles: Vec<_> = (0..10).map(|_| {
-            let engine = Arc::clone(&engine);
-            let data = Arc::clone(&test_data);
-            thread::spawn(move || {
-                let compressed = engine.compress(&data, CompressionType::LZ4).unwrap();
-                let decompressed = engine.decompress(&compressed, CompressionType::LZ4).unwrap();
-                assert_eq!(*data, decompressed);
+        let handles: Vec<_> = (0..10)
+            .map(|_| {
+                let engine = Arc::clone(&engine);
+                let data = Arc::clone(&test_data);
+                thread::spawn(move || {
+                    let compressed = engine.compress(&data, CompressionType::LZ4).unwrap();
+                    let decompressed = engine
+                        .decompress(&compressed, CompressionType::LZ4)
+                        .unwrap();
+                    assert_eq!(*data, decompressed);
+                })
             })
-        }).collect();
-        
+            .collect();
+
         // Wait for all threads to complete
         for handle in handles {
             handle.join().unwrap();
         }
-        
+
         // Verify metrics show all operations
         let metrics = engine.get_metrics();
         assert_eq!(metrics.total_compressions, 10);
@@ -865,17 +968,21 @@ mod tests {
     fn test_global_compression_engine() {
         // Test that the global engine works correctly
         let data = generate_test_data(512, DataCharacteristics::TextBased);
-        
-        let compressed = GLOBAL_COMPRESSION_ENGINE.compress(&data, CompressionType::Snappy).unwrap();
-        let decompressed = GLOBAL_COMPRESSION_ENGINE.decompress(&compressed, CompressionType::Snappy).unwrap();
-        
+
+        let compressed = GLOBAL_COMPRESSION_ENGINE
+            .compress(&data, CompressionType::Snappy)
+            .unwrap();
+        let decompressed = GLOBAL_COMPRESSION_ENGINE
+            .decompress(&compressed, CompressionType::Snappy)
+            .unwrap();
+
         assert_eq!(data, decompressed);
     }
 
     #[test]
     fn test_compressible_state_holder_trait() {
         struct TestStateHolder;
-        
+
         impl CompressibleStateHolder for TestStateHolder {
             fn compression_hints(&self) -> CompressionHints {
                 CompressionHints {
@@ -885,14 +992,16 @@ mod tests {
                 }
             }
         }
-        
+
         let holder = TestStateHolder;
         let data = generate_test_data(1000, DataCharacteristics::ModeratelyRepetitive);
-        
+
         let (compressed, algorithm) = holder.compress_state_data(&data, None).unwrap();
         assert!(matches!(algorithm, CompressionType::LZ4)); // Should prefer speed
-        
-        let decompressed = holder.decompress_state_data(&compressed, algorithm).unwrap();
+
+        let decompressed = holder
+            .decompress_state_data(&compressed, algorithm)
+            .unwrap();
         assert_eq!(data, decompressed);
     }
 }

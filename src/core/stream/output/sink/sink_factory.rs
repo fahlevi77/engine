@@ -1,12 +1,12 @@
 //! Sink Factory Implementation
-//! 
+//!
 //! Provides automatic sink creation from configuration
 
-use std::sync::Arc;
-use std::collections::HashMap;
-use crate::core::stream::output::sink::{Sink, LogSink};
+use crate::core::config::{types::application_config::SinkConfig, ProcessorConfigReader};
+use crate::core::stream::output::sink::{LogSink, Sink};
 use crate::core::stream::output::stream_callback::StreamCallback;
-use crate::core::config::{ProcessorConfigReader, types::application_config::SinkConfig};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Registry for sink factories
 pub struct SinkFactoryRegistry {
@@ -19,20 +19,20 @@ impl SinkFactoryRegistry {
         let mut registry = Self {
             factories: HashMap::new(),
         };
-        
+
         // Register default sink factories
         registry.register("log", Box::new(LogSinkFactory));
         // Future: registry.register("kafka", Box::new(KafkaSinkFactory));
         // Future: registry.register("http", Box::new(HttpSinkFactory));
-        
+
         registry
     }
-    
+
     /// Register a new sink factory
     pub fn register(&mut self, sink_type: &str, factory: Box<dyn SinkFactoryTrait>) {
         self.factories.insert(sink_type.to_string(), factory);
     }
-    
+
     /// Create a sink from configuration
     pub fn create_sink(
         &self,
@@ -40,10 +40,11 @@ impl SinkFactoryRegistry {
         config_reader: Option<Arc<ProcessorConfigReader>>,
         sink_name: &str,
     ) -> Result<Box<dyn StreamCallback>, String> {
-        let factory = self.factories
+        let factory = self
+            .factories
             .get(&sink_config.sink_type)
             .ok_or_else(|| format!("Unknown sink type: {}", sink_config.sink_type))?;
-        
+
         factory.create_from_config(sink_config, config_reader, sink_name)
     }
 }
@@ -70,11 +71,8 @@ impl SinkFactoryTrait for LogSinkFactory {
         sink_name: &str,
     ) -> Result<Box<dyn StreamCallback>, String> {
         // Create LogSink with configuration support
-        let log_sink = LogSink::new_with_config(
-            config_reader,
-            sink_name.to_string(),
-        );
-        
+        let log_sink = LogSink::new_with_config(config_reader, sink_name.to_string());
+
         Ok(Box::new(log_sink))
     }
 }

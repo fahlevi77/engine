@@ -1,24 +1,24 @@
 //! End-to-End Configuration Integration Tests
-//! 
+//!
 //! Tests the complete flow from YAML configuration loading to runtime component behavior
 //! verification, ensuring that configuration values are properly applied to processors.
 
-use siddhi_rust::core::config::{
-    ConfigManager, SiddhiConfig, ApplicationConfig,
-    ProcessorConfigReader, ConfigValue, RuntimeMode,
+use eventflux_rust::core::config::types::application_config::{DefinitionConfig, WindowConfig};
+use eventflux_rust::core::config::types::*;
+use eventflux_rust::core::config::{
+    ApplicationConfig, ConfigManager, ConfigValue, EventFluxConfig, ProcessorConfigReader,
+    RuntimeMode,
 };
-use siddhi_rust::core::SiddhiManager;
-use siddhi_rust::core::config::types::*;
-use siddhi_rust::core::config::types::application_config::{DefinitionConfig, WindowConfig};
-use siddhi_rust::core::siddhi_manager::SiddhiManager as Manager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::core::event::{Event, StreamEvent};
+use eventflux_rust::core::event::{Event, StreamEvent};
+use eventflux_rust::core::eventflux_manager::EventFluxManager as Manager;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::EventFluxManager;
 use serial_test::serial;
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use tokio;
-use tempfile::NamedTempFile;
 use std::io::Write;
+use std::sync::{Arc, Mutex};
+use tempfile::NamedTempFile;
+use tokio;
 
 /// Test data structure to collect output events
 #[derive(Debug, Clone, Default)]
@@ -48,7 +48,7 @@ impl StreamCallback for TestEventCollector {
     fn receive_events(&self, events: &[Event]) {
         let mut stored_events = self.events.lock().unwrap();
         let mut count = self.callback_count.lock().unwrap();
-        
+
         stored_events.extend_from_slice(events);
         *count += 1;
     }
@@ -57,12 +57,12 @@ impl StreamCallback for TestEventCollector {
 /// Create a test YAML configuration file
 async fn create_test_config_file() -> NamedTempFile {
     let config_yaml = r#"
-apiVersion: siddhi.io/v2
-kind: SiddhiConfig
+apiVersion: eventflux.io/v2
+kind: EventFluxConfig
 metadata:
   name: test-config
   namespace: default
-siddhi:
+eventflux:
   runtime:
     mode: single-node
     performance:
@@ -133,13 +133,13 @@ applications:
     temp_file
 }
 
-// TODO: NOT PART OF M1 - Old SiddhiQL syntax with @app annotations
+// TODO: NOT PART OF M1 - Old EventFluxQL syntax with @app annotations
 // This test uses @app:name and @info annotations which are not supported in SQL parser.
 // While YAML configuration system exists, tests need to be updated to use SQL syntax.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
 #[serial]
-#[ignore = "@app annotations and old SiddhiQL syntax not part of M1"]
+#[ignore = "@app annotations and old EventFluxQL syntax not part of M1"]
 async fn test_yaml_config_to_runtime_integration() {
     // Create temporary config file
     let config_file = create_test_config_file().await;
@@ -153,26 +153,39 @@ async fn test_yaml_config_to_runtime_integration() {
         .expect("Failed to load configuration");
 
     // Verify global configuration was loaded correctly
-    assert_eq!(loaded_config.siddhi.runtime.mode, RuntimeMode::SingleNode);
+    assert_eq!(
+        loaded_config.eventflux.runtime.mode,
+        RuntimeMode::SingleNode
+    );
     // Note: Due to PerformanceConfig defaults, these may not match YAML exactly
-    println!("Event buffer size: {}", loaded_config.siddhi.runtime.performance.event_buffer_size);
-    println!("Thread pool size: {}", loaded_config.siddhi.runtime.performance.thread_pool_size);
+    println!(
+        "Event buffer size: {}",
+        loaded_config
+            .eventflux
+            .runtime
+            .performance
+            .event_buffer_size
+    );
+    println!(
+        "Thread pool size: {}",
+        loaded_config.eventflux.runtime.performance.thread_pool_size
+    );
 
     // Verify application-specific configuration exists
     let app_config = loaded_config
         .applications
         .get("test-app")
         .expect("Test app configuration not found");
-    
+
     // Application config doesn't have performance field directly
     // Those would be in global config, but we can verify monitoring settings
     assert!(app_config.monitoring.is_some());
 
-    // Create SiddhiManager with the loaded configuration
-    let manager = SiddhiManager::new_with_config(loaded_config);
+    // Create EventFluxManager with the loaded configuration
+    let manager = EventFluxManager::new_with_config(loaded_config);
 
-    // Test SiddhiQL that would use window configuration
-    let siddhi_app_string = r#"
+    // Test EventFluxQL that would use window configuration
+    let eventflux_app_string = r#"
         @app:name('test-app')
         @app:statistics('true')
         
@@ -187,19 +200,19 @@ async fn test_yaml_config_to_runtime_integration() {
     "#;
 
     // Create the runtime (this should apply the configuration)
-    let siddhi_app_runtime = manager
-        .create_siddhi_app_runtime_from_string(siddhi_app_string)
+    let eventflux_app_runtime = manager
+        .create_eventflux_app_runtime_from_string(eventflux_app_string)
         .await
-        .expect("Failed to create SiddhiApp runtime");
+        .expect("Failed to create EventFluxApp runtime");
 
     // Set up event collector
     let event_collector = Arc::new(TestEventCollector::new());
-    siddhi_app_runtime
+    eventflux_app_runtime
         .add_callback("OutputStream", Box::new(event_collector.as_ref().clone()))
         .expect("Failed to add callback");
 
     // Get input handler and send test events
-    let input_handler = siddhi_app_runtime
+    let input_handler = eventflux_app_runtime
         .get_input_handler("InputStream")
         .expect("Failed to get input handler");
 
@@ -212,14 +225,14 @@ async fn test_yaml_config_to_runtime_integration() {
 
     // For now, just verify the runtime was created successfully
     // TODO: Add proper event processing verification once AttributeValue is fixed
-    println!("SiddhiApp runtime created successfully with configuration");
+    println!("EventFluxApp runtime created successfully with configuration");
 
     // Verify that configuration was applied by checking internal state
     // This is a more indirect test since we can't directly access processor internals
     println!("Configuration integration test completed successfully");
-    
+
     // Clean up
-    siddhi_app_runtime.shutdown();
+    eventflux_app_runtime.shutdown();
 }
 
 #[tokio::test]
@@ -227,16 +240,16 @@ async fn test_yaml_config_to_runtime_integration() {
 async fn test_processor_config_reader() {
     // Create test application config
     let mut app_config = ApplicationConfig::default();
-    
+
     // Create window definitions with parameters using YAML format
     let mut yaml_params = serde_yaml::Mapping::new();
     yaml_params.insert(
         serde_yaml::Value::String("initial_capacity_multiplier".to_string()),
-        serde_yaml::Value::String("1.8".to_string())
+        serde_yaml::Value::String("1.8".to_string()),
     );
     yaml_params.insert(
-        serde_yaml::Value::String("distributed_size_factor".to_string()), 
-        serde_yaml::Value::String("0.6".to_string())
+        serde_yaml::Value::String("distributed_size_factor".to_string()),
+        serde_yaml::Value::String("0.6".to_string()),
     );
 
     let window_config = WindowConfig {
@@ -248,10 +261,12 @@ async fn test_processor_config_reader() {
 
     let window_def = DefinitionConfig::Window(window_config);
 
-    app_config.definitions.insert("sort".to_string(), window_def);
+    app_config
+        .definitions
+        .insert("sort".to_string(), window_def);
 
     // Create global config
-    let global_config = SiddhiConfig::default();
+    let global_config = EventFluxConfig::default();
 
     // Test ProcessorConfigReader directly
     let config_reader = ProcessorConfigReader::new(Some(app_config), Some(global_config));
@@ -291,7 +306,7 @@ async fn test_processor_config_reader() {
     // Access some configs to populate cache
     let _val1 = config_reader.get_window_config("sort", "initial_capacity_multiplier");
     let _val2 = config_reader.get_performance_config("event_buffer_size");
-    
+
     assert_eq!(config_reader.get_cache_size(), 2);
 
     // Clear cache
@@ -299,7 +314,7 @@ async fn test_processor_config_reader() {
     assert_eq!(config_reader.get_cache_size(), 0);
 }
 
-#[tokio::test] 
+#[tokio::test]
 #[serial]
 async fn test_config_fallback_behavior() {
     // Test with no application config
@@ -321,34 +336,39 @@ async fn test_config_fallback_behavior() {
 
 #[tokio::test]
 #[serial]
-async fn test_config_manager_siddhi_manager_integration() {
+async fn test_config_manager_eventflux_manager_integration() {
     // Create test configuration
-    let mut config = SiddhiConfig::default();
-    config.siddhi.runtime.mode = RuntimeMode::Distributed;
-    
+    let mut config = EventFluxConfig::default();
+    config.eventflux.runtime.mode = RuntimeMode::Distributed;
+
     let mut perf_config = PerformanceConfig::default();
     perf_config.event_buffer_size = 16384;
     perf_config.batch_size = Some(5000);
-    config.siddhi.runtime.performance = perf_config;
+    config.eventflux.runtime.performance = perf_config;
 
     // Create application-specific config
     let app_config = ApplicationConfig::default();
-    
-    config.applications.insert("integration-test".to_string(), app_config);
+
+    config
+        .applications
+        .insert("integration-test".to_string(), app_config);
 
     // Create manager with config
-    let manager = SiddhiManager::new_with_config(config);
+    let manager = EventFluxManager::new_with_config(config);
 
     // Verify configuration access
     let loaded_config = manager.get_config().await.expect("Failed to get config");
-    assert_eq!(loaded_config.siddhi.runtime.mode, RuntimeMode::Distributed);
+    assert_eq!(
+        loaded_config.eventflux.runtime.mode,
+        RuntimeMode::Distributed
+    );
 
     let app_specific = manager
         .get_application_config("integration-test")
         .await
         .expect("Failed to get app config")
         .expect("App config not found");
-    
+
     // App config exists but doesn't have performance field
     assert!(app_specific.monitoring.is_none()); // Default empty config
 
@@ -388,4 +408,3 @@ async fn test_config_value_type_conversions() {
     assert_eq!(negative_val.as_usize(), None);
     assert_eq!(negative_val.as_integer(), Some(-1));
 }
-

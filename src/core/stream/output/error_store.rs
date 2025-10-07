@@ -1,8 +1,8 @@
-use crate::core::exception::error::SiddhiError;
+use crate::core::exception::error::EventFluxError;
 use std::sync::Mutex;
 
 pub trait ErrorStore: Send + Sync + std::fmt::Debug {
-    fn store(&self, stream_id: &str, error: SiddhiError);
+    fn store(&self, stream_id: &str, error: EventFluxError);
 }
 
 #[derive(Default, Debug)]
@@ -25,7 +25,7 @@ impl InMemoryErrorStore {
 }
 
 impl ErrorStore for InMemoryErrorStore {
-    fn store(&self, stream_id: &str, error: SiddhiError) {
+    fn store(&self, stream_id: &str, error: EventFluxError) {
         self.inner
             .lock()
             .unwrap()

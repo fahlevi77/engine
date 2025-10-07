@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/executor/function/scalar_function_executor.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+// eventflux_rust/src/core/executor/function/scalar_function_executor.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::executor::expression_executor::ExpressionExecutor;
 use std::sync::Arc;
 
@@ -7,7 +7,7 @@ use std::sync::Arc;
 ///
 /// A `ScalarFunctionExecutor` is both a factory and the runtime instance of a
 /// scalar function.  The same instance that is registered with
-/// [`SiddhiManager`](crate::core::siddhi_manager::SiddhiManager) will be cloned
+/// [`EventFluxManager`](crate::core::eventflux_manager::EventFluxManager) will be cloned
 /// using [`clone_scalar_function`] whenever the parser requires a new copy for a
 /// query plan.  Implementations are therefore free to hold arbitrary internal
 /// state (for example inside a `Box<dyn Any>`) which can be initialised during
@@ -22,7 +22,7 @@ pub trait ScalarFunctionExecutor: ExpressionExecutor {
     fn init(
         &mut self,
         argument_executors: &Vec<Box<dyn ExpressionExecutor>>,
-        siddhi_app_context: &Arc<SiddhiAppContext>,
+        eventflux_app_context: &Arc<EventFluxAppContext>,
     ) -> Result<(), String>;
 
     /// Release any resources held by this instance.

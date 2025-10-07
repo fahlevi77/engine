@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/stream/stream_event_factory.rs
-// Corresponds to io.siddhi.core.event.stream.StreamEventFactory
+// eventflux_rust/src/core/event/stream/stream_event_factory.rs
+// Corresponds to io.eventflux.core.event.stream.StreamEventFactory
 use super::meta_stream_event::MetaStreamEvent;
 use super::stream_event::StreamEvent;
 use crate::core::event::complex_event::ComplexEventType;

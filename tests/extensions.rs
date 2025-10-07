@@ -1,32 +1,32 @@
 #[path = "common/mod.rs"]
 mod common;
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_query_context::SiddhiQueryContext,
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_query_context::EventFluxQueryContext,
 };
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::extension::{AttributeAggregatorFactory, WindowProcessorFactory};
-use siddhi_rust::core::query::processor::stream::window::WindowProcessor;
-use siddhi_rust::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::core::util::parser::{
-    parse_expression, ExpressionParserContext, QueryParser, SiddhiAppParser,
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::extension::{AttributeAggregatorFactory, WindowProcessorFactory};
+use eventflux_rust::core::query::processor::stream::window::WindowProcessor;
+use eventflux_rust::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
+use eventflux_rust::core::stream::stream_junction::StreamJunction;
+use eventflux_rust::core::util::parser::{
+    parse_expression, EventFluxAppParser, ExpressionParserContext, QueryParser,
 };
-use siddhi_rust::query_api::annotation::Annotation;
-use siddhi_rust::query_api::definition::{
+use eventflux_rust::query_api::annotation::Annotation;
+use eventflux_rust::query_api::definition::{
     attribute::Type as AttrType, StreamDefinition, TableDefinition,
 };
-use siddhi_rust::query_api::execution::query::input::handler::WindowHandler;
-use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::execution::query::input::handler::WindowHandler;
+use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::Selector;
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::query_api::execution::query::selection::Selector;
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::expression::Expression;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -47,20 +47,20 @@ impl Processor for DummyWindowProcessor {
     fn set_next_processor(&mut self, next: Option<Arc<Mutex<dyn Processor>>>) {
         self.meta.next_processor = next;
     }
-    fn clone_processor(&self, q: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, q: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(DummyWindowProcessor {
             meta: CommonProcessorMeta::new(
-                Arc::clone(&self.meta.siddhi_app_context),
+                Arc::clone(&self.meta.eventflux_app_context),
                 Arc::clone(q),
             ),
         })
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        Arc::clone(&self.meta.siddhi_query_context)
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        Arc::clone(&self.meta.eventflux_query_context)
     }
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::BATCH
@@ -80,8 +80,8 @@ impl WindowProcessorFactory for DummyWindowFactory {
     fn create(
         &self,
         _h: &WindowHandler,
-        app: Arc<SiddhiAppContext>,
-        q: Arc<SiddhiQueryContext>,
+        app: Arc<EventFluxAppContext>,
+        q: Arc<EventFluxQueryContext>,
     ) -> Result<Arc<Mutex<dyn Processor>>, String> {
         Ok(Arc::new(Mutex::new(DummyWindowProcessor {
             meta: CommonProcessorMeta::new(app, q),
@@ -103,23 +103,23 @@ impl AttributeAggregatorFactory for ConstAggFactory {
     fn create(
         &self,
     ) -> Box<
-        dyn siddhi_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor,
-    > {
+        dyn eventflux_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor,
+    >{
         Box::new(ConstAggExec)
     }
     fn clone_box(&self) -> Box<dyn AttributeAggregatorFactory> {
         Box::new(Self)
     }
 }
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::query::selector::attribute::aggregator::AttributeAggregatorExecutor;
 impl AttributeAggregatorExecutor for ConstAggExec {
     fn init(
         &mut self,
         _e: Vec<Box<dyn ExpressionExecutor>>,
         _m: ProcessingMode,
         _ex: bool,
-        _ctx: &SiddhiQueryContext,
+        _ctx: &EventFluxQueryContext,
     ) -> Result<(), String> {
         Ok(())
     }
@@ -143,7 +143,7 @@ impl ExpressionExecutor for ConstAggExec {
     fn get_return_type(&self) -> AttrType {
         AttrType::INT
     }
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(ConstAggExec)
     }
     fn is_attribute_aggregator(&self) -> bool {
@@ -151,15 +151,18 @@ impl ExpressionExecutor for ConstAggExec {
     }
 }
 
-fn make_ctx_with_manager(manager: &SiddhiManager, name: &str) -> ExpressionParserContext<'static> {
-    let app = Arc::new(SiddhiApp::new("app".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        manager.siddhi_context(),
+fn make_ctx_with_manager(
+    manager: &EventFluxManager,
+    name: &str,
+) -> ExpressionParserContext<'static> {
+    let app = Arc::new(EventFluxApp::new("app".to_string()));
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        manager.eventflux_context(),
         "app".to_string(),
         Arc::clone(&app),
         String::new(),
     ));
-    let q_ctx = Arc::new(SiddhiQueryContext::new(
+    let q_ctx = Arc::new(EventFluxQueryContext::new(
         Arc::clone(&app_ctx),
         name.to_string(),
         None,
@@ -167,14 +170,14 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name: &str) -> ExpressionParse
     let stream_def =
         Arc::new(StreamDefinition::new("s".to_string()).attribute("v".to_string(), AttrType::INT));
     let meta =
-        siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent::new_for_single_input(
+        eventflux_rust::core::event::stream::meta_stream_event::MetaStreamEvent::new_for_single_input(
             Arc::clone(&stream_def),
         );
     let mut smap = HashMap::new();
     smap.insert("s".to_string(), Arc::new(meta));
     ExpressionParserContext {
-        siddhi_app_context: app_ctx,
-        siddhi_query_context: q_ctx,
+        eventflux_app_context: app_ctx,
+        eventflux_query_context: q_ctx,
         stream_meta_map: smap,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),
@@ -191,14 +194,14 @@ fn make_ctx_with_manager(manager: &SiddhiManager, name: &str) -> ExpressionParse
 }
 
 fn setup_query_env(
-    manager: &SiddhiManager,
+    manager: &EventFluxManager,
 ) -> (
-    Arc<SiddhiAppContext>,
+    Arc<EventFluxAppContext>,
     HashMap<String, Arc<Mutex<StreamJunction>>>,
 ) {
-    let ctx = manager.siddhi_context();
-    let app = Arc::new(SiddhiApp::new("A".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
+    let ctx = manager.eventflux_context();
+    let app = Arc::new(EventFluxApp::new("A".to_string()));
+    let app_ctx = Arc::new(EventFluxAppContext::new(
         ctx,
         "A".to_string(),
         Arc::clone(&app),
@@ -237,22 +240,22 @@ fn setup_query_env(
 
 #[test]
 fn test_register_window_factory() {
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_window_factory("dummy".to_string(), Box::new(DummyWindowFactory));
     let handler = WindowHandler::new("dummy".to_string(), None, vec![]);
-    let app = Arc::new(SiddhiApp::new("A".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        manager.siddhi_context(),
+    let app = Arc::new(EventFluxApp::new("A".to_string()));
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        manager.eventflux_context(),
         "A".to_string(),
         Arc::clone(&app),
         String::new(),
     ));
-    let q_ctx = Arc::new(SiddhiQueryContext::new(
+    let q_ctx = Arc::new(EventFluxQueryContext::new(
         Arc::clone(&app_ctx),
         "q".to_string(),
         None,
     ));
-    let res = siddhi_rust::core::query::processor::stream::window::create_window_processor(
+    let res = eventflux_rust::core::query::processor::stream::window::create_window_processor(
         &handler, app_ctx, q_ctx,
     );
     assert!(res.is_ok());
@@ -260,7 +263,7 @@ fn test_register_window_factory() {
 
 #[test]
 fn test_register_attribute_aggregator_factory() {
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_attribute_aggregator_factory("constAgg".to_string(), Box::new(ConstAggFactory));
     let ctx = make_ctx_with_manager(&manager, "agg");
     let expr = Expression::function_no_ns("constAgg".to_string(), vec![]);
@@ -270,7 +273,7 @@ fn test_register_attribute_aggregator_factory() {
 
 #[test]
 fn test_query_parser_uses_custom_window_factory() {
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_window_factory("dummyWin".to_string(), Box::new(DummyWindowFactory));
 
     let (app_ctx, junctions) = setup_query_env(&manager);
@@ -304,15 +307,15 @@ fn test_query_parser_uses_custom_window_factory() {
     assert!(dbg.contains("DummyWindowProcessor"));
 }
 
-// TODO: NOT PART OF M1 - Old SiddhiQL syntax for custom window
+// TODO: NOT PART OF M1 - Old EventFluxQL syntax for custom window
 // This test uses "define stream" and old query syntax.
 // Custom window functionality works (see other tests in this file using programmatic API),
 // but SQL syntax for custom windows is not part of M1.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
-#[ignore = "Old SiddhiQL syntax not part of M1"]
+#[ignore = "Old EventFluxQL syntax not part of M1"]
 async fn app_runner_custom_window() {
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_window_factory("ptWin".to_string(), Box::new(DummyWindowFactory));
     let app = "\
         define stream In (v int);\n\
@@ -330,7 +333,7 @@ fn test_table_factory_invoked() {
 
     #[derive(Debug, Clone)]
     struct RecordingFactory;
-    impl siddhi_rust::core::extension::TableFactory for RecordingFactory {
+    impl eventflux_rust::core::extension::TableFactory for RecordingFactory {
         fn name(&self) -> &'static str {
             "rec"
         }
@@ -338,22 +341,22 @@ fn test_table_factory_invoked() {
             &self,
             _n: String,
             _p: HashMap<String, String>,
-            _c: Arc<siddhi_rust::core::config::siddhi_context::SiddhiContext>,
-        ) -> Result<Arc<dyn siddhi_rust::core::table::Table>, String> {
+            _c: Arc<eventflux_rust::core::config::eventflux_context::EventFluxContext>,
+        ) -> Result<Arc<dyn eventflux_rust::core::table::Table>, String> {
             CREATED.fetch_add(1, Ordering::SeqCst);
-            Ok(Arc::new(siddhi_rust::core::table::InMemoryTable::new()))
+            Ok(Arc::new(eventflux_rust::core::table::InMemoryTable::new()))
         }
-        fn clone_box(&self) -> Box<dyn siddhi_rust::core::extension::TableFactory> {
+        fn clone_box(&self) -> Box<dyn eventflux_rust::core::extension::TableFactory> {
             Box::new(self.clone())
         }
     }
 
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_table_factory("rec".to_string(), Box::new(RecordingFactory));
 
-    let ctx = manager.siddhi_context();
-    let app = Arc::new(SiddhiApp::new("TApp".to_string()));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
+    let ctx = manager.eventflux_context();
+    let app = Arc::new(EventFluxApp::new("TApp".to_string()));
+    let app_ctx = Arc::new(EventFluxAppContext::new(
         Arc::clone(&ctx),
         "TApp".to_string(),
         Arc::clone(&app),
@@ -367,14 +370,18 @@ fn test_table_factory_invoked() {
                 .element(Some("type".to_string()), "rec".to_string()),
         );
 
-    let mut app_obj = SiddhiApp::new("TApp".to_string());
+    let mut app_obj = EventFluxApp::new("TApp".to_string());
     app_obj
         .table_definition_map
         .insert("T1".to_string(), Arc::new(table_def));
 
-    let _ =
-        SiddhiAppParser::parse_siddhi_app_runtime_builder(&app_obj, Arc::clone(&app_ctx), None).unwrap();
+    let _ = EventFluxAppParser::parse_eventflux_app_runtime_builder(
+        &app_obj,
+        Arc::clone(&app_ctx),
+        None,
+    )
+    .unwrap();
 
     assert_eq!(CREATED.load(Ordering::SeqCst), 1);
-    assert!(app_ctx.get_siddhi_context().get_table("T1").is_some());
+    assert!(app_ctx.get_eventflux_context().get_table("T1").is_some());
 }

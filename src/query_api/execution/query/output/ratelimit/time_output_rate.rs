@@ -1,7 +1,7 @@
-// Corresponds to parts of io.siddhi.query.api.execution.query.output.ratelimit.TimeOutputRate
+// Corresponds to parts of io.eventflux.query.api.execution.query.output.ratelimit.TimeOutputRate
 
 // This struct holds the specific data for time-based rate limiting.
-// SiddhiElement context and OutputRateBehavior are in the main OutputRate struct.
+// EventFluxElement context and OutputRateBehavior are in the main OutputRate struct.
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct TimeOutputRate {

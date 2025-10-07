@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -44,7 +44,7 @@ impl ExpressionExecutor for IncrementalShouldUpdateFunctionExecutor {
         ApiAttributeType::BOOL
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(Self {
             timestamp_executor: self.timestamp_executor.clone_executor(ctx),
             last_timestamp: Mutex::new(0),
@@ -58,7 +58,7 @@ mod tests {
     use crate::core::event::stream::stream_event::StreamEvent;
     use crate::core::executor::constant_expression_executor::ConstantExpressionExecutor;
     use crate::core::executor::variable_expression_executor::VariableExpressionExecutor;
-    use crate::core::util::siddhi_constants::{
+    use crate::core::util::eventflux_constants::{
         BEFORE_WINDOW_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
     };
 

@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/stream/operation.rs
-// Corresponds to io.siddhi.core.event.stream.Operation
+// eventflux_rust/src/core/event/stream/operation.rs
+// Corresponds to io.eventflux.core.event.stream.Operation
 #[derive(Debug)]
 pub struct Operation {
     pub operation: Operator,

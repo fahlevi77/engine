@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Siddhi Rust is an experimental port of the Java-based Siddhi CEP (Complex Event Processing) engine to Rust. The project aims to create an **enterprise-grade distributed CEP engine** with superior performance characteristics leveraging Rust's memory safety and concurrency features.
+EventFlux Rust is an experimental port of the Java-based EventFlux CEP (Complex Event Processing) engine to Rust. The project aims to create an **enterprise-grade distributed CEP engine** with superior performance characteristics leveraging Rust's memory safety and concurrency features.
 
 ## Current Architecture Status
 
@@ -113,15 +113,15 @@ cargo test -- --nocapture
 # Run specific test
 cargo test test_name
 
-# Build and run the CLI with a Siddhi query file
-cargo run --bin run_siddhi <file.siddhi>
+# Build and run the CLI with a EventFlux query file
+cargo run --bin run_eventflux <file.eventflux>
 
 # Run with persistence options
-cargo run --bin run_siddhi --persistence-dir <dir> <file.siddhi>
-cargo run --bin run_siddhi --sqlite <db> <file.siddhi>
+cargo run --bin run_eventflux --persistence-dir <dir> <file.eventflux>
+cargo run --bin run_eventflux --sqlite <db> <file.eventflux>
 
 # Run with dynamic extensions
-cargo run --bin run_siddhi --extension <lib_path> <file.siddhi>
+cargo run --bin run_eventflux --extension <lib_path> <file.eventflux>
 
 # Build release version
 cargo build --release
@@ -144,11 +144,11 @@ cargo bench
 ### Module Structure
 
 1. **query_api** - AST and query language structures
-   - Defines all Siddhi query language constructs
+   - Defines all EventFlux query language constructs
    - Located in `src/query_api/`
 
 2. **query_compiler** - LALRPOP-based parser
-   - Converts SiddhiQL to AST via `grammar.lalrpop`
+   - Converts EventFluxQL to AST via `grammar.lalrpop`
    - Generated during build via `build.rs`
    - Located in `src/query_compiler/`
 
@@ -199,7 +199,7 @@ Input → OptimizedStreamJunction → Processors → Output
    - ✅ Distributed runtime wrapper maintaining API compatibility
    - ✅ Extension points ready (Transport, State Backend, Coordination, Broker)
    - ✅ **Redis State Backend** - Enterprise-grade implementation with ThreadBarrier coordination
-   - ✅ **ThreadBarrier Synchronization** - Java Siddhi's proven pattern for race-condition-free operations
+   - ✅ **ThreadBarrier Synchronization** - Java EventFlux's proven pattern for race-condition-free operations
    - ✅ Zero overhead confirmed for single-node users
    - **Next**: Complete Raft coordinator, Kafka message broker, integration testing
 
@@ -427,18 +427,18 @@ fn test_my_window() {
 ```bash
 # CPU profiling
 cargo build --release
-perf record --call-graph=dwarf target/release/run_siddhi query.siddhi
+perf record --call-graph=dwarf target/release/run_eventflux query.eventflux
 perf report
 
 # Memory profiling
-valgrind --tool=massif target/release/run_siddhi query.siddhi
+valgrind --tool=massif target/release/run_eventflux query.eventflux
 ms_print massif.out.*
 
 # Flamegraph generation
-cargo flamegraph --bin run_siddhi -- query.siddhi
+cargo flamegraph --bin run_eventflux -- query.eventflux
 
 # Lock contention analysis
-perf lock record target/release/run_siddhi query.siddhi
+perf lock record target/release/run_eventflux query.eventflux
 perf lock report
 ```
 
@@ -455,16 +455,16 @@ perf lock report
 - <1ms p99 latency for 90% of queries
 - 99.9% uptime with automatic failover
 
-This roadmap transforms Siddhi Rust from a high-quality single-node solution into an enterprise-grade distributed CEP engine capable of competing with and exceeding Java Siddhi in production environments.
+This roadmap transforms EventFlux Rust from a high-quality single-node solution into an enterprise-grade distributed CEP engine capable of competing with and exceeding Java EventFlux in production environments.
 
 ## Recent Major Updates
 
 ### 2025-08-22: Redis State Backend & ThreadBarrier Coordination 🔄
-**MAJOR MILESTONE**: Enterprise-grade Redis state persistence with Java Siddhi's ThreadBarrier synchronization pattern
+**MAJOR MILESTONE**: Enterprise-grade Redis state persistence with Java EventFlux's ThreadBarrier synchronization pattern
 
 **What was implemented:**
-- **Redis State Backend** (`RedisPersistenceStore`) - Complete enterprise-grade Redis integration implementing Siddhi's PersistenceStore trait
-- **ThreadBarrier Coordination** - Java Siddhi's proven pattern for race-condition-free state restoration during concurrent event processing
+- **Redis State Backend** (`RedisPersistenceStore`) - Complete enterprise-grade Redis integration implementing EventFlux's PersistenceStore trait
+- **ThreadBarrier Coordination** - Java EventFlux's proven pattern for race-condition-free state restoration during concurrent event processing
 - **Aggregation State Infrastructure** - Complete aggregation state persistence architecture with shared state synchronization
 - **Enterprise Features** - Connection pooling, automatic failover, comprehensive error handling, health monitoring
 - **Production Integration** - Seamless integration with SnapshotService, StateHolders, and incremental checkpointing system
@@ -478,10 +478,10 @@ This roadmap transforms Siddhi Rust from a high-quality single-node solution int
 
 **Files Implemented:**
 - `src/core/persistence/persistence_store.rs` - RedisPersistenceStore with PersistenceStore trait implementation
-- `src/core/siddhi_app_runtime.rs` - ThreadBarrier coordination in restore_revision()
+- `src/core/eventflux_app_runtime.rs` - ThreadBarrier coordination in restore_revision()
 - `src/core/stream/input/input_handler.rs` - ThreadBarrier enter/exit coordination in event processing
 - `src/core/query/selector/attribute/aggregator/mod.rs` - Shared state synchronization in Count and Sum aggregators
-- `tests/redis_siddhi_persistence.rs` - Comprehensive integration tests for real Siddhi application state persistence
+- `tests/redis_eventflux_persistence.rs` - Comprehensive integration tests for real EventFlux application state persistence
 - `docker-compose.yml` - Redis development environment with Redis Commander web UI
 
 **Status**: ✅ **PRODUCTION-READY INFRASTRUCTURE** - Basic window filtering with persistence works, aggregation state debugging in progress
@@ -492,7 +492,7 @@ This roadmap transforms Siddhi Rust from a high-quality single-node solution int
 **What was implemented:**
 - **Runtime Mode Abstraction** (`runtime_mode.rs`) - Single-node, Distributed, and Hybrid modes with zero-overhead default
 - **Processing Engine** (`processing_engine.rs`) - Unified engine abstraction for both single-node and distributed execution
-- **Distributed Runtime** (`distributed_runtime.rs`) - Wraps SiddhiAppRuntime with distributed capabilities while maintaining API compatibility
+- **Distributed Runtime** (`distributed_runtime.rs`) - Wraps EventFluxAppRuntime with distributed capabilities while maintaining API compatibility
 - **Extension Points** - Transport, State Backend, Coordinator, and Message Broker abstractions ready for implementation
 - **Complete Module Structure** - Full distributed module (`src/core/distributed/`) with all required components
 
@@ -668,7 +668,7 @@ This project maintains several specialized documentation files, each serving spe
 #### 🔧 **IMPLEMENTATION_GUIDE.md** - *Developer Implementation Patterns*
 - **Purpose**: Practical guide for implementing new features and components
 - **Content**: Java-to-Rust translation patterns, implementation templates, testing strategies
-- **Target Audience**: Active developers working on Siddhi Rust implementation
+- **Target Audience**: Active developers working on EventFlux Rust implementation
 - **Key Sections**: Window/function/aggregator patterns, factory implementations, performance considerations
 - **Maintenance**: Update when new implementation patterns are established
 
@@ -681,13 +681,13 @@ This project maintains several specialized documentation files, each serving spe
 
 #### 🗺️ **ROADMAP.md** - *Strategic Implementation Roadmap*
 - **Purpose**: Enterprise-focused implementation priorities and architectural planning
-- **Content**: Critical gaps vs Java Siddhi, prioritized tasks, success metrics
+- **Content**: Critical gaps vs Java EventFlux, prioritized tasks, success metrics
 - **Target Audience**: Project managers, enterprise evaluators, strategic planners
 - **Key Sections**: Performance targets, enterprise readiness metrics, phase-based approach
 - **Maintenance**: Update after major milestones and architectural decisions
 
 #### 🚀 **ASYNC_STREAMS_GUIDE.md** - *Comprehensive Async Streams Documentation*
-- **Purpose**: Complete guide for high-performance async stream processing in Siddhi Rust
+- **Purpose**: Complete guide for high-performance async stream processing in EventFlux Rust
 - **Content**: Architecture, query-based usage, Rust API, configuration, performance tuning, examples
 - **Target Audience**: Developers implementing high-performance stream processing solutions
 - **Key Sections**: @Async annotations, performance characteristics, best practices, troubleshooting

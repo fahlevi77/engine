@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/query/query_runtime.rs
-// Corresponds to io.siddhi.core.query.QueryRuntimeImpl
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+// eventflux_rust/src/core/query/query_runtime.rs
+// Corresponds to io.eventflux.core.query.QueryRuntimeImpl
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::query::processor::Processor; // The Processor trait
                                               // StreamJunction is referenced in comments but not used in implementation
 use crate::query_api::execution::query::Query as ApiQuery;
@@ -14,14 +14,14 @@ pub trait QueryRuntimeTrait: Debug + Send + Sync {
 }
 
 // Represents the runtime of a single query.
-// In Java, QueryRuntimeImpl has fields for queryName, SiddhiQueryContext,
+// In Java, QueryRuntimeImpl has fields for queryName, EventFluxQueryContext,
 // StreamJunction (for input), QuerySelector, OutputRateLimiter, and OutputCallback.
 // The processor chain is: InputJunction -> QuerySelector -> OutputRateLimiter -> OutputCallback (e.g., InsertIntoStreamProcessor)
 #[derive(Debug)]
 pub struct QueryRuntime {
     pub query_name: String,
     pub api_query: Option<Arc<ApiQuery>>,
-    pub siddhi_query_context: Option<Arc<SiddhiQueryContext>>,
+    pub eventflux_query_context: Option<Arc<EventFluxQueryContext>>,
     // The input stream junction this query consumes from.
     // The QueryRuntime itself doesn't directly "own" the input junction,
     // but it needs to be registered with it.
@@ -35,7 +35,7 @@ pub struct QueryRuntime {
     // This could be a FilterProcessor, WindowProcessor, QuerySelector, etc.
     pub processor_chain_head: Option<Arc<Mutex<dyn Processor>>>,
     // Add other fields as per QueryRuntimeImpl:
-    // pub siddhi_query_context: Arc<SiddhiQueryContext>,
+    // pub eventflux_query_context: Arc<EventFluxQueryContext>,
     // pub query_selector: Option<Arc<Mutex<SelectProcessor>>>, // Or QuerySelector if that's the struct name
     // pub output_rate_limiter: Option<Arc<Mutex<OutputRateLimiterPlaceholder>>>,
     // pub output_callback: Option<Arc<Mutex<dyn StreamCallback>>> // Or specific output processor
@@ -50,7 +50,7 @@ impl QueryRuntime {
         Self {
             query_name,
             api_query: None,
-            siddhi_query_context: None,
+            eventflux_query_context: None,
             processor_chain_head: None,
         }
     }
@@ -58,12 +58,12 @@ impl QueryRuntime {
     pub fn new_with_context(
         query_name: String,
         api_query: Arc<ApiQuery>,
-        siddhi_query_context: Arc<SiddhiQueryContext>,
+        eventflux_query_context: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             query_name,
             api_query: Some(api_query),
-            siddhi_query_context: Some(siddhi_query_context),
+            eventflux_query_context: Some(eventflux_query_context),
             processor_chain_head: None,
         }
     }
@@ -71,11 +71,11 @@ impl QueryRuntime {
     /// Snapshot the current state using the application's `SnapshotService`.
     pub fn snapshot(&self) -> Result<Vec<u8>, String> {
         let ctx = self
-            .siddhi_query_context
+            .eventflux_query_context
             .as_ref()
-            .ok_or("SiddhiQueryContext not set")?;
+            .ok_or("EventFluxQueryContext not set")?;
         let service = ctx
-            .get_siddhi_app_context()
+            .get_eventflux_app_context()
             .get_snapshot_service()
             .ok_or("SnapshotService not set")?;
         Ok(service.snapshot())
@@ -84,11 +84,11 @@ impl QueryRuntime {
     /// Restore the provided snapshot bytes using the `SnapshotService`.
     pub fn restore(&self, snapshot: &[u8]) -> Result<(), String> {
         let ctx = self
-            .siddhi_query_context
+            .eventflux_query_context
             .as_ref()
-            .ok_or("SiddhiQueryContext not set")?;
+            .ok_or("EventFluxQueryContext not set")?;
         let service = ctx
-            .get_siddhi_app_context()
+            .get_eventflux_app_context()
             .get_snapshot_service()
             .ok_or("SnapshotService not set")?;
         service.set_state(snapshot.to_vec());
@@ -98,11 +98,11 @@ impl QueryRuntime {
     /// Restore a persisted revision via the application's `SnapshotService`.
     pub fn restore_revision(&self, revision: &str) -> Result<(), String> {
         let ctx = self
-            .siddhi_query_context
+            .eventflux_query_context
             .as_ref()
-            .ok_or("SiddhiQueryContext not set")?;
+            .ok_or("EventFluxQueryContext not set")?;
         let service = ctx
-            .get_siddhi_app_context()
+            .get_eventflux_app_context()
             .get_snapshot_service()
             .ok_or("SnapshotService not set")?;
         service.restore_revision(revision)
@@ -122,7 +122,7 @@ impl QueryRuntimeTrait for QueryRuntime {
     }
 
     fn is_stateful(&self) -> bool {
-        self.siddhi_query_context
+        self.eventflux_query_context
             .as_ref()
             .map(|ctx| ctx.is_stateful())
             .unwrap_or(false)

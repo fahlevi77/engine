@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/state/meta_state_event_attribute.rs
-// Corresponds to io.siddhi.core.event.state.MetaStateEventAttribute
+// eventflux_rust/src/core/event/state/meta_state_event_attribute.rs
+// Corresponds to io.eventflux.core.event.state.MetaStateEventAttribute
 use crate::query_api::definition::attribute::Attribute as QueryApiAttribute;
 
 #[derive(Debug, Clone, PartialEq)]

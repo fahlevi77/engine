@@ -1,10 +1,10 @@
-// Corresponds to io.siddhi.query.api.expression.math.Add
-use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement; // Main Expression enum
+// Corresponds to io.eventflux.query.api.expression.math.Add
+use crate::query_api::eventflux_element::EventFluxElement;
+use crate::query_api::expression::Expression; // Main Expression enum
 
 #[derive(Clone, Debug, PartialEq)] // Removed Default
 pub struct Add {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Add specific fields
     // Default for Box<Expression> would be Box::new(Expression::default_variant_if_any)
@@ -16,7 +16,7 @@ pub struct Add {
 impl Add {
     pub fn new(left_value: Expression, right_value: Expression) -> Self {
         Add {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             left_value: Box::new(left_value),
             right_value: Box::new(right_value),
         }
@@ -25,9 +25,9 @@ impl Add {
 
 // Deref if needed:
 // impl std::ops::Deref for Add {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for Add {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }

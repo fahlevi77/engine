@@ -3,11 +3,11 @@
 //! This implementation replaces the original crossbeam_channel-based StreamJunction
 //! with our high-performance crossbeam pipeline for >1M events/second throughput.
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::event::Event;
 use crate::core::event::stream::StreamEvent;
-use crate::core::exception::SiddhiError;
+use crate::core::exception::EventFluxError;
 use crate::core::query::processor::Processor;
 use crate::core::stream::input::input_handler::InputProcessor;
 use crate::core::util::executor_service::ExecutorService;
@@ -39,7 +39,7 @@ pub struct OptimizedStreamJunction {
     // Core identification
     pub stream_id: String,
     stream_definition: Arc<StreamDefinition>,
-    siddhi_app_context: Arc<SiddhiAppContext>,
+    eventflux_app_context: Arc<EventFluxAppContext>,
 
     // High-performance pipeline
     event_pipeline: Arc<EventPipeline>,
@@ -99,7 +99,7 @@ impl OptimizedStreamJunction {
     /// # Arguments
     /// * `stream_id` - Unique identifier for this stream junction
     /// * `stream_definition` - Schema definition for events flowing through this junction
-    /// * `siddhi_app_context` - Application context for configuration and services
+    /// * `eventflux_app_context` - Application context for configuration and services
     /// * `buffer_size` - Internal buffer capacity (power of 2 recommended for async mode)
     /// * `is_async` - **CRITICAL**: Processing mode selection
     ///   - `false` (RECOMMENDED DEFAULT): Synchronous processing with guaranteed event ordering
@@ -126,12 +126,12 @@ impl OptimizedStreamJunction {
     pub fn new(
         stream_id: String,
         stream_definition: Arc<StreamDefinition>,
-        siddhi_app_context: Arc<SiddhiAppContext>,
+        eventflux_app_context: Arc<EventFluxAppContext>,
         buffer_size: usize,
         is_async: bool,
         fault_stream_junction: Option<Arc<Mutex<OptimizedStreamJunction>>>,
     ) -> Result<Self, String> {
-        let executor_service = siddhi_app_context
+        let executor_service = eventflux_app_context
             .executor_service
             .clone()
             .unwrap_or_else(|| Arc::new(ExecutorService::default()));
@@ -153,8 +153,8 @@ impl OptimizedStreamJunction {
                 1
             },
             batch_size: 64, // Optimal batch size for throughput
-            enable_metrics: siddhi_app_context.get_root_metrics_level()
-                != crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::OFF,
+            enable_metrics: eventflux_app_context.get_root_metrics_level()
+                != crate::core::config::eventflux_app_context::MetricsLevelPlaceholder::OFF,
         };
 
         let event_pipeline = Arc::new(
@@ -173,7 +173,7 @@ impl OptimizedStreamJunction {
         Ok(Self {
             stream_id,
             stream_definition,
-            siddhi_app_context,
+            eventflux_app_context,
             event_pipeline,
             event_pool,
             subscribers: Arc::new(Mutex::new(Vec::new())),
@@ -244,9 +244,9 @@ impl OptimizedStreamJunction {
     }
 
     /// Send a single event through the pipeline
-    pub fn send_event(&self, event: Event) -> Result<(), SiddhiError> {
+    pub fn send_event(&self, event: Event) -> Result<(), EventFluxError> {
         if self.shutdown.load(Ordering::Acquire) {
-            return Err(SiddhiError::SendError {
+            return Err(EventFluxError::SendError {
                 message: "StreamJunction is shutting down".to_string(),
             });
         }
@@ -263,22 +263,22 @@ impl OptimizedStreamJunction {
                 PipelineResult::Full => {
                     self.events_dropped.fetch_add(1, Ordering::Relaxed);
                     self.handle_backpressure_error("Pipeline full");
-                    Err(SiddhiError::SendError {
+                    Err(EventFluxError::SendError {
                         message: format!("Pipeline full for stream {}", self.stream_id),
                     })
                 }
-                PipelineResult::Shutdown => Err(SiddhiError::SendError {
+                PipelineResult::Shutdown => Err(EventFluxError::SendError {
                     message: "Pipeline is shutting down".to_string(),
                 }),
                 PipelineResult::Timeout => {
                     self.events_dropped.fetch_add(1, Ordering::Relaxed);
-                    Err(SiddhiError::SendError {
+                    Err(EventFluxError::SendError {
                         message: "Pipeline publish timeout".to_string(),
                     })
                 }
                 PipelineResult::Error(msg) => {
                     self.processing_errors.fetch_add(1, Ordering::Relaxed);
-                    Err(SiddhiError::SendError { message: msg })
+                    Err(EventFluxError::SendError { message: msg })
                 }
             }
         } else {
@@ -288,13 +288,13 @@ impl OptimizedStreamJunction {
     }
 
     /// Send multiple events through the pipeline
-    pub fn send_events(&self, events: Vec<Event>) -> Result<(), SiddhiError> {
+    pub fn send_events(&self, events: Vec<Event>) -> Result<(), EventFluxError> {
         if events.is_empty() {
             return Ok(());
         }
 
         if self.shutdown.load(Ordering::Acquire) {
-            return Err(SiddhiError::SendError {
+            return Err(EventFluxError::SendError {
                 message: "StreamJunction is shutting down".to_string(),
             });
         }
@@ -328,7 +328,7 @@ impl OptimizedStreamJunction {
             if successful > 0 {
                 Ok(())
             } else {
-                Err(SiddhiError::SendError {
+                Err(EventFluxError::SendError {
                     message: format!("Failed to process {event_count} events"),
                 })
             }
@@ -425,7 +425,7 @@ impl OptimizedStreamJunction {
     fn dispatch_to_subscribers_sync(
         &self,
         event: Box<dyn ComplexEvent>,
-    ) -> Result<(), SiddhiError> {
+    ) -> Result<(), EventFluxError> {
         let subs_guard = self.subscribers.lock().expect("Mutex poisoned");
         let subs: Vec<_> = subs_guard.iter().map(Arc::clone).collect();
         drop(subs_guard);
@@ -447,7 +447,7 @@ impl OptimizedStreamJunction {
                 }
                 Err(_) => {
                     self.processing_errors.fetch_add(1, Ordering::Relaxed);
-                    return Err(SiddhiError::SendError {
+                    return Err(EventFluxError::SendError {
                         message: "Failed to lock subscriber processor".to_string(),
                     });
                 }
@@ -462,7 +462,7 @@ impl OptimizedStreamJunction {
                 }
                 Err(_) => {
                     self.processing_errors.fetch_add(1, Ordering::Relaxed);
-                    return Err(SiddhiError::SendError {
+                    return Err(EventFluxError::SendError {
                         message: "Failed to lock subscriber processor".to_string(),
                     });
                 }
@@ -534,11 +534,11 @@ impl OptimizedStreamJunction {
             }
             OnErrorAction::STORE => {
                 if let Some(store) = self
-                    .siddhi_app_context
-                    .get_siddhi_context()
+                    .eventflux_app_context
+                    .get_eventflux_context()
                     .get_error_store()
                 {
-                    let error = SiddhiError::SendError {
+                    let error = EventFluxError::SendError {
                         message: message.to_string(),
                     };
                     store.store(&self.stream_id, error);
@@ -690,7 +690,7 @@ impl InputProcessor for OptimizedPublisher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::siddhi_context::SiddhiContext;
+    use crate::core::config::eventflux_context::EventFluxContext;
     use crate::core::event::value::AttributeValue;
     use crate::query_api::definition::attribute::Type as AttrType;
     use std::thread;
@@ -737,28 +737,28 @@ mod tests {
 
         fn clone_processor(
             &self,
-            _c: &Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext>,
+            _c: &Arc<crate::core::config::eventflux_query_context::EventFluxQueryContext>,
         ) -> Box<dyn Processor> {
             Box::new(TestProcessor::new(self.name.clone()))
         }
 
-        fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-            Arc::new(SiddhiAppContext::new(
-                Arc::new(SiddhiContext::new()),
+        fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+            Arc::new(EventFluxAppContext::new(
+                Arc::new(EventFluxContext::new()),
                 "TestApp".to_string(),
-                Arc::new(crate::query_api::siddhi_app::SiddhiApp::new(
+                Arc::new(crate::query_api::eventflux_app::EventFluxApp::new(
                     "TestApp".to_string(),
                 )),
                 String::new(),
             ))
         }
 
-        fn get_siddhi_query_context(
+        fn get_eventflux_query_context(
             &self,
-        ) -> Arc<crate::core::config::siddhi_query_context::SiddhiQueryContext> {
+        ) -> Arc<crate::core::config::eventflux_query_context::EventFluxQueryContext> {
             Arc::new(
-                crate::core::config::siddhi_query_context::SiddhiQueryContext::new(
-                    self.get_siddhi_app_context(),
+                crate::core::config::eventflux_query_context::EventFluxQueryContext::new(
+                    self.get_eventflux_app_context(),
                     "TestQuery".to_string(),
                     None,
                 ),
@@ -775,18 +775,18 @@ mod tests {
     }
 
     fn setup_junction(is_async: bool) -> (OptimizedStreamJunction, Arc<Mutex<TestProcessor>>) {
-        let siddhi_context = Arc::new(SiddhiContext::new());
-        let app = Arc::new(crate::query_api::siddhi_app::SiddhiApp::new(
+        let eventflux_context = Arc::new(EventFluxContext::new());
+        let app = Arc::new(crate::query_api::eventflux_app::EventFluxApp::new(
             "TestApp".to_string(),
         ));
-        let mut app_ctx = SiddhiAppContext::new(
-            Arc::clone(&siddhi_context),
+        let mut app_ctx = EventFluxAppContext::new(
+            Arc::clone(&eventflux_context),
             "TestApp".to_string(),
             Arc::clone(&app),
             String::new(),
         );
         app_ctx.root_metrics_level =
-            crate::core::config::siddhi_app_context::MetricsLevelPlaceholder::BASIC;
+            crate::core::config::eventflux_app_context::MetricsLevelPlaceholder::BASIC;
 
         let stream_def = Arc::new(
             StreamDefinition::new("TestStream".to_string())

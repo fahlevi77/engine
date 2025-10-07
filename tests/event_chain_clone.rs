@@ -1,9 +1,9 @@
-use siddhi_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
-use siddhi_rust::core::event::stream::{
+use eventflux_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
+use eventflux_rust::core::event::stream::{
     stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
     stream_event_factory::StreamEventFactory,
 };
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 #[test]
 fn test_clone_event_chain() {

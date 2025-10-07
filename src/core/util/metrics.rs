@@ -1,4 +1,4 @@
-use crate::core::config::{SiddhiAppContext, SiddhiContext};
+use crate::core::config::{EventFluxAppContext, EventFluxContext};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{
@@ -31,7 +31,7 @@ impl Clone for LatencyTracker {
 }
 
 impl LatencyTracker {
-    pub fn new(name: &str, _ctx: &SiddhiAppContext) -> Arc<Self> {
+    pub fn new(name: &str, _ctx: &EventFluxAppContext) -> Arc<Self> {
         let tracker = Arc::new(Self::default());
         LATENCY_BY_STREAM
             .lock()
@@ -68,7 +68,7 @@ impl Clone for ThroughputTracker {
 }
 
 impl ThroughputTracker {
-    pub fn new(name: &str, _ctx: &SiddhiAppContext) -> Arc<Self> {
+    pub fn new(name: &str, _ctx: &EventFluxAppContext) -> Arc<Self> {
         let tracker = Arc::new(Self::default());
         THROUGHPUT_BY_STREAM
             .lock()
@@ -98,7 +98,7 @@ pub struct Counter {
 }
 
 impl Counter {
-    pub fn new(name: &str, _ctx: &SiddhiContext) -> Arc<Self> {
+    pub fn new(name: &str, _ctx: &EventFluxContext) -> Arc<Self> {
         let c = Arc::new(Self::default());
         COUNTERS
             .lock()
@@ -127,7 +127,7 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn new(name: &str, _ctx: &SiddhiContext) -> Arc<Self> {
+    pub fn new(name: &str, _ctx: &EventFluxContext) -> Arc<Self> {
         let t = Arc::new(Self::default());
         TIMERS
             .lock()
@@ -161,7 +161,7 @@ impl Clone for BufferedEventsTracker {
 }
 
 impl BufferedEventsTracker {
-    pub fn new(_ctx: &SiddhiAppContext, _name: &str, _is_snapshotable: bool) -> Self {
+    pub fn new(_ctx: &EventFluxAppContext, _name: &str, _is_snapshotable: bool) -> Self {
         Self::default()
     }
     pub fn increment_event_count_by(&self, n: i32) {

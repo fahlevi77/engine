@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/stream/input/mod.rs
+// eventflux_rust/src/core/stream/input/mod.rs
 
 pub mod input_distributor;
 pub mod input_entry_valve;

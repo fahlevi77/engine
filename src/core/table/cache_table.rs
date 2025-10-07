@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_context::SiddhiContext;
+use crate::core::config::eventflux_context::EventFluxContext;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -217,7 +217,7 @@ impl TableFactory for CacheTableFactory {
         &self,
         _name: String,
         mut properties: HashMap<String, String>,
-        _ctx: Arc<SiddhiContext>,
+        _ctx: Arc<EventFluxContext>,
     ) -> Result<Arc<dyn Table>, String> {
         let size_str = properties
             .remove("max_size")

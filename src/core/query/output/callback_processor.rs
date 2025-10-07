@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/query/output/callback_processor.rs
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+// eventflux_rust/src/core/query/output/callback_processor.rs
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::event::Event; // For converting back
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
@@ -16,8 +16,8 @@ pub struct CallbackProcessor {
 impl CallbackProcessor {
     pub fn new(
         callback: Arc<Mutex<Box<dyn StreamCallback>>>,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
         // query_name: String, // query_name is in query_ctx
     ) -> Self {
         // query_name for CommonProcessorMeta can be extracted from query_ctx
@@ -36,7 +36,7 @@ fn complex_event_to_simple_event(ce_box: Box<dyn ComplexEvent>) -> Event {
         .get_output_data()
         .map_or_else(Vec::new, |d| d.to_vec());
     Event {
-        id: 0, // Siddhi core Event does not have an ID like query_api::Event.
+        id: 0, // EventFlux core Event does not have an ID like query_api::Event.
         // Or generate a new one if needed for callback context.
         // For now, 0 as placeholder.
         timestamp: ce_box.get_timestamp(),
@@ -76,21 +76,21 @@ impl Processor for CallbackProcessor {
 
     fn clone_processor(
         &self,
-        siddhi_query_context: &Arc<SiddhiQueryContext>,
+        eventflux_query_context: &Arc<EventFluxQueryContext>,
     ) -> Box<dyn Processor> {
         Box::new(Self::new(
             Arc::clone(&self.callback),
-            Arc::clone(&self.meta.siddhi_app_context),
-            Arc::clone(siddhi_query_context), // Use the new query context for the clone
-                                              // self.meta.query_name.clone() // query_name is in siddhi_query_context
+            Arc::clone(&self.meta.eventflux_app_context),
+            Arc::clone(eventflux_query_context), // Use the new query context for the clone
+                                                 // self.meta.query_name.clone() // query_name is in eventflux_query_context
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
     fn get_processing_mode(&self) -> ProcessingMode {
         // Callbacks generally operate in default/pass-through mode relative to the query's output.

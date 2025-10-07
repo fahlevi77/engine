@@ -6,13 +6,14 @@ pub mod sql_compiler;
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::sync::Arc; // For SiddhiApp's maps (not directly used in this test logic for app construction)
+    use std::sync::Arc; // For EventFluxApp's maps (not directly used in this test logic for app construction)
 
     // query_api module items
     use crate::query_api::definition::{
         attribute::Type as ApiAttributeType, // Explicitly importing Type
         StreamDefinition as ApiStreamDefinition,
     };
+    use crate::query_api::eventflux_app::EventFluxApp as ApiEventFluxApp;
     use crate::query_api::execution::{
         query::input::stream::{
             InputStream as ApiInputStream, SingleInputStream as ApiSingleInputStream,
@@ -30,26 +31,25 @@ mod tests {
         variable::Variable as ApiVariable,
         Expression as ApiExpression,
     };
-    use crate::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
 
     // core module items
-    use crate::core::config::siddhi_context::SiddhiContext;
-    // SiddhiAppContext is created inside SiddhiAppRuntime::new currently
-    // use crate::core::config::siddhi_app_context::SiddhiAppContext;
+    use crate::core::config::eventflux_context::EventFluxContext;
+    // EventFluxAppContext is created inside EventFluxAppRuntime::new currently
+    // use crate::core::config::eventflux_app_context::EventFluxAppContext;
     use crate::core::event::event::Event;
     use crate::core::event::value::AttributeValue as CoreAttributeValue;
-    use crate::core::siddhi_app_runtime::SiddhiAppRuntime;
+    use crate::core::eventflux_app_runtime::EventFluxAppRuntime;
     use crate::core::stream::output::stream_callback::LogStreamCallback; // Assuming LogStreamCallback is here
 
     #[test]
     fn test_simple_filter_projection_query() {
         println!("Starting test_simple_filter_projection_query...");
 
-        // a. Create SiddhiContext (SiddhiAppContext is created inside SiddhiAppRuntime::new)
-        let siddhi_context = Arc::new(SiddhiContext::new());
+        // a. Create EventFluxContext (EventFluxAppContext is created inside EventFluxAppRuntime::new)
+        let eventflux_context = Arc::new(EventFluxContext::new());
 
-        // b. Manually Construct query_api::SiddhiApp
-        let mut app_to_run = ApiSiddhiApp::new("TestApp".to_string());
+        // b. Manually Construct query_api::EventFluxApp
+        let mut app_to_run = ApiEventFluxApp::new("TestApp".to_string());
 
         // Input Stream Definition: define stream InputStream (attribute1 int, attribute2 string);
         let input_stream_def = ApiStreamDefinition::new("InputStream".to_string())
@@ -122,7 +122,7 @@ mod tests {
             };
         let output_s = ApiOutputStream::new(
             crate::query_api::execution::query::output::output_stream::OutputStreamAction::InsertInto(insert_action),
-            None // Let Query/SiddhiAppRuntimeBuilder determine default OutputEventType
+            None // Let Query/EventFluxAppRuntimeBuilder determine default OutputEventType
         );
 
         let query = ApiQuery::query()
@@ -135,12 +135,12 @@ mod tests {
 
         let runnable_api_app = Arc::new(app_to_run);
 
-        // c. Create SiddhiAppRuntime
-        // SiddhiAppRuntime::new now takes Arc<ApiSiddhiApp> and Arc<SiddhiContext>
-        println!("Test: Creating SiddhiAppRuntime...");
-        let runtime = SiddhiAppRuntime::new(runnable_api_app, siddhi_context, None)
-            .expect("Test: Failed to create SiddhiAppRuntime");
-        println!("Test: SiddhiAppRuntime created successfully.");
+        // c. Create EventFluxAppRuntime
+        // EventFluxAppRuntime::new now takes Arc<ApiEventFluxApp> and Arc<EventFluxContext>
+        println!("Test: Creating EventFluxAppRuntime...");
+        let runtime = EventFluxAppRuntime::new(runnable_api_app, eventflux_context, None)
+            .expect("Test: Failed to create EventFluxAppRuntime");
+        println!("Test: EventFluxAppRuntime created successfully.");
 
         // d. Add LogStreamCallback
         let callback = Box::new(LogStreamCallback::new("OutputStream".to_string()));
@@ -149,9 +149,9 @@ mod tests {
             .expect("Test: Failed to add callback to OutputStream");
         println!("Test: Callback added to OutputStream.");
 
-        // e. Start SiddhiAppRuntime
+        // e. Start EventFluxAppRuntime
         runtime.start();
-        println!("Test: SiddhiAppRuntime started.");
+        println!("Test: EventFluxAppRuntime started.");
 
         // f. Get InputHandler
         let input_handler = runtime
@@ -209,9 +209,9 @@ mod tests {
         // Allow some time for async processing if any (though current setup is mostly sync)
         // std::thread::sleep(std::time::Duration::from_millis(100));
 
-        // h. Shutdown SiddhiAppRuntime
+        // h. Shutdown EventFluxAppRuntime
         runtime.shutdown();
-        println!("Test: SiddhiAppRuntime shutdown.");
+        println!("Test: EventFluxAppRuntime shutdown.");
         println!("Test: test_simple_filter_projection_query finished. Check console output for LogStreamCallback.");
 
         // i. Assertions (Manual Observation of Console Output)

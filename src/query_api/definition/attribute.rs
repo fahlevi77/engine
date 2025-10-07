@@ -1,5 +1,5 @@
-// Corresponds to io.siddhi.query.api.definition.Attribute
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.definition.Attribute
+use crate::query_api::eventflux_element::EventFluxElement;
 
 /// Defines the data type of an attribute.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)] // Added Copy for easier usage
@@ -15,11 +15,10 @@ pub enum Type {
     OBJECT,
 }
 
-
 /// Represents an attribute with a name and a type.
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Attribute {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // Attribute fields
     pub name: String,
@@ -29,7 +28,7 @@ pub struct Attribute {
 impl Attribute {
     pub fn new(name: String, attribute_type: Type) -> Self {
         Attribute {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             name,
             attribute_type,
         }
@@ -46,16 +45,16 @@ impl Attribute {
     }
 }
 
-// The From<SiddhiElement> for Attribute impl is removed as it's less relevant
-// when Attribute composes SiddhiElement directly. Construction is via new().
+// The From<EventFluxElement> for Attribute impl is removed as it's less relevant
+// when Attribute composes EventFluxElement directly. Construction is via new().
 
-// If direct access to SiddhiElement fields from Attribute is desired:
+// If direct access to EventFluxElement fields from Attribute is desired:
 // impl std::ops::Deref for Attribute {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for Attribute {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }
 
 #[cfg(test)]
@@ -67,9 +66,9 @@ mod tests {
         let attr = Attribute::new("timestamp".to_string(), Type::LONG);
         assert_eq!(attr.get_name(), "timestamp");
         assert_eq!(attr.get_type(), &Type::LONG); // Compare with borrowed Type
-                                                  // Check siddhi_element defaults
-        assert_eq!(attr.siddhi_element.query_context_start_index, None);
-        assert_eq!(attr.siddhi_element.query_context_end_index, None);
+                                                  // Check eventflux_element defaults
+        assert_eq!(attr.eventflux_element.query_context_start_index, None);
+        assert_eq!(attr.eventflux_element.query_context_end_index, None);
     }
 
     #[test]

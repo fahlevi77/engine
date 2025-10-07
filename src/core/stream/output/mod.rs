@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/stream/output/mod.rs
+// eventflux_rust/src/core/stream/output/mod.rs
 
 pub mod error_store;
 pub mod mapper;

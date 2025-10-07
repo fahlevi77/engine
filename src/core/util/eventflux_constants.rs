@@ -1,7 +1,7 @@
-// siddhi_rust/src/core/util/siddhi_constants.rs
+// eventflux_rust/src/core/util/eventflux_constants.rs
 
-//! Constants used inside the Siddhi core implementation.  These mirror the
-//! values found in the Java `io.siddhi.core.util.SiddhiConstants` class that are
+//! Constants used inside the EventFlux core implementation.  These mirror the
+//! values found in the Java `io.eventflux.core.util.EventFluxConstants` class that are
 //! required by the currently ported modules.  Only the subset needed by the Rust
 //! code base is included here.
 
@@ -32,6 +32,6 @@ pub const KEY_DELIMITER: &str = ":-:";
 pub use crate::query_api::constants::*;
 
 /// Empty struct kept for backwards compatibility with earlier code that
-/// expected a type named `SiddhiConstants` in this module.  New code should
+/// expected a type named `EventFluxConstants` in this module.  New code should
 /// directly use the constants above.
-pub struct SiddhiConstants;
+pub struct EventFluxConstants;

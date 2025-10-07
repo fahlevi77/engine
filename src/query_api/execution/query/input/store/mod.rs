@@ -1,4 +1,4 @@
-// Corresponds to package io.siddhi.query.api.execution.query.input.store
+// Corresponds to package io.eventflux.query.api.execution.query.input.store
 
 pub mod aggregation_input_store;
 pub mod condition_input_store;

@@ -1,7 +1,7 @@
-// Corresponds to parts of io.siddhi.query.api.execution.query.output.ratelimit.EventOutputRate
+// Corresponds to parts of io.eventflux.query.api.execution.query.output.ratelimit.EventOutputRate
 
 // This struct holds the specific data for event-based rate limiting.
-// The common SiddhiElement context will be in the main OutputRate struct.
+// The common EventFluxElement context will be in the main OutputRate struct.
 // The OutputRateBehavior (All, First, Last) will also be associated in the OutputRate struct/enum.
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default

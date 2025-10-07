@@ -1,23 +1,25 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore};
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-use siddhi_rust::query_api::execution::query::input::InputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::persistence::{InMemoryPersistenceStore, PersistenceStore};
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::execution::query::input::InputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::output::ratelimit::{OutputRate, OutputRateBehavior};
-use siddhi_rust::query_api::execution::query::selection::Selector;
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::execution::ExecutionElement;
-use siddhi_rust::query_api::expression::{constant::Constant, variable::Variable};
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::query_api::execution::query::output::ratelimit::{
+    OutputRate, OutputRateBehavior,
+};
+use eventflux_rust::query_api::execution::query::selection::Selector;
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::execution::ExecutionElement;
+use eventflux_rust::query_api::expression::{constant::Constant, variable::Variable};
 use std::sync::Arc;
 
-fn make_app() -> SiddhiApp {
-    let mut app = SiddhiApp::new("RateApp".to_string());
+fn make_app() -> EventFluxApp {
+    let mut app = EventFluxApp::new("RateApp".to_string());
     app.add_stream_definition(
         StreamDefinition::new("In".to_string()).attribute("v".to_string(), AttrType::INT),
     );

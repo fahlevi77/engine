@@ -5,7 +5,7 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::event::value::AttributeValue;
 
 #[tokio::test]
 #[ignore = "WHERE filter syntax not yet supported in SQL parser"]
@@ -25,18 +25,18 @@ async fn test_processor_pipeline() {
 
 #[tokio::test]
 async fn test_order_by_limit_offset() {
-    use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-    use siddhi_rust::query_api::execution::query::output::output_stream::{
+    use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+    use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+    use eventflux_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
     };
-    use siddhi_rust::query_api::execution::query::selection::order_by_attribute::Order;
-    use siddhi_rust::query_api::execution::query::selection::Selector;
-    use siddhi_rust::query_api::execution::query::{input::InputStream, Query};
-    use siddhi_rust::query_api::execution::ExecutionElement;
-    use siddhi_rust::query_api::expression::{constant::Constant, variable::Variable};
-    use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+    use eventflux_rust::query_api::execution::query::selection::order_by_attribute::Order;
+    use eventflux_rust::query_api::execution::query::selection::Selector;
+    use eventflux_rust::query_api::execution::query::{input::InputStream, Query};
+    use eventflux_rust::query_api::execution::ExecutionElement;
+    use eventflux_rust::query_api::expression::{constant::Constant, variable::Variable};
 
-    let mut app = SiddhiApp::new("App".to_string());
+    let mut app = EventFluxApp::new("App".to_string());
     app.add_stream_definition(
         StreamDefinition::new("InputStream".to_string()).attribute("a".to_string(), AttrType::INT),
     );
@@ -81,18 +81,18 @@ async fn test_order_by_limit_offset() {
 
 #[tokio::test]
 async fn test_group_by_order_by() {
-    use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-    use siddhi_rust::query_api::execution::query::output::output_stream::{
+    use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+    use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+    use eventflux_rust::query_api::execution::query::output::output_stream::{
         InsertIntoStreamAction, OutputStream, OutputStreamAction,
     };
-    use siddhi_rust::query_api::execution::query::selection::order_by_attribute::Order;
-    use siddhi_rust::query_api::execution::query::selection::Selector;
-    use siddhi_rust::query_api::execution::query::{input::InputStream, Query};
-    use siddhi_rust::query_api::execution::ExecutionElement;
-    use siddhi_rust::query_api::expression::variable::Variable;
-    use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+    use eventflux_rust::query_api::execution::query::selection::order_by_attribute::Order;
+    use eventflux_rust::query_api::execution::query::selection::Selector;
+    use eventflux_rust::query_api::execution::query::{input::InputStream, Query};
+    use eventflux_rust::query_api::execution::ExecutionElement;
+    use eventflux_rust::query_api::expression::variable::Variable;
 
-    let mut app = SiddhiApp::new("App2".to_string());
+    let mut app = EventFluxApp::new("App2".to_string());
     app.add_stream_definition(
         StreamDefinition::new("InputStream".to_string()).attribute("a".to_string(), AttrType::INT),
     );

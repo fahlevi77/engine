@@ -1,19 +1,19 @@
-// siddhi_rust/src/query_api/siddhi_app.rs
+// eventflux_rust/src/query_api/eventflux_app.rs
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::{
     AggregationDefinition, FunctionDefinition, StreamDefinition, TableDefinition,
     TriggerDefinition, WindowDefinition,
 };
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::execution::ExecutionElement; // This should be the enum
-use crate::query_api::siddhi_element::SiddhiElement;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// Represents a Siddhi Application, containing stream definitions, queries, etc.
+/// Represents a EventFlux Application, containing stream definitions, queries, etc.
 #[derive(Debug, Clone, Default)] // Added Debug, Clone, Default
-pub struct SiddhiApp {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement (as per current design)
-    pub name: String,                  // Name for the Siddhi Application, from @info(name='...')
+pub struct EventFluxApp {
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement (as per current design)
+    pub name: String, // Name for the EventFlux Application, from @info(name='...')
 
     pub stream_definition_map: HashMap<String, Arc<StreamDefinition>>,
     pub table_definition_map: HashMap<String, Arc<TableDefinition>>,
@@ -27,10 +27,10 @@ pub struct SiddhiApp {
     // execution_element_name_list is not typically stored directly; validated during parsing/adding.
 }
 
-impl SiddhiApp {
+impl EventFluxApp {
     pub fn new(name: String) -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(), // Initialize with default start/end context
+            eventflux_element: EventFluxElement::default(), // Initialize with default start/end context
             name,
             stream_definition_map: HashMap::new(),
             table_definition_map: HashMap::new(),

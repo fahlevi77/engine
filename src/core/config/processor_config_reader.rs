@@ -3,9 +3,9 @@
 //! Provides a centralized way for processors to read configuration values
 //! with fallback to defaults and caching for performance.
 
-use crate::core::config::{ApplicationConfig, SiddhiConfig};
-use std::sync::{Arc, RwLock};
+use crate::core::config::{ApplicationConfig, EventFluxConfig};
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 /// Configuration reader for processors with performance-optimized caching
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct ProcessorConfigReader {
     /// Application configuration
     app_config: Option<ApplicationConfig>,
     /// Global configuration
-    global_config: Option<SiddhiConfig>,
+    global_config: Option<EventFluxConfig>,
 }
 
 /// Configuration value types that processors can request
@@ -30,7 +30,10 @@ pub enum ConfigValue {
 
 impl ProcessorConfigReader {
     /// Create a new configuration reader
-    pub fn new(app_config: Option<ApplicationConfig>, global_config: Option<SiddhiConfig>) -> Self {
+    pub fn new(
+        app_config: Option<ApplicationConfig>,
+        global_config: Option<EventFluxConfig>,
+    ) -> Self {
         Self {
             config_cache: Arc::new(RwLock::new(HashMap::new())),
             app_config,
@@ -41,7 +44,7 @@ impl ProcessorConfigReader {
     /// Get window configuration value with caching
     pub fn get_window_config(&self, window_type: &str, key: &str) -> Option<ConfigValue> {
         let cache_key = format!("window.{}.{}", window_type, key);
-        
+
         // Check cache first
         if let Ok(cache) = self.config_cache.read() {
             if let Some(cached_value) = cache.get(&cache_key) {
@@ -51,21 +54,21 @@ impl ProcessorConfigReader {
 
         // Look up from configuration
         let value = self.lookup_window_config(window_type, key);
-        
+
         // Cache the result
         if let Some(ref val) = value {
             if let Ok(mut cache) = self.config_cache.write() {
                 cache.insert(cache_key, val.clone());
             }
         }
-        
+
         value
     }
 
     /// Get sink configuration value with caching
     pub fn get_sink_config(&self, sink_type: &str, key: &str) -> Option<ConfigValue> {
         let cache_key = format!("sink.{}.{}", sink_type, key);
-        
+
         // Check cache first
         if let Ok(cache) = self.config_cache.read() {
             if let Some(cached_value) = cache.get(&cache_key) {
@@ -75,21 +78,21 @@ impl ProcessorConfigReader {
 
         // Look up from configuration
         let value = self.lookup_sink_config(sink_type, key);
-        
+
         // Cache the result
         if let Some(ref val) = value {
             if let Ok(mut cache) = self.config_cache.write() {
                 cache.insert(cache_key, val.clone());
             }
         }
-        
+
         value
     }
 
     /// Get stream processor configuration
     pub fn get_stream_config(&self, processor_type: &str, key: &str) -> Option<ConfigValue> {
         let cache_key = format!("stream.{}.{}", processor_type, key);
-        
+
         // Check cache first
         if let Ok(cache) = self.config_cache.read() {
             if let Some(cached_value) = cache.get(&cache_key) {
@@ -99,21 +102,21 @@ impl ProcessorConfigReader {
 
         // Look up from configuration
         let value = self.lookup_stream_config(processor_type, key);
-        
+
         // Cache the result
         if let Some(ref val) = value {
             if let Ok(mut cache) = self.config_cache.write() {
                 cache.insert(cache_key, val.clone());
             }
         }
-        
+
         value
     }
 
     /// Get performance configuration
     pub fn get_performance_config(&self, key: &str) -> Option<ConfigValue> {
         let cache_key = format!("performance.{}", key);
-        
+
         // Check cache first
         if let Ok(cache) = self.config_cache.read() {
             if let Some(cached_value) = cache.get(&cache_key) {
@@ -123,14 +126,14 @@ impl ProcessorConfigReader {
 
         // Look up from configuration
         let value = self.lookup_performance_config(key);
-        
+
         // Cache the result
         if let Some(ref val) = value {
             if let Ok(mut cache) = self.config_cache.write() {
                 cache.insert(cache_key, val.clone());
             }
         }
-        
+
         value
     }
 
@@ -139,7 +142,9 @@ impl ProcessorConfigReader {
         // First check application-specific window configuration
         if let Some(ref app_config) = self.app_config {
             if let Some(definition_config) = app_config.definitions.get(window_type) {
-                if let crate::core::config::DefinitionConfig::Window(window_config) = definition_config {
+                if let crate::core::config::DefinitionConfig::Window(window_config) =
+                    definition_config
+                {
                     return self.extract_config_value_from_yaml(&window_config.parameters, key);
                 }
             }
@@ -169,19 +174,25 @@ impl ProcessorConfigReader {
                     }
                 }
             }
-            
+
             // Check definitions for backward compatibility (old way)
             if let Some(definition_config) = app_config.definitions.get(sink_type) {
                 // For sinks, we'll use window config structure but interpret it as sink config
-                if let crate::core::config::DefinitionConfig::Window(window_config) = definition_config {
+                if let crate::core::config::DefinitionConfig::Window(window_config) =
+                    definition_config
+                {
                     // Use the window parameter structure to store sink parameters
                     return self.extract_config_value_from_yaml(&window_config.parameters, key);
                 }
-                if let crate::core::config::DefinitionConfig::Stream(stream_config) = definition_config {
+                if let crate::core::config::DefinitionConfig::Stream(stream_config) =
+                    definition_config
+                {
                     // Check sink configuration if present
                     if let Some(ref sink) = stream_config.sink {
                         // Extract parameters from sink configuration
-                        if let Some(parameters) = self.extract_parameters_from_sink_config(sink, key) {
+                        if let Some(parameters) =
+                            self.extract_parameters_from_sink_config(sink, key)
+                        {
                             return Some(parameters);
                         }
                     }
@@ -203,7 +214,9 @@ impl ProcessorConfigReader {
         // First check application-specific stream configuration
         if let Some(ref app_config) = self.app_config {
             if let Some(definition_config) = app_config.definitions.get(processor_type) {
-                if let crate::core::config::DefinitionConfig::Stream(_stream_config) = definition_config {
+                if let crate::core::config::DefinitionConfig::Stream(_stream_config) =
+                    definition_config
+                {
                     // For now, we'll implement simple stream config extraction later
                     // TODO: Implement stream-specific configuration extraction
                 }
@@ -223,11 +236,17 @@ impl ProcessorConfigReader {
     fn lookup_performance_config(&self, key: &str) -> Option<ConfigValue> {
         // Check global configuration for performance settings
         if let Some(ref global_config) = self.global_config {
-            let performance = &global_config.siddhi.runtime.performance;
+            let performance = &global_config.eventflux.runtime.performance;
             match key {
-                "event_buffer_size" => Some(ConfigValue::Integer(performance.event_buffer_size as i64)),
-                "batch_size" => performance.batch_size.map(|v| ConfigValue::Integer(v as i64)),
-                "thread_pool_size" => Some(ConfigValue::Integer(performance.thread_pool_size as i64)),
+                "event_buffer_size" => {
+                    Some(ConfigValue::Integer(performance.event_buffer_size as i64))
+                }
+                "batch_size" => performance
+                    .batch_size
+                    .map(|v| ConfigValue::Integer(v as i64)),
+                "thread_pool_size" => {
+                    Some(ConfigValue::Integer(performance.thread_pool_size as i64))
+                }
                 "batch_processing" => Some(ConfigValue::Boolean(performance.batch_processing)),
                 "async_processing" => Some(ConfigValue::Boolean(performance.async_processing)),
                 "enable_statistics" => Some(ConfigValue::Boolean(false)), // Not in PerformanceConfig, default to false
@@ -248,7 +267,11 @@ impl ProcessorConfigReader {
     }
 
     /// Extract configuration value from parameter map
-    fn extract_config_value(&self, parameters: &Option<std::collections::HashMap<String, String>>, key: &str) -> Option<ConfigValue> {
+    fn extract_config_value(
+        &self,
+        parameters: &Option<std::collections::HashMap<String, String>>,
+        key: &str,
+    ) -> Option<ConfigValue> {
         if let Some(ref params) = parameters {
             if let Some(value_str) = params.get(key) {
                 // Try to parse as different types
@@ -269,7 +292,11 @@ impl ProcessorConfigReader {
     }
 
     /// Extract configuration value from YAML value (for WindowConfig parameters)
-    fn extract_config_value_from_yaml(&self, yaml_value: &serde_yaml::Value, key: &str) -> Option<ConfigValue> {
+    fn extract_config_value_from_yaml(
+        &self,
+        yaml_value: &serde_yaml::Value,
+        key: &str,
+    ) -> Option<ConfigValue> {
         if let serde_yaml::Value::Mapping(map) = yaml_value {
             if let Some(value) = map.get(&serde_yaml::Value::String(key.to_string())) {
                 match value {
@@ -280,7 +307,7 @@ impl ProcessorConfigReader {
                         if let Some(float_val) = num.as_f64() {
                             return Some(ConfigValue::Float(float_val));
                         }
-                    },
+                    }
                     serde_yaml::Value::String(str_val) => {
                         // Try to parse string as number or boolean first
                         if let Ok(int_val) = str_val.parse::<i64>() {
@@ -293,10 +320,10 @@ impl ProcessorConfigReader {
                             return Some(ConfigValue::Boolean(bool_val));
                         }
                         return Some(ConfigValue::String(str_val.clone()));
-                    },
+                    }
                     serde_yaml::Value::Bool(bool_val) => {
                         return Some(ConfigValue::Boolean(*bool_val));
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -313,11 +340,18 @@ impl ProcessorConfigReader {
 
     /// Get cache size for monitoring
     pub fn get_cache_size(&self) -> usize {
-        self.config_cache.read().map(|cache| cache.len()).unwrap_or(0)
+        self.config_cache
+            .read()
+            .map(|cache| cache.len())
+            .unwrap_or(0)
     }
 
     /// Extract configuration value from sink configuration
-    fn extract_parameters_from_sink_config(&self, sink: &crate::core::config::types::application_config::SinkConfig, key: &str) -> Option<ConfigValue> {
+    fn extract_parameters_from_sink_config(
+        &self,
+        sink: &crate::core::config::types::application_config::SinkConfig,
+        key: &str,
+    ) -> Option<ConfigValue> {
         // Extract parameters from the sink's connection YAML configuration
         self.extract_config_value_from_yaml(&sink.connection, key)
     }
@@ -375,10 +409,10 @@ mod tests {
     #[test]
     fn test_window_config_defaults() {
         let reader = ProcessorConfigReader::new(None, None);
-        
+
         let multiplier = reader.get_window_config("length", "initial_capacity_multiplier");
         assert!(matches!(multiplier, Some(ConfigValue::Float(1.2))));
-        
+
         let timeout = reader.get_window_config("session", "timeout_ms");
         assert!(matches!(timeout, Some(ConfigValue::Integer(30000))));
     }
@@ -386,10 +420,10 @@ mod tests {
     #[test]
     fn test_performance_config_defaults() {
         let reader = ProcessorConfigReader::new(None, None);
-        
+
         let buffer_size = reader.get_performance_config("event_buffer_size");
         assert!(matches!(buffer_size, Some(ConfigValue::Integer(1024))));
-        
+
         let stats_enabled = reader.get_performance_config("enable_statistics");
         assert!(matches!(stats_enabled, Some(ConfigValue::Boolean(false))));
     }
@@ -412,19 +446,19 @@ mod tests {
     #[test]
     fn test_cache_functionality() {
         let reader = ProcessorConfigReader::new(None, None);
-        
+
         // First access should cache the value
         let _val1 = reader.get_window_config("length", "initial_capacity_multiplier");
         assert_eq!(reader.get_cache_size(), 1);
-        
+
         // Second access should use cached value
         let _val2 = reader.get_window_config("length", "initial_capacity_multiplier");
         assert_eq!(reader.get_cache_size(), 1);
-        
+
         // Different key should add to cache
         let _val3 = reader.get_window_config("time", "cleanup_interval_ms");
         assert_eq!(reader.get_cache_size(), 2);
-        
+
         // Clear cache
         reader.clear_cache();
         assert_eq!(reader.get_cache_size(), 0);
@@ -433,16 +467,16 @@ mod tests {
     #[test]
     fn test_sink_config_defaults() {
         let reader = ProcessorConfigReader::new(None, None);
-        
+
         let prefix = reader.get_sink_config("log", "prefix");
         assert!(matches!(prefix, Some(ConfigValue::String(p)) if p == "[LOG]"));
-        
+
         let level = reader.get_sink_config("log", "level");
         assert!(matches!(level, Some(ConfigValue::String(l)) if l == "INFO"));
-        
+
         let format = reader.get_sink_config("console", "format");
         assert!(matches!(format, Some(ConfigValue::String(f)) if f == "json"));
-        
+
         let unknown = reader.get_sink_config("unknown", "param");
         assert!(unknown.is_none());
     }

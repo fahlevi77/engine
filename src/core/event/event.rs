@@ -1,17 +1,17 @@
-// siddhi_rust/src/core/event/event.rs
-// Corresponds to io.siddhi.core.event.Event
+// eventflux_rust/src/core/event/event.rs
+// Corresponds to io.eventflux.core.event.Event
 use super::complex_event::{ComplexEvent, ComplexEventType};
 use super::value::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // Global atomic counter for generating unique event IDs.
-// Siddhi Event.java does not have an explicit ID field. This is an addition for Rust if needed,
+// EventFlux Event.java does not have an explicit ID field. This is an addition for Rust if needed,
 // or can be removed if events are identified by other means (e.g. object identity in a Vec).
 // The prompt includes `id: u64`.
 static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(0);
 
-/// Represents a single data event in Siddhi with a timestamp and data payload.
+/// Represents a single data event in EventFlux with a timestamp and data payload.
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Event {
     pub id: u64,                   // Unique ID, added as per prompt

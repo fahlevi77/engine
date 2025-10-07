@@ -1,11 +1,11 @@
-// siddhi_rust/src/core/util/type_system.rs
-// Comprehensive type system for Siddhi Rust implementing Java-compatible type conversion behavior
+// eventflux_rust/src/core/util/type_system.rs
+// Comprehensive type system for EventFlux Rust implementing Java-compatible type conversion behavior
 
 use crate::core::event::value::AttributeValue;
-use crate::core::exception::SiddhiError;
+use crate::core::exception::EventFluxError;
 use crate::query_api::definition::attribute::Type as AttributeType;
 
-/// Type precedence for arithmetic operations following Java Siddhi rules
+/// Type precedence for arithmetic operations following Java EventFlux rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypePrecedence {
     Int = 0,
@@ -41,7 +41,7 @@ impl TypePrecedence {
 pub fn get_arithmetic_result_type(
     left: AttributeType,
     right: AttributeType,
-) -> Result<AttributeType, SiddhiError> {
+) -> Result<AttributeType, EventFluxError> {
     let left_precedence = TypePrecedence::from_attribute_type(left);
     let right_precedence = TypePrecedence::from_attribute_type(right);
 
@@ -51,7 +51,7 @@ pub fn get_arithmetic_result_type(
             let result_precedence = std::cmp::max(l, r);
             Ok(result_precedence.to_attribute_type())
         }
-        _ => Err(SiddhiError::type_error(
+        _ => Err(EventFluxError::type_error(
             "Arithmetic operations only supported on numeric types",
             format!("{left:?}"),
             format!("{right:?}"),
@@ -59,7 +59,7 @@ pub fn get_arithmetic_result_type(
     }
 }
 
-/// Comprehensive type conversion following Java Siddhi rules
+/// Comprehensive type conversion following Java EventFlux rules
 pub struct TypeConverter;
 
 impl TypeConverter {
@@ -234,7 +234,7 @@ impl TypeConverter {
     pub fn validate_conversion(
         from_type: AttributeType,
         to_type: AttributeType,
-    ) -> Result<(), SiddhiError> {
+    ) -> Result<(), EventFluxError> {
         use AttributeType::*;
 
         // These conversions are always valid
@@ -253,7 +253,7 @@ impl TypeConverter {
             // String conversions (validated at runtime)
             (STRING, _) => Ok(()),
             // Invalid conversions
-            _ => Err(SiddhiError::type_error(
+            _ => Err(EventFluxError::type_error(
                 "Invalid type conversion",
                 format!("{from_type:?}"),
                 format!("{to_type:?}"),

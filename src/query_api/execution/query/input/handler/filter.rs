@@ -1,18 +1,18 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.handler.Filter
+// Corresponds to io.eventflux.query.api.execution.query.input.handler.Filter
+use crate::query_api::eventflux_element::EventFluxElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_element::SiddhiElement;
 
 // Corrected structure (previous duplicate removed):
 #[derive(Clone, Debug, PartialEq)]
 pub struct Filter {
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
     pub filter_expression: Expression,
 }
 
 impl Filter {
     pub fn new(filter_expression: Expression) -> Self {
         Filter {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             filter_expression,
         }
     }

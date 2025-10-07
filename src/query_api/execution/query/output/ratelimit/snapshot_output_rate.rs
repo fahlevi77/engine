@@ -1,7 +1,7 @@
-// Corresponds to parts of io.siddhi.query.api.execution.query.output.ratelimit.SnapshotOutputRate
+// Corresponds to parts of io.eventflux.query.api.execution.query.output.ratelimit.SnapshotOutputRate
 
 // This struct holds the specific data for snapshot-based rate limiting.
-// SiddhiElement context is in the main OutputRate struct.
+// EventFluxElement context is in the main OutputRate struct.
 // Snapshot implies a specific behavior (usually OutputRateBehavior::All for the snapshot period).
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default

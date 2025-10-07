@@ -1,84 +1,83 @@
 //! # Configuration Management
-//! 
-//! This module provides comprehensive configuration management for Siddhi applications.
-//! 
+//!
+//! This module provides comprehensive configuration management for EventFlux applications.
+//!
 //! ## Configuration Reload Policy
-//! 
-//! **Note**: Hot reload functionality is not supported in this implementation. 
-//! 
+//!
+//! **Note**: Hot reload functionality is not supported in this implementation.
+//!
 //! To apply configuration changes:
-//! 1. Enable state persistence in your Siddhi application
-//! 2. Gracefully shutdown the current runtime 
+//! 1. Enable state persistence in your EventFlux application
+//! 2. Gracefully shutdown the current runtime
 //! 3. Update configuration files or environment variables
 //! 4. Restart the application with new configuration
 //! 5. State will be automatically restored, ensuring continuity
-//! 
+//!
 //! This approach maintains data consistency and reliable state recovery.
 
 // Legacy context modules
-pub mod siddhi_app_context;
-pub mod siddhi_context;
-pub mod siddhi_on_demand_query_context;
-pub mod siddhi_query_context;
+pub mod eventflux_app_context;
+pub mod eventflux_context;
+pub mod eventflux_on_demand_query_context;
+pub mod eventflux_query_context;
 pub mod statistics_configuration;
 
 // New configuration management modules
-pub mod types;
-pub mod manager;
+pub mod error;
 pub mod loader;
-pub mod validator;
+pub mod manager;
+pub mod monitoring;
+pub mod processor_config_reader;
 pub mod resolver;
 pub mod security;
 pub mod service_discovery;
-pub mod monitoring;
+pub mod types;
 pub mod validation_api;
-pub mod error;
-pub mod processor_config_reader;
-
+pub mod validator;
 
 // Re-export legacy context types for backward compatibility
-pub use self::siddhi_app_context::SiddhiAppContext;
-pub use self::siddhi_context::SiddhiContext;
-pub use self::siddhi_on_demand_query_context::SiddhiOnDemandQueryContext;
-pub use self::siddhi_query_context::SiddhiQueryContext;
+pub use self::eventflux_app_context::EventFluxAppContext;
+pub use self::eventflux_context::EventFluxContext;
+pub use self::eventflux_on_demand_query_context::EventFluxOnDemandQueryContext;
+pub use self::eventflux_query_context::EventFluxQueryContext;
 pub use self::statistics_configuration::StatisticsConfiguration;
 
 // Re-export main configuration types for easy access
-pub use types::*;
+pub use error::{ConfigError, ConfigResult, ValidationError, ValidationResult};
 pub use manager::ConfigManager;
-pub use error::{ConfigError, ConfigResult, ValidationResult, ValidationError};
-pub use processor_config_reader::{ProcessorConfigReader, ConfigValue};
+pub use processor_config_reader::{ConfigValue, ProcessorConfigReader};
+pub use types::*;
 
 // Main configuration loading functions for simple usage
 use std::path::Path;
 
 /// Load configuration from the default locations with automatic environment detection
-pub async fn load_config() -> ConfigResult<SiddhiConfig> {
+pub async fn load_config() -> ConfigResult<EventFluxConfig> {
     let manager = ConfigManager::new();
     manager.load_unified_config().await
 }
 
 /// Load configuration from a specific YAML file
-pub async fn load_config_from_file<P: AsRef<Path>>(path: P) -> ConfigResult<SiddhiConfig> {
+pub async fn load_config_from_file<P: AsRef<Path>>(path: P) -> ConfigResult<EventFluxConfig> {
     let manager = ConfigManager::new();
     manager.load_from_file(path).await
 }
 
 /// Load configuration with custom manager settings
-pub async fn load_config_with_manager(manager: ConfigManager) -> ConfigResult<SiddhiConfig> {
+pub async fn load_config_with_manager(manager: ConfigManager) -> ConfigResult<EventFluxConfig> {
     manager.load_unified_config().await
 }
 
-// Re-exporting placeholders from siddhi_context.rs for now if they are widely used,
+// Re-exporting placeholders from eventflux_context.rs for now if they are widely used,
 // though ideally they'd be replaced by actual types from their own modules.
 // Example:
-// pub use self::siddhi_context::{
+// pub use self::eventflux_context::{
 //     PersistenceStorePlaceholder,
 //     DataSourcePlaceholder,
 //     // etc.
 // };
-// For SiddhiAppContext placeholders:
-// pub use self::siddhi_app_context::{
+// For EventFluxAppContext placeholders:
+// pub use self::eventflux_app_context::{
 //     StatisticsManagerPlaceholder,
 //     TimestampGeneratorPlaceholder,
 //     // etc.

@@ -1,5 +1,5 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::query::processor::{CommonProcessorMeta, ProcessingMode, Processor};
@@ -15,8 +15,8 @@ pub struct UpdateTableProcessor {
 impl UpdateTableProcessor {
     pub fn new(
         table: Arc<dyn Table>,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -47,18 +47,18 @@ impl Processor for UpdateTableProcessor {
         None
     }
     fn set_next_processor(&mut self, _next: Option<Arc<Mutex<dyn Processor>>>) {}
-    fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, query_ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             Arc::clone(&self.table),
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(query_ctx),
         ))
     }
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
     fn get_processing_mode(&self) -> ProcessingMode {
         ProcessingMode::DEFAULT

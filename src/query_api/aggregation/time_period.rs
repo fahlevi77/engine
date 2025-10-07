@@ -1,9 +1,8 @@
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 // Expression is not directly part of TimePeriod fields, but Duration might be associated with values if not just enum.
 // However, Java's TimePeriod.Duration is just an enum.
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum Duration {
     #[default]
     Seconds,
@@ -38,19 +37,16 @@ impl Duration {
     }
 }
 
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)]
 pub enum Operator {
     Range,
     #[default]
     Interval,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct TimePeriod {
-    pub siddhi_element: SiddhiElement,
+    pub eventflux_element: EventFluxElement,
     pub operator: Operator,
     pub durations: Vec<Duration>,
 }
@@ -59,7 +55,7 @@ impl TimePeriod {
     // Private constructor as in Java, use factory methods.
     fn new(operator: Operator, durations: Vec<Duration>) -> Self {
         Self {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             operator,
             durations,
         }
@@ -73,7 +69,7 @@ impl TimePeriod {
     // Corresponds to TimePeriod.interval(Duration... durations)
     pub fn interval(durations: Vec<Duration>) -> Self {
         // Java uses varargs, which implies at least one.
-        // An empty Vec<Duration> for interval might be valid or not depending on Siddhi logic.
+        // An empty Vec<Duration> for interval might be valid or not depending on EventFlux logic.
         Self::new(Operator::Interval, durations)
     }
 }

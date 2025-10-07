@@ -1,6 +1,6 @@
 # Output Submodule
 
-Partial port of Siddhi's `io.siddhi.core.stream.output` package.
+Partial port of EventFlux's `io.eventflux.core.stream.output` package.
 `StreamCallback` trait models the Java abstract class and a simple
 `LogStreamCallback` implementation is provided for tests.
 

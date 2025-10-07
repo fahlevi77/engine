@@ -2,10 +2,10 @@
 mod common;
 use common::AppRunner;
 
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::stream::input::mapper::SourceMapper;
-use siddhi_rust::core::stream::output::mapper::SinkMapper;
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::stream::input::mapper::SourceMapper;
+use eventflux_rust::core::stream::output::mapper::SinkMapper;
 
 #[derive(Debug, Clone)]
 struct CsvSourceMapper;
@@ -51,12 +51,12 @@ impl SinkMapper for ConcatSinkMapper {
     }
 }
 
-// TODO: NOT PART OF M1 - Old SiddhiQL syntax
+// TODO: NOT PART OF M1 - Old EventFluxQL syntax
 // This test uses "define stream" and old query syntax which is not supported by SQL parser.
 // Source/sink mappers functionality exists but SQL syntax for them is not part of M1.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 #[tokio::test]
-#[ignore = "Old SiddhiQL syntax not part of M1"]
+#[ignore = "Old EventFluxQL syntax not part of M1"]
 async fn test_source_and_sink_mapper_usage() {
     let app = "\
         define stream In (a int, b int);\n\

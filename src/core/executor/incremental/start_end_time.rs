@@ -1,5 +1,5 @@
 use super::unix_time::IncrementalUnixTimeFunctionExecutor;
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -55,7 +55,7 @@ impl ExpressionExecutor for IncrementalStartTimeEndTimeFunctionExecutor {
         ApiAttributeType::OBJECT
     }
 
-    fn clone_executor(&self, ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(Self {
             start_executor: self.start_executor.clone_executor(ctx),
             end_executor: self.end_executor.clone_executor(ctx),

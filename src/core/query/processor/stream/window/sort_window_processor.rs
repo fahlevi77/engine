@@ -1,11 +1,9 @@
-// siddhi_rust/src/core/query/processor/stream/window/sort_window_processor.rs
-// Rust implementation of Siddhi SortWindowProcessor
+// eventflux_rust/src/core/query/processor/stream/window/sort_window_processor.rs
+// Rust implementation of EventFlux SortWindowProcessor
 
 use crate::core::config::{
-    siddhi_app_context::SiddhiAppContext,
-    siddhi_context::SiddhiContext,
-    siddhi_query_context::SiddhiQueryContext,
-    ProcessorConfigReader, ConfigValue,
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
+    eventflux_query_context::EventFluxQueryContext, ConfigValue, ProcessorConfigReader,
 };
 use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
 use crate::core::event::stream::StreamEvent;
@@ -35,47 +33,54 @@ impl SortWindowProcessor {
     pub fn new(
         length_to_keep: usize,
         comparator: OrderByEventComparator,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         // Configuration-driven initialization
         let effective_length = Self::calculate_effective_window_size(length_to_keep, &app_ctx);
         let initial_capacity = Self::calculate_initial_capacity(effective_length, &app_ctx);
-        
+
         let processor = SortWindowProcessor {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
             length_to_keep: effective_length,
             sorted_window: Arc::new(Mutex::new(Vec::with_capacity(initial_capacity))),
             comparator,
         };
-        
+
         // Log configuration-driven setup
         processor.log_window_configuration();
-        
+
         processor
     }
-    
+
     /// Calculate effective window size based on configuration
-    fn calculate_effective_window_size(requested_size: usize, app_ctx: &SiddhiAppContext) -> usize {
+    fn calculate_effective_window_size(
+        requested_size: usize,
+        app_ctx: &EventFluxAppContext,
+    ) -> usize {
         let base_size = requested_size;
-        
+
         // Use the configuration reader to get distributed size factor
         if let Some(config_reader) = app_ctx.get_config_reader() {
-            if let Some(ConfigValue::Float(factor)) = config_reader.get_window_config("sort", "distributed_size_factor") {
+            if let Some(ConfigValue::Float(factor)) =
+                config_reader.get_window_config("sort", "distributed_size_factor")
+            {
                 // Apply scaling factor - for now we'll use a simple approach
                 return (base_size as f64 * factor).ceil() as usize;
             }
         }
-        
+
         // Fallback to base size if configuration is unavailable
         base_size
     }
-    
+
     /// Calculate initial capacity for the sorted buffer
-    fn calculate_initial_capacity(window_size: usize, app_ctx: &SiddhiAppContext) -> usize {
+    fn calculate_initial_capacity(window_size: usize, app_ctx: &EventFluxAppContext) -> usize {
         // Get multiplier from configuration
         let multiplier = if let Some(config_reader) = app_ctx.get_config_reader() {
-            if let Some(ConfigValue::Float(mult)) = config_reader.get_window_config("sort", "initial_capacity_multiplier") {
+            if let Some(ConfigValue::Float(mult)) =
+                config_reader.get_window_config("sort", "initial_capacity_multiplier")
+            {
                 mult
             } else {
                 1.2 // Default multiplier
@@ -83,10 +88,12 @@ impl SortWindowProcessor {
         } else {
             1.2
         };
-        
+
         // Check for batch processing mode from performance config
         let batch_multiplier = if let Some(config_reader) = app_ctx.get_config_reader() {
-            if let Some(ConfigValue::Boolean(true)) = config_reader.get_performance_config("batch_processing_enabled") {
+            if let Some(ConfigValue::Boolean(true)) =
+                config_reader.get_performance_config("batch_processing_enabled")
+            {
                 1.25 // Additional multiplier for batch mode
             } else {
                 1.0
@@ -94,26 +101,30 @@ impl SortWindowProcessor {
         } else {
             1.0
         };
-        
+
         (window_size as f64 * multiplier * batch_multiplier).ceil() as usize
     }
-    
+
     /// Log configuration-driven initialization
     fn log_window_configuration(&self) {
         println!("SortWindowProcessor configured:");
         println!("  - Window size: {} events", self.length_to_keep);
-        
+
         // Log configuration if available through config reader
-        if let Some(config_reader) = self.meta.siddhi_app_context.get_config_reader() {
-            if let Some(ConfigValue::Float(factor)) = config_reader.get_window_config("sort", "distributed_size_factor") {
+        if let Some(config_reader) = self.meta.eventflux_app_context.get_config_reader() {
+            if let Some(ConfigValue::Float(factor)) =
+                config_reader.get_window_config("sort", "distributed_size_factor")
+            {
                 println!("  - Distributed size factor: {}", factor);
             }
-            if let Some(ConfigValue::Float(multiplier)) = config_reader.get_window_config("sort", "initial_capacity_multiplier") {
+            if let Some(ConfigValue::Float(multiplier)) =
+                config_reader.get_window_config("sort", "initial_capacity_multiplier")
+            {
                 println!("  - Initial capacity multiplier: {}", multiplier);
             }
         }
     }
-    
+
     /// Check if memory-optimized processing should be used
     fn should_use_memory_optimization(&self) -> bool {
         // For now, return false since we don't have direct access to runtime config
@@ -124,8 +135,8 @@ impl SortWindowProcessor {
     /// Create from window handler (standard factory pattern)
     pub fn from_handler(
         handler: &WindowHandler,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Result<Self, String> {
         let params = handler.get_parameters();
 
@@ -236,22 +247,22 @@ impl Processor for SortWindowProcessor {
         self.meta.next_processor = next;
     }
 
-    fn clone_processor(&self, query_ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, query_ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         Box::new(Self::new(
             self.length_to_keep,
             // TODO: Clone comparator properly
             OrderByEventComparator::new(Vec::new(), Vec::new()),
-            Arc::clone(&self.meta.siddhi_app_context),
+            Arc::clone(&self.meta.eventflux_app_context),
             Arc::clone(query_ctx),
         ))
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        Arc::clone(&self.meta.siddhi_app_context)
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        Arc::clone(&self.meta.eventflux_app_context)
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.meta.get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {
@@ -277,17 +288,17 @@ mod tests {
         let comparator = OrderByEventComparator::new(executors, ascending);
 
         // This test mainly verifies compilation
-        let siddhi_context = Arc::new(SiddhiContext::new());
-        let app = Arc::new(crate::query_api::siddhi_app::SiddhiApp::new(
+        let eventflux_context = Arc::new(EventFluxContext::new());
+        let app = Arc::new(crate::query_api::eventflux_app::EventFluxApp::new(
             "TestApp".to_string(),
         ));
-        let app_ctx = Arc::new(SiddhiAppContext::new(
-            siddhi_context,
+        let app_ctx = Arc::new(EventFluxAppContext::new(
+            eventflux_context,
             "TestApp".to_string(),
             app,
             String::new(),
         ));
-        let query_ctx = Arc::new(SiddhiQueryContext::new(
+        let query_ctx = Arc::new(EventFluxQueryContext::new(
             app_ctx.clone(),
             "test".to_string(),
             None,

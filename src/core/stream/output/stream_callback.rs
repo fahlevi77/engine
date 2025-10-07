@@ -1,6 +1,6 @@
-// siddhi_rust/src/core/stream/output/stream_callback.rs
-// Corresponds to io.siddhi.core.stream.output.StreamCallback
-use crate::core::config::siddhi_app_context::SiddhiAppContext; // For setContext
+// eventflux_rust/src/core/stream/output/stream_callback.rs
+// Corresponds to io.eventflux.core.stream.output.StreamCallback
+use crate::core::config::eventflux_app_context::EventFluxAppContext; // For setContext
 use crate::core::event::complex_event::ComplexEvent; // Trait
 use crate::core::event::event::Event; // Using our core Event struct
 use crate::query_api::definition::AbstractDefinition as AbstractDefinitionApi; // From query_api
@@ -22,10 +22,10 @@ pub trait StreamCallback: StreamJunctionReceiver + Debug + Send + Sync {
     // For now, assuming implementing structs will manage their own stream_id, definition, context.
     // fn get_stream_id_cb(&self) -> &str; // Example if these were trait methods
     // fn get_stream_definition_cb(&self) -> Option<Arc<AbstractDefinitionApi>>;
-    // fn get_siddhi_app_context_cb(&self) -> Option<Arc<SiddhiAppContext>>;
+    // fn get_eventflux_app_context_cb(&self) -> Option<Arc<EventFluxAppContext>>;
     // fn set_stream_id_cb(&mut self, stream_id: String);
     // fn set_stream_definition_cb(&mut self, def: Arc<AbstractDefinitionApi>);
-    // fn set_siddhi_app_context_cb(&mut self, context: Arc<SiddhiAppContext>);
+    // fn set_eventflux_app_context_cb(&mut self, context: Arc<EventFluxAppContext>);
 
     // Default implementations for methods from StreamJunction.Receiver,
     // which then call the primary receive_events method.
@@ -147,7 +147,7 @@ impl<T: StreamCallback + ?Sized> StreamJunctionReceiver for T {
 pub struct LogStreamCallback {
     pub stream_id: String,
     pub stream_definition: Option<Arc<AbstractDefinitionApi>>, // For toMap
-    pub siddhi_app_context: Option<Arc<SiddhiAppContext>>,
+    pub eventflux_app_context: Option<Arc<EventFluxAppContext>>,
 }
 
 impl LogStreamCallback {
@@ -156,7 +156,7 @@ impl LogStreamCallback {
         Self {
             stream_id,
             stream_definition: None,
-            siddhi_app_context: None,
+            eventflux_app_context: None,
         }
     }
 }

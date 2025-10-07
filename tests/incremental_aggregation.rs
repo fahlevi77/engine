@@ -1,30 +1,30 @@
 #[path = "common/mod.rs"]
 mod common;
-use siddhi_rust::core::aggregation::IncrementalExecutor;
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
-    siddhi_query_context::SiddhiQueryContext,
+use eventflux_rust::core::aggregation::IncrementalExecutor;
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
+    eventflux_query_context::EventFluxQueryContext,
 };
-use siddhi_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::table::InMemoryTable;
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::query_api::aggregation::time_period::Duration as TimeDuration;
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-use siddhi_rust::query_api::expression::{variable::Variable, Expression};
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::event::stream::meta_stream_event::MetaStreamEvent;
+use eventflux_rust::core::event::stream::stream_event::StreamEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::table::InMemoryTable;
+use eventflux_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use eventflux_rust::query_api::aggregation::time_period::Duration as TimeDuration;
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::expression::{variable::Variable, Expression};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 fn make_ctx(name: &str) -> ExpressionParserContext<'static> {
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::new(SiddhiContext::default()),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::new(EventFluxContext::default()),
         "app".to_string(),
-        Arc::new(SiddhiApp::new("app".to_string())),
+        Arc::new(EventFluxApp::new("app".to_string())),
         String::new(),
     ));
-    let q_ctx = Arc::new(SiddhiQueryContext::new(
+    let q_ctx = Arc::new(EventFluxQueryContext::new(
         Arc::clone(&app_ctx),
         name.to_string(),
         None,
@@ -37,8 +37,8 @@ fn make_ctx(name: &str) -> ExpressionParserContext<'static> {
     stream_map.insert("InStream".to_string(), Arc::new(meta));
     let qn: &'static str = Box::leak(name.to_string().into_boxed_str());
     ExpressionParserContext {
-        siddhi_app_context: Arc::clone(&app_ctx),
-        siddhi_query_context: q_ctx,
+        eventflux_app_context: Arc::clone(&app_ctx),
+        eventflux_query_context: q_ctx,
         stream_meta_map: stream_map,
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),

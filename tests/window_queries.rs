@@ -1,37 +1,37 @@
-use siddhi_rust::core::config::{
-    siddhi_app_context::SiddhiAppContext, siddhi_context::SiddhiContext,
+use eventflux_rust::core::config::{
+    eventflux_app_context::EventFluxAppContext, eventflux_context::EventFluxContext,
 };
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::core::stream::stream_junction::StreamJunction;
-use siddhi_rust::core::util::parser::QueryParser;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::definition::StreamDefinition;
-use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::core::stream::stream_junction::StreamJunction;
+use eventflux_rust::core::util::parser::QueryParser;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::StreamDefinition;
+use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::Selector;
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_compiler::parse;
+use eventflux_rust::query_api::execution::query::selection::Selector;
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::expression::Expression;
+use eventflux_rust::query_compiler::parse;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 fn setup_context() -> (
-    Arc<SiddhiAppContext>,
+    Arc<EventFluxAppContext>,
     HashMap<String, Arc<Mutex<StreamJunction>>>,
 ) {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let app = Arc::new(siddhi_rust::query_api::siddhi_app::SiddhiApp::new(
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let app = Arc::new(eventflux_rust::query_api::eventflux_app::EventFluxApp::new(
         "TestApp".to_string(),
     ));
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        Arc::clone(&siddhi_context),
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        Arc::clone(&eventflux_context),
         "TestApp".to_string(),
         Arc::clone(&app),
         String::new(),
@@ -146,10 +146,10 @@ async fn test_length_window_runtime() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#window:length(2) select v insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
@@ -195,10 +195,10 @@ async fn test_time_window_runtime() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#window:time(100) select v insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
@@ -231,10 +231,10 @@ async fn test_length_batch_window_runtime() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#window:lengthBatch(2) select v insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
@@ -286,10 +286,10 @@ async fn test_time_batch_window_runtime() {
         define stream In (v int);\n\
         define stream Out (v int);\n\
         from In#window:timeBatch(100) select v insert into Out;\n";
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     let api = parse(app).expect("parse");
     let runtime = manager
-        .create_siddhi_app_runtime_from_api(Arc::new(api), None)
+        .create_eventflux_app_runtime_from_api(Arc::new(api), None)
         .await
         .expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));

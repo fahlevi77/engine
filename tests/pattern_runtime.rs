@@ -1,21 +1,21 @@
-use siddhi_rust::core::config::siddhi_context::SiddhiContext;
-use siddhi_rust::core::event::event::Event as CoreEvent;
-use siddhi_rust::core::event::value::AttributeValue as CoreAttributeValue;
-use siddhi_rust::core::siddhi_app_runtime::SiddhiAppRuntime;
-use siddhi_rust::core::stream::output::stream_callback::StreamCallback;
-use siddhi_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
-use siddhi_rust::query_api::execution::query::input::state::{State, StateElement};
-use siddhi_rust::query_api::execution::query::input::stream::input_stream::InputStream;
-use siddhi_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
-use siddhi_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
-use siddhi_rust::query_api::execution::query::output::output_stream::{
+use eventflux_rust::core::config::eventflux_context::EventFluxContext;
+use eventflux_rust::core::event::event::Event as CoreEvent;
+use eventflux_rust::core::event::value::AttributeValue as CoreAttributeValue;
+use eventflux_rust::core::eventflux_app_runtime::EventFluxAppRuntime;
+use eventflux_rust::core::stream::output::stream_callback::StreamCallback;
+use eventflux_rust::query_api::definition::{attribute::Type as AttrType, StreamDefinition};
+use eventflux_rust::query_api::eventflux_app::EventFluxApp as ApiEventFluxApp;
+use eventflux_rust::query_api::execution::query::input::state::{State, StateElement};
+use eventflux_rust::query_api::execution::query::input::stream::input_stream::InputStream;
+use eventflux_rust::query_api::execution::query::input::stream::single_input_stream::SingleInputStream;
+use eventflux_rust::query_api::execution::query::input::stream::state_input_stream::StateInputStream;
+use eventflux_rust::query_api::execution::query::output::output_stream::{
     InsertIntoStreamAction, OutputStream, OutputStreamAction,
 };
-use siddhi_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
-use siddhi_rust::query_api::execution::query::Query;
-use siddhi_rust::query_api::execution::ExecutionElement;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp as ApiSiddhiApp;
+use eventflux_rust::query_api::execution::query::selection::{OutputAttribute, Selector};
+use eventflux_rust::query_api::execution::query::Query;
+use eventflux_rust::query_api::execution::ExecutionElement;
+use eventflux_rust::query_api::expression::Expression;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
@@ -35,8 +35,8 @@ impl StreamCallback for CollectCallback {
 
 #[test]
 fn test_sequence_runtime_processing() {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let mut app = ApiSiddhiApp::new("TestApp".to_string());
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let mut app = ApiEventFluxApp::new("TestApp".to_string());
 
     let a_def =
         StreamDefinition::new("AStream".to_string()).attribute("val".to_string(), AttrType::INT);
@@ -65,14 +65,14 @@ fn test_sequence_runtime_processing() {
         OutputAttribute::new(
             Some("aval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("AStream".to_string()),
             ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("BStream".to_string()),
             ),
         ),
@@ -92,7 +92,8 @@ fn test_sequence_runtime_processing() {
         .push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
+    let runtime =
+        EventFluxAppRuntime::new(Arc::clone(&app), eventflux_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
         .add_callback(
@@ -137,8 +138,8 @@ fn test_sequence_runtime_processing() {
 
 #[test]
 fn test_every_sequence() {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let mut app = ApiSiddhiApp::new("TestApp2".to_string());
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let mut app = ApiEventFluxApp::new("TestApp2".to_string());
 
     let a_def =
         StreamDefinition::new("AStream".to_string()).attribute("val".to_string(), AttrType::INT);
@@ -170,14 +171,14 @@ fn test_every_sequence() {
         OutputAttribute::new(
             Some("aval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("AStream".to_string()),
             ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("BStream".to_string()),
             ),
         ),
@@ -197,7 +198,8 @@ fn test_every_sequence() {
         .push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
+    let runtime =
+        EventFluxAppRuntime::new(Arc::clone(&app), eventflux_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
         .add_callback(
@@ -242,8 +244,8 @@ fn test_every_sequence() {
 
 #[test]
 fn test_logical_and_pattern() {
-    let siddhi_context = Arc::new(SiddhiContext::new());
-    let mut app = ApiSiddhiApp::new("TestApp3".to_string());
+    let eventflux_context = Arc::new(EventFluxContext::new());
+    let mut app = ApiEventFluxApp::new("TestApp3".to_string());
 
     let a_def =
         StreamDefinition::new("AStream".to_string()).attribute("val".to_string(), AttrType::INT);
@@ -272,14 +274,14 @@ fn test_logical_and_pattern() {
         OutputAttribute::new(
             Some("aval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("AStream".to_string()),
             ),
         ),
         OutputAttribute::new(
             Some("bval".to_string()),
             Expression::Variable(
-                siddhi_rust::query_api::expression::variable::Variable::new("val".to_string())
+                eventflux_rust::query_api::expression::variable::Variable::new("val".to_string())
                     .of_stream("BStream".to_string()),
             ),
         ),
@@ -299,7 +301,8 @@ fn test_logical_and_pattern() {
         .push(ExecutionElement::Query(query));
 
     let app = Arc::new(app);
-    let runtime = SiddhiAppRuntime::new(Arc::clone(&app), siddhi_context, None).expect("runtime");
+    let runtime =
+        EventFluxAppRuntime::new(Arc::clone(&app), eventflux_context, None).expect("runtime");
     let collected = Arc::new(Mutex::new(Vec::new()));
     runtime
         .add_callback(

@@ -1,6 +1,6 @@
 # Executor Module
 
-This directory contains Rust implementations of Siddhi's `executor` package.  The
+This directory contains Rust implementations of EventFlux's `executor` package.  The
 code mirrors the Java classes where practical.  Some functionality has been
 simplified to keep the initial port manageable.
 

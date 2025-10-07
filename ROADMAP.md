@@ -1,9 +1,9 @@
-# Siddhi Rust Implementation Roadmap
+# EventFlux Rust Implementation Roadmap
 
 ## 🔄 **MAJOR UPDATE**: SQL Parser Production Ready
 
 **Date**: 2025-10-06
-**Decision**: SQL-only engine using sqlparser-rs with custom SiddhiDialect
+**Decision**: SQL-only engine using sqlparser-rs with custom EventFluxDialect
 **Status**: ✅ **M1 COMPLETE** - Production-ready SQL parser with 675 passing tests
 
 ### **SQL Parser Implementation Status**
@@ -12,7 +12,7 @@
 
 - **Goal**: Validate SQL approach with production implementation
 - **Key Deliverables**:
-    - [x] Custom `SiddhiDialect` for sqlparser-rs ✅
+    - [x] Custom `EventFluxDialect` for sqlparser-rs ✅
     - [x] DDL parsing (CREATE STREAM) ✅
     - [x] Window clause parsing (WINDOW TUMBLING, SLIDING, length, session) ✅
     - [x] Complete M1 SQL syntax support ✅
@@ -22,8 +22,8 @@
 
 - **Goal**: Production SQL parser for streaming queries
 - **Key Deliverables**:
-    - [x] sqlparser-rs with SiddhiDialect ✅
-    - [x] SQL-only engine (no legacy SiddhiQL) ✅
+    - [x] sqlparser-rs with EventFluxDialect ✅
+    - [x] SQL-only engine (no legacy EventFluxQL) ✅
     - [x] Complete SQL syntax (CREATE STREAM, SELECT, INSERT) ✅
     - [x] Window operations (TUMBLING, SLIDING, length, session) ✅
     - [x] WHERE, GROUP BY, HAVING, ORDER BY, LIMIT/OFFSET ✅
@@ -66,7 +66,7 @@
 ---
 
 This document tracks the implementation tasks for achieving **enterprise-grade CEP capabilities** with the Java version
-of Siddhi CEP. Based on comprehensive gap analysis, this roadmap prioritizes **foundational architecture** over
+of EventFlux CEP. Based on comprehensive gap analysis, this roadmap prioritizes **foundational architecture** over
 individual features.
 
 ## Task Categories
@@ -76,10 +76,10 @@ individual features.
 - 🟡 **Medium** - Feature completeness and optimization
 - 🟢 **Low** - Advanced/specialized features
 
-## 📊 **COMPREHENSIVE AUDIT RESULTS**: Current Status vs Java Siddhi
+## 📊 **COMPREHENSIVE AUDIT RESULTS**: Current Status vs Java EventFlux
 
 **🔍 AUDIT DATE**: 2025-10-06
-**📈 OVERALL FEATURE COVERAGE**: ~32% of Java Siddhi functionality
+**📈 OVERALL FEATURE COVERAGE**: ~32% of Java EventFlux functionality
 **🎯 ENTERPRISE READINESS**: M1 Complete - SQL Parser Production Ready, Feature Gaps Remain
 
 ### ✅ **Areas Where Rust EXCEEDS Java:**
@@ -198,7 +198,7 @@ individual features.
     - [ ] **Complex State Machines** - Multi-state pattern matching with transitions
     - [ ] **Temporal Constraints** - Advanced `within`, `for` timing logic
 - **Effort**: 3-4 months
-- **Impact**: **Complete CEP functionality** - essential for Siddhi's core value proposition
+- **Impact**: **Complete CEP functionality** - essential for EventFlux's core value proposition
 - **Files**: `src/core/query/input/stream/state/`
 
 #### **4. Window Processor Expansion** 🟠 **HIGH PRIORITY**
@@ -258,12 +258,12 @@ individual features.
 - **Status**: ✅ **ENTERPRISE-READY** - Production-grade Redis state management
 - **Implementation**: Complete enterprise state backend with comprehensive features
 - **Completed Features**:
-    - ✅ **RedisPersistenceStore** implementing Siddhi's PersistenceStore trait
+    - ✅ **RedisPersistenceStore** implementing EventFlux's PersistenceStore trait
     - ✅ **Connection pooling** with deadpool-redis and automatic failover
     - ✅ **Enterprise error handling** with retry logic and graceful degradation
     - ✅ **Comprehensive testing** - 15/15 Redis backend tests passing
     - ✅ **Aggregation state persistence** infrastructure with ThreadBarrier coordination
-    - ✅ **ThreadBarrier synchronization** following Java Siddhi's proven pattern
+    - ✅ **ThreadBarrier synchronization** following Java EventFlux's proven pattern
 - **Integration**: Seamless integration with SnapshotService and state holders
 - **Production Features**: Connection pooling, health monitoring, configuration management
 - **Location**: `src/core/persistence/persistence_store.rs`, `src/core/distributed/state_backend.rs`
@@ -331,9 +331,9 @@ individual features.
     - Production-ready Redis state backend with connection pooling
     - Built-in clustering support with automatic failover
     - Excellent performance for hot state with deadpool-redis
-    - Complete RedisPersistenceStore integration with Siddhi
+    - Complete RedisPersistenceStore integration with EventFlux
     - Enterprise-grade error handling and connection management
-    - Working examples demonstrating real Siddhi app state persistence
+    - Working examples demonstrating real EventFlux app state persistence
     - **Test Coverage**: 15 comprehensive integration tests passing
     - **Location**: `src/core/distributed/state_backend.rs`, `src/core/persistence/persistence_store.rs`
 - [ ] **Apache Ignite Backend** (Future Alternative)
@@ -458,7 +458,7 @@ individual features.
     - ✅ Extension points ready (Transport, State Backend, Coordination, Broker)
     - ✅ **Redis State Backend** - Enterprise-grade with connection pooling
     - ✅ **TCP + gRPC Transport** - Production-ready communication layers
-- **Strategic Advantage**: **Exceeds Java Siddhi** - Java only has distributed sinks
+- **Strategic Advantage**: **Exceeds Java EventFlux** - Java only has distributed sinks
 - **Performance**: 1.46M events/sec maintained in single-node mode
 
 #### **3. Enterprise State Management** ✅ **PRODUCTION COMPLETE**
@@ -603,14 +603,14 @@ individual features.
 #### **5. SQL Parser Migration** ✅ **COMPLETE**
 
 - **Status**: ✅ **PRODUCTION READY** - M1 SQL foundation complete
-- **Current**: sqlparser-rs with custom SiddhiDialect
+- **Current**: sqlparser-rs with custom EventFluxDialect
 - **Achievement**: SQL-only engine with 675 passing tests
 - **Strategic Impact**: **TRANSFORMATIONAL** - Production SQL parser enabling broad adoption
 
 **Phase 0: M1 Implementation** ✅ **COMPLETE**:
 
 - [x] **Production Implementation**
-    - [x] Custom `SiddhiDialect` extending sqlparser-rs ✅
+    - [x] Custom `EventFluxDialect` extending sqlparser-rs ✅
     - [x] All M1 SQL statements (CREATE STREAM, SELECT, INSERT) ✅
     - [x] Complete window clause support ✅
     - [x] 675 passing tests demonstrating SQL capabilities ✅
@@ -830,9 +830,9 @@ individual features.
 
 ### **🎯 Current Status (2025-10-06)**
 
-- **Overall Feature Coverage**: ~32% of Java Siddhi functionality
+- **Overall Feature Coverage**: ~32% of Java EventFlux functionality
 - **M1 Milestone**: ✅ **COMPLETE** - SQL Streaming Foundation (675 passing tests, 74 ignored)
-- **SQL Parser**: ✅ **PRODUCTION READY** - sqlparser-rs with SiddhiDialect, 100% M1 queries supported
+- **SQL Parser**: ✅ **PRODUCTION READY** - sqlparser-rs with EventFluxDialect, 100% M1 queries supported
 - **Core Runtime Coverage**: 50% (Event processing, stream junctions, query runtime)
 - **Query Processing**: 30% (SQL parser complete, optimization missing)
 - **Windows**: 27% (8 of 30 types) - TUMBLING, SLIDING, LENGTH, LENGTH_BATCH, SESSION implemented
@@ -899,8 +899,8 @@ individual features.
 4. **Query Optimization** can proceed with validated crossbeam performance baseline
 5. **Monitoring & Performance work significantly accelerated** due to crossbeam foundation
 
-This reprioritized roadmap transforms Siddhi Rust from a **high-quality single-node solution** into an *
-*enterprise-grade distributed CEP engine** capable of competing with Java Siddhi in production environments.
+This reprioritized roadmap transforms EventFlux Rust from a **high-quality single-node solution** into an *
+*enterprise-grade distributed CEP engine** capable of competing with Java EventFlux in production environments.
 
 ## Recent Major Milestones
 
@@ -966,7 +966,7 @@ gap.
 2. **End-to-End Benchmarking** (1 week) - Validate >1M events/sec performance
 3. **Production Load Testing** (1 week) - Stress testing and optimization
 
-This milestone establishes Siddhi Rust as having **enterprise-grade performance potential** and removes the primary
+This milestone establishes EventFlux Rust as having **enterprise-grade performance potential** and removes the primary
 architectural blocker for production adoption.
 
 ### 🎯 **IMMEDIATE NEXT STEPS: Enterprise State Management** (2025-08-03)
@@ -1031,7 +1031,7 @@ architectural design that surpasses Apache Flink's capabilities.
 - ✅ Zero data loss with exactly-once semantics
 - ✅ Support for 1TB+ state sizes
 
-This positions Siddhi Rust for true **enterprise-grade resilience** and creates the foundation for distributed
+This positions EventFlux Rust for true **enterprise-grade resilience** and creates the foundation for distributed
 processing.
 
 ### 🎯 **COMPLETED: Phase 2 Incremental Checkpointing System** (2025-08-03)
@@ -1111,7 +1111,7 @@ management capabilities that surpass Apache Flink.
 3. **Performance Optimization**: Benchmarking and tuning for production workloads
 4. **Documentation**: User guides and best practices for operational deployment
 
-This milestone establishes Siddhi Rust as having **enterprise-grade state management** and removes the critical
+This milestone establishes EventFlux Rust as having **enterprise-grade state management** and removes the critical
 architectural dependency for distributed processing development.
 
 ## 🚀 Future Vision & Strategic Initiatives
@@ -1120,7 +1120,7 @@ architectural dependency for distributed processing development.
 
 #### **1. Streaming Lakehouse Platform** 🏗️
 
-- **Vision**: Transform Siddhi from a CEP engine into a complete streaming lakehouse platform
+- **Vision**: Transform EventFlux from a CEP engine into a complete streaming lakehouse platform
 - **Target**: Unified batch and stream processing on lakehouse architectures
 - **Key Components**:
     - [ ] **Delta Lake/Iceberg Integration**
@@ -1215,7 +1215,7 @@ production deployments.
         - Type-safe function signatures
         - Automatic serialization/deserialization
       ```rust
-      #[siddhi_udf]
+      #[eventflux_udf]
       fn my_custom_function(value: f64, threshold: f64) -> bool {
           value > threshold
       }
@@ -1236,7 +1236,7 @@ production deployments.
 
 #### **2. Developer Experience Improvements** 🎯
 
-- **Vision**: Make Siddhi the most developer-friendly streaming platform
+- **Vision**: Make EventFlux the most developer-friendly streaming platform
 - **Target**: 10x improvement in development velocity
 - **Key Initiatives**:
     - [ ] **Interactive Development Environment**
@@ -1334,12 +1334,12 @@ production deployments.
 - Advanced Optimizations
 - Production Hardening
 
-This roadmap positions Siddhi Rust as not just a CEP engine, but as a **complete streaming data platform** for the
+This roadmap positions EventFlux Rust as not just a CEP engine, but as a **complete streaming data platform** for the
 modern data stack.
 
 ### 🎯 **COMPLETED: Redis State Backend Implementation** (2025-08-22)
 
-**MAJOR MILESTONE**: Production-ready Redis state backend with enterprise features and seamless Siddhi integration
+**MAJOR MILESTONE**: Production-ready Redis state backend with enterprise features and seamless EventFlux integration
 completed.
 
 #### **📦 Delivered Components**
@@ -1354,11 +1354,11 @@ completed.
 
 **2. RedisPersistenceStore** (`src/core/persistence/persistence_store.rs`)
 
-- ✅ **Siddhi Integration**: Complete implementation of PersistenceStore trait for real Siddhi apps
+- ✅ **EventFlux Integration**: Complete implementation of PersistenceStore trait for real EventFlux apps
 - ✅ **State Persistence**: Binary state serialization with automatic key management
 - ✅ **Checkpoint Management**: Save, load, and list checkpoints with revision tracking
 - ✅ **Production Features**: Atomic operations, error recovery, connection pooling
-- ✅ **Working Examples**: Real Siddhi application state persistence demonstrations
+- ✅ **Working Examples**: Real EventFlux application state persistence demonstrations
 
 **3. Docker Infrastructure** (`docker-compose.yml`)
 
@@ -1369,9 +1369,9 @@ completed.
 
 **4. Comprehensive Examples**
 
-- ✅ **redis_siddhi_persistence_simple.rs**: Working example with length window state persistence
-- ✅ **redis_siddhi_persistence.rs**: Advanced example with multiple stateful processors
-- ✅ **Real State Persistence**: Demonstrates actual Siddhi window processor state being saved and restored
+- ✅ **redis_eventflux_persistence_simple.rs**: Working example with length window state persistence
+- ✅ **redis_eventflux_persistence.rs**: Advanced example with multiple stateful processors
+- ✅ **Real State Persistence**: Demonstrates actual EventFlux window processor state being saved and restored
 - ✅ **Application Restart**: Shows state recovery across application restarts
 
 #### **🎯 Impact & Significance**
@@ -1379,7 +1379,7 @@ completed.
 **Technical Achievements:**
 
 - **Production Ready**: Enterprise-grade connection pooling, error handling, and failover
-- **Real Integration**: Not just a Redis client test - actual Siddhi application state persistence
+- **Real Integration**: Not just a Redis client test - actual EventFlux application state persistence
 - **Performance Optimized**: Connection pooling with configurable pool sizes and timeouts
 - **Developer Experience**: Easy Docker setup with web UI for debugging
 
@@ -1387,14 +1387,14 @@ completed.
 
 - **Distributed Foundation**: Enables distributed state management for horizontal scaling
 - **Enterprise Grade**: Connection pooling, automatic failover, and production error handling
-- **Siddhi Integration**: Seamless integration with existing Siddhi persistence system
+- **EventFlux Integration**: Seamless integration with existing EventFlux persistence system
 - **Operational Excellence**: Docker setup with monitoring and easy inspection tools
 
 #### **🚀 Test Results**
 
 - ✅ **All Tests Passing**: 15 Redis state backend integration tests
 - ✅ **Connection Pooling**: Validated pool management and connection reuse
-- ✅ **State Persistence**: Real Siddhi app window state saved and restored correctly
+- ✅ **State Persistence**: Real EventFlux app window state saved and restored correctly
 - ✅ **Error Handling**: Graceful connection failures and recovery
 - ✅ **Performance**: Efficient binary serialization and Redis operations
 
@@ -1406,7 +1406,7 @@ completed.
 - ✅ **Configuration Guide**: All Redis configuration options documented
 
 **Files**: `src/core/distributed/state_backend.rs`, `src/core/persistence/persistence_store.rs`, `docker-compose.yml`,
-`examples/redis_siddhi_persistence*.rs`, `tests/distributed_redis_state.rs`
+`examples/redis_eventflux_persistence*.rs`, `tests/distributed_redis_state.rs`
 
 This milestone establishes **enterprise-grade distributed state management** and provides the second major extension
 point implementation for the distributed processing framework.
@@ -1487,11 +1487,11 @@ Last Updated: 2025-10-06
 
 ## 📋 **AUDIT METHODOLOGY & FINDINGS**
 
-**Audit Approach**: Comprehensive line-by-line comparison of Java (`modules/siddhi-core/`) and Rust (`siddhi_rust/`) implementations
+**Audit Approach**: Comprehensive line-by-line comparison of Java (`modules/eventflux-core/`) and Rust (`eventflux_rust/`) implementations
 
 **Key Findings**:
 
-1. **Overall Coverage**: ~32% feature parity with Java Siddhi
+1. **Overall Coverage**: ~32% feature parity with Java EventFlux
    - 401 tests passing in Rust vs 143+ test files in Java
    - ~250 Rust files vs ~500 Java files
    - Critical architectural components complete (event model, runtime, parser)

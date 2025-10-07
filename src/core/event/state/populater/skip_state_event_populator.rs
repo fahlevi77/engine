@@ -1,4 +1,4 @@
-// siddhi_rust/src/core/event/state/populater/skip_state_event_populator.rs
+// eventflux_rust/src/core/event/state/populater/skip_state_event_populator.rs
 use super::state_event_populator::StateEventPopulator;
 use crate::core::event::complex_event::ComplexEvent;
 

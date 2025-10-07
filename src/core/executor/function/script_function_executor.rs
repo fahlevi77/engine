@@ -1,4 +1,4 @@
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
@@ -28,7 +28,7 @@ impl ExpressionExecutor for ScriptFunctionExecutor {
         self.return_type
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }
@@ -37,7 +37,7 @@ impl ScalarFunctionExecutor for ScriptFunctionExecutor {
     fn init(
         &mut self,
         _args: &Vec<Box<dyn ExpressionExecutor>>,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
     ) -> Result<(), String> {
         Ok(())
     }

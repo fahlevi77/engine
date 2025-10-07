@@ -1,11 +1,11 @@
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::executor::function::{
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::executor::constant_expression_executor::ConstantExpressionExecutor;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::executor::function::{
     CoalesceFunctionExecutor, IfThenElseFunctionExecutor, InstanceOfStringExpressionExecutor,
     UuidFunctionExecutor,
 };
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
 
 #[test]
 fn test_coalesce_function() {

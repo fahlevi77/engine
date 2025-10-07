@@ -1,6 +1,6 @@
 # `core::util`
 
-A partial port of the `io.siddhi.core.util` Java package providing the
+A partial port of the `io.eventflux.core.util` Java package providing the
 utility functions required by the Rust runtime.  Additional helpers can
 be added as needed.
 
@@ -14,7 +14,7 @@ be added as needed.
 * `metrics` – simple in-memory metrics trackers for latency, throughput
   and buffered event counts.
 * `parser` – runtime parsers used by the experimental engine.
-* `siddhi_constants` – constants shared across the core modules.
+* `eventflux_constants` – constants shared across the core modules.
 * `scheduler` – lightweight task scheduler for time based windows and triggers.
 
 Metrics tracking is intentionally lightweight but used throughout the

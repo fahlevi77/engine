@@ -1,10 +1,10 @@
-// siddhi_rust/src/core/executor/variable_expression_executor.rs
+// eventflux_rust/src/core/executor/variable_expression_executor.rs
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::state::state_event::StateEvent;
 use crate::core::event::stream::stream_event::StreamEvent;
 use crate::core::event::value::AttributeValue;
 use crate::core::executor::expression_executor::ExpressionExecutor;
-use crate::core::util::siddhi_constants::{
+use crate::core::util::eventflux_constants::{
     BEFORE_WINDOW_DATA_INDEX, ON_AFTER_WINDOW_DATA_INDEX, OUTPUT_DATA_INDEX,
     STATE_OUTPUT_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE, STREAM_ATTRIBUTE_TYPE_INDEX,
     STREAM_EVENT_CHAIN_INDEX, STREAM_EVENT_INDEX_IN_CHAIN,
@@ -14,7 +14,7 @@ use crate::query_api::definition::attribute::Type as ApiAttributeType;
 /// Executor that retrieves a variable's value from an event. Current impl is simplified.
 #[derive(Debug, Clone)]
 pub struct VariableExpressionExecutor {
-    /// Siddhi position array for locating the attribute within a `ComplexEvent`.
+    /// EventFlux position array for locating the attribute within a `ComplexEvent`.
     ///
     /// `position[STREAM_EVENT_CHAIN_INDEX]`  - index of the stream event in a `StateEvent` chain.
     /// `position[STREAM_EVENT_INDEX_IN_CHAIN]` - index within the chain if the stream has multiple
@@ -40,7 +40,7 @@ impl VariableExpressionExecutor {
         }
     }
 
-    /// Return the current Siddhi position array describing this variable.
+    /// Return the current EventFlux position array describing this variable.
     pub fn get_position(&self) -> [i32; 4] {
         self.position
     }
@@ -118,12 +118,12 @@ impl ExpressionExecutor for VariableExpressionExecutor {
 
     fn clone_executor(
         &self,
-        _siddhi_app_context: &std::sync::Arc<
-            crate::core::config::siddhi_app_context::SiddhiAppContext,
+        _eventflux_app_context: &std::sync::Arc<
+            crate::core::config::eventflux_app_context::EventFluxAppContext,
         >,
     ) -> Box<dyn ExpressionExecutor> {
-        // If siddhi_app_context was stored on self, it would be cloned:
-        // siddhi_app_context: self.siddhi_app_context.as_ref().map(Arc::clone),
+        // If eventflux_app_context was stored on self, it would be cloned:
+        // eventflux_app_context: self.eventflux_app_context.as_ref().map(Arc::clone),
         Box::new(self.clone())
     }
 }
@@ -134,11 +134,11 @@ mod tests {
     use crate::core::event::complex_event::{ComplexEvent, ComplexEventType};
     use crate::core::event::stream::stream_event::StreamEvent; // Using StreamEvent as a concrete ComplexEvent
     use crate::core::event::value::AttributeValue;
-    use crate::core::util::siddhi_constants::{
+    use crate::core::util::eventflux_constants::{
         BEFORE_WINDOW_DATA_INDEX, STREAM_ATTRIBUTE_INDEX_IN_TYPE,
     };
     // ApiAttributeType is imported in the outer scope
-    use crate::core::config::siddhi_app_context::SiddhiAppContext;
+    use crate::core::config::eventflux_app_context::EventFluxAppContext;
     use std::sync::Arc;
 
     // Mock ComplexEvent or use StreamEvent for testing
@@ -291,7 +291,7 @@ mod tests {
             ApiAttributeType::STRING,
             "test_attr_clone".to_string(),
         );
-        let app_ctx_placeholder = Arc::new(SiddhiAppContext::default_for_testing());
+        let app_ctx_placeholder = Arc::new(EventFluxAppContext::default_for_testing());
         let cloned_exec = exec.clone_executor(&app_ctx_placeholder);
 
         assert_eq!(cloned_exec.get_return_type(), ApiAttributeType::STRING);

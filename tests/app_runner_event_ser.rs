@@ -1,16 +1,16 @@
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
-use siddhi_rust::core::event::event::Event;
-use siddhi_rust::core::event::state::state_event::StateEvent;
-use siddhi_rust::core::event::stream::stream_event::StreamEvent;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::util::{from_bytes, to_bytes};
+use eventflux_rust::core::event::complex_event::{clone_event_chain, ComplexEvent};
+use eventflux_rust::core::event::event::Event;
+use eventflux_rust::core::event::state::state_event::StateEvent;
+use eventflux_rust::core::event::stream::stream_event::StreamEvent;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::util::{from_bytes, to_bytes};
 
 // TODO: NOT PART OF M1 SQL TESTING - Event serialization is core functionality but test uses old syntax
 // This test is for event serialization/deserialization which is core runtime functionality.
-// However, it currently uses old SiddhiQL syntax ("define stream") which is no longer supported by AppRunner.
+// However, it currently uses old EventFluxQL syntax ("define stream") which is no longer supported by AppRunner.
 // The test should be rewritten to either:
 // 1. Use SQL syntax (CREATE STREAM), or
 // 2. Test event serialization without going through the parser (direct Event construction)
@@ -70,7 +70,7 @@ async fn test_serialize_state_event() {
 
 // TODO: NOT PART OF M1 SQL TESTING - Event serialization is core functionality but test uses old syntax
 // This test is for event serialization/deserialization which is core runtime functionality.
-// However, it currently uses old SiddhiQL syntax ("define stream") which is no longer supported by AppRunner.
+// However, it currently uses old EventFluxQL syntax ("define stream") which is no longer supported by AppRunner.
 // The test should be rewritten to either:
 // 1. Use SQL syntax (CREATE STREAM), or
 // 2. Test event serialization without going through the parser (direct Event construction)

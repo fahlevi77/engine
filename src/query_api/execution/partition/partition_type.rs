@@ -11,7 +11,7 @@ pub enum PartitionTypeVariant {
 // This struct wraps the variant and implements common traits/functionality.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PartitionType {
-    // Common SiddhiElement context for the PartitionType itself
+    // Common EventFluxElement context for the PartitionType itself
     pub query_context_start_index: Option<(i32, i32)>,
     pub query_context_end_index: Option<(i32, i32)>,
 
@@ -47,5 +47,5 @@ impl PartitionType {
     }
 }
 
-// The impl SiddhiElement for PartitionType block has been removed.
-// PartitionType now directly holds its SiddhiElement-like fields.
+// The impl EventFluxElement for PartitionType block has been removed.
+// PartitionType now directly holds its EventFluxElement-like fields.

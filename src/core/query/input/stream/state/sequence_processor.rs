@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
-use crate::core::config::siddhi_query_context::SiddhiQueryContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
+use crate::core::config::eventflux_query_context::EventFluxQueryContext;
 use crate::core::event::complex_event::ComplexEvent;
 use crate::core::event::stream::{
     stream_event::StreamEvent, stream_event_cloner::StreamEventCloner,
@@ -45,8 +45,8 @@ impl SequenceProcessor {
         second_min: i32,
         second_max: i32,
         within_time: Option<i64>,
-        app_ctx: Arc<SiddhiAppContext>,
-        query_ctx: Arc<SiddhiQueryContext>,
+        app_ctx: Arc<EventFluxAppContext>,
+        query_ctx: Arc<EventFluxQueryContext>,
     ) -> Self {
         Self {
             meta: CommonProcessorMeta::new(app_ctx, query_ctx),
@@ -104,11 +104,10 @@ impl SequenceProcessor {
             }
             let second = self.second_buffer.remove(0);
 
-            if self.first_min == 0
-                && (self.within_time.is_none() || self.first_buffer.is_empty()) {
-                    let joined = self.build_joined_event(None, Some(&second));
-                    self.forward(joined);
-                }
+            if self.first_min == 0 && (self.within_time.is_none() || self.first_buffer.is_empty()) {
+                let joined = self.build_joined_event(None, Some(&second));
+                self.forward(joined);
+            }
 
             let max = if self.first_max < 0 {
                 self.first_buffer.len()
@@ -212,7 +211,7 @@ impl Processor for SequenceProcessorSide {
         self.parent.lock().unwrap().next_processor = next;
     }
 
-    fn clone_processor(&self, ctx: &Arc<SiddhiQueryContext>) -> Box<dyn Processor> {
+    fn clone_processor(&self, ctx: &Arc<EventFluxQueryContext>) -> Box<dyn Processor> {
         let parent = self.parent.lock().unwrap();
         let cloned = SequenceProcessor::new(
             parent.sequence_type,
@@ -223,7 +222,7 @@ impl Processor for SequenceProcessorSide {
             parent.second_min,
             parent.second_max,
             parent.within_time,
-            Arc::clone(&parent.meta.siddhi_app_context),
+            Arc::clone(&parent.meta.eventflux_app_context),
             Arc::clone(ctx),
         );
         let arc = Arc::new(Mutex::new(cloned));
@@ -234,12 +233,21 @@ impl Processor for SequenceProcessorSide {
         Box::new(side)
     }
 
-    fn get_siddhi_app_context(&self) -> Arc<SiddhiAppContext> {
-        self.parent.lock().unwrap().meta.siddhi_app_context.clone()
+    fn get_eventflux_app_context(&self) -> Arc<EventFluxAppContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .eventflux_app_context
+            .clone()
     }
 
-    fn get_siddhi_query_context(&self) -> Arc<SiddhiQueryContext> {
-        self.parent.lock().unwrap().meta.get_siddhi_query_context()
+    fn get_eventflux_query_context(&self) -> Arc<EventFluxQueryContext> {
+        self.parent
+            .lock()
+            .unwrap()
+            .meta
+            .get_eventflux_query_context()
     }
 
     fn get_processing_mode(&self) -> ProcessingMode {

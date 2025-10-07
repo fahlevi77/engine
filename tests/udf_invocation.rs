@@ -1,17 +1,17 @@
-// TODO: NOT PART OF M1 - UDF invocation test uses old SiddhiQL syntax
+// TODO: NOT PART OF M1 - UDF invocation test uses old EventFluxQL syntax
 // Test uses "define stream" which is not supported by SQL parser.
 // See feat/grammar/GRAMMAR_STATUS.md for M1 feature list.
 
 #[path = "common/mod.rs"]
 mod common;
 use common::AppRunner;
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::query_api::definition::attribute::Type as AttrType;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+use eventflux_rust::query_api::definition::attribute::Type as AttrType;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -28,7 +28,7 @@ impl Clone for PlusOneFn {
 impl ExpressionExecutor for PlusOneFn {
     fn execute(
         &self,
-        event: Option<&dyn siddhi_rust::core::event::complex_event::ComplexEvent>,
+        event: Option<&dyn eventflux_rust::core::event::complex_event::ComplexEvent>,
     ) -> Option<AttributeValue> {
         let v = self.arg.as_ref()?.execute(event)?;
         match v {
@@ -41,7 +41,7 @@ impl ExpressionExecutor for PlusOneFn {
         AttrType::INT
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }
@@ -50,7 +50,7 @@ impl ScalarFunctionExecutor for PlusOneFn {
     fn init(
         &mut self,
         args: &Vec<Box<dyn ExpressionExecutor>>,
-        ctx: &Arc<SiddhiAppContext>,
+        ctx: &Arc<EventFluxAppContext>,
     ) -> Result<(), String> {
         if args.len() != 1 {
             return Err("plusOne expects one argument".to_string());
@@ -68,9 +68,9 @@ impl ScalarFunctionExecutor for PlusOneFn {
 }
 
 #[tokio::test]
-#[ignore = "Old SiddhiQL syntax not part of M1"]
+#[ignore = "Old EventFluxQL syntax not part of M1"]
 async fn udf_invoked_in_query() {
-    let mut manager = SiddhiManager::new();
+    let mut manager = EventFluxManager::new();
     manager.add_scalar_function_factory("plusOne".to_string(), Box::new(PlusOneFn::default()));
 
     let app = "\

@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.core.config.SiddhiContext
+// Corresponds to io.eventflux.core.config.EventFluxContext
 use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard}; // For shared, thread-safe components, Added RwLockReadGuard
 
@@ -21,9 +21,9 @@ use crate::core::persistence::{IncrementalPersistenceStore, PersistenceStore};
 
 use crate::core::stream::output::error_store::ErrorStore;
 
-use crate::core::config::siddhi_app_context::SiddhiAppContext;
+use crate::core::config::eventflux_app_context::EventFluxAppContext;
 use crate::core::persistence::data_source::{DataSource, DataSourceConfig}; // Using actual DataSource trait
-                                                                           // use crate::query_api::siddhi_app::SiddhiApp; // TODO: Will be used when implementing app management
+                                                                           // use crate::query_api::eventflux_app::EventFluxApp; // TODO: Will be used when implementing app management
                                                                            // pub trait ConfigManager {} // Example
                                                                            // pub type ConfigManagerType = Arc<dyn ConfigManager + Send + Sync>;
 pub type ConfigManagerPlaceholder = String; // Simplified
@@ -54,16 +54,16 @@ use crate::core::executor::function::ScalarFunctionExecutor; // Added
 use crate::core::table::Table;
 use std::sync::RwLock; // Added for scalar_function_factories and attributes, data_sources
 
-/// Shared context for all Siddhi Apps in a SiddhiManager instance.
+/// Shared context for all EventFlux Apps in a EventFluxManager instance.
 // Custom Debug is implemented to avoid requiring Debug on trait objects.
 #[repr(C)]
-pub struct SiddhiContext {
+pub struct EventFluxContext {
     pub statistics_configuration: StatisticsConfiguration,
     attributes: Arc<RwLock<HashMap<String, AttributeValuePlaceholder>>>,
 
     // --- Placeholders mirroring Java fields ---
-    siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
-    deprecated_siddhi_extensions: HashMap<String, ExtensionClassPlaceholder>,
+    eventflux_extensions: HashMap<String, ExtensionClassPlaceholder>,
+    deprecated_eventflux_extensions: HashMap<String, ExtensionClassPlaceholder>,
     persistence_store: Arc<RwLock<Option<Arc<dyn PersistenceStore>>>>,
     incremental_persistence_store: Arc<RwLock<Option<Arc<dyn IncrementalPersistenceStore>>>>,
     error_store: Option<Arc<dyn ErrorStore>>,
@@ -74,7 +74,7 @@ pub struct SiddhiContext {
     record_table_handler_manager: Option<RecordTableHandlerManagerPlaceholder>,
     default_disrupter_exception_handler: DisruptorExceptionHandlerPlaceholder,
 
-    /// Default buffer size for StreamJunctions created when parsing Siddhi apps.
+    /// Default buffer size for StreamJunctions created when parsing EventFlux apps.
     default_junction_buffer_size: usize,
     /// Whether StreamJunctions should run asynchronously by default when no
     /// annotation overrides the mode.
@@ -113,10 +113,10 @@ pub struct SiddhiContext {
     /// Named executor services for asynchronous processing.
     pub executor_services: Arc<crate::core::util::executor_service::ExecutorServiceRegistry>,
 
-    pub dummy_field_siddhi_context_extensions: String,
+    pub dummy_field_eventflux_context_extensions: String,
 }
 
-impl SiddhiContext {
+impl EventFluxContext {
     pub fn new() -> Self {
         let mut ctx = Self {
             statistics_configuration: StatisticsConfiguration::default(),
@@ -136,8 +136,8 @@ impl SiddhiContext {
             executor_services: Arc::new(
                 crate::core::util::executor_service::ExecutorServiceRegistry::new(),
             ),
-            siddhi_extensions: HashMap::new(),
-            deprecated_siddhi_extensions: HashMap::new(),
+            eventflux_extensions: HashMap::new(),
+            deprecated_eventflux_extensions: HashMap::new(),
             persistence_store: Arc::new(RwLock::new(None)),
             incremental_persistence_store: Arc::new(RwLock::new(None)),
             error_store: None,
@@ -150,7 +150,7 @@ impl SiddhiContext {
             // Increased default async buffer to handle high throughput tests
             default_junction_buffer_size: 4096,
             default_junction_async: false,
-            dummy_field_siddhi_context_extensions: String::new(),
+            dummy_field_eventflux_context_extensions: String::new(),
         };
         let default_threads = crate::core::util::executor_service::pool_size_from_env(
             "default",
@@ -176,8 +176,8 @@ impl SiddhiContext {
     }
 
     // Example methods translated (simplified)
-    pub fn get_siddhi_extensions(&self) -> &HashMap<String, String> {
-        &self.siddhi_extensions
+    pub fn get_eventflux_extensions(&self) -> &HashMap<String, String> {
+        &self.eventflux_extensions
     }
 
     pub fn get_persistence_store(&self) -> Option<Arc<dyn PersistenceStore>> {
@@ -227,10 +227,10 @@ impl SiddhiContext {
         mut data_source: Arc<dyn DataSource>,
     ) -> Result<(), String> {
         if let Some(cfg) = self.data_source_configs.read().unwrap().get(&name).cloned() {
-            let dummy_ctx = Arc::new(SiddhiAppContext::new(
+            let dummy_ctx = Arc::new(EventFluxAppContext::new(
                 Arc::new(self.clone()),
                 "__ds_init__".to_string(),
-                Arc::new(crate::query_api::siddhi_app::SiddhiApp::default()),
+                Arc::new(crate::query_api::eventflux_app::EventFluxApp::default()),
                 String::new(),
             ));
 
@@ -606,14 +606,14 @@ impl SiddhiContext {
     }
 }
 
-impl Default for SiddhiContext {
+impl Default for EventFluxContext {
     fn default() -> Self {
         Self::new()
     }
 }
 
-// Clone implementation for SiddhiContext needs to handle Arc fields by cloning the Arc, not the underlying data.
-impl Clone for SiddhiContext {
+// Clone implementation for EventFluxContext needs to handle Arc fields by cloning the Arc, not the underlying data.
+impl Clone for EventFluxContext {
     fn clone(&self) -> Self {
         Self {
             statistics_configuration: self.statistics_configuration.clone(),
@@ -631,8 +631,8 @@ impl Clone for SiddhiContext {
             data_sources: Arc::clone(&self.data_sources),
             tables: Arc::clone(&self.tables),
             executor_services: Arc::clone(&self.executor_services),
-            siddhi_extensions: self.siddhi_extensions.clone(),
-            deprecated_siddhi_extensions: self.deprecated_siddhi_extensions.clone(),
+            eventflux_extensions: self.eventflux_extensions.clone(),
+            deprecated_eventflux_extensions: self.deprecated_eventflux_extensions.clone(),
             persistence_store: self.persistence_store.clone(),
             incremental_persistence_store: self.incremental_persistence_store.clone(),
             error_store: self.error_store.clone(),
@@ -644,16 +644,16 @@ impl Clone for SiddhiContext {
             default_disrupter_exception_handler: self.default_disrupter_exception_handler.clone(),
             default_junction_buffer_size: self.default_junction_buffer_size,
             default_junction_async: self.default_junction_async,
-            dummy_field_siddhi_context_extensions: self
-                .dummy_field_siddhi_context_extensions
+            dummy_field_eventflux_context_extensions: self
+                .dummy_field_eventflux_context_extensions
                 .clone(),
         }
     }
 }
 
-impl std::fmt::Debug for SiddhiContext {
+impl std::fmt::Debug for EventFluxContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SiddhiContext")
+        f.debug_struct("EventFluxContext")
             .field("statistics_configuration", &self.statistics_configuration)
             .finish()
     }

@@ -1,4 +1,4 @@
-# Siddhi Rust Implementation Milestones
+# EventFlux Rust Implementation Milestones
 
 **Purpose**: This document provides a clear roadmap of upcoming releases and features, helping users understand the product evolution and plan their adoption strategy.
 
@@ -10,7 +10,7 @@
 
 ## Product Vision
 
-Siddhi Rust aims to deliver an enterprise-grade Complex Event Processing (CEP) engine that combines:
+EventFlux Rust aims to deliver an enterprise-grade Complex Event Processing (CEP) engine that combines:
 - **SQL Familiarity**: Standard SQL syntax for stream processing
 - **High Performance**: >1M events/sec with <1ms latency
 - **Type Safety**: Compile-time guarantees eliminating runtime errors
@@ -41,12 +41,12 @@ Siddhi Rust aims to deliver an enterprise-grade Complex Event Processing (CEP) e
 **Status**: ✅ COMPLETE (2025-10-06)
 
 ### Goals
-Enable developers to write stream processing queries using familiar SQL syntax, making Siddhi accessible to a broader audience while maintaining the existing robust runtime.
+Enable developers to write stream processing queries using familiar SQL syntax, making EventFlux accessible to a broader audience while maintaining the existing robust runtime.
 
 ### Key Features
 
 #### 1. SQL-First Parser Integration
-- ✅ **Implemented**: sqlparser-rs integration with custom SiddhiDialect (production-ready)
+- ✅ **Implemented**: sqlparser-rs integration with custom EventFluxDialect (production-ready)
 - ✅ **SQL Syntax Complete**:
   - `CREATE STREAM` with schema definition
   - `SELECT ... FROM stream` with projections
@@ -105,9 +105,9 @@ EMIT CHANGES;
 - [x] Production-ready SQL parser - ✅ **COMPLETE** (sqlparser-rs integrated)
 
 ### Migration Path
-- ✅ SQL-only engine (no SiddhiQL support in M1)
+- ✅ SQL-only engine (no EventFluxQL support in M1)
 - ✅ Migration guide available in feat/grammar/GRAMMAR.md
-- ✅ All tests converted from old SiddhiQL to SQL syntax where applicable
+- ✅ All tests converted from old EventFluxQL to SQL syntax where applicable
 
 ---
 
@@ -118,7 +118,7 @@ EMIT CHANGES;
 **Status**: 📋 Next Priority
 
 ### Goals
-Enable production deployments by implementing critical I/O connectors, allowing Siddhi to integrate with external systems and data sources.
+Enable production deployments by implementing critical I/O connectors, allowing EventFlux to integrate with external systems and data sources.
 
 ### Key Features
 
@@ -368,7 +368,7 @@ WHERE timestamp > now() - 30 minutes;
 ### Migration Impact
 - Additive only - existing windows unchanged
 - New window types available via SQL syntax
-- Backward compatible with SiddhiQL window syntax
+- Backward compatible with EventFluxQL window syntax
 
 ---
 
@@ -660,7 +660,7 @@ Activate the existing distributed processing framework, enabling horizontal scal
     ┌─────────┴──────────┐
     │                    │
 ┌───▼────┐  ┌────────┐  ┌────────┐
-│ Node 1 │  │ Node 2 │  │ Node N │  ← Siddhi Processing Nodes
+│ Node 1 │  │ Node 2 │  │ Node N │  ← EventFlux Processing Nodes
 │(Leader)│  │        │  │        │
 └───┬────┘  └───┬────┘  └───┬────┘
     │           │           │
@@ -678,7 +678,7 @@ Activate the existing distributed processing framework, enabling horizontal scal
 
 ```yaml
 # Distributed mode configuration
-siddhi:
+eventflux:
   runtime:
     mode: distributed
     cluster:
@@ -1083,7 +1083,7 @@ ORDER BY day, daily_requests DESC;
 - ✅ Comprehensive documentation with 200+ examples
 - ✅ IDE integration and syntax highlighting
 - ✅ Query debugging and profiling tools
-- ✅ Migration guides from Java Siddhi
+- ✅ Migration guides from Java EventFlux
 
 #### Operations
 - ✅ Kubernetes operators and Helm charts
@@ -1165,7 +1165,7 @@ This milestone roadmap provides a clear path to delivering a production-ready, e
 - **Scale**: Distributed processing to 10+ nodes
 - **Enterprise**: Security, monitoring, and reliability
 
-By following this incremental delivery approach, users can adopt Siddhi Rust early and benefit from continuous improvements, while developers maintain focus on delivering working, valuable features at each milestone.
+By following this incremental delivery approach, users can adopt EventFlux Rust early and benefit from continuous improvements, while developers maintain focus on delivering working, valuable features at each milestone.
 
 **Last Milestone Completed**: M1 - SQL Streaming Foundation (2025-10-06)
 **Next Update**: Q3 2025 (after M2 completion)

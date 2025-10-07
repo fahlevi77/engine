@@ -1,4 +1,4 @@
-// Corresponds to io.siddhi.query.api.execution.ExecutionElement
+// Corresponds to io.eventflux.query.api.execution.ExecutionElement
 
 use crate::query_api::annotation::Annotation;
 use crate::query_api::execution::partition::Partition;
@@ -43,4 +43,4 @@ impl ExecutionElementTrait for ExecutionElement {
 // impl ExecutionElementTrait for Partition { ... }
 // This is consistent. Query.rs would need a similar direct implementation if not already present.
 // The Java interface `ExecutionElement` only has `getAnnotations()`.
-// `SiddhiElement` (for query context) is implemented by `Query` and `Partition` separately.
+// `EventFluxElement` (for query context) is implemented by `Query` and `Partition` separately.

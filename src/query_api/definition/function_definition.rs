@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.definition.FunctionDefinition
+// Corresponds to io.eventflux.query.api.definition.FunctionDefinition
 use crate::query_api::annotation::Annotation;
 use crate::query_api::definition::attribute::Type as AttributeType;
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct FunctionDefinition {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // FunctionDefinition fields
     pub id: String,
@@ -19,7 +19,7 @@ impl FunctionDefinition {
     // Constructor requiring all essential fields.
     pub fn new(id: String, language: String, body: String, return_type: AttributeType) -> Self {
         FunctionDefinition {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             id,
             language,
             body,
@@ -39,7 +39,7 @@ impl FunctionDefinition {
         FunctionDefinition {
             id,
             annotations: Vec::new(),
-            ..Default::default() // Sets siddhi_element, language, body, return_type to default
+            ..Default::default() // Sets eventflux_element, language, body, return_type to default
         }
     }
 
@@ -66,13 +66,13 @@ impl FunctionDefinition {
     }
 }
 
-// Removed: impl From<SiddhiElement> for FunctionDefinition
+// Removed: impl From<EventFluxElement> for FunctionDefinition
 
 // For direct field access via Deref, if desired:
 // impl std::ops::Deref for FunctionDefinition {
-//     type Target = SiddhiElement;
-//     fn deref(&self) -> &Self::Target { &self.siddhi_element }
+//     type Target = EventFluxElement;
+//     fn deref(&self) -> &Self::Target { &self.eventflux_element }
 // }
 // impl std::ops::DerefMut for FunctionDefinition {
-//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.siddhi_element }
+//     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.eventflux_element }
 // }

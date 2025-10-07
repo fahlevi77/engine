@@ -1,5 +1,5 @@
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::table::{
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::table::{
     CacheTable, InMemoryCompiledCondition, InMemoryCompiledUpdateSet, Table,
 };
 

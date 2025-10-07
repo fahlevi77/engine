@@ -1,8 +1,8 @@
 use super::events_output_rate::EventsOutputRate;
 use super::snapshot_output_rate::SnapshotOutputRate;
 use super::time_output_rate::TimeOutputRate;
-use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue};
-use crate::query_api::siddhi_element::SiddhiElement; // Use renamed ConstantValue
+use crate::query_api::eventflux_element::EventFluxElement;
+use crate::query_api::expression::constant::{Constant, ConstantValueWithFloat as ConstantValue}; // Use renamed ConstantValue
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Default)] // Added Eq, Hash, Copy
 pub enum OutputRateBehavior {
@@ -22,7 +22,7 @@ pub enum OutputRateVariant {
 impl Default for OutputRateVariant {
     fn default() -> Self {
         // Default to "output every event" which is EventOutputRate with ALL behavior and a count of 1 (or similar)
-        // Or, more simply, just "ALL events" without specific count/time, if that's a valid standalone concept in Siddhi.
+        // Or, more simply, just "ALL events" without specific count/time, if that's a valid standalone concept in EventFlux.
         // Java's default Query has no OutputRate. If one is added, `output every events` is common.
         // Let's default to a conceptual "all events without specific rate control"
         // which could be represented by EventsOutputRate(count=some_very_high_number or special_value, OutputRateBehavior::All)
@@ -35,7 +35,7 @@ impl Default for OutputRateVariant {
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct OutputRate {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
     pub variant: OutputRateVariant,
 }
 
@@ -43,7 +43,7 @@ impl OutputRate {
     // Constructor for specific variant
     pub fn new(variant: OutputRateVariant) -> Self {
         OutputRate {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             variant,
         }
     }

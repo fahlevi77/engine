@@ -1,7 +1,7 @@
+use crate::core::config::{ConfigValue, ProcessorConfigReader};
 use crate::core::event::event::Event;
 use crate::core::stream::output::sink::sink_trait::Sink;
 use crate::core::stream::output::stream_callback::StreamCallback;
-use crate::core::config::{ProcessorConfigReader, ConfigValue};
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
@@ -42,7 +42,9 @@ impl LogSink {
     /// Get the configured prefix for this sink
     fn get_prefix(&self) -> String {
         if let Some(ref config_reader) = self.config_reader {
-            if let Some(ConfigValue::String(prefix)) = config_reader.get_sink_config(&self.sink_name, "prefix") {
+            if let Some(ConfigValue::String(prefix)) =
+                config_reader.get_sink_config(&self.sink_name, "prefix")
+            {
                 return prefix;
             }
         }

@@ -1,19 +1,19 @@
-use siddhi_rust::core::config::siddhi_app_context::SiddhiAppContext;
-use siddhi_rust::core::config::siddhi_query_context::SiddhiQueryContext;
-use siddhi_rust::core::event::value::AttributeValue;
-use siddhi_rust::core::siddhi_manager::SiddhiManager;
-use siddhi_rust::core::util::parser::{parse_expression, ExpressionParserContext};
-use siddhi_rust::query_api::definition::attribute::Type as ApiAttributeType;
-use siddhi_rust::query_api::expression::Expression;
-use siddhi_rust::query_api::siddhi_app::SiddhiApp;
+use eventflux_rust::core::config::eventflux_app_context::EventFluxAppContext;
+use eventflux_rust::core::config::eventflux_query_context::EventFluxQueryContext;
+use eventflux_rust::core::event::value::AttributeValue;
+use eventflux_rust::core::eventflux_manager::EventFluxManager;
+use eventflux_rust::core::util::parser::{parse_expression, ExpressionParserContext};
+use eventflux_rust::query_api::definition::attribute::Type as ApiAttributeType;
+use eventflux_rust::query_api::eventflux_app::EventFluxApp;
+use eventflux_rust::query_api::expression::Expression;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use siddhi_rust::core::event::complex_event::ComplexEvent;
-use siddhi_rust::core::executor::expression_executor::ExpressionExecutor;
-use siddhi_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
+use eventflux_rust::core::event::complex_event::ComplexEvent;
+use eventflux_rust::core::executor::expression_executor::ExpressionExecutor;
+use eventflux_rust::core::executor::function::scalar_function_executor::ScalarFunctionExecutor;
 
 #[derive(Debug)]
 struct StatefulCountFunction {
@@ -49,7 +49,7 @@ impl ExpressionExecutor for StatefulCountFunction {
         ApiAttributeType::INT
     }
 
-    fn clone_executor(&self, _ctx: &Arc<SiddhiAppContext>) -> Box<dyn ExpressionExecutor> {
+    fn clone_executor(&self, _ctx: &Arc<EventFluxAppContext>) -> Box<dyn ExpressionExecutor> {
         Box::new(self.clone())
     }
 }
@@ -58,7 +58,7 @@ impl ScalarFunctionExecutor for StatefulCountFunction {
     fn init(
         &mut self,
         _arg_execs: &Vec<Box<dyn ExpressionExecutor>>,
-        _ctx: &Arc<SiddhiAppContext>,
+        _ctx: &Arc<EventFluxAppContext>,
     ) -> Result<(), String> {
         Ok(())
     }
@@ -78,23 +78,23 @@ impl ScalarFunctionExecutor for StatefulCountFunction {
     }
 }
 
-fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
-    let app_ctx = Arc::new(SiddhiAppContext::new(
-        manager.siddhi_context(),
+fn parser_ctx(manager: &EventFluxManager) -> ExpressionParserContext<'static> {
+    let app_ctx = Arc::new(EventFluxAppContext::new(
+        manager.eventflux_context(),
         "test_app".to_string(),
-        Arc::new(SiddhiApp::new("test_app".to_string())),
+        Arc::new(EventFluxApp::new("test_app".to_string())),
         String::new(),
     ));
 
-    let query_ctx = Arc::new(SiddhiQueryContext::new(
+    let query_ctx = Arc::new(EventFluxQueryContext::new(
         Arc::clone(&app_ctx),
         "q".to_string(),
         None,
     ));
 
     ExpressionParserContext {
-        siddhi_app_context: app_ctx,
-        siddhi_query_context: query_ctx,
+        eventflux_app_context: app_ctx,
+        eventflux_query_context: query_ctx,
         stream_meta_map: HashMap::new(),
         table_meta_map: HashMap::new(),
         window_meta_map: HashMap::new(),
@@ -108,7 +108,7 @@ fn parser_ctx(manager: &SiddhiManager) -> ExpressionParserContext<'static> {
 
 #[test]
 fn test_stateful_udf() {
-    let manager = SiddhiManager::new();
+    let manager = EventFluxManager::new();
     manager.add_scalar_function_factory(
         "statefulCount".to_string(),
         Box::new(StatefulCountFunction::new()),

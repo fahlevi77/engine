@@ -1,11 +1,11 @@
-// Corresponds to io.siddhi.query.api.execution.query.input.state.StreamStateElement
-use crate::query_api::siddhi_element::SiddhiElement;
+// Corresponds to io.eventflux.query.api.execution.query.input.state.StreamStateElement
+use crate::query_api::eventflux_element::EventFluxElement;
 // BasicSingleInputStream functionality is now part of SingleInputStream via SingleInputStreamKind::Basic
 use crate::query_api::execution::query::input::stream::SingleInputStream;
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct StreamStateElement {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
 
     // StreamStateElement fields
     // Changed from BasicSingleInputStream to SingleInputStream.
@@ -19,7 +19,7 @@ impl StreamStateElement {
         // It's up to the caller to ensure the provided SingleInputStream is appropriate
         // (e.g., of a Basic kind for most pattern stream elements).
         StreamStateElement {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             basic_single_input_stream: single_input_stream,
         }
     }
@@ -36,7 +36,7 @@ impl StreamStateElement {
     }
 }
 
-// SiddhiElement is composed. Access via self.siddhi_element.
-// No direct impl of SiddhiElement trait needed if using composition and public field,
-// unless it needs to be passed as `dyn SiddhiElement`.
-// The StateElement enum's SiddhiElement impl handles dispatching to this composed element.
+// EventFluxElement is composed. Access via self.eventflux_element.
+// No direct impl of EventFluxElement trait needed if using composition and public field,
+// unless it needs to be passed as `dyn EventFluxElement`.
+// The StateElement enum's EventFluxElement impl handles dispatching to this composed element.

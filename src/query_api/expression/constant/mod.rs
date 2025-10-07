@@ -1,4 +1,4 @@
-use crate::query_api::siddhi_element::SiddhiElement;
+use crate::query_api::eventflux_element::EventFluxElement;
 
 // Individual constant files (bool_constant.rs, etc.) are not needed with this unified approach.
 // Removing their module declarations.
@@ -57,14 +57,14 @@ impl Default for ConstantValueWithFloat {
 
 #[derive(Clone, Debug, PartialEq, Default)] // Added Default
 pub struct Constant {
-    pub siddhi_element: SiddhiElement, // Composed SiddhiElement
-    pub value: ConstantValueWithFloat, // Using the renamed enum that includes floats
+    pub eventflux_element: EventFluxElement, // Composed EventFluxElement
+    pub value: ConstantValueWithFloat,       // Using the renamed enum that includes floats
 }
 
 impl Constant {
     pub fn new(value: ConstantValueWithFloat) -> Self {
         Constant {
-            siddhi_element: SiddhiElement::default(),
+            eventflux_element: EventFluxElement::default(),
             value,
         }
     }
@@ -177,7 +177,7 @@ mod tests {
             c.get_value(),
             &ConstantValueWithFloat::String("hello".to_string())
         );
-        assert_eq!(c.siddhi_element.query_context_start_index, None);
+        assert_eq!(c.eventflux_element.query_context_start_index, None);
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
     fn test_constant_default() {
         let c = Constant::default();
         assert_eq!(c.get_value(), &ConstantValueWithFloat::default()); // String("")
-        assert_eq!(c.siddhi_element.query_context_start_index, None);
+        assert_eq!(c.eventflux_element.query_context_start_index, None);
     }
 
     #[test]

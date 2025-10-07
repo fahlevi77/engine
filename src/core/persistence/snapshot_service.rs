@@ -13,7 +13,7 @@ use super::persistence_store::PersistenceStore;
 pub struct SnapshotService {
     state: Mutex<Vec<u8>>, // serialized runtime state
     pub persistence_store: Option<Arc<dyn PersistenceStore>>,
-    pub siddhi_app_id: String,
+    pub eventflux_app_id: String,
     state_holders: Mutex<HashMap<String, Arc<Mutex<dyn StateHolder>>>>,
 }
 
@@ -26,17 +26,17 @@ struct SnapshotData {
 impl std::fmt::Debug for SnapshotService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SnapshotService")
-            .field("siddhi_app_id", &self.siddhi_app_id)
+            .field("eventflux_app_id", &self.eventflux_app_id)
             .finish()
     }
 }
 
 impl SnapshotService {
-    pub fn new(siddhi_app_id: String) -> Self {
+    pub fn new(eventflux_app_id: String) -> Self {
         Self {
             state: Mutex::new(Vec::new()),
             persistence_store: None,
-            siddhi_app_id,
+            eventflux_app_id,
             state_holders: Mutex::new(HashMap::new()),
         }
     }
@@ -83,7 +83,7 @@ impl SnapshotService {
             .as_ref()
             .ok_or("No persistence store")?;
         let revision = Utc::now().timestamp_millis().to_string();
-        store.save(&self.siddhi_app_id, &revision, &data);
+        store.save(&self.eventflux_app_id, &revision, &data);
         Ok(revision)
     }
 
@@ -93,14 +93,15 @@ impl SnapshotService {
             .persistence_store
             .as_ref()
             .ok_or("No persistence store")?;
-        if let Some(data) = store.load(&self.siddhi_app_id, revision) {
+        if let Some(data) = store.load(&self.eventflux_app_id, revision) {
             let snap: SnapshotData = from_bytes(&data).map_err(|e| e.to_string())?;
             self.set_state(snap.main);
             for (id, bytes) in snap.holders {
                 println!("Restoring state for component: {}", id);
                 if let Some(holder) = self.state_holders.lock().unwrap().get(&id) {
                     // Create a temporary snapshot for deserialization
-                    let checksum = crate::core::persistence::StateSnapshot::calculate_checksum(&bytes);
+                    let checksum =
+                        crate::core::persistence::StateSnapshot::calculate_checksum(&bytes);
                     let temp_snapshot = crate::core::persistence::StateSnapshot {
                         version: crate::core::persistence::SchemaVersion::new(1, 0, 0),
                         checkpoint_id: 0,

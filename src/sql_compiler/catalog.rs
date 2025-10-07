@@ -4,10 +4,10 @@
 
 use crate::query_api::definition::attribute::{Attribute, Type as AttributeType};
 use crate::query_api::definition::{StreamDefinition, TableDefinition};
+use crate::query_api::eventflux_app::EventFluxApp;
 use crate::query_api::execution::query::Query;
 use crate::query_api::execution::ExecutionElement;
 use crate::query_api::expression::Expression;
-use crate::query_api::siddhi_app::SiddhiApp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -32,7 +32,11 @@ impl SqlCatalog {
     }
 
     /// Register a stream definition
-    pub fn register_stream(&mut self, name: String, definition: StreamDefinition) -> Result<(), DdlError> {
+    pub fn register_stream(
+        &mut self,
+        name: String,
+        definition: StreamDefinition,
+    ) -> Result<(), DdlError> {
         if self.streams.contains_key(&name) {
             return Err(DdlError::DuplicateStream(name));
         }
@@ -75,7 +79,9 @@ impl SqlCatalog {
     /// Check if a column exists in a stream
     pub fn has_column(&self, stream_name: &str, column_name: &str) -> bool {
         if let Ok(stream) = self.get_stream(stream_name) {
-            stream.abstract_definition.get_attribute_list()
+            stream
+                .abstract_definition
+                .get_attribute_list()
                 .iter()
                 .any(|attr| attr.get_name() == column_name)
         } else {
@@ -84,16 +90,25 @@ impl SqlCatalog {
     }
 
     /// Get column type from a stream
-    pub fn get_column_type(&self, stream_name: &str, column_name: &str) -> Result<AttributeType, DdlError> {
+    pub fn get_column_type(
+        &self,
+        stream_name: &str,
+        column_name: &str,
+    ) -> Result<AttributeType, DdlError> {
         let stream = self.get_stream(stream_name)?;
 
-        stream.abstract_definition.get_attribute_list()
+        stream
+            .abstract_definition
+            .get_attribute_list()
             .iter()
             .find(|attr| attr.get_name() == column_name)
             .map(|attr| attr.get_type().clone())
-            .ok_or_else(|| DdlError::InvalidCreateStream(
-                format!("Column {} not found in stream {}", column_name, stream_name)
-            ))
+            .ok_or_else(|| {
+                DdlError::InvalidCreateStream(format!(
+                    "Column {} not found in stream {}",
+                    column_name, stream_name
+                ))
+            })
     }
 
     /// Get all columns from a stream
@@ -147,9 +162,9 @@ impl SqlApplication {
         self.queries.is_empty()
     }
 
-    /// Convert to SiddhiApp for runtime creation
-    pub fn to_siddhi_app(self, app_name: String) -> SiddhiApp {
-        let mut app = SiddhiApp::new(app_name);
+    /// Convert to EventFluxApp for runtime creation
+    pub fn to_eventflux_app(self, app_name: String) -> EventFluxApp {
+        let mut app = EventFluxApp::new(app_name);
 
         // Add all stream definitions from catalog
         for (stream_name, stream_def) in self.catalog.streams {
@@ -165,7 +180,8 @@ impl SqlApplication {
         for query in &self.queries {
             // Extract target stream name from query's output stream
             let output_stream = query.get_output_stream();
-            let target_stream_name = output_stream.get_target_id()
+            let target_stream_name = output_stream
+                .get_target_id()
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "OutputStream".to_string());
 
@@ -188,10 +204,8 @@ impl SqlApplication {
                     output_stream = output_stream.attribute(attr_name, AttributeType::STRING);
                 }
 
-                app.stream_definition_map.insert(
-                    target_stream_name,
-                    Arc::new(output_stream)
-                );
+                app.stream_definition_map
+                    .insert(target_stream_name, Arc::new(output_stream));
             }
         }
 
@@ -220,7 +234,9 @@ mod tests {
         let stream = StreamDefinition::new("TestStream".to_string())
             .attribute("col1".to_string(), AttributeType::STRING);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
         assert!(!catalog.is_empty());
         assert!(catalog.get_stream("TestStream").is_ok());
     }
@@ -231,7 +247,9 @@ mod tests {
         let stream1 = StreamDefinition::new("TestStream".to_string());
         let stream2 = StreamDefinition::new("TestStream".to_string());
 
-        catalog.register_stream("TestStream".to_string(), stream1).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream1)
+            .unwrap();
         let result = catalog.register_stream("TestStream".to_string(), stream2);
         assert!(result.is_err());
     }
@@ -243,7 +261,9 @@ mod tests {
             .attribute("col1".to_string(), AttributeType::STRING)
             .attribute("col2".to_string(), AttributeType::INT);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
         assert!(catalog.has_column("TestStream", "col1"));
         assert!(catalog.has_column("TestStream", "col2"));
         assert!(!catalog.has_column("TestStream", "col3"));
@@ -256,7 +276,9 @@ mod tests {
             .attribute("name".to_string(), AttributeType::STRING)
             .attribute("age".to_string(), AttributeType::INT);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
 
         let name_type = catalog.get_column_type("TestStream", "name").unwrap();
         assert_eq!(name_type, AttributeType::STRING);
@@ -272,7 +294,9 @@ mod tests {
             .attribute("col1".to_string(), AttributeType::STRING)
             .attribute("col2".to_string(), AttributeType::INT);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
         let columns = catalog.get_all_columns("TestStream").unwrap();
         assert_eq!(columns.len(), 2);
         assert_eq!(columns[0].get_name(), "col1");
@@ -285,7 +309,9 @@ mod tests {
         let stream = StreamDefinition::new("TestStream".to_string())
             .attribute("col1".to_string(), AttributeType::STRING);
 
-        catalog.register_stream("TestStream".to_string(), stream).unwrap();
+        catalog
+            .register_stream("TestStream".to_string(), stream)
+            .unwrap();
         catalog.register_alias("ts".to_string(), "TestStream".to_string());
 
         assert!(catalog.get_stream("ts").is_ok());

@@ -1,31 +1,31 @@
 //! Configuration Monitoring & Health Checks
-//! 
-//! Provides comprehensive monitoring configuration for Siddhi applications,
+//!
+//! Provides comprehensive monitoring configuration for EventFlux applications,
 //! including health checks, metrics collection, alerting, and observability features.
 
 use crate::core::config::types::duration_serde;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use serde::{Deserialize, Serialize};
 
 /// Main monitoring configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MonitoringConfig {
     /// Enable or disable monitoring globally
     pub enabled: bool,
-    
+
     /// Health check configuration
     pub health: HealthCheckConfig,
-    
+
     /// Metrics collection configuration
     pub metrics: MetricsConfig,
-    
+
     /// Alerting configuration
     pub alerting: Option<AlertingConfig>,
-    
+
     /// Observability settings (tracing, logging)
     pub observability: Option<ObservabilityConfig>,
-    
+
     /// Endpoints configuration for health and metrics
     pub endpoints: EndpointConfig,
 }
@@ -48,7 +48,7 @@ impl MonitoringConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Enable monitoring with default settings
     pub fn enabled() -> Self {
         Self {
@@ -56,7 +56,7 @@ impl MonitoringConfig {
             ..Self::default()
         }
     }
-    
+
     /// Disable monitoring
     pub fn disabled() -> Self {
         Self {
@@ -64,7 +64,7 @@ impl MonitoringConfig {
             ..Self::default()
         }
     }
-    
+
     /// Configure for development environment
     pub fn development() -> Self {
         Self {
@@ -76,7 +76,7 @@ impl MonitoringConfig {
             endpoints: EndpointConfig::development(),
         }
     }
-    
+
     /// Configure for production environment
     pub fn production() -> Self {
         Self {
@@ -88,7 +88,7 @@ impl MonitoringConfig {
             endpoints: EndpointConfig::production(),
         }
     }
-    
+
     /// Configure for Kubernetes deployment
     pub fn kubernetes() -> Self {
         Self {
@@ -100,21 +100,21 @@ impl MonitoringConfig {
             endpoints: EndpointConfig::kubernetes(),
         }
     }
-    
+
     /// Merge another monitoring configuration into this one
     pub fn merge(&mut self, other: MonitoringConfig) {
         self.enabled = other.enabled;
         self.health.merge(other.health);
         self.metrics.merge(other.metrics);
-        
+
         if other.alerting.is_some() {
             self.alerting = other.alerting;
         }
-        
+
         if other.observability.is_some() {
             self.observability = other.observability;
         }
-        
+
         self.endpoints.merge(other.endpoints);
     }
 }
@@ -124,30 +124,30 @@ impl MonitoringConfig {
 pub struct HealthCheckConfig {
     /// Enable health checks
     pub enabled: bool,
-    
+
     /// Health check interval
     #[serde(with = "duration_serde")]
     pub interval: Duration,
-    
+
     /// Health check timeout
     #[serde(with = "duration_serde")]
     pub timeout: Duration,
-    
+
     /// Failure threshold before marking unhealthy
     pub failure_threshold: u32,
-    
+
     /// Success threshold before marking healthy again
     pub success_threshold: u32,
-    
+
     /// Individual health checks to perform
     pub checks: Vec<HealthCheck>,
-    
+
     /// Startup probe configuration
     pub startup: Option<ProbeConfig>,
-    
+
     /// Readiness probe configuration
     pub readiness: Option<ProbeConfig>,
-    
+
     /// Liveness probe configuration
     pub liveness: Option<ProbeConfig>,
 }
@@ -182,7 +182,7 @@ impl HealthCheckConfig {
             ..Self::default()
         }
     }
-    
+
     /// Production configuration
     pub fn production() -> Self {
         Self {
@@ -193,7 +193,7 @@ impl HealthCheckConfig {
             ..Self::default()
         }
     }
-    
+
     /// Kubernetes configuration
     pub fn kubernetes() -> Self {
         Self {
@@ -207,7 +207,7 @@ impl HealthCheckConfig {
             ..Self::default()
         }
     }
-    
+
     /// Merge another health check configuration
     pub fn merge(&mut self, other: HealthCheckConfig) {
         self.enabled = other.enabled;
@@ -215,19 +215,19 @@ impl HealthCheckConfig {
         self.timeout = other.timeout;
         self.failure_threshold = other.failure_threshold;
         self.success_threshold = other.success_threshold;
-        
+
         if !other.checks.is_empty() {
             self.checks = other.checks;
         }
-        
+
         if other.startup.is_some() {
             self.startup = other.startup;
         }
-        
+
         if other.readiness.is_some() {
             self.readiness = other.readiness;
         }
-        
+
         if other.liveness.is_some() {
             self.liveness = other.liveness;
         }
@@ -239,16 +239,16 @@ impl HealthCheckConfig {
 pub struct HealthCheck {
     /// Health check name
     pub name: String,
-    
+
     /// Health check type
     pub check_type: HealthCheckType,
-    
+
     /// Check-specific configuration
     pub config: HashMap<String, String>,
-    
+
     /// Weight of this check in overall health (0.0 to 1.0)
     pub weight: f32,
-    
+
     /// Whether this check is critical for overall health
     pub critical: bool,
 }
@@ -260,7 +260,7 @@ impl HealthCheck {
         config.insert("max_cpu_percent".to_string(), "80".to_string());
         config.insert("max_memory_percent".to_string(), "85".to_string());
         config.insert("max_disk_percent".to_string(), "90".to_string());
-        
+
         Self {
             name: "system_resources".to_string(),
             check_type: HealthCheckType::SystemResource,
@@ -269,14 +269,14 @@ impl HealthCheck {
             critical: true,
         }
     }
-    
+
     /// Event processing health check
     pub fn event_processing() -> Self {
         let mut config = HashMap::new();
         config.insert("max_processing_latency_ms".to_string(), "1000".to_string());
         config.insert("min_throughput_eps".to_string(), "100".to_string());
         config.insert("max_error_rate_percent".to_string(), "1".to_string());
-        
+
         Self {
             name: "event_processing".to_string(),
             check_type: HealthCheckType::EventProcessing,
@@ -285,13 +285,16 @@ impl HealthCheck {
             critical: true,
         }
     }
-    
+
     /// State persistence health check
     pub fn state_persistence() -> Self {
         let mut config = HashMap::new();
         config.insert("max_checkpoint_age_minutes".to_string(), "10".to_string());
-        config.insert("min_checkpoint_success_rate".to_string(), "0.95".to_string());
-        
+        config.insert(
+            "min_checkpoint_success_rate".to_string(),
+            "0.95".to_string(),
+        );
+
         Self {
             name: "state_persistence".to_string(),
             check_type: HealthCheckType::StatePersistence,
@@ -307,19 +310,19 @@ impl HealthCheck {
 pub enum HealthCheckType {
     /// Check system resource usage
     SystemResource,
-    
+
     /// Check event processing performance
     EventProcessing,
-    
+
     /// Check state persistence health
     StatePersistence,
-    
+
     /// Check external dependency connectivity
     ExternalDependency,
-    
+
     /// Custom health check
     Custom,
-    
+
     /// HTTP endpoint check
     HttpEndpoint,
 }
@@ -329,16 +332,16 @@ pub enum HealthCheckType {
 pub struct ProbeConfig {
     /// Initial delay before first probe
     pub initial_delay: Duration,
-    
+
     /// Interval between probes
     pub period: Duration,
-    
+
     /// Probe timeout
     pub timeout: Duration,
-    
+
     /// Failure threshold
     pub failure_threshold: u32,
-    
+
     /// Success threshold
     pub success_threshold: u32,
 }
@@ -354,7 +357,7 @@ impl ProbeConfig {
             success_threshold: 1,
         }
     }
-    
+
     /// Readiness probe defaults
     pub fn readiness_default() -> Self {
         Self {
@@ -365,7 +368,7 @@ impl ProbeConfig {
             success_threshold: 1,
         }
     }
-    
+
     /// Liveness probe defaults
     pub fn liveness_default() -> Self {
         Self {
@@ -376,7 +379,7 @@ impl ProbeConfig {
             success_threshold: 1,
         }
     }
-    
+
     /// Kubernetes startup probe
     pub fn kubernetes_startup() -> Self {
         Self {
@@ -387,7 +390,7 @@ impl ProbeConfig {
             success_threshold: 1,
         }
     }
-    
+
     /// Kubernetes readiness probe
     pub fn kubernetes_readiness() -> Self {
         Self {
@@ -398,7 +401,7 @@ impl ProbeConfig {
             success_threshold: 1,
         }
     }
-    
+
     /// Kubernetes liveness probe
     pub fn kubernetes_liveness() -> Self {
         Self {
@@ -416,21 +419,21 @@ impl ProbeConfig {
 pub struct MetricsConfig {
     /// Enable metrics collection
     pub enabled: bool,
-    
+
     /// Metrics collection interval
     #[serde(with = "duration_serde")]
     pub collection_interval: Duration,
-    
+
     /// Metrics retention period
     #[serde(with = "duration_serde")]
     pub retention_period: Duration,
-    
+
     /// Metrics exporters configuration
     pub exporters: Vec<MetricsExporter>,
-    
+
     /// Custom metrics to collect
     pub custom_metrics: Vec<CustomMetric>,
-    
+
     /// Histogram buckets for latency metrics
     pub histogram_buckets: Vec<f64>,
 }
@@ -444,7 +447,7 @@ impl Default for MetricsConfig {
             exporters: vec![MetricsExporter::prometheus_default()],
             custom_metrics: Vec::new(),
             histogram_buckets: vec![
-                0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
+                0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
             ],
         }
     }
@@ -459,7 +462,7 @@ impl MetricsConfig {
             ..Self::default()
         }
     }
-    
+
     /// Production configuration
     pub fn production() -> Self {
         Self {
@@ -472,7 +475,7 @@ impl MetricsConfig {
             ..Self::default()
         }
     }
-    
+
     /// Kubernetes configuration
     pub fn kubernetes() -> Self {
         Self {
@@ -485,21 +488,21 @@ impl MetricsConfig {
             ..Self::default()
         }
     }
-    
+
     /// Merge another metrics configuration
     pub fn merge(&mut self, other: MetricsConfig) {
         self.enabled = other.enabled;
         self.collection_interval = other.collection_interval;
         self.retention_period = other.retention_period;
-        
+
         if !other.exporters.is_empty() {
             self.exporters = other.exporters;
         }
-        
+
         if !other.custom_metrics.is_empty() {
             self.custom_metrics = other.custom_metrics;
         }
-        
+
         if !other.histogram_buckets.is_empty() {
             self.histogram_buckets = other.histogram_buckets;
         }
@@ -511,13 +514,13 @@ impl MetricsConfig {
 pub struct MetricsExporter {
     /// Exporter name
     pub name: String,
-    
+
     /// Exporter type
     pub exporter_type: MetricsExporterType,
-    
+
     /// Exporter-specific configuration
     pub config: HashMap<String, String>,
-    
+
     /// Whether this exporter is enabled
     pub enabled: bool,
 }
@@ -528,7 +531,7 @@ impl MetricsExporter {
         let mut config = HashMap::new();
         config.insert("endpoint".to_string(), "/metrics".to_string());
         config.insert("port".to_string(), "9090".to_string());
-        
+
         Self {
             name: "prometheus".to_string(),
             exporter_type: MetricsExporterType::Prometheus,
@@ -536,14 +539,14 @@ impl MetricsExporter {
             enabled: true,
         }
     }
-    
+
     /// Prometheus exporter for Kubernetes
     pub fn prometheus_kubernetes() -> Self {
         let mut config = HashMap::new();
         config.insert("endpoint".to_string(), "/metrics".to_string());
         config.insert("port".to_string(), "8080".to_string());
-        config.insert("namespace".to_string(), "siddhi".to_string());
-        
+        config.insert("namespace".to_string(), "eventflux".to_string());
+
         Self {
             name: "prometheus-k8s".to_string(),
             exporter_type: MetricsExporterType::Prometheus,
@@ -551,13 +554,13 @@ impl MetricsExporter {
             enabled: true,
         }
     }
-    
+
     /// Default OpenTelemetry exporter
     pub fn opentelemetry_default() -> Self {
         let mut config = HashMap::new();
         config.insert("endpoint".to_string(), "http://localhost:4317".to_string());
         config.insert("protocol".to_string(), "grpc".to_string());
-        
+
         Self {
             name: "opentelemetry".to_string(),
             exporter_type: MetricsExporterType::OpenTelemetry,
@@ -565,14 +568,20 @@ impl MetricsExporter {
             enabled: true,
         }
     }
-    
+
     /// OpenTelemetry exporter for Kubernetes
     pub fn opentelemetry_kubernetes() -> Self {
         let mut config = HashMap::new();
-        config.insert("endpoint".to_string(), "http://otel-collector.monitoring.svc.cluster.local:4317".to_string());
+        config.insert(
+            "endpoint".to_string(),
+            "http://otel-collector.monitoring.svc.cluster.local:4317".to_string(),
+        );
         config.insert("protocol".to_string(), "grpc".to_string());
-        config.insert("headers".to_string(), "x-honeycomb-team=YOUR_API_KEY".to_string());
-        
+        config.insert(
+            "headers".to_string(),
+            "x-honeycomb-team=YOUR_API_KEY".to_string(),
+        );
+
         Self {
             name: "opentelemetry-k8s".to_string(),
             exporter_type: MetricsExporterType::OpenTelemetry,
@@ -587,16 +596,16 @@ impl MetricsExporter {
 pub enum MetricsExporterType {
     /// Prometheus metrics format
     Prometheus,
-    
+
     /// OpenTelemetry metrics
     OpenTelemetry,
-    
+
     /// InfluxDB time series
     InfluxDB,
-    
+
     /// Custom metrics exporter
     Custom,
-    
+
     /// Log-based metrics
     Log,
 }
@@ -606,16 +615,16 @@ pub enum MetricsExporterType {
 pub struct CustomMetric {
     /// Metric name
     pub name: String,
-    
+
     /// Metric type
     pub metric_type: MetricType,
-    
+
     /// Metric description
     pub description: String,
-    
+
     /// Metric labels
     pub labels: Vec<String>,
-    
+
     /// Collection query/expression
     pub query: String,
 }
@@ -625,13 +634,13 @@ pub struct CustomMetric {
 pub enum MetricType {
     /// Counter metric (always increasing)
     Counter,
-    
+
     /// Gauge metric (can go up and down)
     Gauge,
-    
+
     /// Histogram metric (distribution of values)
     Histogram,
-    
+
     /// Summary metric (quantiles)
     Summary,
 }
@@ -641,14 +650,14 @@ pub enum MetricType {
 pub struct AlertingConfig {
     /// Enable alerting
     pub enabled: bool,
-    
+
     /// Alert evaluation interval
     #[serde(with = "duration_serde")]
     pub evaluation_interval: Duration,
-    
+
     /// Alert rules
     pub rules: Vec<AlertRule>,
-    
+
     /// Notification channels
     pub notification_channels: Vec<NotificationChannel>,
 }
@@ -676,12 +685,10 @@ impl AlertingConfig {
                 AlertRule::high_processing_latency(),
                 AlertRule::checkpoint_failure(),
             ],
-            notification_channels: vec![
-                NotificationChannel::email_default(),
-            ],
+            notification_channels: vec![NotificationChannel::email_default()],
         }
     }
-    
+
     /// Kubernetes alerting configuration
     pub fn kubernetes() -> Self {
         Self {
@@ -693,9 +700,7 @@ impl AlertingConfig {
                 AlertRule::high_processing_latency(),
                 AlertRule::checkpoint_failure(),
             ],
-            notification_channels: vec![
-                NotificationChannel::slack_default(),
-            ],
+            notification_channels: vec![NotificationChannel::slack_default()],
         }
     }
 }
@@ -705,16 +710,16 @@ impl AlertingConfig {
 pub struct AlertRule {
     /// Alert name
     pub name: String,
-    
+
     /// Alert expression (PromQL-like)
     pub expression: String,
-    
+
     /// Duration before firing
     pub for_duration: Duration,
-    
+
     /// Alert labels
     pub labels: HashMap<String, String>,
-    
+
     /// Alert annotations
     pub annotations: HashMap<String, String>,
 }
@@ -724,59 +729,65 @@ impl AlertRule {
     pub fn high_cpu_usage() -> Self {
         let mut labels = HashMap::new();
         labels.insert("severity".to_string(), "warning".to_string());
-        
+
         let mut annotations = HashMap::new();
         annotations.insert("summary".to_string(), "High CPU usage detected".to_string());
-        annotations.insert("description".to_string(), "CPU usage is above 80%".to_string());
-        
+        annotations.insert(
+            "description".to_string(),
+            "CPU usage is above 80%".to_string(),
+        );
+
         Self {
             name: "HighCpuUsage".to_string(),
-            expression: "siddhi_system_cpu_usage > 0.8".to_string(),
+            expression: "eventflux_system_cpu_usage > 0.8".to_string(),
             for_duration: Duration::from_secs(300),
             labels,
             annotations,
         }
     }
-    
+
     /// High memory usage alert
     pub fn high_memory_usage() -> Self {
         let mut labels = HashMap::new();
         labels.insert("severity".to_string(), "warning".to_string());
-        
+
         let mut annotations = HashMap::new();
-        annotations.insert("summary".to_string(), "High memory usage detected".to_string());
-        
+        annotations.insert(
+            "summary".to_string(),
+            "High memory usage detected".to_string(),
+        );
+
         Self {
             name: "HighMemoryUsage".to_string(),
-            expression: "siddhi_system_memory_usage > 0.85".to_string(),
+            expression: "eventflux_system_memory_usage > 0.85".to_string(),
             for_duration: Duration::from_secs(300),
             labels,
             annotations,
         }
     }
-    
+
     /// High processing latency alert
     pub fn high_processing_latency() -> Self {
         let mut labels = HashMap::new();
         labels.insert("severity".to_string(), "critical".to_string());
-        
+
         Self {
             name: "HighProcessingLatency".to_string(),
-            expression: "siddhi_processing_latency_p99 > 1000".to_string(),
+            expression: "eventflux_processing_latency_p99 > 1000".to_string(),
             for_duration: Duration::from_secs(60),
             labels,
             annotations: HashMap::new(),
         }
     }
-    
+
     /// Checkpoint failure alert
     pub fn checkpoint_failure() -> Self {
         let mut labels = HashMap::new();
         labels.insert("severity".to_string(), "critical".to_string());
-        
+
         Self {
             name: "CheckpointFailure".to_string(),
-            expression: "siddhi_checkpoint_failure_rate > 0.1".to_string(),
+            expression: "eventflux_checkpoint_failure_rate > 0.1".to_string(),
             for_duration: Duration::from_secs(120),
             labels,
             annotations: HashMap::new(),
@@ -789,13 +800,13 @@ impl AlertRule {
 pub struct NotificationChannel {
     /// Channel name
     pub name: String,
-    
+
     /// Channel type
     pub channel_type: NotificationChannelType,
-    
+
     /// Channel configuration
     pub config: HashMap<String, String>,
-    
+
     /// Whether this channel is enabled
     pub enabled: bool,
 }
@@ -804,9 +815,12 @@ impl NotificationChannel {
     /// Default Slack notification channel
     pub fn slack_default() -> Self {
         let mut config = HashMap::new();
-        config.insert("webhook_url".to_string(), "${SLACK_WEBHOOK_URL}".to_string());
-        config.insert("channel".to_string(), "#siddhi-alerts".to_string());
-        
+        config.insert(
+            "webhook_url".to_string(),
+            "${SLACK_WEBHOOK_URL}".to_string(),
+        );
+        config.insert("channel".to_string(), "#eventflux-alerts".to_string());
+
         Self {
             name: "slack".to_string(),
             channel_type: NotificationChannelType::Slack,
@@ -814,14 +828,17 @@ impl NotificationChannel {
             enabled: true,
         }
     }
-    
+
     /// Default Email notification channel
     pub fn email_default() -> Self {
         let mut config = HashMap::new();
         config.insert("smtp_server".to_string(), "${SMTP_SERVER}".to_string());
         config.insert("from_address".to_string(), "${FROM_EMAIL}".to_string());
-        config.insert("to_addresses".to_string(), "${ALERT_EMAIL_LIST}".to_string());
-        
+        config.insert(
+            "to_addresses".to_string(),
+            "${ALERT_EMAIL_LIST}".to_string(),
+        );
+
         Self {
             name: "email".to_string(),
             channel_type: NotificationChannelType::Email,
@@ -836,16 +853,16 @@ impl NotificationChannel {
 pub enum NotificationChannelType {
     /// Slack notifications
     Slack,
-    
+
     /// Email notifications
     Email,
-    
+
     /// PagerDuty notifications
     PagerDuty,
-    
+
     /// Webhook notifications
     Webhook,
-    
+
     /// Custom notification channel
     Custom,
 }
@@ -855,7 +872,7 @@ pub enum NotificationChannelType {
 pub struct ObservabilityConfig {
     /// Tracing configuration
     pub tracing: TracingConfig,
-    
+
     /// Logging configuration
     pub logging: LoggingConfig,
 }
@@ -868,7 +885,7 @@ impl ObservabilityConfig {
             logging: LoggingConfig::development(),
         }
     }
-    
+
     /// Production configuration
     pub fn production() -> Self {
         Self {
@@ -876,7 +893,7 @@ impl ObservabilityConfig {
             logging: LoggingConfig::production(),
         }
     }
-    
+
     /// Kubernetes configuration
     pub fn kubernetes() -> Self {
         Self {
@@ -891,16 +908,16 @@ impl ObservabilityConfig {
 pub struct TracingConfig {
     /// Enable distributed tracing
     pub enabled: bool,
-    
+
     /// Tracing exporter type
     pub exporter: TracingExporter,
-    
+
     /// Sample rate (0.0 to 1.0)
     pub sample_rate: f64,
-    
+
     /// Service name for tracing
     pub service_name: String,
-    
+
     /// Additional tracing configuration
     pub config: HashMap<String, String>,
 }
@@ -912,35 +929,41 @@ impl TracingConfig {
             enabled: true,
             exporter: TracingExporter::Console,
             sample_rate: 1.0, // Trace everything in dev
-            service_name: "siddhi-dev".to_string(),
+            service_name: "eventflux-dev".to_string(),
             config: HashMap::new(),
         }
     }
-    
+
     /// Production tracing
     pub fn production() -> Self {
         let mut config = HashMap::new();
-        config.insert("endpoint".to_string(), "http://jaeger:14268/api/traces".to_string());
-        
+        config.insert(
+            "endpoint".to_string(),
+            "http://jaeger:14268/api/traces".to_string(),
+        );
+
         Self {
             enabled: true,
             exporter: TracingExporter::Jaeger,
             sample_rate: 0.1, // Sample 10% in production
-            service_name: "siddhi".to_string(),
+            service_name: "eventflux".to_string(),
             config,
         }
     }
-    
+
     /// Kubernetes tracing
     pub fn kubernetes() -> Self {
         let mut config = HashMap::new();
-        config.insert("endpoint".to_string(), "http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces".to_string());
-        
+        config.insert(
+            "endpoint".to_string(),
+            "http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces".to_string(),
+        );
+
         Self {
             enabled: true,
             exporter: TracingExporter::Jaeger,
             sample_rate: 0.05, // Sample 5% in k8s
-            service_name: "siddhi".to_string(),
+            service_name: "eventflux".to_string(),
             config,
         }
     }
@@ -951,13 +974,13 @@ impl TracingConfig {
 pub enum TracingExporter {
     /// Console output
     Console,
-    
+
     /// Jaeger tracing
     Jaeger,
-    
+
     /// Zipkin tracing  
     Zipkin,
-    
+
     /// OpenTelemetry
     OpenTelemetry,
 }
@@ -967,13 +990,13 @@ pub enum TracingExporter {
 pub struct LoggingConfig {
     /// Log level
     pub level: String,
-    
+
     /// Log format
     pub format: LogFormat,
-    
+
     /// Log output destinations
     pub outputs: Vec<LogOutput>,
-    
+
     /// Structured logging fields
     pub structured_fields: Vec<String>,
 }
@@ -985,10 +1008,14 @@ impl LoggingConfig {
             level: "debug".to_string(),
             format: LogFormat::Pretty,
             outputs: vec![LogOutput::Console],
-            structured_fields: vec!["timestamp".to_string(), "level".to_string(), "message".to_string()],
+            structured_fields: vec![
+                "timestamp".to_string(),
+                "level".to_string(),
+                "message".to_string(),
+            ],
         }
     }
-    
+
     /// Production logging
     pub fn production() -> Self {
         Self {
@@ -1004,7 +1031,7 @@ impl LoggingConfig {
             ],
         }
     }
-    
+
     /// Kubernetes logging
     pub fn kubernetes() -> Self {
         Self {
@@ -1028,10 +1055,10 @@ impl LoggingConfig {
 pub enum LogFormat {
     /// Pretty printed logs
     Pretty,
-    
+
     /// JSON structured logs
     Json,
-    
+
     /// Plain text logs
     Plain,
 }
@@ -1041,13 +1068,13 @@ pub enum LogFormat {
 pub enum LogOutput {
     /// Console output
     Console,
-    
+
     /// Standard output
     Stdout,
-    
+
     /// File output
     File,
-    
+
     /// Syslog output
     Syslog,
 }
@@ -1057,16 +1084,16 @@ pub enum LogOutput {
 pub struct EndpointConfig {
     /// Health check endpoint
     pub health_endpoint: String,
-    
+
     /// Metrics endpoint
     pub metrics_endpoint: String,
-    
+
     /// Port for monitoring endpoints
     pub port: u16,
-    
+
     /// Bind address
     pub bind_address: String,
-    
+
     /// Enable HTTPS
     pub tls_enabled: bool,
 }
@@ -1093,7 +1120,7 @@ impl EndpointConfig {
             ..Self::default()
         }
     }
-    
+
     /// Production configuration
     pub fn production() -> Self {
         Self {
@@ -1103,7 +1130,7 @@ impl EndpointConfig {
             ..Self::default()
         }
     }
-    
+
     /// Kubernetes configuration
     pub fn kubernetes() -> Self {
         Self {
@@ -1115,7 +1142,7 @@ impl EndpointConfig {
             ..Self::default()
         }
     }
-    
+
     /// Merge another endpoint configuration
     pub fn merge(&mut self, other: EndpointConfig) {
         self.health_endpoint = other.health_endpoint;
@@ -1131,13 +1158,13 @@ impl EndpointConfig {
 pub struct HealthStatus {
     /// Overall health status
     pub status: HealthState,
-    
+
     /// Individual check results
     pub checks: HashMap<String, CheckResult>,
-    
+
     /// Overall health score (0.0 to 1.0)
     pub score: f32,
-    
+
     /// Last check timestamp
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
@@ -1147,13 +1174,13 @@ pub struct HealthStatus {
 pub enum HealthState {
     /// Healthy
     Healthy,
-    
+
     /// Degraded but functional
     Degraded,
-    
+
     /// Unhealthy
     Unhealthy,
-    
+
     /// Unknown status
     Unknown,
 }
@@ -1163,13 +1190,13 @@ pub enum HealthState {
 pub struct CheckResult {
     /// Check status
     pub status: HealthState,
-    
+
     /// Check message
     pub message: String,
-    
+
     /// Check duration
     pub duration: Duration,
-    
+
     /// Check-specific data
     pub data: HashMap<String, serde_json::Value>,
 }
@@ -1177,7 +1204,7 @@ pub struct CheckResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_monitoring_config_default() {
         let config = MonitoringConfig::default();
@@ -1186,7 +1213,7 @@ mod tests {
         assert!(config.metrics.enabled);
         assert_eq!(config.endpoints.port, 8080);
     }
-    
+
     #[test]
     fn test_monitoring_config_development() {
         let config = MonitoringConfig::development();
@@ -1195,7 +1222,7 @@ mod tests {
         assert_eq!(config.metrics.collection_interval, Duration::from_secs(5));
         assert!(config.alerting.is_none());
     }
-    
+
     #[test]
     fn test_monitoring_config_production() {
         let config = MonitoringConfig::production();
@@ -1205,7 +1232,7 @@ mod tests {
         assert_eq!(config.endpoints.port, 8443);
         assert!(config.endpoints.tls_enabled);
     }
-    
+
     #[test]
     fn test_monitoring_config_kubernetes() {
         let config = MonitoringConfig::kubernetes();
@@ -1213,12 +1240,12 @@ mod tests {
         assert_eq!(config.endpoints.health_endpoint, "/healthz");
         assert_eq!(config.endpoints.port, 8080);
         assert!(!config.endpoints.tls_enabled);
-        
+
         let alerting = config.alerting.unwrap();
         assert!(alerting.enabled);
         assert_eq!(alerting.rules.len(), 4);
     }
-    
+
     #[test]
     fn test_health_check_configuration() {
         let check = HealthCheck::system_resource();
@@ -1227,39 +1254,48 @@ mod tests {
         assert!(check.critical);
         assert_eq!(check.weight, 0.3);
     }
-    
+
     #[test]
     fn test_metrics_exporter_configuration() {
         let prometheus = MetricsExporter::prometheus_kubernetes();
         assert_eq!(prometheus.name, "prometheus-k8s");
         assert!(prometheus.enabled);
         assert_eq!(prometheus.config.get("port"), Some(&"8080".to_string()));
-        assert_eq!(prometheus.config.get("namespace"), Some(&"siddhi".to_string()));
+        assert_eq!(
+            prometheus.config.get("namespace"),
+            Some(&"eventflux".to_string())
+        );
     }
-    
+
     #[test]
     fn test_probe_configuration() {
         let startup = ProbeConfig::kubernetes_startup();
         assert_eq!(startup.initial_delay, Duration::from_secs(5));
         assert_eq!(startup.failure_threshold, 30);
-        
+
         let liveness = ProbeConfig::kubernetes_liveness();
         assert_eq!(liveness.initial_delay, Duration::from_secs(30));
         assert_eq!(liveness.failure_threshold, 3);
     }
-    
+
     #[test]
     fn test_alert_rules() {
         let cpu_alert = AlertRule::high_cpu_usage();
         assert_eq!(cpu_alert.name, "HighCpuUsage");
-        assert_eq!(cpu_alert.expression, "siddhi_system_cpu_usage > 0.8");
+        assert_eq!(cpu_alert.expression, "eventflux_system_cpu_usage > 0.8");
         assert_eq!(cpu_alert.for_duration, Duration::from_secs(300));
-        assert_eq!(cpu_alert.labels.get("severity"), Some(&"warning".to_string()));
-        
+        assert_eq!(
+            cpu_alert.labels.get("severity"),
+            Some(&"warning".to_string())
+        );
+
         let latency_alert = AlertRule::high_processing_latency();
-        assert_eq!(latency_alert.labels.get("severity"), Some(&"critical".to_string()));
+        assert_eq!(
+            latency_alert.labels.get("severity"),
+            Some(&"critical".to_string())
+        );
     }
-    
+
     #[test]
     fn test_observability_configuration() {
         let obs = ObservabilityConfig::production();
@@ -1267,20 +1303,20 @@ mod tests {
         assert_eq!(obs.tracing.sample_rate, 0.1);
         assert_eq!(obs.logging.level, "info");
         assert!(matches!(obs.logging.format, LogFormat::Json));
-        
+
         let k8s_obs = ObservabilityConfig::kubernetes();
         assert_eq!(k8s_obs.tracing.sample_rate, 0.05);
         assert_eq!(k8s_obs.logging.outputs.len(), 1);
         assert!(matches!(k8s_obs.logging.outputs[0], LogOutput::Stdout));
     }
-    
+
     #[test]
     fn test_configuration_merging() {
         let mut base = MonitoringConfig::development();
         let production = MonitoringConfig::production();
-        
+
         base.merge(production);
-        
+
         assert_eq!(base.health.interval, Duration::from_secs(60));
         assert_eq!(base.endpoints.port, 8443);
         assert!(base.endpoints.tls_enabled);

@@ -1,5 +1,5 @@
-use siddhi_rust::query_api::expression::constant::TimeUtil;
-use siddhi_rust::query_compiler::parse_time_constant;
+use eventflux_rust::query_api::expression::constant::TimeUtil;
+use eventflux_rust::query_compiler::parse_time_constant;
 
 #[test]
 fn test_parse_seconds() {

@@ -1,5 +1,5 @@
-// siddhi_rust/src/core/event/stream/stream_event_cloner.rs
-// Utility for cloning StreamEvents similar to io.siddhi.core.event.stream.StreamEventCloner
+// eventflux_rust/src/core/event/stream/stream_event_cloner.rs
+// Utility for cloning StreamEvents similar to io.eventflux.core.event.stream.StreamEventCloner
 
 use super::{
     meta_stream_event::MetaStreamEvent, stream_event::StreamEvent,
